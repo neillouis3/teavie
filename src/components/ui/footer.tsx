@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function Footer () {
     return (
         <div className="w-full mt-48 py-4 justify-center items-center px-4 ">
-            <div className="bg-black flex items-center  flex-col bg-opacity-50 py-8 px-4 rounded-lg">
+            <div className="bg-white flex items-center  flex-col bg-opacity-50 py-8 px-4 rounded-lg">
                 <div>
                     <Link href='/explore'>
                         <img src="/verLogo.png" alt="logo" className=" w-64 h-fit" />

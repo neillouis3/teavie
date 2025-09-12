@@ -1,11 +1,14 @@
+"use client";
+
 import React from "react";
-import {Input} from "@nextui-org/input"
+import {Input} from "@heroui/react"
 
 export default function CustomInput () {
     return (
         <Input  
             label="Search..." 
             size="sm" 
+            variant="bordered"
             classNames={{
                 label: "text-black/50 dark:text-white/90",
                 input: [
@@ -15,7 +18,7 @@ export default function CustomInput () {
                 ],
                 innerWrapper: "bg-transparent",
                 inputWrapper: [
-                    "shadow-xl",
+                    
                     "bg-default-200/50",
                     "dark:bg-sub",
                     "backdrop-blur-xl",
