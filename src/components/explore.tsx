@@ -73,8 +73,8 @@ export default function Explore(){
     <div className="bg-[#F3F4F6] h-full w-full flex flex-col mb-128">
       <Header pageName="Explore" />
       <div className="flex-col my-4 h-fit w-full">
-        <div className="mb-2 pl-4">
-          <Chip color="success" size="md">New & Upcoming</Chip>
+        <div className="mb-4 pl-4">
+          <Chip color="success" size="lg" radius="sm">New & Upcoming</Chip>
         </div>
         <div>
             <UpcomingViewerLoading />
@@ -82,22 +82,19 @@ export default function Explore(){
           
         </div>
       </div>
-      <div className="flex flex-row w-full h-fit mt-2 px-4 gap-32">
+      <div className="flex flex-row w-full h-fit mt-2 px-4 gap-24">
         <div className="flex-4 flex w-full flex-col">
           <div className="flex flex-row h-fit justify-between items-center">
-            <Chip color="success" variant="flat" size="md" className="mb-2">New on SofaCouch</Chip>
-            
-            <div className="h-full flex items-center justify-center">
-              <a className="underline">View All</a>
-            </div>
+            <Chip color="success" variant="flat" size="lg" className="mb-4" radius="sm">New on SofaCouch</Chip>
+          
           </div>
           <div className="w-full h-96">
             <NewViewerLoading />
             
           </div>
         </div>
-        <div className="flex-2 flex h-fit flex-col">
-        <Chip color="success" variant="flat" size="md" className="mb-2">Recently Updated</Chip>
+        <div className="flex-2 flex h-fit flex-col pr-4">
+        <Chip color="success" variant="flat" size="lg" className="mb-4" radius="sm">Recently Updated</Chip>
           <div className="w-full h-96 rounded-xl">
             <UpdatedViewerLoading />
             

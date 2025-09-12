@@ -4,9 +4,9 @@ import Link from "next/link";
 export default function SmallCard() {
 
     return (
-        <div className="w-full h-96 flex flex-col rounded-xl group ">
+        <div className="w-full h-72 flex flex-col rounded-xl group ">
             
-            <div className="w-full h-72 bg-gray-500 bg-opacity-50 rounded-xl relative">
+            <div className="w-full h-52 bg-gray-500 bg-opacity-50 rounded-xl relative">
             </div>
 
 
