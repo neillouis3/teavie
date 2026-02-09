@@ -59,7 +59,7 @@ export default function MovieTemplate({ id }: { id: string }) {
   const imageUrl = movie?.poster_path ? `${baseUrl}${size}${movie.poster_path}` : '';
 
   return (
-    <div className="bg-main h-full w-full flex flex-col items-center px-4 pb-32">
+    <div className="bg-background h-full w-full flex flex-col items-center px-4 py-2 pb-32">
       <div className="w-full h-20 items-center flex flex-row -ml-16 mb-4 ">
         <Header />
       </div>

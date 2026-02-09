@@ -27,14 +27,14 @@ const SimilarViewer: React.FC<SimilarViewerProps> = ({ SimilarContent }) => {
         .filter((movie) => movie?.title && movie?.release_year)
         .map((movie) => (
           <SimilarCard
-            key={movie.id} // Use the movie's id as the key
+            key={movie.id}
             title={movie.title}
-            year={movie.release_year}
+            year={String(movie.release_year)}
             type={movie.type}
             runtime={movie.runtime}
-            seasonAmount={movie.season_amount}
+            seasonAmount={movie.season_amount ?? 0}
             id={movie.id}
-            posterPath={movie.poster_path}
+            backDropPath={movie.poster_path}
           />
         ))}
     </div>
