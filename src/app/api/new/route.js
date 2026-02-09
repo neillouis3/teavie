@@ -12,48 +12,23 @@ export async function GET(req) {
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const skip = (page - 1) * limit;
 
-    // Date range: last 30 days
-    const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-
-    // Query both movies & tv from same collection
+    // New = most recently released (by release_date / first_air_date), any time
     const cursor = contentCollection
       .find({
         $or: [
-          {
-            release_date: {
-              $gte: thirtyDaysAgo.toISOString().split("T")[0],
-              $lte: today.toISOString().split("T")[0],
-            },
-          },
-          {
-            first_air_date: {
-              $gte: thirtyDaysAgo.toISOString().split("T")[0],
-              $lte: today.toISOString().split("T")[0],
-            },
-          },
+          { release_date: { $exists: true, $ne: null, $ne: "" } },
+          { first_air_date: { $exists: true, $ne: null, $ne: "" } },
         ],
       })
-      .sort({ release_date: -1, first_air_date: -1 })
+      .sort({ release_date: -1, first_air_date: -1, _id: -1 })
       .skip(skip)
       .limit(limit);
 
     const results = await cursor.toArray();
     const total = await contentCollection.countDocuments({
       $or: [
-        {
-          release_date: {
-            $gte: thirtyDaysAgo.toISOString().split("T")[0],
-            $lte: today.toISOString().split("T")[0],
-          },
-        },
-        {
-          first_air_date: {
-            $gte: thirtyDaysAgo.toISOString().split("T")[0],
-            $lte: today.toISOString().split("T")[0],
-          },
-        },
+        { release_date: { $exists: true, $ne: null, $ne: "" } },
+        { first_air_date: { $exists: true, $ne: null, $ne: "" } },
       ],
     });
 
@@ -63,15 +38,22 @@ export async function GET(req) {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
-        results: results.map((doc) => ({
+        results: results.map((doc) => {
+          const rawDate = doc.release_date ?? doc.releaseDate ?? doc.first_air_date ?? doc.firstAirDate ?? null;
+          const release_date = rawDate == null ? null : typeof rawDate === "string" ? rawDate : rawDate.toISOString?.().split("T")[0] ?? null;
+          return {
           id: doc.id.toString(),
           title: doc.title ?? doc.name,
-          release_date: doc.release_date ?? doc.first_air_date,
+          release_date,
+          runtime: doc.runtime ?? null,
+          season_amount: doc.season_amount ?? null,
           popularity: doc.popularity ?? 0,
           genre_ids: doc.genre_ids ?? [],
           poster_path: doc.poster_path ?? null,
+          backdrop_path: doc.backdrop_path ?? null,
           type: doc.type, // "movie" | "tv"
-        })),
+          };
+        }),
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

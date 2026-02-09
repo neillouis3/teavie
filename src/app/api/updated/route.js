@@ -28,16 +28,22 @@ export async function GET(req) {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
-        results: results.map((doc) => ({
+        results: results.map((doc) => {
+          const rawDate = doc.release_date ?? doc.releaseDate ?? doc.first_air_date ?? doc.firstAirDate ?? null;
+          const release_date = rawDate == null ? null : typeof rawDate === "string" ? rawDate : rawDate.toISOString?.().split("T")[0] ?? null;
+          return {
           id: doc.id.toString(),
           title: doc.title ?? doc.name,
           date: doc.updatedAt ?? doc.release_date ?? doc.first_air_date ?? null,
+          release_date,
+          first_air_date: release_date,
           popularity: doc.popularity ?? 0,
           genre_ids: doc.genre_ids ?? [],
           poster_path: doc.poster_path ?? null,
           backdrop_path: doc.backdrop_path ?? null,
           type: doc.type, // "movie" | "tv"
-        })),
+          };
+        }),
       }),
       {
         status: 200,

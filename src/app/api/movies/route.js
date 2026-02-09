@@ -41,10 +41,13 @@ export async function GET(req) {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
-        results: results.map((doc) => ({
+        results: results.map((doc) => {
+          const rawDate = doc.release_date ?? doc.releaseDate ?? doc.first_air_date ?? doc.firstAirDate ?? null;
+          const release_date = rawDate == null ? null : typeof rawDate === "string" ? rawDate : rawDate.toISOString?.().split("T")[0] ?? null;
+          return {
           id: doc.id.toString(),
           title: doc.title ?? doc.name,
-          release_date: doc.release_date ?? doc.first_air_date ?? null,
+          release_date,
           runtime: doc.runtime ?? null,
           season_amount: doc.season_amount ?? null,
           popularity: doc.popularity ?? 0,
@@ -52,7 +55,8 @@ export async function GET(req) {
           poster_path: doc.poster_path ?? null,
           backdrop_path: doc.backdrop_path ?? null,
           type: doc.type,
-        })),
+          };
+        }),
       }),
       {
         status: 200,
