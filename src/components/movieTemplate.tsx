@@ -78,10 +78,10 @@ export default function MovieTemplate({ id }: { id: string }) {
             </div>
           ) : (
             movie && (
-              <div className="w-full h-18 flex flex-col mt-4 ">
+              <div className="w-full h-18 flex flex-col mt-4 text-foreground">
                 
                 <h1 className="text-3xl font-bold uppercase">{movie.title}</h1>
-                <div className="flex flex-row text-black gap-2 h-fit items-center mt-2">
+                <div className="flex flex-row  gap-2 h-fit items-center mt-2">
                 <Chip color="success" size="md" variant="flat">
                   Movie
                 </Chip>
@@ -104,11 +104,11 @@ export default function MovieTemplate({ id }: { id: string }) {
                 <p className="text-md  mt-2 w-full">{movie.tagline}</p>
                 <div className="mt-4 flex flex-row font-medium">
                   <div className="flex-1 flex flex-col gap-2">
-                    <p className="text-md text-gray">Country: </p>
-                    <p className="text-md text-gray">Genre:</p>
-                    <p className="text-md text-gray">Year:</p>
+                    <p className="text-md text-foreground">Country: </p>
+                    <p className="text-md text-foreground">Genre:</p>
+                    <p className="text-md text-foreground">Year:</p>
                   </div>
-                  <div className="flex-4 text-black text-md flex flex-col gap-2">
+                  <div className="flex-4 text-foreground text-md flex flex-col gap-2">
                     <p>{movie.origin_country?.join(", ") || "N/A"}</p>
                     <p>{movie.genres.map((g) => g.name).join(", ")}</p>
                     <p>{movie.release_date?.slice(0, 4)}</p>
