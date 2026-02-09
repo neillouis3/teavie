@@ -10,7 +10,7 @@ interface UpdatedViewerProps {
 
 const UpdatedViewer: React.FC<UpdatedViewerProps> = ({ updatedContent }) => {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 h-fit">
       {updatedContent &&
         updatedContent.slice(0, 9).map((movie, index) => {
           const year =

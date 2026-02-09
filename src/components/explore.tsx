@@ -25,7 +25,7 @@ export default function Explore({
   loading,
 }: ExploreProps) {
   return (
-    <div className="bg-background h-full w-full flex flex-col mb-128 ">
+    <div className="bg-background  w-full flex flex-col ">
       <Header pageName="Explore" />
 
       {/* New & Upcoming Section */}
@@ -45,7 +45,7 @@ export default function Explore({
       </div>
 
       {/* New + Updated Section */}
-      <div className="flex flex-col lg:flex-row w-full h-fit mt-2 px-4 gap-24">
+      <div className="flex flex-col lg:flex-row w-full h-fit mt-2 mb-8 px-4 gap-24">
         {/* New on SofaCouch */}
         <div className="flex-4 flex w-full flex-col">
           <div className="flex flex-row h-fit justify-between items-center">
@@ -80,7 +80,7 @@ export default function Explore({
           >
             Recently Updated
           </Chip>
-          <div className="w-full h-96 rounded-xl">
+          <div className="w-full h-fit rounded-xl">
             {loading ? (
               <UpdatedViewerLoading />
             ) : (

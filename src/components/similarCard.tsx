@@ -30,7 +30,7 @@ export default function SimilarCard({
 
   return (
     <Link href={type === 'tv' ? `/shows/${id}` : `/movies/${id}`}>
-      <div className="w-full h-20 bg-white drop-shadow-md bg-opacity-50 flex flex-row group rounded-lg">
+      <div className="w-full h-20 bg-background drop-shadow-md bg-opacity-50 flex flex-row group rounded-lg">
         <div className="h-20">
           <Image
             src={imageUrl}
