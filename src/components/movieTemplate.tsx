@@ -141,7 +141,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                   </div>
                 </section>
 
-                <section className="w-full lg:max-w-5xl mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+                <section className="w-full  mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
                   <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
                     <div className="flex-shrink-0 w-full lg:w-48 hidden lg:block">
                       <Image
