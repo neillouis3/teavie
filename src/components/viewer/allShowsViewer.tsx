@@ -1,43 +1,38 @@
-'use client'
-import React, {useEffect, useState} from "react";
+'use client';
 
+import React from "react";
 import SmallCard from "../ui/smallCard";
+import { ContentItem } from "@/types/content";
 
-type ContentItem = {
-    id: number;
-    title: string;
-    release_year: number;
-    type: string;
-    season_amount: number;
-    poster_path: string;
-  };
-  
-  // Define the props type for UpdatedViewer
-  interface UpdatedViewerProps {
-    allContentData: ContentItem[]; // updatedContent is an array of ContentItem
-  }
+interface AllShowsViewerProps {
+  allContentData: ContentItem[];
+}
 
+const AllShowsViewer: React.FC<AllShowsViewerProps> = ({ allContentData }) => {
+  return (
+    <div className="w-full h-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      {allContentData.map((item, index) => {
+        const title = item.title ?? item.name ?? "Untitled";
+        const releaseDate = item.release_date ?? item.first_air_date ?? "";
+        const year = releaseDate
+          ? String(new Date(releaseDate).getFullYear())
+          : "TBA";
 
-const AllShowsViewer: React.FC<UpdatedViewerProps> = ({allContentData}) => {
-    
-    return (
-        <div className="w-full h-full grid grid-cols-5 gap-4">
-            {allContentData.map((movie, index) => (
-                movie && movie.title && movie.release_year ? ( // Conditionally render only if movie has title and year
-                    <SmallCard
-                    key={index} 
-                    id={movie.id}
-                    title={movie.title} 
-                    year={movie.release_year}
-                    type={movie.type}
-                    runtime={0}
-                    seasonAmount={movie.season_amount}
-                    posterPath={movie.poster_path}
-                />
-                ) : null // Skip rendering if it's a placeholder (null)
-            ))}
-        </div>
-    );
+        return (
+          <SmallCard
+            key={item.id || index}
+            id={item.id}
+            title={title}
+            year={year}
+            type={item.type || "tv"}
+            runtime={item.runtime ?? 0}
+            seasonAmount={item.season_amount ?? 0}
+            posterPath={item.poster_path || ""}
+          />
+        );
+      })}
+    </div>
+  );
 };
 
 export default AllShowsViewer;
