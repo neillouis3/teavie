@@ -57,6 +57,7 @@ const MoviePage = () => {
     //   similarContentData={similarContent}
     //   loading={loading}  // Pass loading state to MovieTemplate
     // />
+    <div>Hello</div>
   );
 };
 
