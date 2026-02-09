@@ -32,8 +32,6 @@ interface Show {
 export default function ShowTemplate({ id }: { id: string }) {
   const baseUrl = "https://image.tmdb.org/t/p/";
   const size = "w500";
-
-  const [server, setServer] = useState("vidsrc");
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState(1);
@@ -90,8 +88,6 @@ export default function ShowTemplate({ id }: { id: string }) {
                 videoId={show?.id ?? id}
                 season={selectedSeason}
                 episode={selectedEpisode}
-                isTmdb={1}
-                server={server}
               />
             )}
           </div>
@@ -209,51 +205,18 @@ export default function ShowTemplate({ id }: { id: string }) {
         </div>
 
         <div className="w-full h-full flex-1 flex flex-col gap-4 lg:flex-2 min-w-0">
-          {/* Server chooser */}
+          {/* Streaming source info */}
           {loading ? (
             <div className="w-full h-44 rounded-xl bg-default-200 animate-pulse" />
           ) : (
             <div className="w-full h-fit text-sm flex flex-col rounded-xl bg-default-100/60 dark:bg-default-100/20 border border-default-200/60 p-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold tracking-wide uppercase text-default-500">
-                  Streaming servers
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-default-200 text-default-600">
-                  Beta
+                  Streaming source
                 </span>
               </div>
               <p className="text-foreground/80 text-xs mt-1">
-                If the current server doesn&apos;t work, switch to another option.
-              </p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {["vidsrc", "moviesapi", "superembed"].map((s) => {
-                  const label =
-                    s === "vidsrc" ? "Vidsrc" : s === "moviesapi" ? "MoviesAPI" : "SuperEmbed";
-                  const isActive = server === s;
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => setServer(s)}
-                      className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
-                        isActive
-                          ? "bg-primary/90 border-primary text-primary-foreground shadow-sm"
-                          : "bg-background border-default-200 text-foreground hover:bg-default-100"
-                      }`}
-                      aria-pressed={isActive}
-                      type="button"
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          isActive ? "bg-success-400" : "bg-default-400"
-                        }`}
-                      />
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-default-500 text-[11px] mt-3 leading-snug">
-                We can&apos;t control ads or playback issues from these third‑party players.
+                Episodes are streamed via MoviesAPI. We can&apos;t control ads or playback issues from this third‑party player.
               </p>
             </div>
           )}

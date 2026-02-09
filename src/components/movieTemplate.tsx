@@ -23,8 +23,6 @@ interface Movie {
 export default function MovieTemplate({ id }: { id: string }) {
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
-
-  const [server, setServer] = useState('vidsrc');
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +65,7 @@ export default function MovieTemplate({ id }: { id: string }) {
       <div className="w-full h-full flex flex-row gap-4">
         <div className="w-full h-full flex-5">
           <div className="w-full h-[50vh] lg:h-[70vh]  rounded-lg flex flex-col bg-gray-500">
-            <MoviePlayer videoId={id} server={server} />
+            <MoviePlayer videoId={id} />
           </div>
 
           {/* Movie details */}
@@ -194,41 +192,11 @@ export default function MovieTemplate({ id }: { id: string }) {
             <div className="w-full h-fit text-sm flex flex-col rounded-xl bg-default-100/60 dark:bg-default-100/20 border border-default-200/60 p-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold tracking-wide uppercase text-default-500">
-                  Streaming servers
+                  Streaming source
                 </span>
               </div>
               <p className="text-foreground/80 text-xs mt-1">
-                If the current server doesn&apos;t work, switch to another option.
-              </p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {["vidsrc", "moviesapi", "superembed"].map((s) => {
-                  const label =
-                    s === "vidsrc" ? "Vidsrc" : s === "moviesapi" ? "MoviesAPI" : "SuperEmbed";
-                  const isActive = server === s;
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => setServer(s)}
-                      className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
-                        isActive
-                          ? "bg-primary/90 border-primary text-primary-foreground shadow-sm"
-                          : "bg-background border-default-200 text-foreground hover:bg-default-100"
-                      }`}
-                      aria-pressed={isActive}
-                      type="button"
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          isActive ? "bg-success-400" : "bg-default-400"
-                        }`}
-                      />
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-default-500 text-[11px] mt-3 leading-snug">
-                We can&apos;t control ads or playback issues from these third-party players.
+                Movies are streamed via MoviesAPI. We can&apos;t control ads or playback issues from this third-party player.
               </p>
             </div>
           )}
