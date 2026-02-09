@@ -10,14 +10,14 @@ export default function MovieLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-main h-full w-full flex flex-row justify-center">
-       <div className="flex-1 sticky top-0 h-screen">
-        <SideBar />
+    <div className="bg-background h-full w-full flex flex-row justify-center">
+       <SideBar />
+       <div className="w-[15vw] top-0 h-screen">
       </div>
-      <div className="w-full h-full flex flex-col items-center flex-5 ">
+      <div className=" h-full flex flex-col items-center w-[85vw] ">
         {children}
         
-
+        
       </div>
     </div>
   );
