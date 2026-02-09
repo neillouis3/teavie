@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Header from '@/components/ui/header';
 import AllMovieViewer from '@/components/viewer/allMoviesViewer';
@@ -8,7 +8,7 @@ import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewer
 import { Button } from '@heroui/react';
 import { ContentItem } from '@/types/content';
 
-export default function AllMoviePage() {
+function AllMoviePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -112,5 +112,13 @@ export default function AllMoviePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AllMoviePage() {
+  return (
+    <Suspense fallback={<AllMoviesViewerLoading />}>
+      <AllMoviePageContent />
+    </Suspense>
   );
 }
