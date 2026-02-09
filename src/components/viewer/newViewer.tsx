@@ -1,41 +1,36 @@
 'use client'
 import React from "react";
 import SmallCard from "../ui/smallCard";
+import { ContentItem } from "@/types/content";
 
-// Define the type for the newContent items
-type ContentItem = {
-  id: number;
-  title: string;
-  release_year: number;
-  type: string;
-  runtime: number;
-  season_amount: number;
-  poster_path: string;
-};
-
-// Define the props type for NewViewer
 interface NewViewerProps {
-  newContent: ContentItem[]; // newContent is an array of ContentItem
+  newContent: ContentItem[];
 }
 
-export default function NewViewer({ newContent }: NewViewerProps) { // Use the defined type for props
-
+export default function NewViewer({ newContent }: NewViewerProps) {
   return (
-    <div className="w-full h-full grid grid-cols-3 gap-4">
-      {newContent && newContent.slice(0, 6).map((movie, index) => ( // Limit to 6 items
-        movie && movie.title && movie.release_year ? ( // Conditionally render only if movie has title and year
-          <SmallCard
-            key={index} 
-            id={movie.id}
-            title={movie.title} 
-            year={movie.release_year}
-            type={movie.type}
-            runtime={movie.runtime}
-            seasonAmount={movie.season_amount}
-            posterPath={movie.poster_path}
-          />
-        ) : null // Skip rendering if it's a placeholder (null)
-      ))}
+    <div className="w-full h-full grid grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {newContent &&
+        newContent.slice(0, 8).map((item, index) => {
+          const title = item.title || item.name || "Untitled";
+          const year =
+            item.release_date?.split("-")[0] ||
+            item.first_air_date?.split("-")[0] ||
+            "N/A";
+
+          return (
+            <SmallCard
+              key={index}
+              id={item.id}
+              title={title}
+              year={year}
+              type={item.type || "movie"}
+              runtime={item.runtime ?? 0}
+              seasonAmount={item.season_amount ?? 0}
+              posterPath={item.poster_path || ""}
+            />
+          );
+        })}
     </div>
   );
 }

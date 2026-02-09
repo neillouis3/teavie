@@ -1,7 +1,36 @@
 
-@import "tailwindcss";
 
+@import "tailwindcss";
 @plugin './hero.ts';
-/* Note: You may need to change the path to fit your project structure */
+
 @source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 @custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-midground: var(--midground);
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
+  }
+  
+  
+  /* Dark mode via manual theme toggle */
+  .dark {
+    --background: #121212;
+    --midground: #27272a;
+    --foreground: #ededed;
+  }
+  
+  /* Light mode via manual theme toggle (overrides system dark mode) */
+  .light {
+    --background: #ffffff;
+    --midground: #f3f4f6;
+    --foreground: #171717;
+  }
+  
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
+  }

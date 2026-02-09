@@ -2,40 +2,35 @@
 
 import React from 'react';
 import SimilarCard from '../similarCard';
+import { ContentItem } from '@/types/content';
 
-// Define the type for each content item
-type ContentItem = {
-  id: number;
-  title: string;
-  release_year: number;
-  type: string;
-  runtime: number;
-  season_amount: number;
-  poster_path: string;
-};
-
-// Define the props type for UpdatedViewer
 interface UpdatedViewerProps {
-  updatedContent: ContentItem[]; // updatedContent is an array of ContentItem
+  updatedContent: ContentItem[];
 }
 
 const UpdatedViewer: React.FC<UpdatedViewerProps> = ({ updatedContent }) => {
   return (
     <div className="flex flex-col gap-2">
-      {updatedContent && updatedContent.map((movie, index) => (
-        movie && movie.title && movie.release_year ? ( // Conditionally render only if movie has title and year
-          <SimilarCard 
-            key={index} 
-            title={movie.title} 
-            year={movie.release_year}
-            type={movie.type}
-            runtime={movie.runtime}
-            seasonAmount={movie.season_amount}
-            id={movie.id}
-            posterPath={movie.poster_path}
-          />
-        ) : null // Skip rendering if it's a placeholder (null)
-      ))}
+      {updatedContent &&
+        updatedContent.slice(0, 9).map((movie, index) => {
+          const year =
+            movie.release_date?.split('-')[0] ||
+            movie.first_air_date?.split('-')[0] ||
+            "—";
+
+          return movie && (movie.title || movie.name) ? (
+            <SimilarCard
+              key={index}
+              title={movie.title || movie.name || ''}
+              year={year} // pass string year
+              type={movie.type || ''}
+              runtime={movie.runtime || 0}
+              seasonAmount={movie.season_amount || 0}
+              id={movie.id}
+              backDropPath={movie.backdrop_path || ''}
+            />
+          ) : null;
+        })}
     </div>
   );
 };

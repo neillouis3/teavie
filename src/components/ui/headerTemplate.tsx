@@ -1,6 +1,7 @@
 import React from "react";
 import CustomInput from "./customInput";
 import Link from "next/link";
+import { Image } from "@heroui/react";
 
 export default function Header() {
     return (
@@ -11,7 +12,7 @@ export default function Header() {
                     className="flex-1"
                 >
                     <Link href="/explore">
-                    <img src="/horLogo.png" alt="logo" className="w-1/2 h-fit" />
+                        <Image src="/verLogo.png" alt="logo" className="w-1/3 h-fit" />
 
                     </Link>
                  </div>

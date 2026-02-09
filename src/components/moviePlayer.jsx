@@ -1,70 +1,45 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-const MoviePlayer = ({ videoId, season, episode, isTmdb, server }) => {
+const MoviePlayer = ({ videoId, server = 'vidsrc' }) => {
   const [playerUrl, setPlayerUrl] = useState('');
   const [error, setError] = useState(null);
 
+
   useEffect(() => {
-    const fetchPlayerUrl = async () => {
-      try {
-        console.log(`Fetching player URL for video ID: ${videoId}`);
+    try {
+      console.log(`Fetching movie player URL for ID: ${videoId}`);
 
-        let playerUrl;
-        if (server === 'vidsrc') {
-          playerUrl = `https://vidsrc.icu/embed/movie/${videoId}`;
-        } else if (server === 'moviesapi') {
-          playerUrl = `https://moviesapi.club/movie/${videoId}`;
-        } else {
-          // Fallback to the Flask API or use `superembed` logic
-          const response = await fetch(`http://localhost:5000/player?video_id=${videoId}&tmdb=${isTmdb ? 1 : 0}&season=${season}&episode=${episode}`);
+      let url = '';
 
-          // Check if the response is okay
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          // Log the raw response text
-          const responseText = await response.text();
-          console.log('Raw response:', responseText);
-
-          // Parse the response text as JSON
-          const data = JSON.parse(responseText);
-          console.log('Parsed response:', data);
-
-          if (data.player_url) {
-            playerUrl = data.player_url;
-          } else {
-            console.error('Error fetching player URL:', data.error);
-            setError(data.error);
-            return;
-          }
-        }
-
-        // Set the player URL
-        setPlayerUrl(playerUrl);
-      } catch (error) {
-        console.error('Error in fetchPlayerUrl:', error);
-        setError(error.message);
+      if (server === 'vidsrc') {
+        url = `https://vidsrc.icu/embed/movie/${videoId}`;
+      } else {
+        url = `https://moviesapi.club/movie/${videoId}`;
       }
-    };
 
-    fetchPlayerUrl();
-  }, [videoId, season, episode, isTmdb, server]);
+      setPlayerUrl(url);
+    } catch (err) {
+      console.error('Error setting player URL:', err);
+      setError(err.message || 'Unknown error');
+    }
+  }, [videoId, server]);
 
   return (
-    <div className='rounded-lg h-full w-full'>
+    <div className="rounded-lg h-full w-full">
       {error ? (
-        <p>Error loading video: {error}</p>
-      ) : (
+        <p className="text-red-500">Error loading video: {error}</p>
+      ) : playerUrl ? (
         <iframe
           src={playerUrl}
           width="100%"
           height="100%"
           frameBorder="0"
           allowFullScreen
-          className='rounded-lg h-full w-full'
-        ></iframe>
+          className="rounded-lg h-full w-full overflow-hidden"
+        />
+      ) : (
+        <p>Loading player...</p>
       )}
     </div>
   );

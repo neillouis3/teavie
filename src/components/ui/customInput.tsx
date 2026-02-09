@@ -8,7 +8,7 @@ export default function CustomInput () {
         <Input  
             label="Search..." 
             size="sm" 
-            variant="bordered"
+            variant="flat"
             classNames={{
                 label: "text-black/50 dark:text-white/90",
                 input: [
