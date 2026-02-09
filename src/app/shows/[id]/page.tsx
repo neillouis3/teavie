@@ -1,4 +1,4 @@
-// 'use client';
+'use client';
 
 // import React, { useState, useEffect } from 'react';
 // import { useParams } from 'next/navigation';
@@ -19,45 +19,45 @@
 //   }
 // };
 
-// const MoviePage = () => {
-//   const params = useParams();
+const MoviePage = () => {
+  // const params = useParams();
 
-//   // If params is null or 'id' is not a string, return an error message.
-//   if (!params || typeof params.id !== 'string') {
-//     return <div>Error: Invalid movie ID</div>;
-//   }
+  // // If params is null or 'id' is not a string, return an error message.
+  // if (!params || typeof params.id !== 'string') {
+  //   return <div>Error: Invalid movie ID</div>;
+  // }
 
-//   // Convert 'id' to a number, as your MovieTemplate component expects a number type for movieId.
-//   const movieId = parseInt(params.id, 10);
+  // // Convert 'id' to a number, as your MovieTemplate component expects a number type for movieId.
+  // const movieId = parseInt(params.id, 10);
 
-//   // Check if conversion failed (NaN), handle the error if necessary.
-//   if (isNaN(movieId)) {
-//     return <div>Error: Movie ID must be a valid number</div>;
-//   }
+  // // Check if conversion failed (NaN), handle the error if necessary.
+  // if (isNaN(movieId)) {
+  //   return <div>Error: Movie ID must be a valid number</div>;
+  // }
 
-//   const [detailContent, setDetailContent] = useState(null);  // Initialize as null for better handling
-//   const [similarContent, setSimilarContent] = useState([]);
-//   const [loading, setLoading] = useState(true); // Add loading state
+  // const [detailContent, setDetailContent] = useState(null);  // Initialize as null for better handling
+  // const [similarContent, setSimilarContent] = useState([]);
+  // const [loading, setLoading] = useState(true); // Add loading state
 
-//   useEffect(() => {
-//     const getMovieData = async () => {
-//       const data = await fetchMovieData(movieId);
-//       setDetailContent(data.show);
-//       setSimilarContent(data.similar_shows);
-//       setLoading(false); // Set loading to false once data is fetched
-//     };
+  // useEffect(() => {
+  //   const getMovieData = async () => {
+  //     const data = await fetchMovieData(movieId);
+  //     setDetailContent(data.show);
+  //     setSimilarContent(data.similar_shows);
+  //     setLoading(false); // Set loading to false once data is fetched
+  //   };
 
-//     getMovieData();
-//   }, [movieId]);
+  //   getMovieData();
+  // }, [movieId]);
 
-//   // Pass the loading state and content to MovieTemplate
-//   return (
-//     <ShowTemplate
-//       movie={detailContent}
-//       similarContentData={similarContent}
-//       loading={loading}  // Pass loading state to MovieTemplate
-//     />
-//   );
-// };
+  // Pass the loading state and content to MovieTemplate
+  return (
+    // <ShowTemplate
+    //   movie={detailContent}
+    //   similarContentData={similarContent}
+    //   loading={loading}  // Pass loading state to MovieTemplate
+    // />
+  );
+};
 
-// export default MoviePage;
+export default MoviePage;
