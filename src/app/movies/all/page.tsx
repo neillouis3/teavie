@@ -6,6 +6,7 @@ import Header from '@/components/ui/header';
 import AllMovieViewer from '@/components/viewer/allMoviesViewer';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
 import { Button } from '@heroui/react';
+import { ContentItem } from '@/types/content';
 
 export default function AllMoviePage() {
   const searchParams = useSearchParams();
@@ -16,7 +17,7 @@ export default function AllMoviePage() {
   const pageParam = parseInt(searchParams.get("page") || "1", 10);
   const sortParam = searchParams.get("sort_by") || "title";
 
-  const [movies, setMovies] = useState<any[]>([]);
+  const [movies, setMovies] = useState<ContentItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 

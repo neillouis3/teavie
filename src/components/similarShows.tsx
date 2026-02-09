@@ -3,8 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import SimilarCard from './similarCard';
 
+interface SimilarShowItem {
+  id: number;
+  title?: string;
+  release_year?: number;
+  type?: string;
+  runtime?: number;
+  poster_path?: string | null;
+}
+
 const SimilarShows = ({ showId }: { showId: number }) => {
-    const [shows, setShows] = useState<any[]>([]); // Array to store similar movies
+    const [shows, setShows] = useState<SimilarShowItem[]>([]); // Array to store similar shows
     const [loading, setLoading] = useState<boolean>(true); // To handle loading state
 
     // Fetch similar movies when the component mounts or when movieId changes
@@ -45,13 +54,13 @@ const SimilarShows = ({ showId }: { showId: number }) => {
                 movie && movie.title && movie.release_year ? ( // Conditionally render only if movie has title and year
                     <SimilarCard 
                         key={index} 
-                        title={movie.title} 
-                        year={movie.release_year}
-                        type={movie.type}
+                        title={movie.title ?? ""} 
+                        year={String(movie.release_year ?? "")}
+                        type={movie.type ?? "tv"}
                         runtime={movie.runtime}
                         seasonAmount={0}
                         id={movie.id}
-                        posterPath={movie.poster_path}
+                        backDropPath={movie.poster_path ?? undefined}
                     />
                 ) : null // Skip rendering if it's a placeholder (null)
             ))}

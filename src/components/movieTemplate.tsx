@@ -38,7 +38,7 @@ export default function MovieTemplate({ id }: { id: string }) {
           method: 'GET',
           headers: {
             accept: 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_TMDB_BEARER}`, // <-- put your token in .env
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_TMDB_BEARER}`,
           },
         };
 
@@ -109,8 +109,8 @@ export default function MovieTemplate({ id }: { id: string }) {
                     <p className="text-md text-gray">Year:</p>
                   </div>
                   <div className="flex-4 text-black text-md flex flex-col gap-2">
-                    <p>{movie.origin_country?.join(', ') || 'N/A'}</p>
-                    <p>{movie.genres.map((g) => g.name).join(', ')}</p>
+                    <p>{movie.origin_country?.join(", ") || "N/A"}</p>
+                    <p>{movie.genres.map((g) => g.name).join(", ")}</p>
                     <p>{movie.release_date?.slice(0, 4)}</p>
                   </div>
                 </div>
