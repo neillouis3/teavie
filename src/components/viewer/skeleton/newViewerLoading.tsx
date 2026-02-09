@@ -1,20 +1,14 @@
-'use client'
+'use client';
+
 import React from "react";
 import SmallCardLoading from "../../ui/smallCardLoading";
 
-
-
-export default function NewViewerLoading() { // Use the defined type for props
-
+export default function NewViewerLoading() {
   return (
-    <div className="w-full h-fit grid grid-cols-4 gap-4">
+    <div className="w-full h-full grid grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {Array.from({ length: 8 }).map((_, index) => (
-            <React.Fragment key={index}>
-                <SmallCardLoading
-// Placeholder poster path
-                />
-            </React.Fragment>
-        ))}
+        <SmallCardLoading key={index} />
+      ))}
     </div>
   );
 }

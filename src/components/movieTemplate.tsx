@@ -72,49 +72,164 @@ export default function MovieTemplate({ id }: { id: string }) {
 
           {/* Movie details */}
           {loading ? (
-            <div className="w-full h-18 mt-4 rounded-lg">
-              <div className="w-[50%] h-10 bg-gray-500 rounded-lg"></div>
-              <div className="w-[30%] h-4 bg-gray-500 mt-2 rounded-lg"></div>
-            </div>
+            <>
+              <section className="mt-6 w-full">
+                <div className="h-8 sm:h-9 w-3/4 max-w-xl bg-default-200 rounded-lg animate-pulse" />
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
+                </div>
+              </section>
+              <section className="w-full lg:max-w-5xl mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+                  <div className="flex-shrink-0 w-full lg:w-48 hidden lg:block">
+                    <div className="w-full rounded-lg bg-default-200 aspect-[2/3] animate-pulse" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-4">
+                    <div className="space-y-2">
+                      <div className="h-3 w-full max-w-2xl bg-default-200 rounded animate-pulse" />
+                      <div className="h-3 w-full max-w-xl bg-default-200 rounded animate-pulse" />
+                      <div className="h-3 w-2/3 max-w-lg bg-default-200 rounded animate-pulse" />
+                    </div>
+                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
+                      <div className="space-y-1">
+                        <div className="h-3 w-14 bg-default-200 rounded animate-pulse" />
+                        <div className="h-4 w-20 bg-default-200 rounded animate-pulse" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-3 w-12 bg-default-200 rounded animate-pulse" />
+                        <div className="h-4 w-24 bg-default-200 rounded animate-pulse" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-3 w-10 bg-default-200 rounded animate-pulse" />
+                        <div className="h-4 w-12 bg-default-200 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </>
           ) : (
             movie && (
-              <div className="w-full h-18 flex flex-col mt-4 text-foreground">
-                
-                <h1 className="text-3xl font-bold uppercase">{movie.title}</h1>
-                <div className="flex flex-row  gap-2 h-fit items-center mt-2">
-                <Chip color="success" size="md" variant="flat">
-                  Movie
-                </Chip>
-                  <h1 className="text-md">{movie.vote_average.toFixed(1)}</h1>
-                  <h1 className="text-md">{movie.release_date?.slice(0, 4)}</h1>
-                  <h1 className="text-md">{movie.runtime} min</h1>
-                  <h1 className="text-md">{movie.status}</h1>
-                </div>
-              </div>
+              <>
+                <section className="mt-6">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                    {movie.title}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <Chip color="success" size="sm" variant="flat" className="font-medium">
+                      Movie
+                    </Chip>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-xs font-medium">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5">
+                        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
+                      </svg>
+                      {movie.vote_average.toFixed(1)}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs font-medium">
+                      {movie.release_date?.slice(0, 4)}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs">
+                      {movie.runtime} min
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs capitalize">
+                      {movie.status}
+                    </span>
+                  </div>
+                </section>
+
+                <section className="w-full lg:max-w-5xl mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+                  <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+                    <div className="flex-shrink-0 w-full lg:w-48 hidden lg:block">
+                      <Image
+                        src={imageUrl}
+                        alt={movie.title}
+                        className="w-full rounded-lg shadow-md object-cover aspect-[2/3]"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm sm:text-base text-foreground/80 leading-relaxed">
+                        {movie.overview}
+                      </p>
+                      {movie.tagline && (
+                        <p className="mt-3 text-sm text-foreground/60 italic">
+                          {movie.tagline}
+                        </p>
+                      )}
+                      <dl className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                        <div>
+                          <dt className="text-default-500 font-medium">Country</dt>
+                          <dd className="text-foreground mt-0.5">
+                            {movie.origin_country?.join(", ") || "N/A"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-default-500 font-medium">Genre</dt>
+                          <dd className="text-foreground mt-0.5">
+                            {movie.genres.map((g) => g.name).join(", ")}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-default-500 font-medium">Year</dt>
+                          <dd className="text-foreground mt-0.5">
+                            {movie.release_date?.slice(0, 4)}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </div>
+                </section>
+              </>
             )
           )}
+        </div>
 
-          {!loading && movie && (
-            <div className="w-full lg:w-3/4 h-fit text-gray-500 flex flex-row gap-4 mt-4 rounded-lg bg-opacity-25 ">
-              <div className="flex-1 rounded-md hidden lg:block">
-                <Image src={imageUrl} alt={movie.title} className="w-full h-auto rounded-md" />
+        <div className="w-full h-full flex-1 flex flex-col gap-4 lg:flex-2 min-w-0">
+          {loading ? (
+            <div className="w-full h-44 rounded-xl bg-default-200 animate-pulse" />
+          ) : (
+            <div className="w-full h-fit text-sm flex flex-col rounded-xl bg-default-100/60 dark:bg-default-100/20 border border-default-200/60 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold tracking-wide uppercase text-default-500">
+                  Streaming servers
+                </span>
               </div>
-              <div className="flex-5">
-                <p className="text-md  w-full">{movie.overview}</p>
-                <p className="text-md  mt-2 w-full">{movie.tagline}</p>
-                <div className="mt-4 flex flex-row font-medium">
-                  <div className="flex-1 flex flex-col gap-2">
-                    <p className="text-md text-foreground">Country: </p>
-                    <p className="text-md text-foreground">Genre:</p>
-                    <p className="text-md text-foreground">Year:</p>
-                  </div>
-                  <div className="flex-4 text-foreground text-md flex flex-col gap-2">
-                    <p>{movie.origin_country?.join(", ") || "N/A"}</p>
-                    <p>{movie.genres.map((g) => g.name).join(", ")}</p>
-                    <p>{movie.release_date?.slice(0, 4)}</p>
-                  </div>
-                </div>
+              <p className="text-foreground/80 text-xs mt-1">
+                If the current server doesn&apos;t work, switch to another option.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {["vidsrc", "moviesapi", "superembed"].map((s) => {
+                  const label =
+                    s === "vidsrc" ? "Vidsrc" : s === "moviesapi" ? "MoviesAPI" : "SuperEmbed";
+                  const isActive = server === s;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setServer(s)}
+                      className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
+                        isActive
+                          ? "bg-primary/90 border-primary text-primary-foreground shadow-sm"
+                          : "bg-background border-default-200 text-foreground hover:bg-default-100"
+                      }`}
+                      aria-pressed={isActive}
+                      type="button"
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          isActive ? "bg-success-400" : "bg-default-400"
+                        }`}
+                      />
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
+              <p className="text-default-500 text-[11px] mt-3 leading-snug">
+                We can&apos;t control ads or playback issues from these third-party players.
+              </p>
             </div>
           )}
         </div>

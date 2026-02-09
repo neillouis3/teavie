@@ -3,10 +3,11 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Header from '@/components/ui/header';
-import AllMovieViewer from '@/components/viewer/allMoviesViewer';
-import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
 import { Button } from '@heroui/react';
 import { ContentItem } from '@/types/content';
+import AllShowsViewer from '@/components/viewer/allShowsViewer';
+import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading'; 
+
 
 function AllShowsPageContent() {
   const searchParams = useSearchParams();
@@ -84,7 +85,7 @@ function AllShowsPageContent() {
           {loading ? (
             <AllMoviesViewerLoading />
           ) : (
-            <AllMovieViewer allContentData={movies} />
+            <AllShowsViewer allContentData={movies} />
           )}
         </div>
 
