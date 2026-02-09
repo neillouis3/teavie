@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Header from '@/components/ui/header';
 import AllMovieViewer from '@/components/viewer/allMoviesViewer';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
-import { Button } from '@heroui/react';
+import { Button, Pagination } from '@heroui/react';
 import { ContentItem } from '@/types/content';
 
 function AllMoviePageContent() {
@@ -57,26 +57,29 @@ function AllMoviePageContent() {
 
       <div className="flex-col px-4 my-4">
         {/* Sort Controls */}
-        <div className="w-full flex flex-row items-center gap-4 mb-4">
-          <span className="text-sm">Sort by: </span>
-
-          <Button
-            radius="full"
-            size="sm"
-            variant={sortParam === "title" ? "solid" : "ghost"}
-            onPress={() => updateParams({ sort_by: "title", page: 1 })}
-          >
-            Title
-          </Button>
-
-          <Button
-            radius="full"
-            size="sm"
-            variant={sortParam === "release_year" ? "solid" : "ghost"}
-            onPress={() => updateParams({ sort_by: "release_year", page: 1 })}
-          >
-            Release Date
-          </Button>
+        <div className="w-full flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
+          
+          <div className="flex flex-wrap gap-2">
+            {[
+              { value: "title", label: "Title (A–Z)" },
+              { value: "release_year", label: "Release date" },
+              { value: "popularity", label: "Trending" },
+            ].map((opt) => {
+              const isActive = sortParam === opt.value;
+              return (
+                <Button
+                  key={opt.value}
+                  radius="full"
+                  size="md"
+                  variant={isActive ? "solid" : "flat"}
+                  color={isActive ? "primary" : "default"}
+                  onPress={() => updateParams({ sort_by: opt.value, page: 1 })}
+                >
+                  {opt.label}
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Movie Viewer */}
@@ -88,28 +91,22 @@ function AllMoviePageContent() {
           )}
         </div>
 
-        {/* Pagination Controls */}
-        <div className="flex items-center mt-4">
-          <Button
-            radius="full"
-            size="md"
-            variant="flat"
-            onPress={() => updateParams({ page: pageParam - 1, sort_by: sortParam })}
-            disabled={pageParam <= 1}
-          >
-            Previous
-          </Button>
-          <span className="text-md mx-4">{`Page ${pageParam} of ${totalPages}`}</span>
-          <Button
-            radius="full"
-            size="md"
-            variant="flat"
-            onPress={() => updateParams({ page: pageParam + 1, sort_by: sortParam })}
-            disabled={pageParam >= totalPages}
-          >
-            Next
-          </Button>
-        </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="w-full flex flex-col gap-2 mt-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
+
+            <Pagination
+              total={totalPages}
+              page={pageParam}
+              onChange={(p) => updateParams({ page: p, sort_by: sortParam })}
+              showControls
+              size="lg"
+              
+              color="primary"
+              variant="flat"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

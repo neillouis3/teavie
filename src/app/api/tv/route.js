@@ -12,22 +12,27 @@ export async function GET(req) {
     const limit = parseInt(searchParams.get("limit") || "15", 10);
     const skip = (page - 1) * limit;
 
-    const sortBy = searchParams.get("sort_by") || "title"; // ✅ default sort
+    const sortBy = searchParams.get("sort_by") || "title";
     let sort = {};
 
-    // 🏷️ choose sort dynamically
-    if (sortBy === "release_year") {
-      sort = { first_air_date: -1, _id: -1 }; // newest first
-    } else if (sortBy === "title") {
-      sort = { name: 1, _id: -1 }; // A → Z
-    } else {
-      sort = { updatedAt: -1, _id: -1 }; // fallback
+    switch (sortBy) {
+      case "release_year":
+        sort = { first_air_date: -1, _id: -1 };
+        break;
+      case "popularity":
+        sort = { popularity: -1, _id: -1 };
+        break;
+      case "title_desc":
+        sort = { name: -1, _id: -1 };
+        break;
+      case "title":
+      default:
+        sort = { name: 1, _id: -1 };
+        break;
     }
 
-    // ✅ Count only movies
     const total = await collection.countDocuments({ type: "tv" });
 
-    // ✅ Fetch only movies with chosen sort
     const results = await collection
       .find({ type: "tv" })
       .sort(sort)
@@ -42,19 +47,29 @@ export async function GET(req) {
         total,
         totalPages: Math.ceil(total / limit),
         results: results.map((doc) => {
-          const rawDate = doc.release_date ?? doc.releaseDate ?? doc.first_air_date ?? doc.firstAirDate ?? null;
-          const release_date = rawDate == null ? null : typeof rawDate === "string" ? rawDate : rawDate.toISOString?.().split("T")[0] ?? null;
+          const rawDate =
+            doc.release_date ??
+            doc.releaseDate ??
+            doc.first_air_date ??
+            doc.firstAirDate ??
+            null;
+          const release_date =
+            rawDate == null
+              ? null
+              : typeof rawDate === "string"
+              ? rawDate
+              : rawDate.toISOString?.().split("T")[0] ?? null;
           return {
-          id: doc.id.toString(),
-          title: doc.title ?? doc.name,
-          release_date,
-          runtime: doc.runtime ?? null,
-          season_amount: doc.season_amount ?? null,
-          popularity: doc.popularity ?? 0,
-          genre_ids: doc.genre_ids ?? [],
-          poster_path: doc.poster_path ?? null,
-          backdrop_path: doc.backdrop_path ?? null,
-          type: doc.type,
+            id: doc.id.toString(),
+            title: doc.title ?? doc.name,
+            release_date,
+            runtime: doc.runtime ?? null,
+            season_amount: doc.season_amount ?? null,
+            popularity: doc.popularity ?? 0,
+            genre_ids: doc.genre_ids ?? [],
+            poster_path: doc.poster_path ?? null,
+            backdrop_path: doc.backdrop_path ?? null,
+            type: doc.type,
           };
         }),
       }),
@@ -65,9 +80,13 @@ export async function GET(req) {
     );
   } catch (err) {
     console.error(err);
-    return new Response(JSON.stringify({ error: "Failed to fetch movies" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch tv shows" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
+
