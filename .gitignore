@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lib data / seed / config (large or sensitive)
+src/lib/genres.json
+src/lib/mongo.js
+src/lib/movies.json
+src/lib/seed.js
+src/lib/tmdb.js
+src/lib/tvshows.json
