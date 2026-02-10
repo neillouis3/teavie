@@ -1,15 +1,22 @@
 'use client';
 import { useEffect, useState } from 'react';
 
+const PRIMARY_SERVER_BASE = 'https://111movies.com';
+const FALLBACK_SERVER_BASE = 'https://moviesapi.club';
+
 const MoviePlayer = ({ videoId }) => {
   const [playerUrl, setPlayerUrl] = useState('');
 
   useEffect(() => {
     console.log(`Fetching movie player URL for ID: ${videoId}`);
 
-    // Only use moviesapi for movie playback
-    const url = `https://moviesapi.club/movie/${videoId}`;
-    setPlayerUrl(url);
+    // Default server: 111movies
+    const primaryUrl = `${PRIMARY_SERVER_BASE}/movie/${videoId}`;
+
+    // Optional fallback (kept for easy switching if needed):
+    // const fallbackUrl = `${FALLBACK_SERVER_BASE}/movie/${videoId}`;
+
+    setPlayerUrl(primaryUrl);
   }, [videoId]);
 
   return (
