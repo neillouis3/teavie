@@ -9,7 +9,7 @@ type ContentItem = {
   title: string;
   release_year: number;
   type: string;
-  runtime: number;
+  runtimeSeconds?: number;
   season_amount?: number; // Optional, as some content might not have seasons
   poster_path: string;
 };
@@ -31,7 +31,7 @@ const SimilarViewer: React.FC<SimilarViewerProps> = ({ SimilarContent }) => {
             title={movie.title}
             year={String(movie.release_year)}
             type={movie.type}
-            runtime={movie.runtime}
+            runtimeSeconds={movie.runtimeSeconds}
             seasonAmount={movie.season_amount ?? 0}
             id={movie.id}
             backDropPath={movie.poster_path}

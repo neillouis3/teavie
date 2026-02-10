@@ -25,7 +25,7 @@ export default function NewViewer({ newContent }: NewViewerProps) {
               title={title}
               year={year}
               type={item.type || "movie"}
-              runtime={item.runtime ?? 0}
+              runtimeSeconds={item.runtimeSeconds ?? undefined}
               seasonAmount={item.season_amount ?? 0}
               posterPath={item.poster_path || ""}
             />

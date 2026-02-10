@@ -11,7 +11,8 @@ interface Movie {
   title: string;
   release_date: string;
   status: string;
-  runtime: number;
+  runtime?: number;
+  runtimeSeconds?: number;
   overview: string;
   origin_country?: string[];
   genres: { id: number; name: string }[];
@@ -131,7 +132,10 @@ export default function MovieTemplate({ id }: { id: string }) {
                       {movie.release_date?.slice(0, 4)}
                     </span>
                     <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs">
-                      {movie.runtime} min
+                      {(() => {
+                        const m = movie.runtimeSeconds != null ? Math.round(movie.runtimeSeconds / 60) : movie.runtime;
+                        return m != null ? `${m} min` : "—";
+                      })()}
                     </span>
                     <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs capitalize">
                       {movie.status}

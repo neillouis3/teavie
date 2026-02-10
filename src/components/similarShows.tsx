@@ -8,7 +8,7 @@ interface SimilarShowItem {
   title?: string;
   release_year?: number;
   type?: string;
-  runtime?: number;
+  runtimeSeconds?: number;
   poster_path?: string | null;
 }
 
@@ -57,7 +57,7 @@ const SimilarShows = ({ showId }: { showId: number }) => {
                         title={movie.title ?? ""} 
                         year={String(movie.release_year ?? "")}
                         type={movie.type ?? "tv"}
-                        runtime={movie.runtime}
+                        runtimeSeconds={movie.runtimeSeconds}
                         seasonAmount={0}
                         id={movie.id}
                         backDropPath={movie.poster_path ?? undefined}

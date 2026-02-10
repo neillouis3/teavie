@@ -63,7 +63,7 @@ export async function GET(req) {
             id: doc.id.toString(),
             title: doc.title ?? doc.name,
             release_date,
-            runtime: doc.runtime ?? null,
+            runtimeSeconds: doc.runtimeSeconds ?? null,
             season_amount: doc.season_amount ?? null,
             popularity: doc.popularity ?? 0,
             genre_ids: doc.genre_ids ?? [],

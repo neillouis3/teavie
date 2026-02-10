@@ -8,7 +8,7 @@ interface SimilarCardProps {
   title: string;
   year: string; // ✅ make this a string
   type: "movie" | "tv" | string;
-  runtime?: number;
+  runtimeSeconds?: number;
   seasonAmount?: number;
   id: number;
   backDropPath?: string;
@@ -18,11 +18,12 @@ export default function SimilarCard({
   title,
   year,
   type,
-  runtime,
+  runtimeSeconds,
   seasonAmount,
   id,
   backDropPath,
 }: SimilarCardProps) {
+  const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
 
@@ -44,7 +45,7 @@ export default function SimilarCard({
             <h1 className="text-gray-500 group-hover:text-main text-xs">
                 {type === 'tv'
                 ? `TV Show / ${year} / SS ${seasonAmount ?? "-"}`
-                : `Movie / ${year} / ${runtime ?? "-"} min`}
+                : `Movie / ${year} / ${runtimeMin ?? "-"} min`}
             </h1>
 
           </div>

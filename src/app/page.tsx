@@ -3,17 +3,20 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import Footer from '@/components/ui/newfooter'
 import { Button } from '@heroui/react'
-
+import { useTheme } from 'next-themes'
 
 export default function HomePage () {
     const router = useRouter()
+    const { theme, systemTheme } = useTheme()
+    const currentTheme = theme === 'system' ? systemTheme : theme
+    const logoSrc = currentTheme === 'dark' ? '/darkLogo.png' : '/lightLogo.png'
     
     return (
        
         <div className='flex flex-col h-screen w-screen bg-main justify-center items-center'>
             <div className='flex-5 w-[75%] h-full flex flex-col justify-center items-center py-24 px-8'>
                 <div className='w-full flex flex-col items-center justify-center'>
-                    <img src="/verLogo.png" alt="logo" className="w-128 h-fit p-4 rounded-xl" />
+                    <img src={logoSrc} alt="logo" className="w-128 h-fit p-4 rounded-xl" />
                     
                     
                     <div className='mt-16'>

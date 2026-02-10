@@ -25,7 +25,7 @@ const AllMovieViewer: React.FC<AllMovieViewerProps> = ({ allContentData }) => {
             title={title ?? item.name ?? "Untitled"}
             year={year}  // ✅ now a string
             type={item.type || "movie"}
-            runtime={item.runtime ?? 0}
+            runtimeSeconds={item.runtimeSeconds ?? undefined}
             seasonAmount={item.season_amount ?? 0}
             posterPath={item.poster_path || ""}
           />

@@ -42,6 +42,7 @@ export async function GET(req) {
           poster_path: doc.poster_path ?? null,
           backdrop_path: doc.backdrop_path ?? null,
           type: doc.type, // "movie" | "tv"
+          runtimeSeconds: doc.runtimeSeconds ?? null,
           };
         }),
       }),

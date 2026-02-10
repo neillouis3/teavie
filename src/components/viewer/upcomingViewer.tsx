@@ -67,6 +67,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
                   id={item.id}
                   title={title}
                   year={year}
+                  runtimeSeconds={item.runtimeSeconds}
                   type={item.type ?? "movie"}
                   posterPath={item.poster_path}
                   backdropPath={item.backdrop_path}

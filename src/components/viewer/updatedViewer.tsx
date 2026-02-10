@@ -24,7 +24,7 @@ const UpdatedViewer: React.FC<UpdatedViewerProps> = ({ updatedContent }) => {
               title={movie.title || movie.name || ''}
               year={year} // pass string year
               type={movie.type || ''}
-              runtime={movie.runtime || 0}
+              runtimeSeconds={movie.runtimeSeconds}
               seasonAmount={movie.season_amount || 0}
               id={movie.id}
               backDropPath={movie.backdrop_path || ''}

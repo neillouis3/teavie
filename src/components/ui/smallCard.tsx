@@ -5,8 +5,8 @@ import { Image } from "@heroui/react";
 interface SmallCardProps {
   id: number;
   title: string;
-  year: string; // <-- changed to string
-  runtime: number;
+  year: string;
+  runtimeSeconds?: number;
   seasonAmount: number;
   type: string;
   posterPath: string;
@@ -16,11 +16,12 @@ export default function SmallCard({
   id,
   title,
   year,
-  runtime,
+  runtimeSeconds,
   seasonAmount,
   type,
   posterPath,
 }: SmallCardProps) {
+  const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : 0;
   const baseUrl = "https://image.tmdb.org/t/p/";
   const size = "w500";
   const imageUrl = `${baseUrl}${size}${posterPath}`;
@@ -48,7 +49,7 @@ export default function SmallCard({
             {type === "TV"
               ? `SS ${seasonAmount}`
               : type === "Movie"
-              ? `${runtime} min`
+              ? `${runtimeMin} min`
               : ""}
           </p>
         </div>

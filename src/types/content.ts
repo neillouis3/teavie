@@ -9,7 +9,7 @@ export interface ContentItem {
     backdrop_path?: string;
     overview?: string;
     type?: "movie" | "tv";
-    runtime?: number;
+    runtimeSeconds?: number;
     season_amount?: number;
   }
   
