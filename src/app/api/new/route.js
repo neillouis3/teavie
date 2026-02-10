@@ -8,29 +8,46 @@ export async function GET(req) {
     const contentCollection = db.collection("content");
 
     const { searchParams } = new URL(req.url);
+
+    // Only take titles released recently: from N days ago up to today
+    const now = new Date();
+    const daysBack = 30; // adjust this window as needed
+    const past = new Date(now);
+    past.setDate(past.getDate() - daysBack);
+    const toDateString = (d) => d.toISOString().split("T")[0];
+    const startDate = toDateString(past);
+    const endDate = toDateString(now);
+
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const skip = (page - 1) * limit;
 
-    // New = most recently released (by release_date / first_air_date), any time
+    // New = most recently released in the recent window (by release_date / first_air_date)
+    const filter = {
+      $or: [
+        {
+          release_date: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        },
+        {
+          first_air_date: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        },
+      ],
+    };
+
     const cursor = contentCollection
-      .find({
-        $or: [
-          { release_date: { $exists: true, $ne: null, $ne: "" } },
-          { first_air_date: { $exists: true, $ne: null, $ne: "" } },
-        ],
-      })
+      .find(filter)
       .sort({ release_date: -1, first_air_date: -1, _id: -1 })
       .skip(skip)
       .limit(limit);
 
     const results = await cursor.toArray();
-    const total = await contentCollection.countDocuments({
-      $or: [
-        { release_date: { $exists: true, $ne: null, $ne: "" } },
-        { first_air_date: { $exists: true, $ne: null, $ne: "" } },
-      ],
-    });
+    const total = await contentCollection.countDocuments(filter);
 
     return new Response(
       JSON.stringify({

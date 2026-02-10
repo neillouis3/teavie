@@ -7,7 +7,15 @@ export async function GET(req) {
 
     const contentCollection = db.collection("content");
 
-    // Step 1: aggregation to sort by release_date/first_air_date
+    // Define date window: from today through one month ahead
+    const now = new Date();
+    const oneMonthAhead = new Date();
+    oneMonthAhead.setMonth(oneMonthAhead.getMonth() + 1);
+    const toDateString = (d) => d.toISOString().split("T")[0];
+    const startDate = toDateString(now);
+    const endDate = toDateString(oneMonthAhead);
+
+    // Aggregation: only items releasing between now and one month ahead
     const cursor = contentCollection.aggregate([
       {
         $addFields: {
@@ -16,9 +24,17 @@ export async function GET(req) {
           },
         },
       },
-      { $sort: { sortDate: -1 } }, // newest release first
-      { $limit: 100 },             // only take top 100
-      { $sample: { size: 20 } },   // randomly pick 20 from those
+      {
+        $match: {
+          sortDate: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        },
+      },
+      { $sort: { sortDate: 1 } }, // soonest releases first
+      { $limit: 100 },            // only take top 100
+      { $sample: { size: 20 } },  // randomly pick 20 from those
     ]);
 
     const results = await cursor.toArray();
