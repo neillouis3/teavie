@@ -20,6 +20,7 @@ type ContentItem = {
   backdrop_path?: string;
   overview?: string;
   type?: "movie" | "tv";   // optional type flag
+  runtimeSeconds?: number;
 };
 
 // Props
