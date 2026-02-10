@@ -46,12 +46,7 @@ function SearchContent() {
       <Header pageName="Search" />
 
       <div className="flex-col px-4 my-4">
-        {/* Search bar row */}
-        <div className="w-full flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="w-full max-w-md">
-            <CustomInput />
-          </div>
-        </div>
+        
 
         {/* Intro when no query */}
         {!hasQuery && (
@@ -73,7 +68,7 @@ function SearchContent() {
             </h1>
 
             {loading && (
-              <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
+              <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="h-96 rounded-xl bg-white/10 animate-pulse" />
                 ))}
@@ -81,7 +76,7 @@ function SearchContent() {
             )}
 
             {!loading && results.length > 0 && (
-              <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
+              <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {results.map((item, index) => {
                   const title = item.title || item.name || 'Untitled';
                   const year =
