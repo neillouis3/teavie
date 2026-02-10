@@ -35,6 +35,7 @@ export async function GET(req) {
           release_date,
           updatedAt: doc.updatedAt ?? null,
           runtimeSeconds: doc.runtimeSeconds ?? null,
+          season_amount: doc.season_amount ?? null,
           popularity: doc.popularity ?? 0,
           genre_ids: doc.genre_ids ?? [],
           poster_path: doc.poster_path ?? null,

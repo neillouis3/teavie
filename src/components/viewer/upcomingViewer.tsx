@@ -19,8 +19,9 @@ type ContentItem = {
   poster_path?: string;
   backdrop_path?: string;
   overview?: string;
-  type?: "movie" | "tv";   // optional type flag
+  type?: "movie" | "tv";
   runtimeSeconds?: number;
+  season_amount?: number;
 };
 
 // Props
@@ -69,6 +70,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
                   title={title}
                   year={year}
                   runtimeSeconds={item.runtimeSeconds}
+                  seasonAmount={item.season_amount ?? 0}
                   type={item.type ?? "movie"}
                   posterPath={item.poster_path}
                   backdropPath={item.backdrop_path}

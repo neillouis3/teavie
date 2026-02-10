@@ -24,6 +24,7 @@ export default function LargeCard({
   posterPath,
   backdropPath,
 }: LargeCardProps) {
+  const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const baseUrl = "https://image.tmdb.org/t/p/";
   const backdropSize = "w1280"; // nice for hero cards
@@ -36,7 +37,7 @@ export default function LargeCard({
     ? `${baseUrl}${posterSize}${posterPath}`
     : "/placeholder.jpg";
 
-  const href = type === "tv" ? `/shows/${id}` : `/movies/${id}`;
+  const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
 
   return (
     <Link href={href}>
@@ -52,9 +53,9 @@ export default function LargeCard({
             {title}
           </h1>
           <p className="text-sm text-gray-300">
-            {type === "tv"
+            {typeLower === "tv"
               ? `TV Show • ${year} • SS ${seasonAmount ?? "?"}`
-              : `Movie • ${year} • ${runtimeMin ?? "?"} min`}
+              : `Movie • ${year} • ${runtimeMin != null ? `${runtimeMin} min` : "—"}`}
           </p>
         </div>
       </div>

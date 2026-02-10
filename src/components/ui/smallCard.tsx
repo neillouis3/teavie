@@ -21,11 +21,12 @@ export default function SmallCard({
   type,
   posterPath,
 }: SmallCardProps) {
-  const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : 0;
+  const typeLower = (type ?? "").toLowerCase();
+  const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const baseUrl = "https://image.tmdb.org/t/p/";
   const size = "w500";
   const imageUrl = `${baseUrl}${size}${posterPath}`;
-  const href = type === "tv" ? `/shows/${id}` : `/movies/${id}`;
+  const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
 
   return (
     <div className="w-full min-w-0 h-96 flex flex-col rounded-xl group">
@@ -43,13 +44,13 @@ export default function SmallCard({
         <div className="w-full flex flex-row justify-between items-center gap-1 shrink-0">
           <p className="flex-1 text-xs text-start truncate">{year}</p>
           <div className="uppercase flex-shrink-0 text-xs text-center border border-gray-500 group-hover:border-success rounded-2xl px-2 py-0.5 group-hover:text-success transition-colors duration-300">
-            {type === "TV" ? "TV" : type === "Movie" ? "Movie" : type}
+            {typeLower === "tv" ? "TV" : typeLower === "movie" ? "Movie" : type}
           </div>
           <p className="flex-1 text-xs text-end truncate">
-            {type === "TV"
+            {typeLower === "tv"
               ? `SS ${seasonAmount}`
-              : type === "Movie"
-              ? `${runtimeMin} min`
+              : typeLower === "movie"
+              ? runtimeMin != null ? `${runtimeMin} min` : "—"
               : ""}
           </p>
         </div>
