@@ -1,23 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-const PRIMARY_SERVER_BASE = 'https://111movies.com';
-const FALLBACK_SERVER_BASE = 'https://moviesapi.club';
+export const MOVIE_SERVERS = {
+  '111movies': { base: 'https://111movies.com', path: (id) => `/movie/${id}` },
+  moviesapi: { base: 'https://moviesapi.club', path: (id) => `/movie/${id}` },
+};
 
-const MoviePlayer = ({ videoId }) => {
+const MoviePlayer = ({ videoId, server = '111movies' }) => {
   const [playerUrl, setPlayerUrl] = useState('');
 
   useEffect(() => {
-    console.log(`Fetching movie player URL for ID: ${videoId}`);
-
-    // Default server: 111movies
-    const primaryUrl = `${PRIMARY_SERVER_BASE}/movie/${videoId}`;
-
-    // Optional fallback (kept for easy switching if needed):
-    // const fallbackUrl = `${FALLBACK_SERVER_BASE}/movie/${videoId}`;
-
-    setPlayerUrl(primaryUrl);
-  }, [videoId]);
+    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS['111movies'];
+    const url = `${config.base}${config.path(videoId)}`;
+    setPlayerUrl(url);
+  }, [videoId, server]);
 
   return (
     <div className="rounded-lg h-full w-full">

@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Header from './ui/headerTemplate';
-import MoviePlayer from './moviePlayer';
+import MoviePlayer, { MOVIE_SERVERS } from './moviePlayer';
 import { Image } from '@heroui/react';
-import { Chip } from '@heroui/react';
+import { Chip, Button } from '@heroui/react';
 
 interface Movie {
   id: number;
@@ -21,11 +21,14 @@ interface Movie {
   tagline: string;
 }
 
+export type MovieServerKey = keyof typeof MOVIE_SERVERS;
+
 export default function MovieTemplate({ id }: { id: string }) {
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
+  const [server, setServer] = useState<MovieServerKey>('111movies');
 
   useEffect(() => {
     const fetchMovieDetails = async () => {
@@ -66,7 +69,7 @@ export default function MovieTemplate({ id }: { id: string }) {
       <div className="w-full h-full flex flex-row gap-4">
         <div className="w-full h-full flex-5">
           <div className="w-full h-[50vh] lg:h-[70vh]  rounded-lg flex flex-col bg-gray-500">
-            <MoviePlayer videoId={id} />
+            <MoviePlayer videoId={id} server={server} />
           </div>
 
           {/* Movie details */}
@@ -199,8 +202,21 @@ export default function MovieTemplate({ id }: { id: string }) {
                   Streaming source
                 </span>
               </div>
-              <p className="text-foreground/80 text-xs mt-1">
-                Movies are streamed via MoviesAPI. We can&apos;t control ads or playback issues from this third-party player.
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(Object.keys(MOVIE_SERVERS) as MovieServerKey[]).map((key) => (
+                  <Button
+                    key={key}
+                    size="sm"
+                    variant={server === key ? 'solid' : 'flat'}
+                    color={server === key ? 'primary' : 'default'}
+                    onPress={() => setServer(key)}
+                  >
+                    {key === '111movies' ? '111movies' : 'MoviesAPI'}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-foreground/80 text-xs mt-3">
+                We can&apos;t control ads or playback issues from third-party players.
               </p>
             </div>
           )}
