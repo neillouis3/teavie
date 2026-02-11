@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from "react";
 import SimilarShows from "./similarShows";
 import Header from "./ui/headerTemplate";
-import ShowPlayer from "./showPlayer";
+import ShowPlayer, { SHOW_SERVERS } from "./showPlayer";
 import SimilarViewerLoading from "@/components/viewer/skeleton/similarViewerLoading";
 import { Image } from "@heroui/react";
-import { Chip } from "@heroui/react";
+import { Chip, Button } from "@heroui/react";
 
 interface Season {
   season_number: number;
@@ -29,6 +29,8 @@ interface Show {
   seasons?: Season[];
 }
 
+export type ShowServerKey = keyof typeof SHOW_SERVERS;
+
 export default function ShowTemplate({ id }: { id: string }) {
   const baseUrl = "https://image.tmdb.org/t/p/";
   const size = "w500";
@@ -36,6 +38,7 @@ export default function ShowTemplate({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
+  const [server, setServer] = useState<ShowServerKey>("111movies");
 
   useEffect(() => {
     const fetchShowDetails = async () => {
@@ -88,6 +91,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                 videoId={show?.id ?? id}
                 season={selectedSeason}
                 episode={selectedEpisode}
+                server={server}
               />
             )}
           </div>
@@ -215,8 +219,21 @@ export default function ShowTemplate({ id }: { id: string }) {
                   Streaming source
                 </span>
               </div>
-              <p className="text-foreground/80 text-xs mt-1">
-                Episodes are streamed via MoviesAPI. We can&apos;t control ads or playback issues from this third‑party player.
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(Object.keys(SHOW_SERVERS) as ShowServerKey[]).map((key) => (
+                  <Button
+                    key={key}
+                    size="sm"
+                    variant={server === key ? "solid" : "flat"}
+                    color={server === key ? "primary" : "default"}
+                    onPress={() => setServer(key)}
+                  >
+                    {key === "111movies" ? "111movies" : "MoviesAPI"}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-foreground/80 text-xs mt-3">
+                We can&apos;t control ads or playback issues from third-party players.
               </p>
             </div>
           )}

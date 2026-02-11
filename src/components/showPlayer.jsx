@@ -1,10 +1,18 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-const PRIMARY_SERVER_BASE = 'https://111movies.com';
-const FALLBACK_SERVER_BASE = 'https://moviesapi.club';
+export const SHOW_SERVERS = {
+  '111movies': {
+    base: 'https://111movies.com',
+    path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
+  },
+  moviesapi: {
+    base: 'https://moviesapi.club',
+    path: (id, season, episode) => `/tv/${id}-${season}-${episode}`,
+  },
+};
 
-const ShowPlayer = ({ videoId, season, episode }) => {
+const ShowPlayer = ({ videoId, season, episode, server = '111movies' }) => {
   const [playerUrl, setPlayerUrl] = useState('');
   const [error, setError] = useState(null);
 
@@ -12,18 +20,14 @@ const ShowPlayer = ({ videoId, season, episode }) => {
     try {
       console.log(`Fetching show player URL for ID: ${videoId}, S${season}E${episode}`);
 
-      // Default server: 111movies
-      const primaryUrl = `${PRIMARY_SERVER_BASE}/tv/${videoId}/${season}/${episode}`;
-
-      // Optional fallback (kept for easy switching if needed):
-      // const fallbackUrl = `${FALLBACK_SERVER_BASE}/tv/${videoId}-${season}-${episode}`;
-
-      setPlayerUrl(primaryUrl);
+      const config = SHOW_SERVERS[server] ?? SHOW_SERVERS['111movies'];
+      const url = `${config.base}${config.path(videoId, season, episode)}`;
+      setPlayerUrl(url);
     } catch (err) {
       console.error('Error setting player URL:', err);
       setError(err.message || 'Unknown error');
     }
-  }, [videoId, season, episode]);
+  }, [videoId, season, episode, server]);
 
   return (
     <div className="rounded-lg h-full w-full">
