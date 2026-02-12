@@ -43,6 +43,7 @@ export async function GET(req) {
           backdrop_path: doc.backdrop_path ?? null,
           type: doc.type, // "movie" | "tv"
           runtimeSeconds: doc.runtimeSeconds ?? null,
+          season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
           };
         }),
       }),

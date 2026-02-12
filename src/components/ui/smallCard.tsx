@@ -48,7 +48,7 @@ export default function SmallCard({
           </div>
           <p className="flex-1 text-xs text-end truncate">
             {typeLower === "tv"
-              ? `SS ${seasonAmount}`
+              ? (seasonAmount != null && seasonAmount > 0 ? `SS ${seasonAmount}` : "—")
               : typeLower === "movie"
               ? runtimeMin != null ? `${runtimeMin} min` : "—"
               : ""}
