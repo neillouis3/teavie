@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 import { useParams } from 'next/navigation';
 import ShowTemplate from '@/components/showTemplate';

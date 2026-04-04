@@ -10,6 +10,10 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    document.title = "Explore - Teavie";
+  }, []);
+
+  useEffect(() => {
     const fetchExploreData = async () => {
       try {
         const [newRes, updatedRes, upcomingRes] = await Promise.all([

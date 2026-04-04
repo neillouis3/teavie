@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@heroui/react": "^2.8.4",
+    "class-variance-authority": "^0.7.1",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.12",
     "mongodb": "^6.20.0",

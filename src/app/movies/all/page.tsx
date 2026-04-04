@@ -21,6 +21,11 @@ function AllMoviePageContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // Update page title
+  useEffect(() => {
+    document.title = "All Movies - Teavie";
+  }, []);
+
   // fetch movies when URL params change
   useEffect(() => {
     const fetchMovies = async () => {

@@ -15,6 +15,15 @@ function SearchContent() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  // Update page title based on search query
+  useEffect(() => {
+    if (q.trim()) {
+      document.title = `Search: ${q} - Teavie`;
+    } else {
+      document.title = "Search - Teavie";
+    }
+  }, [q]);
+
   useEffect(() => {
     if (!q.trim()) {
       setResults([]);

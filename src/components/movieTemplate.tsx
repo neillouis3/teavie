@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from './ui/headerTemplate';
 import MoviePlayer, { MOVIE_SERVERS } from './moviePlayer';
-import { Image } from '@heroui/react';
-import { Chip, Button } from '@heroui/react';
+import { Image, Chip, Button } from '@heroui/react';
 
 interface Movie {
   id: number;
@@ -58,24 +57,34 @@ export default function MovieTemplate({ id }: { id: string }) {
     fetchMovieDetails();
   }, [id]);
 
+  // Update page title when movie data loads
+  useEffect(() => {
+    if (movie?.title) {
+      const year = movie.release_date?.slice(0, 4);
+      document.title = year ? `${movie.title} (${year}) - Teavie` : `${movie.title} - Teavie`;
+    }
+  }, [movie]);
+
   const imageUrl = movie?.poster_path ? `${baseUrl}${size}${movie.poster_path}` : '';
 
   return (
-    <div className="bg-background h-full w-full flex flex-col items-center px-4 py-2 pb-32">
-      <div className="w-full h-20 items-center flex flex-row -ml-16 mb-4 ">
-        <Header />
-      </div>
-
-      <div className="w-full h-full flex flex-row gap-4">
-        <div className="w-full h-full flex-5">
-          <div className="w-full h-[50vh] lg:h-[70vh]  rounded-lg flex flex-col bg-gray-500">
+    <div className="bg-background h-full w-full flex flex-col  px-4 py-4 pb-32">
+      <div className="w-full  flex flex-col gap-6">
+        {/* Video Player */}
+        <div className="w-full h-[50vh] lg:h-[70vh] rounded-lg overflow-hidden bg-gray-500">
+          {loading ? (
+            <div className="bg-default-200 animate-pulse rounded-lg w-full h-full" />
+          ) : (
             <MoviePlayer videoId={id} server={server} />
-          </div>
+          )}
+        </div>
 
-          {/* Movie details */}
+        
+        {/* Movie Details */}
+        <div className="w-full">
           {loading ? (
             <>
-              <section className="mt-6 w-full">
+              <section className="w-full">
                 <div className="h-8 sm:h-9 w-3/4 max-w-xl bg-default-200 rounded-lg animate-pulse" />
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
@@ -85,9 +94,9 @@ export default function MovieTemplate({ id }: { id: string }) {
                   <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
                 </div>
               </section>
-              <section className="w-full lg:max-w-5xl mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+              <section className="w-full mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
                 <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                  <div className="flex-shrink-0 w-full lg:w-48 hidden lg:block">
+                  <div className="flex-shrink-0 w-full lg:w-48">
                     <div className="w-full rounded-lg bg-default-200 aspect-[2/3] animate-pulse" />
                   </div>
                   <div className="flex-1 min-w-0 space-y-4">
@@ -110,6 +119,13 @@ export default function MovieTemplate({ id }: { id: string }) {
                         <div className="h-4 w-12 bg-default-200 rounded animate-pulse" />
                       </div>
                     </div>
+                    <div className="mt-6 pt-6 border-t border-default-200">
+                      <div className="h-4 w-32 bg-default-200 rounded animate-pulse mb-3" />
+                      <div className="flex gap-2">
+                        <div className="h-8 w-20 bg-default-200 rounded animate-pulse" />
+                        <div className="h-8 w-20 bg-default-200 rounded animate-pulse" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -117,7 +133,7 @@ export default function MovieTemplate({ id }: { id: string }) {
           ) : (
             movie && (
               <>
-                <section className="mt-6">
+                <section>
                   <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
                     {movie.title}
                   </h1>
@@ -146,9 +162,9 @@ export default function MovieTemplate({ id }: { id: string }) {
                   </div>
                 </section>
 
-                <section className="w-full  mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+                <section className="w-full mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
                   <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                    <div className="flex-shrink-0 w-full lg:w-48 hidden lg:block">
+                    <div className="flex-shrink-0 w-full lg:w-48">
                       <Image
                         src={imageUrl}
                         alt={movie.title}
@@ -184,6 +200,31 @@ export default function MovieTemplate({ id }: { id: string }) {
                           </dd>
                         </div>
                       </dl>
+
+                      {/* Streaming Source */}
+                      <div className="mt-6">
+                        <div className="flex flex-col gap-2 p-3 rounded-lg border border-default-200">
+                          <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                            Streaming Source
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(Object.keys(MOVIE_SERVERS) as MovieServerKey[]).map((key) => (
+                              <Button
+                                key={key}
+                                size="sm"
+                                variant={server === key ? 'solid' : 'flat'}
+                                color={server === key ? 'primary' : 'default'}
+                                onPress={() => setServer(key)}
+                              >
+                                {key === '111movies' ? '111movies' : 'MoviesAPI'}
+                              </Button>
+                            ))}
+                          </div>
+                          <p className="text-foreground/60 text-[11px]">
+                            We can&apos;t control ads or playback issues from third-party players.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -192,35 +233,6 @@ export default function MovieTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        <div className="w-full h-full flex-1 flex flex-col gap-4 lg:flex-2 min-w-0">
-          {loading ? (
-            <div className="w-full h-44 rounded-xl bg-default-200 animate-pulse" />
-          ) : (
-            <div className="w-full h-fit text-sm flex flex-col rounded-xl bg-default-100/60 dark:bg-default-100/20 border border-default-200/60 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold tracking-wide uppercase text-default-500">
-                  Streaming source
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {(Object.keys(MOVIE_SERVERS) as MovieServerKey[]).map((key) => (
-                  <Button
-                    key={key}
-                    size="sm"
-                    variant={server === key ? 'solid' : 'flat'}
-                    color={server === key ? 'primary' : 'default'}
-                    onPress={() => setServer(key)}
-                  >
-                    {key === '111movies' ? '111movies' : 'MoviesAPI'}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-foreground/80 text-xs mt-3">
-                We can&apos;t control ads or playback issues from third-party players.
-              </p>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

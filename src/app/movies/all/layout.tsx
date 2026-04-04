@@ -1,24 +1,10 @@
-// app/[id]/layout.tsx
-
 import React from 'react';
-import SideBar from '@/components/ui/sideBar';
-import Footer from '@/components/ui/footer';
+import MainLayout from '@/components/ui/mainLayout';
 
-export default function MovieLayout({
+export default function MoviesAllLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="bg-background h-full w-full flex flex-row justify-center">
-       <SideBar />
-       <div className="w-[15vw] top-0 h-screen">
-      </div>
-      <div className=" h-full flex flex-col items-center w-[85vw] ">
-        {children}
-        
-        
-      </div>
-    </div>
-  );
+  return <MainLayout>{children}</MainLayout>;
 }

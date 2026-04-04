@@ -22,6 +22,11 @@ function AllShowsPageContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // Update page title
+  useEffect(() => {
+    document.title = "All TV Shows - Teavie";
+  }, []);
+
   // fetch movies when URL params change
   useEffect(() => {
     const fetchMovies = async () => {

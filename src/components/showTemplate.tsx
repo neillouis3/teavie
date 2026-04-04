@@ -5,8 +5,7 @@ import SimilarShows from "./similarShows";
 import Header from "./ui/headerTemplate";
 import ShowPlayer, { SHOW_SERVERS } from "./showPlayer";
 import SimilarViewerLoading from "@/components/viewer/skeleton/similarViewerLoading";
-import { Image } from "@heroui/react";
-import { Chip, Button } from "@heroui/react";
+import { Image, Chip, Button, Divider } from "@heroui/react";
 
 interface Season {
   season_number: number;
@@ -69,6 +68,16 @@ export default function ShowTemplate({ id }: { id: string }) {
     fetchShowDetails();
   }, [id]);
 
+  useEffect(() => {
+    if (show?.name) {
+      const year = show.first_air_date?.slice(0, 4);
+      const seasonEpisode = `S${selectedSeason}E${selectedEpisode}`;
+      document.title = year
+        ? `${show.name} (${year}) ${seasonEpisode} - Teavie`
+        : `${show.name} ${seasonEpisode} - Teavie`;
+    }
+  }, [show, selectedSeason, selectedEpisode]);
+
   const currentSeason = show?.seasons?.find((s) => s.season_number === selectedSeason);
   const episodeCount = currentSeason?.episode_count ?? 0;
   const imageUrl = show?.poster_path ? `${baseUrl}${size}${show.poster_path}` : "";
@@ -76,104 +85,144 @@ export default function ShowTemplate({ id }: { id: string }) {
   const year = show?.first_air_date?.slice(0, 4) ?? "TBA";
 
   return (
-    <div className="bg-background h-full w-full flex flex-col items-center px-4 py-2 pb-32">
-      <div className="w-full h-20 items-center flex flex-row -ml-16 mb-4">
-        <Header />
-      </div>
+    <div className="bg-background min-h-full w-full flex flex-col px-4 py-4 pb-32">
+      <div className="w-full flex flex-col gap-6">
 
-      <div className="w-full h-full flex flex-row gap-4">
-        <div className="w-full h-full flex-5">
-          <div className="w-full h-[50vh] lg:h-[70vh] rounded-lg flex flex-col bg-gray-500">
-            {loading ? (
-              <div className="bg-default-200 animate-pulse rounded-lg w-full h-full" />
-            ) : (
-              <ShowPlayer
-                videoId={show?.id ?? id}
-                season={selectedSeason}
-                episode={selectedEpisode}
-                server={server}
-              />
-            )}
-          </div>
-
-          {/* Show details */}
+        {/* ── Video Player ── */}
+        <div className="w-full h-[50vh] lg:h-[70vh] rounded-xl overflow-hidden bg-default-200">
           {loading ? (
-            <>
-              <section className="mt-6 w-full">
-                <div className="h-8 sm:h-9 w-3/4 max-w-xl bg-default-200 rounded-lg animate-pulse" />
-                <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
-                </div>
-              </section>
-              <section className="w-full lg:max-w-5xl mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
-                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                  <div className="flex-shrink-0 w-full lg:w-48 hidden lg:block">
-                    <div className="w-full rounded-lg bg-default-200 aspect-[2/3] animate-pulse" />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-4">
-                    <div className="space-y-2">
-                      <div className="h-3 w-full max-w-2xl bg-default-200 rounded animate-pulse" />
-                      <div className="h-3 w-full max-w-xl bg-default-200 rounded animate-pulse" />
-                      <div className="h-3 w-2/3 max-w-lg bg-default-200 rounded animate-pulse" />
-                    </div>
-                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
-                      <div className="space-y-1">
-                        <div className="h-3 w-14 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-20 bg-default-200 rounded animate-pulse" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="h-3 w-12 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-24 bg-default-200 rounded animate-pulse" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="h-3 w-10 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-12 bg-default-200 rounded animate-pulse" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </>
+            <div className="bg-default-200 animate-pulse w-full h-full" />
+          ) : (
+            <ShowPlayer
+              videoId={show?.id ?? id}
+              season={selectedSeason}
+              episode={selectedEpisode}
+              server={server}
+            />
+          )}
+        </div>
+
+        {/* ── Show Details ── */}
+        <div className="w-full flex flex-col gap-4">
+          {loading ? (
+            <LoadingSkeleton />
           ) : (
             show && (
               <>
-                <section className="mt-6">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                {/* ── Title + Meta ── */}
+                <section>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight leading-tight">
                     {title}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
                     <Chip color="success" size="sm" variant="flat" className="font-medium">
                       TV
                     </Chip>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-xs font-medium">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5">
-                        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
-                      </svg>
+                    <Chip
+                      size="sm"
+                      variant="flat"
+                      color="warning"
+                      startContent={
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                          <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
+                        </svg>
+                      }
+                      className="font-medium"
+                    >
                       {show.vote_average.toFixed(1)}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs font-medium">
+                    </Chip>
+                    <Chip size="sm" variant="flat" className="font-medium">
                       {year}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs capitalize">
+                    </Chip>
+                    <Chip size="sm" variant="flat" className="font-medium capitalize">
                       {show.status}
-                    </span>
+                    </Chip>
                   </div>
                 </section>
 
-                <section className="w-full  mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+                {/* ── Season & Episode Chooser ── */}
+                <div className="rounded-xl border border-default-200/60 bg-default-100/60 dark:bg-default-100/20 overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3.5 border-b border-default-200/60">
+                    <span className="text-sm font-medium text-foreground">Season & Episode</span>
+                    {show.number_of_seasons && show.number_of_episodes && (
+                      <span className="text-xs text-default-500">
+                        {show.number_of_seasons} seasons · {show.number_of_episodes} eps
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Season pills */}
+                  <div className="px-4 pt-4 pb-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
+                      Season
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {show.seasons
+                        ?.filter((s) => s.season_number >= 1)
+                        .map((s) => (
+                          <Button
+                            key={s.season_number}
+                            size="sm"
+                            variant={selectedSeason === s.season_number ? "solid" : "flat"}
+                            color={selectedSeason === s.season_number ? "primary" : "default"}
+                            onPress={() => { setSelectedSeason(s.season_number); setSelectedEpisode(1); }}
+                          >
+                            Season {s.season_number}
+                          </Button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Episode grid */}
+                  {episodeCount > 0 && (
+                    <div className="px-4 pb-4">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
+                        Episode{selectedEpisode ? ` — ${selectedEpisode}` : ""}
+                      </p>
+                      <div
+                        className="grid gap-1.5"
+                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))" }}
+                      >
+                        {Array.from({ length: episodeCount }, (_, i) => i + 1).map((ep) => (
+                          <Button
+                            key={ep}
+                            size="sm"
+                            isIconOnly
+                            variant={selectedEpisode === ep ? "solid" : "flat"}
+                            color={selectedEpisode === ep ? "primary" : "default"}
+                            onPress={() => setSelectedEpisode(ep)}
+                            className="text-xs font-medium aspect-square"
+                          >
+                            {ep}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selection summary bar */}
+                  <div className="flex items-center gap-2 px-4 py-3 border-t border-default-200/60 bg-default-50/50 dark:bg-default-100/10">
+                    <Chip size="sm" variant="flat" color="primary" className="font-mono">
+                      S{selectedSeason}
+                    </Chip>
+                    <span className="text-default-400 text-xs">›</span>
+                    <Chip size="sm" variant="flat" color="primary" className="font-mono">
+                      E{selectedEpisode}
+                    </Chip>
+                  </div>
+                </div>
+
+                <section className="w-full  p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
                   <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                    <div className="flex-shrink-0 w-full lg:w-48 hidden lg:block">
+                    <div className="flex-shrink-0 w-full lg:w-48">
                       <Image
                         src={imageUrl}
                         alt={title}
                         className="w-full rounded-lg shadow-md object-cover aspect-[2/3]"
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 ">
                       <p className="text-sm sm:text-base text-foreground/80 leading-relaxed">
                         {show.overview}
                       </p>
@@ -200,6 +249,31 @@ export default function ShowTemplate({ id }: { id: string }) {
                           <dd className="text-foreground mt-0.5">{year}</dd>
                         </div>
                       </dl>
+
+                      {/* Streaming Source */}
+                      <div className="mt-12">
+                        <div className="flex flex-col gap-2 p-3 rounded-lg border border-default-200">
+                          <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                            Streaming Source
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(Object.keys(SHOW_SERVERS) as ShowServerKey[]).map((key) => (
+                              <Button
+                                key={key}
+                                size="sm"
+                                variant={server === key ? "solid" : "flat"}
+                                color={server === key ? "primary" : "default"}
+                                onPress={() => setServer(key)}
+                              >
+                                {key === "111movies" ? "111movies" : "MoviesAPI"}
+                              </Button>
+                            ))}
+                          </div>
+                          <p className="text-foreground/60 text-[11px]">
+                            We can&apos;t control ads or playback issues from third-party players.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -207,129 +281,74 @@ export default function ShowTemplate({ id }: { id: string }) {
             )
           )}
         </div>
-
-        <div className="w-full h-full flex-1 flex flex-col gap-4 lg:flex-2 min-w-0">
-          {/* Streaming source info */}
-          {loading ? (
-            <div className="w-full h-44 rounded-xl bg-default-200 animate-pulse" />
-          ) : (
-            <div className="w-full h-fit text-sm flex flex-col rounded-xl bg-default-100/60 dark:bg-default-100/20 border border-default-200/60 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold tracking-wide uppercase text-default-500">
-                  Streaming source
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {(Object.keys(SHOW_SERVERS) as ShowServerKey[]).map((key) => (
-                  <Button
-                    key={key}
-                    size="sm"
-                    variant={server === key ? "solid" : "flat"}
-                    color={server === key ? "primary" : "default"}
-                    onPress={() => setServer(key)}
-                  >
-                    {key === "111movies" ? "111movies" : "MoviesAPI"}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-foreground/80 text-xs mt-3">
-                We can&apos;t control ads or playback issues from third-party players.
-              </p>
-            </div>
-          )}
-
-          {/* Season & episode */}
-          {loading ? (
-            <div className="w-full h-72 rounded-xl bg-default-200 animate-pulse" />
-          ) : (
-            show && (
-              <div className="w-full h-fit flex flex-col rounded-xl bg-default-100/60 dark:bg-default-100/20 border border-default-200/60 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-foreground">
-                    Seasons & episodes
-                  </label>
-                  {show.number_of_seasons && show.number_of_episodes && (
-                    <span className="text-[11px] text-default-500">
-                      {show.number_of_seasons} seasons • {show.number_of_episodes} eps
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <span className="block text-xs font-medium text-default-500 mb-1">
-                      Season
-                    </span>
-                    <select
-                      value={selectedSeason}
-                      onChange={(e) => {
-                        setSelectedSeason(Number(e.target.value));
-                        setSelectedEpisode(1);
-                      }}
-                      className="w-full p-2.5 rounded-lg bg-default-100 border border-default-200 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/60"
-                    >
-                      {show.seasons
-                        ?.filter((s) => s.season_number >= 1)
-                        .map((s) => (
-                          <option key={s.season_number} value={s.season_number}>
-                            Season {s.season_number}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {episodeCount > 0 && (
-                    <div>
-                      <span className="block text-xs font-medium text-default-500 mb-1">
-                        Episode
-                      </span>
-                      <div className="max-h-40 overflow-y-auto rounded-lg bg-default-100/60 p-2">
-                        <div className="grid grid-cols-6 gap-2">
-                          {Array.from({ length: episodeCount }, (_, i) => (
-                            <button
-                              key={i + 1}
-                              onClick={() => setSelectedEpisode(i + 1)}
-                              className={`p-2 rounded-md text-xs font-medium transition-colors ${
-                                selectedEpisode === i + 1
-                                  ? "bg-primary text-primary-foreground shadow-sm"
-                                  : "bg-default-200 text-foreground hover:bg-default-300"
-                              }`}
-                              type="button"
-                            >
-                              {i + 1}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {episodeCount === 0 && currentSeason && (
-                    <p className="text-default-500 text-sm mt-1">
-                      No episodes listed for this season yet.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )
-          )}
-
-          {/* Similar shows
-          {loading ? (
-            <div className="mt-4">
-              <div className="h-6 w-32 rounded-lg bg-default-200 animate-pulse mb-3" />
-              <SimilarViewerLoading />
-            </div>
-          ) : (
-            show && (
-              <div className="mt-4">
-                <h2 className="text-lg font-bold text-foreground mb-3">Similar Shows</h2>
-                <SimilarShows showId={show.id} />
-              </div>
-            )
-          )} */}
-        </div>
       </div>
     </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <>
+      <section className="w-full">
+        <div className="h-8 sm:h-9 w-3/4 max-w-xl bg-default-200 rounded-lg animate-pulse" />
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
+          ))}
+        </div>
+      </section>
+
+      <div className="rounded-xl border border-default-200/60 bg-default-100/60 dark:bg-default-100/20 overflow-hidden">
+        <div className="px-4 py-3.5 border-b border-default-200/60">
+          <div className="h-4 w-36 bg-default-200 rounded animate-pulse" />
+        </div>
+        <div className="px-4 pt-4 pb-3">
+          <div className="h-2.5 w-14 bg-default-200 rounded animate-pulse mb-2.5" />
+          <div className="flex gap-1.5">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-8 w-20 bg-default-200 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </div>
+        <div className="px-4 pb-4">
+          <div className="h-2.5 w-16 bg-default-200 rounded animate-pulse mb-2.5" />
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))" }}>
+            {Array.from({ length: 13 }).map((_, i) => (
+              <div key={i} className="aspect-square rounded-lg bg-default-200 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <section className="w-full rounded-xl border border-default-200/60 overflow-hidden">
+        <div className="flex flex-col sm:flex-row">
+          <div className="flex-shrink-0 w-full sm:w-36 lg:w-44 aspect-[2/3] bg-default-200 animate-pulse" />
+          <div className="flex-1 p-4 sm:p-5 space-y-4">
+            <div className="space-y-2">
+              {[90, 75, 55].map((w, i) => (
+                <div key={i} className="h-3 bg-default-200 rounded animate-pulse" style={{ width: `${w}%` }} />
+              ))}
+            </div>
+            <div className="h-px bg-default-200" />
+            <div className="grid grid-cols-3 gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="h-2.5 w-12 bg-default-200 rounded animate-pulse" />
+                  <div className="h-4 w-16 bg-default-200 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+            <div className="h-px bg-default-200" />
+            <div className="space-y-2">
+              <div className="h-2.5 w-28 bg-default-200 rounded animate-pulse" />
+              <div className="flex gap-1.5">
+                <div className="h-8 w-20 bg-default-200 rounded-lg animate-pulse" />
+                <div className="h-8 w-20 bg-default-200 rounded-lg animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

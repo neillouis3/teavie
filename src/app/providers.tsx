@@ -4,6 +4,9 @@ import * as React from "react";
 import {HeroUIProvider} from "@heroui/system";
 import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { SidebarProvider } from "@/components/ui/sidebarContext";
+import SideBar from "@/components/ui/sideBar";
+import Header from "@/components/ui/header1";
 
 
 export interface ProvidersProps {
@@ -15,7 +18,13 @@ export function Providers({children}: ProvidersProps) {
 
   return (
     <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider attribute="class" defaultTheme="light" >{children}</NextThemesProvider>
+      <NextThemesProvider attribute="class" defaultTheme="light" >
+        <SidebarProvider>
+          <SideBar />
+          <Header />
+          {children}
+        </SidebarProvider>
+      </NextThemesProvider>
     </HeroUIProvider>
   );
 }

@@ -22,8 +22,8 @@ const MoviePlayer = ({ videoId, server = '111movies' }) => {
           src={playerUrl}
           width="100%"
           height="100%"
-          frameBorder="0"
-          allowFullScreen
+          style={{ border: 0 }}
+          allow="fullscreen"
           className="rounded-lg h-full w-full overflow-hidden"
         />
       ) : (

@@ -1,5 +1,5 @@
 'use client'
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Footer from '@/components/ui/newfooter'
 import { Button } from '@heroui/react'
@@ -11,6 +11,10 @@ export default function HomePage () {
     const currentTheme = theme === 'system' ? systemTheme : theme
     const logoSrc = currentTheme === 'dark' ? '/darkLogo.png' : '/lightLogo.png'
     
+    useEffect(() => {
+        document.title = "Teavie - Watch Movies & TV Shows";
+    }, []);
+
     return (
        
         <div className='flex flex-col h-screen w-screen bg-main justify-center items-center'>
