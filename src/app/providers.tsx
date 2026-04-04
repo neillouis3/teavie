@@ -7,6 +7,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SidebarProvider } from "@/components/ui/sidebarContext";
 import SideBar from "@/components/ui/sideBar";
 import Header from "@/components/ui/header1";
+import { Suspense } from "react";
 
 
 export interface ProvidersProps {
@@ -20,7 +21,9 @@ export function Providers({children}: ProvidersProps) {
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider attribute="class" defaultTheme="light" >
         <SidebarProvider>
-          <SideBar />
+          <Suspense fallback={<div className="w-16 lg:w-64 h-screen fixed left-0 top-0 bg-background border-r border-divider" />}>
+            <SideBar />
+          </Suspense>
           <Header />
           {children}
         </SidebarProvider>
