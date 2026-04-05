@@ -89,7 +89,7 @@ export default function ShowTemplate({ id }: { id: string }) {
       <div className="w-full flex flex-col gap-6">
 
         {/* ── Video Player ── */}
-        <div className="w-full h-[50vh] lg:h-[70vh] rounded-xl overflow-hidden bg-default-200">
+        <div className="w-full h-[50vh] lg:h-[80vh] rounded-xl overflow-hidden bg-default-200">
           {loading ? (
             <div className="bg-default-200 animate-pulse w-full h-full" />
           ) : (

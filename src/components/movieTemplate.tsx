@@ -71,7 +71,7 @@ export default function MovieTemplate({ id }: { id: string }) {
     <div className="bg-background h-full w-full flex flex-col  px-4 py-4 pb-32">
       <div className="w-full  flex flex-col gap-6">
         {/* Video Player */}
-        <div className="w-full h-[50vh] lg:h-[70vh] rounded-lg overflow-hidden bg-gray-500">
+        <div className="w-full h-[50vh] lg:h-[80vh] rounded-lg overflow-hidden bg-gray-500">
           {loading ? (
             <div className="bg-default-200 animate-pulse rounded-lg w-full h-full" />
           ) : (
