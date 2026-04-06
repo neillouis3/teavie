@@ -68,18 +68,17 @@ export default function MovieTemplate({ id }: { id: string }) {
   const imageUrl = movie?.poster_path ? `${baseUrl}${size}${movie.poster_path}` : '';
 
   return (
-    <div className="bg-background h-full w-full flex flex-col  px-4 py-4 pb-32">
-      <div className="w-full  flex flex-col gap-6">
-        {/* Video Player */}
-        <div className="w-full h-[50vh] lg:h-[80vh] rounded-lg bg-gray-500 [&_iframe]:rounded-lg">
-          {loading ? (
-            <div className="bg-default-200 animate-pulse rounded-lg w-full h-full" />
-          ) : (
-            <MoviePlayer videoId={id} server={server} />
-          )}
-        </div>
+    <div className="bg-background flex h-full min-h-0 w-full flex-col pb-32">
+      {/* Full-bleed player: no horizontal padding, explicit viewport height, stable box for absolute iframe */}
+      <div className="h-[50vh] w-full min-h-0 shrink-0 bg-gray-500 p-0 lg:h-[80vh]">
+        {loading ? (
+          <div className="h-full w-full animate-pulse bg-default-200" />
+        ) : (
+          <MoviePlayer videoId={id} server={server} />
+        )}
+      </div>
 
-        
+      <div className="flex w-full flex-col gap-6 px-4 pt-4">
         {/* Movie Details */}
         <div className="w-full">
           {loading ? (

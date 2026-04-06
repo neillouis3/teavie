@@ -29,19 +29,20 @@ const ShowPlayer = ({ videoId, season, episode, server = '111movies' }) => {
     }
   }, [videoId, season, episode, server]);
 
+  const allow =
+    'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+
   return (
-    <div className="rounded-lg h-full w-full">
+    <div className="relative h-full w-full min-h-0 rounded-lg bg-black">
       {error ? (
-        <p className="text-red-500">Error loading video: {error}</p>
+        <p className="relative z-[1] p-4 text-sm text-red-400">Error loading video: {error}</p>
       ) : (
         <iframe
+          title="Episode player"
           src={playerUrl}
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+          allow={allow}
           allowFullScreen
-          className="rounded-lg h-full w-full"
+          className="absolute inset-0 h-full w-full rounded-lg border-0"
         />
       )}
     </div>

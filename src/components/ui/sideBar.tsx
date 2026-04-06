@@ -93,16 +93,10 @@ export default function SideBar() {
           : null;
 
   return (
-    <motion.div 
-      initial={false}
-      animate={{ 
-        width: isCollapsed ? "4rem" : "16rem"
-      }}
-      transition={{ duration: 0.2, ease: "easeInOut" }}
-      className="items-center bg-background z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex border-r border-divider"
-      style={{
-        willChange: "width"
-      }}
+    <div
+      className={`items-center bg-background z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex border-r border-divider transition-[width] duration-200 ease-in-out ${
+        isCollapsed ? "w-16" : "w-64"
+      }`}
     >
       <div className="w-full h-full flex flex-col gap-4">
         {/* Logo and Toggle Button */}
@@ -207,6 +201,6 @@ export default function SideBar() {
           <ThemeSwitcher collapsed={isCollapsed} />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

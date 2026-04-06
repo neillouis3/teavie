@@ -15,20 +15,21 @@ const MoviePlayer = ({ videoId, server = '111movies' }) => {
     setPlayerUrl(url);
   }, [videoId, server]);
 
+  const allow =
+    'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+
   return (
-    <div className="rounded-lg h-full w-full">
+    <div className="relative h-full w-full min-h-0 rounded-lg bg-black">
       {playerUrl ? (
         <iframe
+          title="Movie player"
           src={playerUrl}
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+          allow={allow}
           allowFullScreen
-          className="block h-full w-full rounded-lg"
+          className="absolute inset-0 h-full w-full rounded-lg border-0"
         />
       ) : (
-        <p>Loading player...</p>
+        <p className="relative z-[1] p-4 text-sm text-white/80">Loading player...</p>
       )}
     </div>
   );
