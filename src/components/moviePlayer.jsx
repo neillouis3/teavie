@@ -23,7 +23,8 @@ const MoviePlayer = ({ videoId, server = '111movies' }) => {
           width="100%"
           height="100%"
           style={{ border: 0 }}
-          allow="fullscreen"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+          allowFullScreen
           className="rounded-lg h-full w-full overflow-hidden"
         />
       ) : (
