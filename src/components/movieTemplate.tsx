@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './ui/headerTemplate';
 import MoviePlayer, { MOVIE_SERVERS } from './moviePlayer';
-import PlayerViewport from './playerViewport';
 import { Image, Chip, Button } from '@heroui/react';
 
 interface Movie {
@@ -72,13 +71,11 @@ export default function MovieTemplate({ id }: { id: string }) {
     <div className="bg-background h-full w-full flex flex-col  px-4 py-4 pb-32">
       <div className="w-full  flex flex-col gap-6">
         {/* Video Player */}
-        <div className="w-full h-[50vh] lg:h-[80vh] rounded-lg overflow-hidden bg-gray-500">
+        <div className="w-full h-[50vh] lg:h-[80vh] rounded-lg bg-gray-500 [&_iframe]:rounded-lg">
           {loading ? (
             <div className="bg-default-200 animate-pulse rounded-lg w-full h-full" />
           ) : (
-            <PlayerViewport>
-              <MoviePlayer videoId={id} server={server} />
-            </PlayerViewport>
+            <MoviePlayer videoId={id} server={server} />
           )}
         </div>
 

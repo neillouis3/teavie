@@ -25,7 +25,7 @@ const MoviePlayer = ({ videoId, server = '111movies' }) => {
           style={{ border: 0 }}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
-          className="rounded-lg h-full w-full overflow-hidden"
+          className="block h-full w-full rounded-lg"
         />
       ) : (
         <p>Loading player...</p>
