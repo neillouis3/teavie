@@ -85,23 +85,25 @@ export default function ShowTemplate({ id }: { id: string }) {
   const year = show?.first_air_date?.slice(0, 4) ?? "TBA";
 
   return (
-    <div className="bg-background flex min-h-full w-full flex-col pb-32">
-      <div className="h-[50vh] w-full min-h-0 shrink-0 bg-default-200 p-0 lg:h-[80vh]">
-        {loading ? (
-          <div className="h-full w-full animate-pulse bg-default-200" />
-        ) : (
-          <ShowPlayer
-            videoId={show?.id ?? id}
-            season={selectedSeason}
-            episode={selectedEpisode}
-            server={server}
-          />
-        )}
-      </div>
+    <div className="bg-background min-h-full w-full flex flex-col px-4 py-4 pb-32">
+      <div className="w-full flex flex-col gap-6">
 
-      <div className="flex w-full flex-col gap-6 px-4 pt-4">
+        {/* ── Video Player ── */}
+        <div className="w-full h-[50vh] lg:h-[80vh] rounded-xl overflow-hidden bg-default-200">
+          {loading ? (
+            <div className="bg-default-200 animate-pulse w-full h-full" />
+          ) : (
+            <ShowPlayer
+              videoId={show?.id ?? id}
+              season={selectedSeason}
+              episode={selectedEpisode}
+              server={server}
+            />
+          )}
+        </div>
+
         {/* ── Show Details ── */}
-        <div className="flex w-full flex-col gap-4">
+        <div className="w-full flex flex-col gap-4">
           {loading ? (
             <LoadingSkeleton />
           ) : (
