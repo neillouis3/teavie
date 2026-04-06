@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import SimilarShows from "./similarShows";
 import Header from "./ui/headerTemplate";
 import ShowPlayer, { SHOW_SERVERS } from "./showPlayer";
+import PlayerViewport from "./playerViewport";
 import SimilarViewerLoading from "@/components/viewer/skeleton/similarViewerLoading";
 import { Image, Chip, Button, Divider } from "@heroui/react";
 
@@ -93,12 +94,14 @@ export default function ShowTemplate({ id }: { id: string }) {
           {loading ? (
             <div className="bg-default-200 animate-pulse w-full h-full" />
           ) : (
-            <ShowPlayer
-              videoId={show?.id ?? id}
-              season={selectedSeason}
-              episode={selectedEpisode}
-              server={server}
-            />
+            <PlayerViewport>
+              <ShowPlayer
+                videoId={show?.id ?? id}
+                season={selectedSeason}
+                episode={selectedEpisode}
+                server={server}
+              />
+            </PlayerViewport>
           )}
         </div>
 

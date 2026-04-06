@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from './ui/headerTemplate';
 import MoviePlayer, { MOVIE_SERVERS } from './moviePlayer';
+import PlayerViewport from './playerViewport';
 import { Image, Chip, Button } from '@heroui/react';
 
 interface Movie {
@@ -75,7 +76,9 @@ export default function MovieTemplate({ id }: { id: string }) {
           {loading ? (
             <div className="bg-default-200 animate-pulse rounded-lg w-full h-full" />
           ) : (
-            <MoviePlayer videoId={id} server={server} />
+            <PlayerViewport>
+              <MoviePlayer videoId={id} server={server} />
+            </PlayerViewport>
           )}
         </div>
 
