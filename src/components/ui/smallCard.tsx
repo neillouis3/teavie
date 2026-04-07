@@ -31,9 +31,9 @@ export default function SmallCard({
   const href = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
 
   return (
-    <div className="group flex h-96 min-w-0 w-full flex-col rounded-xl">
+    <div className="group flex min-w-0 w-full flex-col rounded-xl">
       <Link href={href} className="block w-full shrink-0">
-        <div className="relative h-72 w-full overflow-hidden rounded-xl bg-default-200">
+        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-default-200">
           {hasPoster ? (
             <Image
               src={imageUrl}
@@ -48,8 +48,8 @@ export default function SmallCard({
         </div>
       </Link>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1 rounded-b-xl pt-2 text-gray-500">
-        <div className="flex w-full shrink-0 flex-row items-center justify-between gap-1">
+      <div className="mt-2 flex shrink-0 flex-col gap-1 rounded-b-xl text-gray-500">
+        <div className="flex w-full flex-row items-center justify-between gap-1">
           <p className="flex-1 truncate text-start text-xs">{year}</p>
           <div className="flex-shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs uppercase transition-colors duration-300 group-hover:border-success group-hover:text-success">
             {typeLower === 'tv'
@@ -71,7 +71,7 @@ export default function SmallCard({
           </p>
         </div>
         <h1
-          className="text-md min-h-0 truncate transition-colors duration-300 group-hover:text-success"
+          className="text-md truncate transition-colors duration-300 group-hover:text-success"
           title={title}
         >
           {title.length > 25
