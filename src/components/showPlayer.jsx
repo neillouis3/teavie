@@ -1,9 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import {
-  EMBED_IFRAME_ALLOW,
-  EMBED_IFRAME_SANDBOX,
-} from '@/lib/embedPlayerIframe';
+import { EMBED_IFRAME_ALLOW } from '@/lib/embedPlayerIframe';
 
 /** Videasy TV — https://www.videasy.net/docs — overlay = Netflix-style pause overlay */
 const VIDEASY_TV_QUERY =
@@ -64,7 +61,6 @@ const ShowPlayer = ({ videoId, season, episode, server = 'videasy' }) => {
           title="Episode player"
           src={playerUrl}
           allow={EMBED_IFRAME_ALLOW}
-          sandbox={EMBED_IFRAME_SANDBOX}
           allowFullScreen
           referrerPolicy="no-referrer-when-downgrade"
           className="absolute inset-0 h-full w-full border-0"
