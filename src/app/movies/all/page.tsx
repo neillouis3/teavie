@@ -67,7 +67,7 @@ function AllMoviePageContent() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="All Movies" />
-      <div className="space-y-4 px-4 pb-8 pt-2">
+      <div className="space-y-4 px-3 pb-8 pt-2 sm:px-4">
         <BrowseCatalogFilters mode="movie" total={total} loading={loading} />
 
         {loading ? (
@@ -104,7 +104,7 @@ export default function AllMoviePage() {
       fallback={
         <div className="bg-main min-h-screen w-full">
           <Header pageName="All Movies" />
-          <div className="px-4 pb-8 pt-2">
+          <div className="px-3 pb-8 pt-2 sm:px-4">
             <AllMoviesViewerLoading />
           </div>
         </div>

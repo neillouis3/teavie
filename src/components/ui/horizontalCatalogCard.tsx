@@ -18,7 +18,7 @@ const BACKDROP_SIZE = 'w1280';
 const POSTER_SIZE = 'w500';
 
 const pill =
-  'rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm tabular-nums';
+  'rounded-sm bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm tabular-nums';
 
 /**
  * Wide tile: backdrop/poster, type + year pills, title on bottom-left overlay.
@@ -57,7 +57,7 @@ export default function HorizontalCatalogCard({
             alt=""
             aria-hidden
             fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
@@ -70,7 +70,7 @@ export default function HorizontalCatalogCard({
         )}
         {src && (
           <>
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/20" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
             <div className="absolute left-2 top-2 sm:left-2.5 sm:top-2.5">
               <span className={pill}>{label}</span>
             </div>

@@ -30,7 +30,7 @@ export default function Explore({
 
       {/* New & Upcoming Section */}
       <div className="mt-6 mb-4 flex h-fit w-full flex-col">
-        <div className="mb-4 pl-4">
+        <div className="mb-4 px-3 sm:pl-4">
           <Chip color="success" size="md" radius="sm">
             New & Upcoming
           </Chip>
@@ -45,7 +45,7 @@ export default function Explore({
       </div>
 
       {/* New + Updated Section */}
-      <div className="flex flex-col lg:flex-row w-full h-fit mt-2 mb-8 px-4 gap-24">
+      <div className="mb-8 mt-2 flex h-fit w-full flex-col gap-8 px-3 sm:px-4 lg:flex-row lg:gap-16 xl:gap-24">
         {/* New on SofaCouch */}
         <div className="flex-4 flex w-full flex-col">
           <div className="flex flex-row h-fit justify-between items-center">
@@ -70,7 +70,7 @@ export default function Explore({
         </div>
 
         {/* Recently Updated */}
-        <div className="flex-2 flex h-fit flex-col pr-4 hidden lg:block">
+        <div className="flex-2 hidden h-fit flex-col md:block lg:pr-4">
           <Chip
             color="success"
             variant="flat"

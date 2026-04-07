@@ -27,7 +27,7 @@ export default function SettingsPage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Settings" />
-      <div className="mx-auto max-w-xl space-y-10 px-4 pb-12 pt-4">
+      <div className="mx-auto max-w-xl space-y-10 px-3 pb-12 pt-4 sm:px-4">
         <p className="text-sm text-default-500">
           Appearance and how titles are shown on All Movies, All TV, and Search. Choices are
           saved in this browser.

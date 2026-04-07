@@ -12,26 +12,26 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen w-screen flex-col items-center justify-center bg-main px-8 py-24">
-      <div className="flex w-[75%] max-w-4xl flex-col items-center justify-center">
-        <div className="flex w-full flex-col items-center justify-center">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col items-center justify-center bg-main px-4 py-12 sm:px-8 sm:py-24 lg:min-h-screen">
+      <div className="flex w-full max-w-lg flex-col items-center justify-center sm:max-w-2xl">
+        <div className="flex w-full flex-col items-center justify-center text-center">
           <img
             src="/lightLogo.png"
             alt="Teavie"
-            className="h-fit w-128 rounded-xl p-4 dark:hidden"
+            className="h-auto w-full max-w-xs rounded-xl p-2 dark:hidden sm:max-w-md sm:p-4"
           />
           <img
             src="/darkLogo.png"
             alt="Teavie"
-            className="hidden h-fit w-128 rounded-xl p-4 dark:block"
+            className="hidden h-auto w-full max-w-xs rounded-xl p-2 dark:block sm:max-w-md sm:p-4"
           />
 
-          <div className="mt-16">
+          <p className="mt-8 max-w-md text-sm text-default-600 dark:text-default-400 sm:mt-16 sm:text-base">
             Movies and shows shown are limited and just for demo purposes.
-          </div>
+          </p>
           <Button
             color="success"
-            className="mt-16"
+            className="mt-8 sm:mt-16"
             onPress={() => router.push('/explore')}
           >
             Go Explore The Site

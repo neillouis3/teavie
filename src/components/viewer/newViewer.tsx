@@ -15,7 +15,7 @@ function toNumericId(id: ContentItem["id"]): number {
 
 export default function NewViewer({ newContent }: NewViewerProps) {
   return (
-    <div className="grid w-full grid-cols-3 gap-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid w-full grid-cols-3 gap-2 sm:gap-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
       {newContent &&
         newContent.slice(0, 8).map((item, index) => {
           const title = item.title || item.name || "Untitled";

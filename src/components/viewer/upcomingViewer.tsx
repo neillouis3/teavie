@@ -55,7 +55,10 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
               : "TBA";
 
             return (
-              <CarouselItem key={item.id} className="pl-4 basis-2/3">
+              <CarouselItem
+                key={item.id}
+                className="basis-[88%] pl-3 sm:basis-2/3 sm:pl-4"
+              >
                 <LargeCard
                   id={toNumericId(item.id)}
                   title={title}

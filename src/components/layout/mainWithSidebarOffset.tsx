@@ -16,7 +16,7 @@ export default function MainWithSidebarOffset({
 
   return (
     <div
-      className={`min-h-screen w-full min-w-0 transition-[padding-left] duration-200 ease-in-out ${
+      className={`min-h-screen w-full min-w-0 pt-14 transition-[padding-left] duration-200 ease-in-out lg:pt-0 ${
         collapsed ? 'lg:pl-16' : 'lg:pl-64'
       }`}
     >

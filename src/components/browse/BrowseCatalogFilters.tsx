@@ -21,8 +21,9 @@ type SelectRow = { id: string; label: string };
 const BORDERED_FIELD =
   'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
 
-/** Fixed trigger width (8rem) per design */
-const SELECT_BASE = 'w-32 min-w-32 max-w-32 shrink-0';
+/** Full width on small screens; fixed width from `sm` up */
+const SELECT_BASE =
+  'w-full min-w-0 sm:w-32 sm:min-w-32 sm:max-w-32 sm:shrink-0';
 
 const sortSelectClassNames = {
   base: SELECT_BASE,

@@ -183,7 +183,7 @@ function SearchContent() {
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Search" />
 
-      <div className="space-y-6 px-4 pb-6 pt-8">
+      <div className="space-y-6 px-3 pb-6 pt-6 sm:px-4 sm:pt-8">
         <form onSubmit={submitSearch} className="w-full">
           <Input
             aria-label="Search query"
@@ -292,7 +292,7 @@ export default function SearchPage() {
       fallback={
         <div className="bg-main min-h-screen w-full">
           <Header pageName="Search" />
-          <div className="px-4 pb-6 pt-8">
+          <div className="px-3 pb-6 pt-6 sm:px-4 sm:pt-8">
             <AllMoviesViewerLoading />
           </div>
         </div>

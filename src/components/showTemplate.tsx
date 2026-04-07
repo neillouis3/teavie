@@ -87,7 +87,7 @@ export default function ShowTemplate({ id }: { id: string }) {
       <div className="w-full flex flex-col gap-6">
 
         {/* ── Video Player ── */}
-        <div className="h-[80vh] max-h-[80vh] min-h-0 w-full shrink-0 overflow-hidden rounded-xl bg-default-200">
+        <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {loading ? (
             <div className="h-full w-full animate-pulse bg-default-200" />
           ) : (

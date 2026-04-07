@@ -6,36 +6,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSidebar } from "./sidebarContext";
 import Link from "next/link";
 import {
-  HomeIcon,
-  FilmIcon,
   MagnifyingGlassIcon,
-  TvIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import { Input, Alert, Tooltip } from "@heroui/react";
-
-const navItems = [
-  {
-    key: "explore",
-    label: "Explore",
-    href: "/explore",
-    icon: HomeIcon,
-  },
-  {
-    key: "movies",
-    label: "Movies",
-    href: "/movies/all",
-    icon: FilmIcon,
-  },
-  {
-    key: "shows",
-    label: "TV Shows",
-    href: "/shows/all",
-    icon: TvIcon,
-  },
-] as const;
+import { APP_NAV_ITEMS } from "@/components/ui/navItems";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -129,9 +106,9 @@ export default function SideBar() {
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
-          {navItems.map((item) => {
+          {APP_NAV_ITEMS.map((item) => {
             const isActive = selectedKey === item.key;
-            const Icon = item.icon;
+            const Icon = item.Icon;
 
             return (
               <Link
