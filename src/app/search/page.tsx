@@ -16,36 +16,28 @@ import {
 } from '@/contexts/catalogCardStyleContext';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
 import { ContentItem } from '@/types/content';
+import {
+  CATALOG_GRID_HORIZONTAL_SEARCH,
+  CATALOG_GRID_VERTICAL_SEARCH,
+} from '@/lib/catalogGrid';
 
-const GRID_VERTICAL =
-  'grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
-const GRID_HORIZONTAL_MOVIE =
-  'grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
-const GRID_HORIZONTAL_TV =
-  'grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4';
-
-function gridClass(
-  layoutMode: CatalogCardLayoutMode,
-  row: 'movie' | 'tv' | 'mixed'
-): string {
-  if (layoutMode !== 'horizontal') return GRID_VERTICAL;
-  if (row === 'tv') return GRID_HORIZONTAL_TV;
-  return GRID_HORIZONTAL_MOVIE;
+function gridClassSearch(layoutMode: CatalogCardLayoutMode) {
+  return layoutMode === 'horizontal'
+    ? CATALOG_GRID_HORIZONTAL_SEARCH
+    : CATALOG_GRID_VERTICAL_SEARCH;
 }
 
 function CardGridSkeleton({
   count,
   layoutMode,
-  row,
 }: {
   count: number;
   layoutMode: CatalogCardLayoutMode;
-  row: 'movie' | 'tv' | 'mixed';
 }) {
   const horizontal = layoutMode === 'horizontal';
   const S = horizontal ? HorizontalCatalogCardLoading : SmallCardLoading;
   return (
-    <div className={gridClass(layoutMode, row)}>
+    <div className={gridClassSearch(layoutMode)}>
       {Array.from({ length: count }).map((_, i) => (
         <S key={i} />
       ))}
@@ -143,12 +135,8 @@ function SearchContent() {
     router.push(params.toString() ? `${pathname}?${params}` : pathname);
   };
 
-  const renderCards = (
-    items: ContentItem[],
-    keyPrefix: string,
-    row: 'movie' | 'tv' | 'mixed'
-  ) => (
-    <div className={gridClass(cardLayoutMode, row)}>
+  const renderCards = (items: ContentItem[], keyPrefix: string) => (
+    <div className={gridClassSearch(cardLayoutMode)}>
       {items.map((item, index) => {
         const title = item.title || item.name || 'Untitled';
         const release = item.release_date || item.first_air_date || '';
@@ -223,8 +211,8 @@ function SearchContent() {
           <div className="space-y-8">
             {popularLoading ? (
               <>
-                <CardGridSkeleton count={6} layoutMode={cardLayoutMode} row="movie" />
-                <CardGridSkeleton count={6} layoutMode={cardLayoutMode} row="tv" />
+                <CardGridSkeleton count={6} layoutMode={cardLayoutMode} />
+                <CardGridSkeleton count={6} layoutMode={cardLayoutMode} />
               </>
             ) : (
               <>
@@ -232,14 +220,14 @@ function SearchContent() {
                   <Chip color="success" size="md" radius="sm" variant="flat">Popular Movies</Chip>
                   {popularMovies.length === 0
                     ? <p className="text-sm text-default-500">Nothing to show.</p>
-                    : renderCards(popularMovies, 'pop-m', 'movie')}
+                    : renderCards(popularMovies, 'pop-m')}
                 </section>
 
                 <section className="space-y-3">
                   <Chip color="success" size="md" radius="sm" variant="flat">Popular TV</Chip>
                   {popularTv.length === 0
                     ? <p className="text-sm text-default-500">Nothing to show.</p>
-                    : renderCards(popularTv, 'pop-tv', 'tv')}
+                    : renderCards(popularTv, 'pop-tv')}
                 </section>
               </>
             )}
@@ -265,12 +253,12 @@ function SearchContent() {
             )}
 
             {loading && (
-              <CardGridSkeleton count={12} layoutMode={cardLayoutMode} row="mixed" />
+              <CardGridSkeleton count={12} layoutMode={cardLayoutMode} />
             )}
 
             {!loading && !error && results.length > 0 && (
               <>
-                {renderCards(results, 'q', 'mixed')}
+                {renderCards(results, 'q')}
                 {totalPages > 1 && (
                   <div className="flex justify-center pt-2">
                     <Pagination

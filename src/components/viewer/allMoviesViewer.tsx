@@ -5,6 +5,10 @@ import SmallCard from '../ui/smallCard';
 import HorizontalCatalogCard from '../ui/horizontalCatalogCard';
 import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
 import { ContentItem } from '@/types/content';
+import {
+  CATALOG_GRID_HORIZONTAL,
+  CATALOG_GRID_VERTICAL,
+} from '@/lib/catalogGrid';
 
 interface AllMovieViewerProps {
   allContentData: ContentItem[];
@@ -16,17 +20,12 @@ function toNumericId(id: ContentItem['id']): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-const GRID_VERTICAL =
-  'grid h-full w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
-const GRID_HORIZONTAL =
-  'grid h-full w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
-
 const AllMovieViewer: React.FC<AllMovieViewerProps> = ({ allContentData }) => {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === 'horizontal';
 
   return (
-    <div className={horizontal ? GRID_HORIZONTAL : GRID_VERTICAL}>
+    <div className={horizontal ? CATALOG_GRID_HORIZONTAL : CATALOG_GRID_VERTICAL}>
       {allContentData.map((item, index) => {
         const title = item.title ?? item.name ?? 'Untitled';
         const releaseDate = item.release_date ?? item.first_air_date ?? '';

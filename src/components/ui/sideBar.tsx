@@ -13,6 +13,7 @@ import {
   TvIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import { Input, Alert, Tooltip } from "@heroui/react";
 
@@ -34,6 +35,12 @@ const navItems = [
     label: "TV Shows", 
     href: "/shows/all",
     icon: TvIcon
+  },
+  {
+    key: "settings",
+    label: "Settings",
+    href: "/settings",
+    icon: Cog6ToothIcon,
   },
 ] as const;
 
@@ -84,13 +91,15 @@ export default function SideBar() {
   };
 
   const selectedKey =
-    pathname.startsWith("/explore")
-      ? "explore"
-      : pathname.startsWith("/movies")
-        ? "movies"
-        : pathname.startsWith("/shows")
-          ? "shows"
-          : null;
+    pathname.startsWith("/settings")
+      ? "settings"
+      : pathname.startsWith("/explore")
+        ? "explore"
+        : pathname.startsWith("/movies")
+          ? "movies"
+          : pathname.startsWith("/shows")
+            ? "shows"
+            : null;
 
   return (
     <div
