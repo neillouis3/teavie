@@ -1,9 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import ShowPlayer, { SHOW_SERVERS } from "./showPlayer";
+import ShowPlayer from "./showPlayer";
 import YouMightLike from "./youMightLike";
 import { Image, Chip, Button } from "@heroui/react";
+import {
+  useStreamingSource,
+  type StreamServerId,
+} from "@/contexts/streamingSourceContext";
 
 interface Season {
   season_number: number;
@@ -26,16 +30,16 @@ interface Show {
   seasons?: Season[];
 }
 
-export type ShowServerKey = keyof typeof SHOW_SERVERS;
+export type ShowServerKey = StreamServerId;
 
 export default function ShowTemplate({ id }: { id: string }) {
   const baseUrl = "https://image.tmdb.org/t/p/";
   const size = "w500";
+  const { server } = useStreamingSource();
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
-  const [server, setServer] = useState<ShowServerKey>("videasy");
 
   useEffect(() => {
     const fetchShowDetails = async () => {
@@ -247,37 +251,6 @@ export default function ShowTemplate({ id }: { id: string }) {
                           <dd className="text-foreground mt-0.5">{year}</dd>
                         </div>
                       </dl>
-
-                      {/* Streaming Source */}
-                      <div className="mt-12">
-                        <div className="flex flex-col gap-2 p-3 rounded-lg border border-default-200">
-                          <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
-                            Streaming Source
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {(Object.keys(SHOW_SERVERS) as ShowServerKey[]).map((key) => (
-                              <Button
-                                key={key}
-                                size="sm"
-                                variant={server === key ? "solid" : "flat"}
-                                color={server === key ? "success" : "default"}
-                                onPress={() => setServer(key)}
-                              >
-                                {key === "videasy"
-                                  ? "Videasy"
-                                  : key === "vidking"
-                                    ? "Vidking"
-                                    : key === "111movies"
-                                      ? "111movies"
-                                      : "MoviesAPI"}
-                              </Button>
-                            ))}
-                          </div>
-                          <p className="text-foreground/60 text-[11px]">
-                            We can&apos;t control ads or playback issues from third-party players.
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </section>

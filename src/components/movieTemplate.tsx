@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import MoviePlayer, { MOVIE_SERVERS } from './moviePlayer';
+import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
-import { Image, Chip, Button } from '@heroui/react';
+import { Image, Chip } from '@heroui/react';
+import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 
 interface Movie {
   id: number;
@@ -20,14 +21,14 @@ interface Movie {
   tagline: string;
 }
 
-export type MovieServerKey = keyof typeof MOVIE_SERVERS;
+export type MovieServerKey = StreamServerId;
 
 export default function MovieTemplate({ id }: { id: string }) {
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
+  const { server } = useStreamingSource();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
-  const [server, setServer] = useState<MovieServerKey>('videasy');
 
   useEffect(() => {
     const fetchMovieDetails = async () => {
@@ -200,37 +201,6 @@ export default function MovieTemplate({ id }: { id: string }) {
                           </dd>
                         </div>
                       </dl>
-
-                      {/* Streaming Source */}
-                      <div className="mt-6">
-                        <div className="flex flex-col gap-2 p-3 rounded-lg border border-default-200">
-                          <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
-                            Streaming Source
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {(Object.keys(MOVIE_SERVERS) as MovieServerKey[]).map((key) => (
-                              <Button
-                                key={key}
-                                size="sm"
-                                variant={server === key ? 'solid' : 'flat'}
-                                color={server === key ? 'success' : 'default'}
-                                onPress={() => setServer(key)}
-                              >
-                                {key === 'videasy'
-                                  ? 'Videasy'
-                                  : key === 'vidking'
-                                    ? 'Vidking'
-                                    : key === '111movies'
-                                      ? '111movies'
-                                      : 'MoviesAPI'}
-                              </Button>
-                            ))}
-                          </div>
-                          <p className="text-foreground/60 text-[11px]">
-                            We can&apos;t control ads or playback issues from third-party players.
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </section>
