@@ -65,7 +65,9 @@ export default function SideBar() {
         ? "movies"
         : pathname.startsWith("/shows")
           ? "shows"
-          : null;
+          : pathname.startsWith("/sports")
+            ? "sports"
+            : null;
 
   const settingsActive = pathname.startsWith("/settings");
 

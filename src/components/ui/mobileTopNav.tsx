@@ -54,7 +54,9 @@ export default function MobileTopNav() {
         ? 'movies'
         : pathname.startsWith('/shows')
           ? 'shows'
-          : null;
+          : pathname.startsWith('/sports')
+            ? 'sports'
+            : null;
 
   const settingsActive = pathname.startsWith('/settings');
   const searchActive = pathname.startsWith('/search');
