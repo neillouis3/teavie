@@ -9,24 +9,34 @@ import React, {
   useState,
 } from 'react';
 
-export type CatalogCardStyleMode = 'rating' | 'yearRuntime';
+/** Vertical = classic poster + meta row + title; horizontal = minimal poster, type + year only. */
+export type CatalogCardLayoutMode = 'vertical' | 'horizontal';
 
-const STORAGE_KEY = 'teavie-catalog-card-style';
+const STORAGE_KEY = 'teavie-catalog-card-layout';
+const LEGACY_STORAGE_KEY = 'teavie-catalog-card-style';
 
-function readStored(): CatalogCardStyleMode {
-  if (typeof window === 'undefined') return 'rating';
+function readStored(): CatalogCardLayoutMode {
+  if (typeof window === 'undefined') return 'vertical';
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === 'yearRuntime' || v === 'rating') return v;
+    if (v === 'horizontal' || v === 'vertical') return v;
+    // One-time: old rating/yearRuntime preference does not map to layout; start fresh
+    if (localStorage.getItem(LEGACY_STORAGE_KEY)) {
+      try {
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+    }
   } catch {
     /* ignore */
   }
-  return 'rating';
+  return 'vertical';
 }
 
 type CatalogCardStyleContextValue = {
-  mode: CatalogCardStyleMode;
-  setMode: (m: CatalogCardStyleMode) => void;
+  mode: CatalogCardLayoutMode;
+  setMode: (m: CatalogCardLayoutMode) => void;
 };
 
 const CatalogCardStyleContext = createContext<CatalogCardStyleContextValue | null>(
@@ -38,7 +48,7 @@ export function CatalogCardStyleProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [mode, setModeState] = useState<CatalogCardStyleMode>('rating');
+  const [mode, setModeState] = useState<CatalogCardLayoutMode>('vertical');
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -46,7 +56,7 @@ export function CatalogCardStyleProvider({
     setHydrated(true);
   }, []);
 
-  const setMode = useCallback((m: CatalogCardStyleMode) => {
+  const setMode = useCallback((m: CatalogCardLayoutMode) => {
     setModeState(m);
     try {
       localStorage.setItem(STORAGE_KEY, m);
@@ -56,7 +66,7 @@ export function CatalogCardStyleProvider({
   }, []);
 
   const value = useMemo(
-    () => ({ mode: hydrated ? mode : 'rating', setMode }),
+    () => ({ mode: hydrated ? mode : 'vertical', setMode }),
     [hydrated, mode, setMode]
   );
 

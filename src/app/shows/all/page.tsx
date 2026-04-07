@@ -71,7 +71,7 @@ function AllShowsPageContent() {
         <BrowseCatalogFilters mode="tv" total={total} loading={loading} />
 
         {loading ? (
-          <AllMoviesViewerLoading />
+          <AllMoviesViewerLoading variant="tv" />
         ) : shows.length === 0 ? (
           <p className="py-16 text-center text-sm text-default-500">
             No shows match these filters. Try adjusting your search.
@@ -105,7 +105,7 @@ export default function AllShowsPage() {
         <div className="bg-main min-h-screen w-full">
           <Header pageName="All TV Shows" />
           <div className="px-4 pb-8 pt-2">
-            <AllMoviesViewerLoading />
+            <AllMoviesViewerLoading variant="tv" />
           </div>
         </div>
       }

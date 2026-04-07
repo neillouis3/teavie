@@ -4,12 +4,12 @@ import React from 'react';
 import { Button } from '@heroui/react';
 import {
   useCatalogCardStyle,
-  type CatalogCardStyleMode,
+  type CatalogCardLayoutMode,
 } from '@/contexts/catalogCardStyleContext';
 
-const OPTIONS: { id: CatalogCardStyleMode; label: string }[] = [
-  { id: 'rating', label: 'Rating' },
-  { id: 'yearRuntime', label: 'Year & runtime' },
+const OPTIONS: { id: CatalogCardLayoutMode; label: string }[] = [
+  { id: 'vertical', label: 'Vertical' },
+  { id: 'horizontal', label: 'Horizontal' },
 ];
 
 type CatalogCardStyleToggleProps = {
@@ -17,10 +17,7 @@ type CatalogCardStyleToggleProps = {
   size?: 'sm' | 'md';
 };
 
-/**
- * Switches catalog card overlay between rating (top-right) and year + runtime.
- * Persists via CatalogCardStyleProvider + localStorage.
- */
+/** Vertical = poster + details + title; horizontal = compact poster (type + year only). */
 export default function CatalogCardStyleToggle({
   className = '',
   size = 'sm',
@@ -31,7 +28,7 @@ export default function CatalogCardStyleToggle({
     <div
       className={`inline-flex flex-wrap items-center gap-1.5 ${className}`}
       role="group"
-      aria-label="Card style"
+      aria-label="Card layout"
     >
       <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
         Cards

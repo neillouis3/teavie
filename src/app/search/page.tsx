@@ -5,20 +5,49 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Input, Chip, Pagination } from '@heroui/react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Header from '@/components/ui/header';
-import CatalogCard from '@/components/ui/catalogCard';
-import CatalogCardLoading from '@/components/ui/catalogCardLoading';
+import SmallCard from '@/components/ui/smallCard';
+import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
+import SmallCardLoading from '@/components/ui/smallCardLoading';
+import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
 import CatalogCardStyleToggle from '@/components/ui/CatalogCardStyleToggle';
-import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
+import {
+  useCatalogCardStyle,
+  type CatalogCardLayoutMode,
+} from '@/contexts/catalogCardStyleContext';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
 import { ContentItem } from '@/types/content';
 
-const GRID = 'grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
+const GRID_VERTICAL =
+  'grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
+const GRID_HORIZONTAL_MOVIE =
+  'grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
+const GRID_HORIZONTAL_TV =
+  'grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4';
 
-function CardGridSkeleton({ count }: { count: number }) {
+function gridClass(
+  layoutMode: CatalogCardLayoutMode,
+  row: 'movie' | 'tv' | 'mixed'
+): string {
+  if (layoutMode !== 'horizontal') return GRID_VERTICAL;
+  if (row === 'tv') return GRID_HORIZONTAL_TV;
+  return GRID_HORIZONTAL_MOVIE;
+}
+
+function CardGridSkeleton({
+  count,
+  layoutMode,
+  row,
+}: {
+  count: number;
+  layoutMode: CatalogCardLayoutMode;
+  row: 'movie' | 'tv' | 'mixed';
+}) {
+  const horizontal = layoutMode === 'horizontal';
+  const S = horizontal ? HorizontalCatalogCardLoading : SmallCardLoading;
   return (
-    <div className={GRID}>
+    <div className={gridClass(layoutMode, row)}>
       {Array.from({ length: count }).map((_, i) => (
-        <CatalogCardLoading key={i} />
+        <S key={i} />
       ))}
     </div>
   );
@@ -42,7 +71,8 @@ function SearchContent() {
   const [popularMovies, setPopularMovies] = useState<ContentItem[]>([]);
   const [popularTv, setPopularTv] = useState<ContentItem[]>([]);
   const [popularLoading, setPopularLoading] = useState(false);
-  const { mode: cardStyleMode } = useCatalogCardStyle();
+  const { mode: cardLayoutMode } = useCatalogCardStyle();
+  const horizontal = cardLayoutMode === 'horizontal';
 
   useEffect(() => { setInputValue(qParam); }, [qParam]);
 
@@ -113,27 +143,45 @@ function SearchContent() {
     router.push(params.toString() ? `${pathname}?${params}` : pathname);
   };
 
-  const renderCards = (items: ContentItem[], keyPrefix: string) => (
-    <div className={GRID}>
+  const renderCards = (
+    items: ContentItem[],
+    keyPrefix: string,
+    row: 'movie' | 'tv' | 'mixed'
+  ) => (
+    <div className={gridClass(cardLayoutMode, row)}>
       {items.map((item, index) => {
         const title = item.title || item.name || 'Untitled';
         const release = item.release_date || item.first_air_date || '';
         const year = release ? String(new Date(release).getFullYear()) : '—';
         const nid =
           typeof item.id === 'number' ? item.id : parseInt(String(item.id), 10);
+        const id = Number.isFinite(nid) ? nid : 0;
+        const type = item.type || 'movie';
+        const poster = item.poster_path || '';
+
+        if (horizontal) {
+          return (
+            <HorizontalCatalogCard
+              key={`${keyPrefix}-${type}-${item.id}-${index}`}
+              id={id}
+              title={title}
+              year={year}
+              type={type}
+              posterPath={poster}
+            />
+          );
+        }
+
         return (
-          <CatalogCard
-            key={`${keyPrefix}-${item.type ?? 'x'}-${item.id}-${index}`}
-            id={Number.isFinite(nid) ? nid : 0}
+          <SmallCard
+            key={`${keyPrefix}-${type}-${item.id}-${index}`}
+            id={id}
             title={title}
             year={year}
-            voteAverage={item.vote_average ?? null}
-            runtimeSeconds={item.runtimeSeconds ?? null}
-            seasonAmount={item.season_amount ?? null}
-            type={item.type || 'movie'}
-            posterPath={item.poster_path}
-            backdropPath={item.backdrop_path}
-            styleMode={cardStyleMode}
+            type={type}
+            runtimeSeconds={item.runtimeSeconds ?? undefined}
+            seasonAmount={item.season_amount ?? 0}
+            posterPath={poster}
           />
         );
       })}
@@ -174,8 +222,8 @@ function SearchContent() {
           <div className="space-y-8">
             {popularLoading ? (
               <>
-                <CardGridSkeleton count={6} />
-                <CardGridSkeleton count={6} />
+                <CardGridSkeleton count={6} layoutMode={cardLayoutMode} row="movie" />
+                <CardGridSkeleton count={6} layoutMode={cardLayoutMode} row="tv" />
               </>
             ) : (
               <>
@@ -183,14 +231,14 @@ function SearchContent() {
                   <Chip color="success" size="md" radius="sm" variant="flat">Popular Movies</Chip>
                   {popularMovies.length === 0
                     ? <p className="text-sm text-default-500">Nothing to show.</p>
-                    : renderCards(popularMovies, 'pop-m')}
+                    : renderCards(popularMovies, 'pop-m', 'movie')}
                 </section>
 
                 <section className="space-y-3">
                   <Chip color="success" size="md" radius="sm" variant="flat">Popular TV</Chip>
                   {popularTv.length === 0
                     ? <p className="text-sm text-default-500">Nothing to show.</p>
-                    : renderCards(popularTv, 'pop-tv')}
+                    : renderCards(popularTv, 'pop-tv', 'tv')}
                 </section>
               </>
             )}
@@ -215,11 +263,13 @@ function SearchContent() {
               <p className="text-sm text-danger">{error}</p>
             )}
 
-            {loading && <CardGridSkeleton count={12} />}
+            {loading && (
+              <CardGridSkeleton count={12} layoutMode={cardLayoutMode} row="mixed" />
+            )}
 
             {!loading && !error && results.length > 0 && (
               <>
-                {renderCards(results, 'q')}
+                {renderCards(results, 'q', 'mixed')}
                 {totalPages > 1 && (
                   <div className="flex justify-center pt-2">
                     <Pagination
