@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Image } from '@heroui/react';
+import Image from 'next/image';
 
 interface SmallCardProps {
   id: number;
@@ -38,7 +38,9 @@ export default function SmallCard({
             <Image
               src={imageUrl}
               alt={title}
-              className="h-full w-full object-cover transition-all duration-300 group-hover:opacity-50"
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+              className="object-cover transition-opacity duration-300 group-hover:opacity-50"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-default-500">
