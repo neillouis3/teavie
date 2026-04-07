@@ -60,7 +60,7 @@ export default function Explore({
             </Chip>
             <a className="underline cursor-pointer text-sm hidden">View All</a>
           </div>
-          <div className="w-full h-96">
+          <div className="w-full">
             {loading ? (
               <NewViewerLoading />
             ) : (
