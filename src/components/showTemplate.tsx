@@ -37,7 +37,7 @@ export default function ShowTemplate({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
-  const [server, setServer] = useState<ShowServerKey>("111movies");
+  const [server, setServer] = useState<ShowServerKey>("videasy");
 
   useEffect(() => {
     const fetchShowDetails = async () => {
@@ -89,7 +89,7 @@ export default function ShowTemplate({ id }: { id: string }) {
       <div className="w-full flex flex-col gap-6">
 
         {/* ── Video Player ── */}
-        <div className="w-full h-[50vh] lg:h-[80vh] rounded-xl overflow-hidden bg-default-200">
+        <div className="h-[50vh] min-h-0 w-full rounded-xl bg-default-200 lg:h-[80vh]">
           {loading ? (
             <div className="bg-default-200 animate-pulse w-full h-full" />
           ) : (
@@ -165,7 +165,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                             key={s.season_number}
                             size="sm"
                             variant={selectedSeason === s.season_number ? "solid" : "flat"}
-                            color={selectedSeason === s.season_number ? "primary" : "default"}
+                            color={selectedSeason === s.season_number ? "success" : "default"}
                             onPress={() => { setSelectedSeason(s.season_number); setSelectedEpisode(1); }}
                           >
                             Season {s.season_number}
@@ -190,7 +190,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                             size="sm"
                             isIconOnly
                             variant={selectedEpisode === ep ? "solid" : "flat"}
-                            color={selectedEpisode === ep ? "primary" : "default"}
+                            color={selectedEpisode === ep ? "success" : "default"}
                             onPress={() => setSelectedEpisode(ep)}
                             className="text-xs font-medium aspect-square"
                           >
@@ -203,11 +203,11 @@ export default function ShowTemplate({ id }: { id: string }) {
 
                   {/* Selection summary bar */}
                   <div className="flex items-center gap-2 px-4 py-3 border-t border-default-200/60 bg-default-50/50 dark:bg-default-100/10">
-                    <Chip size="sm" variant="flat" color="primary" className="font-mono">
+                    <Chip size="sm" variant="flat" color="success" className="font-mono">
                       S{selectedSeason}
                     </Chip>
                     <span className="text-default-400 text-xs">›</span>
-                    <Chip size="sm" variant="flat" color="primary" className="font-mono">
+                    <Chip size="sm" variant="flat" color="success" className="font-mono">
                       E{selectedEpisode}
                     </Chip>
                   </div>
@@ -262,10 +262,16 @@ export default function ShowTemplate({ id }: { id: string }) {
                                 key={key}
                                 size="sm"
                                 variant={server === key ? "solid" : "flat"}
-                                color={server === key ? "primary" : "default"}
+                                color={server === key ? "success" : "default"}
                                 onPress={() => setServer(key)}
                               >
-                                {key === "111movies" ? "111movies" : "MoviesAPI"}
+                                {key === "videasy"
+                                  ? "Videasy"
+                                  : key === "vidking"
+                                    ? "Vidking"
+                                    : key === "111movies"
+                                      ? "111movies"
+                                      : "MoviesAPI"}
                               </Button>
                             ))}
                           </div>

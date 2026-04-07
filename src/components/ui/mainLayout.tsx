@@ -1,6 +1,5 @@
 "use client";
 import { ReactNode } from "react";
-import { motion } from "framer-motion";
 import { useSidebar } from "./sidebarContext";
 
 interface MainLayoutProps {
@@ -13,18 +12,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <>
-      <motion.div
-        initial={false}
-        animate={{
-          width: isCollapsed ? "4rem" : "16rem",
-        }}
-        transition={{ duration: 0.2, ease: "easeInOut" }}
-        className="hidden lg:block shrink-0 fixed left-0 top-0 h-screen"
-        style={{ willChange: "width" }}
+      <div
+        className={`hidden shrink-0 transition-[width] duration-200 ease-in-out lg:fixed lg:left-0 lg:top-0 lg:block lg:h-screen ${
+          isCollapsed ? "w-16" : "w-64"
+        }`}
+        aria-hidden
       />
 
-      {/* Keep left offset at expanded sidebar width (16rem) so content does not widen when the sidebar collapses */}
-      <div className="bg-background ml-0 flex min-h-screen w-full flex-1 flex-col items-center lg:ml-64 lg:w-auto">
+      <div
+        className={`bg-background ml-0 flex min-h-screen w-full flex-1 flex-col items-center transition-[margin-left] duration-200 ease-in-out ${
+          isCollapsed ? "lg:ml-16" : "lg:ml-64"
+        } lg:w-auto`}
+      >
         {children}
       </div>
     </>

@@ -25,18 +25,25 @@ export default function SmallCard({
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const baseUrl = "https://image.tmdb.org/t/p/";
   const size = "w500";
-  const imageUrl = `${baseUrl}${size}${posterPath}`;
+  const hasPoster = Boolean(posterPath?.trim());
+  const imageUrl = hasPoster ? `${baseUrl}${size}${posterPath}` : "";
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
 
   return (
     <div className="w-full min-w-0 h-96 flex flex-col rounded-xl group">
       <Link href={href} className="block w-full shrink-0">
-        <div className="w-full h-72 relative overflow-hidden rounded-xl">
-          <Image
-            src={imageUrl}
-            alt={title}
-            className="w-full h-full object-cover transition-all duration-300 group-hover:opacity-50"
-          />
+        <div className="w-full h-72 relative overflow-hidden rounded-xl bg-default-200">
+          {hasPoster ? (
+            <Image
+              src={imageUrl}
+              alt={title}
+              className="w-full h-full object-cover transition-all duration-300 group-hover:opacity-50"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-default-500">
+              No poster
+            </div>
+          )}
         </div>
       </Link>
 

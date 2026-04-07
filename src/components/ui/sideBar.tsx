@@ -6,15 +6,15 @@ import { ThemeSwitcher } from "../themeSwitch";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSidebar } from "./sidebarContext";
 import Link from "next/link";
-import { 
-  HomeIcon, 
-  FilmIcon, 
+import {
+  HomeIcon,
+  FilmIcon,
   MagnifyingGlassIcon,
   TvIcon,
   ChevronLeftIcon,
-  ChevronRightIcon 
+  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
-import { Input } from "@heroui/react";
+import { Input, Alert, Tooltip } from "@heroui/react";
 
 const navItems = [
   { 
@@ -93,16 +93,10 @@ export default function SideBar() {
           : null;
 
   return (
-    <motion.div 
-      initial={false}
-      animate={{ 
-        width: isCollapsed ? "4rem" : "16rem"
-      }}
-      transition={{ duration: 0.2, ease: "easeInOut" }}
-      className="items-center bg-background z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex border-r border-divider"
-      style={{
-        willChange: "width"
-      }}
+    <div
+      className={`items-center bg-background z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex border-r border-divider transition-[width] duration-200 ease-in-out ${
+        isCollapsed ? "w-16" : "w-64"
+      }`}
     >
       <div className="w-full h-full flex flex-col gap-4">
         {/* Logo and Toggle Button */}
@@ -136,7 +130,7 @@ export default function SideBar() {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex flex-col gap-1 flex-1 px-1">
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
           {navItems.map((item) => {
             const isActive = selectedKey === item.key;
             const Icon = item.icon;
@@ -148,7 +142,7 @@ export default function SideBar() {
                 className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
                   ${isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
+                    ? "bg-success text-success-foreground shadow-sm"
                     : "hover:bg-default-100 text-foreground"
                   }
                   ${isCollapsed ? "justify-center" : ""}
@@ -173,9 +167,25 @@ export default function SideBar() {
             );
           })}
 
-          {/* Search Input */}
-          <AnimatePresence mode="wait">
-            {!isCollapsed && (
+          {/* Search — icon when collapsed, field when expanded */}
+          {isCollapsed ? (
+            <Tooltip placement="right" content="Search">
+              <Link
+                href="/search"
+                className={`
+                  mt-1 flex items-center justify-center rounded-lg px-3 py-2.5 transition-all
+                  ${pathname.startsWith("/search")
+                    ? "bg-success text-success-foreground shadow-sm"
+                    : "text-foreground hover:bg-default-100"
+                  }
+                `}
+                aria-label="Search"
+              >
+                <MagnifyingGlassIcon className="h-5 w-5 shrink-0" />
+              </Link>
+            </Tooltip>
+          ) : (
+            <AnimatePresence mode="wait">
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -190,16 +200,40 @@ export default function SideBar() {
                     placeholder="Search..."
                     value={searchValue}
                     onValueChange={setSearchValue}
-                    startContent={<MagnifyingGlassIcon className="w-4 h-4 text-default-400" />}
+                    startContent={<MagnifyingGlassIcon className="h-4 w-4 text-default-400" />}
                     classNames={{
                       input: "text-sm",
-                      inputWrapper: "h-9 bg-default-100 hover:bg-default-200"
+                      inputWrapper: "h-9 bg-default-100 hover:bg-default-200",
                     }}
                   />
                 </form>
               </motion.div>
-            )}
-          </AnimatePresence>
+            </AnimatePresence>
+          )}
+
+          {!isCollapsed ? (
+            <div className="px-0 pt-3">
+              <Alert
+                color="success"
+                variant="flat"
+                isDefaultVisible
+                hideIcon
+                description="Use an ad blocker—third-party players show ads we don’t control."
+              />
+            </div>
+          ) : (
+            <div className="flex justify-center px-1 pt-3">
+              <Tooltip
+                placement="right"
+                content="Use an ad blocker—third-party players show ads we don’t control."
+                classNames={{ content: "max-w-[220px] text-tiny" }}
+              >
+                <span className="cursor-default text-center text-[10px] font-medium leading-tight text-success">
+                  Adblock
+                </span>
+              </Tooltip>
+            </div>
+          )}
         </nav>
 
         {/* Theme Switcher at Bottom */}
@@ -207,6 +241,6 @@ export default function SideBar() {
           <ThemeSwitcher collapsed={isCollapsed} />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

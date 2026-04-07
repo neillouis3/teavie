@@ -1,7 +1,23 @@
 'use client';
 import { useEffect, useState } from 'react';
 
+/** Videasy TV — https://www.videasy.net/docs — overlay = Netflix-style pause overlay */
+const VIDEASY_TV_QUERY =
+  '?color=22c55e&nextEpisode=true&episodeSelector=true&overlay=true';
+
+const VIDKING_QUERY = '?color=22c55e&nextEpisode=true&episodeSelector=true';
+
 export const SHOW_SERVERS = {
+  videasy: {
+    base: 'https://player.videasy.net',
+    path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
+    suffix: () => VIDEASY_TV_QUERY,
+  },
+  vidking: {
+    base: 'https://www.vidking.net',
+    path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
+    suffix: () => VIDKING_QUERY,
+  },
   '111movies': {
     base: 'https://111movies.com',
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
@@ -12,36 +28,48 @@ export const SHOW_SERVERS = {
   },
 };
 
-const ShowPlayer = ({ videoId, season, episode, server = '111movies' }) => {
+const IFRAME_ALLOW =
+  'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+
+const ShowPlayer = ({ videoId, season, episode, server = 'videasy' }) => {
   const [playerUrl, setPlayerUrl] = useState('');
   const [error, setError] = useState(null);
 
   useEffect(() => {
     try {
-      console.log(`Fetching show player URL for ID: ${videoId}, S${season}E${episode}`);
-
-      const config = SHOW_SERVERS[server] ?? SHOW_SERVERS['111movies'];
-      const url = `${config.base}${config.path(videoId, season, episode)}`;
-      setPlayerUrl(url);
+      const config = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
+      const path = config.path(videoId, season, episode);
+      const suffix = typeof config.suffix === 'function' ? config.suffix() : '';
+      setPlayerUrl(`${config.base}${path}${suffix}`);
+      setError(null);
     } catch (err) {
       console.error('Error setting player URL:', err);
       setError(err.message || 'Unknown error');
     }
   }, [videoId, season, episode, server]);
 
+  if (error) {
+    return (
+      <div className="flex h-full min-h-0 w-full items-center justify-center rounded-lg bg-black p-4 ring-1 ring-white/10">
+        <p className="text-sm text-red-400">Error loading video: {error}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-lg h-full w-full">
-      {error ? (
-        <p className="text-red-500">Error loading video: {error}</p>
-      ) : (
+    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+      {playerUrl ? (
         <iframe
+          title="Episode player"
           src={playerUrl}
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          allow="fullscreen"
-          className="rounded-lg h-full w-full"
+          allow={IFRAME_ALLOW}
+          allowFullScreen
+          className="absolute inset-0 h-full w-full border-0"
         />
+      ) : (
+        <p className="absolute inset-0 flex items-center justify-center p-4 text-sm text-white/70">
+          Loading player…
+        </p>
       )}
     </div>
   );

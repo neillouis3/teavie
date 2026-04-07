@@ -78,7 +78,7 @@ function AllShowsPageContent() {
                   radius="full"
                   size="md"
                   variant={isActive ? "solid" : "flat"}
-                  color={isActive ? "primary" : "default"}
+                  color={isActive ? "success" : "default"}
                   onPress={() => updateParams({ sort_by: opt.value, page: 1 })}
                 >
                   {opt.label}
@@ -108,7 +108,7 @@ function AllShowsPageContent() {
               showControls
               size="lg"
             
-              color="primary"
+              color="success"
               variant="flat"
             />
           </div>

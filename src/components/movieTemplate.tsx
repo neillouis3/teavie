@@ -27,7 +27,7 @@ export default function MovieTemplate({ id }: { id: string }) {
   const size = 'w500';
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
-  const [server, setServer] = useState<MovieServerKey>('111movies');
+  const [server, setServer] = useState<MovieServerKey>('videasy');
 
   useEffect(() => {
     const fetchMovieDetails = async () => {
@@ -71,7 +71,7 @@ export default function MovieTemplate({ id }: { id: string }) {
     <div className="bg-background h-full w-full flex flex-col  px-4 py-4 pb-32">
       <div className="w-full  flex flex-col gap-6">
         {/* Video Player */}
-        <div className="w-full h-[50vh] lg:h-[80vh] rounded-lg overflow-hidden bg-gray-500">
+        <div className="h-[50vh] min-h-0 w-full rounded-lg bg-gray-500 lg:h-[80vh]">
           {loading ? (
             <div className="bg-default-200 animate-pulse rounded-lg w-full h-full" />
           ) : (
@@ -213,10 +213,16 @@ export default function MovieTemplate({ id }: { id: string }) {
                                 key={key}
                                 size="sm"
                                 variant={server === key ? 'solid' : 'flat'}
-                                color={server === key ? 'primary' : 'default'}
+                                color={server === key ? 'success' : 'default'}
                                 onPress={() => setServer(key)}
                               >
-                                {key === '111movies' ? '111movies' : 'MoviesAPI'}
+                                {key === 'videasy'
+                                  ? 'Videasy'
+                                  : key === 'vidking'
+                                    ? 'Vidking'
+                                    : key === '111movies'
+                                      ? '111movies'
+                                      : 'MoviesAPI'}
                               </Button>
                             ))}
                           </div>
