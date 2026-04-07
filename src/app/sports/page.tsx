@@ -6,7 +6,10 @@ import HorizontalSportsCard from '@/components/ui/horizontalSportsCard';
 import VerticalSportsCard from '@/components/ui/verticalSportsCard';
 import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
 import { SPORTS_STREAMS } from '@/lib/sportsStreams';
-import { CATALOG_GRID_VERTICAL } from '@/lib/catalogGrid';
+import {
+  CATALOG_GRID_HORIZONTAL,
+  CATALOG_GRID_VERTICAL,
+} from '@/lib/catalogGrid';
 
 export default function SportsPage() {
   const { mode } = useCatalogCardStyle();
@@ -20,7 +23,7 @@ export default function SportsPage() {
     <div className="min-h-screen w-full bg-main">
       <Header pageName="Sports" />
       <div className="space-y-4 px-3 pb-8 pt-2 sm:px-4">
-        <div className={horizontal ? 'flex flex-col gap-4' : CATALOG_GRID_VERTICAL}>
+        <div className={horizontal ? CATALOG_GRID_HORIZONTAL : CATALOG_GRID_VERTICAL}>
           {SPORTS_STREAMS.map((s) =>
             horizontal ? (
               <HorizontalSportsCard
