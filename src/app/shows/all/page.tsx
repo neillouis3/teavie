@@ -35,7 +35,7 @@ function AllShowsPageContent() {
       try {
         const qs = new URLSearchParams();
         qs.set('page', String(pageParam));
-        qs.set('limit', '18');
+        qs.set('limit', '28');
         qs.set('sort_by', sortParam);
         if (genreParam) qs.set('genre', genreParam);
         if (yearMinParam) qs.set('year_min', yearMinParam);

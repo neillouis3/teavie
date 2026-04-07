@@ -6,12 +6,10 @@ import Image from 'next/image';
 
 export type HorizontalCatalogCardProps = {
   id: number;
-  /** Shown only in accessibility (alt / aria-label), not on screen */
   title: string;
   year: string;
   type: 'movie' | 'tv' | string;
   posterPath?: string;
-  /** Same as LargeCard: wide still preferred */
   backdropPath?: string;
 };
 
@@ -23,7 +21,7 @@ const pill =
   'rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm tabular-nums';
 
 /**
- * Minimal catalog tile: backdrop (or poster) like LargeCard, MOVIE/TV + year only (no title).
+ * Wide tile: backdrop/poster, type + year pills, title on bottom-left overlay.
  */
 export default function HorizontalCatalogCard({
   id,
@@ -56,23 +54,36 @@ export default function HorizontalCatalogCard({
         {src ? (
           <Image
             src={src}
-            alt={title}
+            alt=""
+            aria-hidden
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full items-center justify-center p-2 text-center text-[10px] text-default-500">
-            No image
+          <div className="flex h-full flex-col items-center justify-center gap-1 p-2 text-center">
+            <p className="line-clamp-2 text-xs font-semibold text-foreground">
+              {title}
+            </p>
+            <span className="text-[10px] text-default-500">No image</span>
           </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
-        <div className="absolute left-2 top-2 sm:left-2.5 sm:top-2.5">
-          <span className={pill}>{label}</span>
-        </div>
-        <div className="absolute right-2 top-2 sm:right-2.5 sm:top-2.5">
-          <span className={pill}>{year}</span>
-        </div>
+        {src && (
+          <>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/20" />
+            <div className="absolute left-2 top-2 sm:left-2.5 sm:top-2.5">
+              <span className={pill}>{label}</span>
+            </div>
+            <div className="absolute right-2 top-2 sm:right-2.5 sm:top-2.5">
+              <span className={pill}>{year}</span>
+            </div>
+            <div className="absolute bottom-2 left-2 right-3 max-w-[85%] sm:bottom-2.5 sm:left-2.5 sm:right-4">
+              <p className="text-left text-xs font-semibold leading-snug text-white drop-shadow-md line-clamp-2 sm:text-sm">
+                {title}
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </Link>
   );

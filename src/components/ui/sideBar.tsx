@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
-import { ThemeSwitcher } from "../themeSwitch";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSidebar } from "./sidebarContext";
 import Link from "next/link";
@@ -18,29 +17,23 @@ import {
 import { Input, Alert, Tooltip } from "@heroui/react";
 
 const navItems = [
-  { 
-    key: "explore", 
-    label: "Explore", 
+  {
+    key: "explore",
+    label: "Explore",
     href: "/explore",
-    icon: HomeIcon
-  },
-  { 
-    key: "movies", 
-    label: "Movies", 
-    href: "/movies/all",
-    icon: FilmIcon
-  },
-  { 
-    key: "shows", 
-    label: "TV Shows", 
-    href: "/shows/all",
-    icon: TvIcon
+    icon: HomeIcon,
   },
   {
-    key: "settings",
-    label: "Settings",
-    href: "/settings",
-    icon: Cog6ToothIcon,
+    key: "movies",
+    label: "Movies",
+    href: "/movies/all",
+    icon: FilmIcon,
+  },
+  {
+    key: "shows",
+    label: "TV Shows",
+    href: "/shows/all",
+    icon: TvIcon,
   },
 ] as const;
 
@@ -58,7 +51,6 @@ export default function SideBar() {
     setMounted(true);
   }, []);
 
-  // Sync search value with URL params
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
     if (pathname === "/search") {
@@ -66,7 +58,6 @@ export default function SideBar() {
     }
   }, [pathname, searchParams]);
 
-  // Keyboard shortcut: Cmd/Ctrl + B
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "b") {
@@ -91,15 +82,15 @@ export default function SideBar() {
   };
 
   const selectedKey =
-    pathname.startsWith("/settings")
-      ? "settings"
-      : pathname.startsWith("/explore")
-        ? "explore"
-        : pathname.startsWith("/movies")
-          ? "movies"
-          : pathname.startsWith("/shows")
-            ? "shows"
-            : null;
+    pathname.startsWith("/explore")
+      ? "explore"
+      : pathname.startsWith("/movies")
+        ? "movies"
+        : pathname.startsWith("/shows")
+          ? "shows"
+          : null;
+
+  const settingsActive = pathname.startsWith("/settings");
 
   return (
     <div
@@ -108,7 +99,6 @@ export default function SideBar() {
       }`}
     >
       <div className="w-full h-full flex flex-col gap-4">
-        {/* Logo and Toggle Button */}
         <div className="flex items-center justify-between px-2 min-h-[48px]">
           <AnimatePresence mode="wait">
             {!isCollapsed && (
@@ -123,7 +113,7 @@ export default function SideBar() {
               </motion.div>
             )}
           </AnimatePresence>
-          
+
           <button
             onClick={toggleSidebar}
             className="p-1.5 rounded-lg hover:bg-default-100 transition-colors flex-shrink-0 ml-auto"
@@ -138,21 +128,21 @@ export default function SideBar() {
           </button>
         </div>
 
-        {/* Navigation Items */}
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
           {navItems.map((item) => {
             const isActive = selectedKey === item.key;
             const Icon = item.icon;
-            
+
             return (
               <Link
                 key={item.key}
                 href={item.href}
                 className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
-                  ${isActive
-                    ? "bg-success text-success-foreground shadow-sm"
-                    : "hover:bg-default-100 text-foreground"
+                  ${
+                    isActive
+                      ? "bg-success text-success-foreground shadow-sm"
+                      : "hover:bg-default-100 text-foreground"
                   }
                   ${isCollapsed ? "justify-center" : ""}
                 `}
@@ -176,16 +166,16 @@ export default function SideBar() {
             );
           })}
 
-          {/* Search — icon when collapsed, field when expanded */}
           {isCollapsed ? (
             <Tooltip placement="right" content="Search">
               <Link
                 href="/search"
                 className={`
                   mt-1 flex items-center justify-center rounded-lg px-3 py-2.5 transition-all
-                  ${pathname.startsWith("/search")
-                    ? "bg-success text-success-foreground shadow-sm"
-                    : "text-foreground hover:bg-default-100"
+                  ${
+                    pathname.startsWith("/search")
+                      ? "bg-success text-success-foreground shadow-sm"
+                      : "text-foreground hover:bg-default-100"
                   }
                 `}
                 aria-label="Search"
@@ -245,9 +235,40 @@ export default function SideBar() {
           )}
         </nav>
 
-        {/* Theme Switcher at Bottom */}
-        <div className={`mt-auto px-1 ${isCollapsed ? "flex justify-center" : ""}`}>
-          <ThemeSwitcher collapsed={isCollapsed} />
+        <div className={`mt-auto shrink-0 px-1 pb-0 ${isCollapsed ? "flex justify-center" : ""}`}>
+          {isCollapsed ? (
+            <Tooltip placement="right" content="Settings">
+              <Link
+                href="/settings"
+                className={`
+                  flex items-center justify-center rounded-lg p-2.5 transition-all
+                  ${
+                    settingsActive
+                      ? "bg-success text-success-foreground shadow-sm"
+                      : "text-foreground hover:bg-default-100"
+                  }
+                `}
+                aria-label="Settings"
+              >
+                <Cog6ToothIcon className="h-5 w-5 shrink-0" />
+              </Link>
+            </Tooltip>
+          ) : (
+            <Link
+              href="/settings"
+              className={`
+                flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all
+                ${
+                  settingsActive
+                    ? "bg-success text-success-foreground shadow-sm"
+                    : "text-foreground hover:bg-default-100"
+                }
+              `}
+            >
+              <Cog6ToothIcon className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">Settings</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>

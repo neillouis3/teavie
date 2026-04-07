@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SidebarProvider } from "@/components/ui/sidebarContext";
 import SideBar from "@/components/ui/sideBar";
+import MainWithSidebarOffset from "@/components/layout/mainWithSidebarOffset";
 import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
 import { Suspense } from "react";
 
@@ -28,7 +29,7 @@ export function Providers({ children }: ProvidersProps) {
             >
               <SideBar />
             </Suspense>
-            {children}
+            <MainWithSidebarOffset>{children}</MainWithSidebarOffset>
           </CatalogCardStyleProvider>
         </SidebarProvider>
       </NextThemesProvider>

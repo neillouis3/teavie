@@ -5,7 +5,6 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Input, Button, Select, SelectItem, Chip } from '@heroui/react';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from '@/lib/tmdbGenres';
-import CatalogCardStyleToggle from '@/components/ui/CatalogCardStyleToggle';
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title A-Z' },
@@ -222,11 +221,10 @@ export default function BrowseCatalogFilters({
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Chip color="success" size="md" radius="sm" variant="flat">
           {countLabel}
         </Chip>
-        <CatalogCardStyleToggle />
       </div>
     </section>
   );

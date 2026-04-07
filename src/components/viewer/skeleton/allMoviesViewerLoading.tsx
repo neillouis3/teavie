@@ -17,7 +17,7 @@ export default function AllMoviesViewerLoading() {
 
   return (
     <div className={gridClass}>
-      {Array.from({ length: 18 }).map((_, index) => (
+      {Array.from({ length: 28 }).map((_, index) => (
         <CardSkeleton key={index} />
       ))}
     </div>

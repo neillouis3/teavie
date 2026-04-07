@@ -9,7 +9,6 @@ import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import SmallCardLoading from '@/components/ui/smallCardLoading';
 import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
-import CatalogCardStyleToggle from '@/components/ui/CatalogCardStyleToggle';
 import {
   useCatalogCardStyle,
   type CatalogCardLayoutMode,
@@ -99,7 +98,10 @@ function SearchContent() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=${encodeURIComponent(q)}&page=${pageParam}`, { signal: controller.signal })
+    fetch(
+      `/api/search?q=${encodeURIComponent(q)}&page=${pageParam}&limit=28`,
+      { signal: controller.signal }
+    )
       .then((res) => res.json())
       .then((data) => {
         setResults(data.results ?? []);
@@ -182,8 +184,7 @@ function SearchContent() {
       <Header pageName="Search" />
 
       <div className="space-y-6 px-4 pb-6 pt-8">
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <form onSubmit={submitSearch} className="w-full min-w-0 sm:flex-1">
+        <form onSubmit={submitSearch} className="w-full">
           <Input
             aria-label="Search query"
             placeholder="Search titles…"
@@ -202,9 +203,7 @@ function SearchContent() {
               inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
             }}
           />
-          </form>
-          <CatalogCardStyleToggle className="shrink-0" />
-        </div>
+        </form>
 
         {/* Popular (no query) */}
         {!hasQuery && (
@@ -253,7 +252,7 @@ function SearchContent() {
             )}
 
             {loading && (
-              <CardGridSkeleton count={12} layoutMode={cardLayoutMode} />
+              <CardGridSkeleton count={28} layoutMode={cardLayoutMode} />
             )}
 
             {!loading && !error && results.length > 0 && (

@@ -35,9 +35,7 @@ export default function SettingsPage() {
 
         <section className="space-y-3 rounded-xl border border-default-200/80 p-4 dark:border-white/10">
           <h2 className="text-sm font-semibold text-foreground">Theme</h2>
-          <p className="text-xs text-default-500">
-            Light or dark interface. You can still use the sidebar toggle anytime.
-          </p>
+          <p className="text-xs text-default-500">Light or dark interface for the whole site.</p>
           {!mounted ? (
             <div className="h-9 animate-pulse rounded-lg bg-default-200" />
           ) : (
@@ -68,7 +66,7 @@ export default function SettingsPage() {
             <strong className="font-medium text-foreground">Vertical</strong> — poster on top,
             year, type, runtime or seasons, and title (7 per row on large screens).{' '}
             <strong className="font-medium text-foreground">Horizontal</strong> — wide backdrop
-            image with type and year only (4 per row).
+            image, type and year on top, title on the bottom-left (4 per row).
           </p>
           <div className="flex flex-wrap gap-2">
             {(
