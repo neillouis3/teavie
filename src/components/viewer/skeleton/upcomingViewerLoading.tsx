@@ -4,9 +4,7 @@ import React from "react";
 
 function LargeCardLoading() {
   return (
-    <div className="w-full h-[500px] rounded-xl overflow-hidden bg-default-200 animate-pulse">
-      <div className="w-full h-full rounded-xl" />
-    </div>
+    <div className="aspect-video w-full animate-pulse overflow-hidden rounded-xl bg-default-200" />
   );
 }
 

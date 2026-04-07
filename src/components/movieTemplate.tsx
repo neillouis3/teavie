@@ -95,9 +95,9 @@ export default function MovieTemplate({ id }: { id: string }) {
                 </div>
               </section>
               <section className="w-full mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
-                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                  <div className="flex-shrink-0 w-full lg:w-48">
-                    <div className="w-full rounded-lg bg-default-200 aspect-[2/3] animate-pulse" />
+                <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
+                  <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
+                    <div className="aspect-[2/3] w-full animate-pulse rounded-lg bg-default-200" />
                   </div>
                   <div className="flex-1 min-w-0 space-y-4">
                     <div className="space-y-2">
@@ -163,12 +163,12 @@ export default function MovieTemplate({ id }: { id: string }) {
                 </section>
 
                 <section className="w-full mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
-                  <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                    <div className="flex-shrink-0 w-full lg:w-48">
+                  <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
+                    <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
                       <Image
                         src={imageUrl}
                         alt={movie.title}
-                        className="w-full rounded-lg shadow-md object-cover aspect-[2/3]"
+                        className="aspect-[2/3] w-full rounded-lg object-cover shadow-md"
                       />
                     </div>
                     <div className="flex-1 min-w-0">

@@ -212,15 +212,15 @@ export default function ShowTemplate({ id }: { id: string }) {
                 </div>
 
                 <section className="w-full  p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
-                  <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                    <div className="flex-shrink-0 w-full lg:w-48">
+                  <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
+                    <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
                       <Image
                         src={imageUrl}
                         alt={title}
-                        className="w-full rounded-lg shadow-md object-cover aspect-[2/3]"
+                        className="aspect-[2/3] w-full rounded-lg object-cover shadow-md"
                       />
                     </div>
-                    <div className="flex-1 min-w-0 ">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm sm:text-base text-foreground/80 leading-relaxed">
                         {show.overview}
                       </p>
@@ -327,8 +327,8 @@ function LoadingSkeleton() {
       </div>
 
       <section className="w-full rounded-xl border border-default-200/60 overflow-hidden">
-        <div className="flex flex-col sm:flex-row">
-          <div className="flex-shrink-0 w-full sm:w-36 lg:w-44 aspect-[2/3] bg-default-200 animate-pulse" />
+        <div className="flex flex-row gap-4">
+          <div className="aspect-[2/3] w-28 shrink-0 animate-pulse bg-default-200 sm:w-36 md:w-40 lg:w-48" />
           <div className="flex-1 p-4 sm:p-5 space-y-4">
             <div className="space-y-2">
               {[90, 75, 55].map((w, i) => (

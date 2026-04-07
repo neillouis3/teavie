@@ -40,19 +40,19 @@ export default function LargeCard({
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
 
   return (
-    <Link href={href}>
-      <div className="relative w-full h-[500px] rounded-xl overflow-hidden group">
+    <Link href={href} className="block min-w-0 w-full">
+      <div className="group relative aspect-video w-full overflow-hidden rounded-xl">
         <img
           src={imageUrl}
           alt={title}
-          className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-        <div className="absolute bottom-6 left-6 text-white">
-          <h1 className="text-3xl font-bold group-hover:text-success transition-colors">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="absolute bottom-4 left-4 right-4 text-white sm:bottom-6 sm:left-6 sm:right-auto">
+          <h1 className="line-clamp-2 text-xl font-bold transition-colors group-hover:text-success sm:text-2xl md:text-3xl">
             {title}
           </h1>
-          <p className="text-sm text-gray-300">
+          <p className="mt-1 text-xs text-gray-300 sm:text-sm">
             {typeLower === "tv"
               ? `TV Show • ${year} • SS ${seasonAmount ?? "?"}`
               : `Movie • ${year} • ${runtimeMin != null ? `${runtimeMin} min` : "—"}`}
