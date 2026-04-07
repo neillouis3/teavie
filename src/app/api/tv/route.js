@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongo";
+import { buildCatalogFilter, catalogSort } from "@/lib/catalogQuery";
 
 export async function GET(req) {
   try {
@@ -8,33 +9,30 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
 
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "15", 10);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(
+      48,
+      Math.max(1, parseInt(searchParams.get("limit") || "18", 10))
+    );
     const skip = (page - 1) * limit;
 
     const sortBy = searchParams.get("sort_by") || "title";
-    let sort = {};
+    const sort = catalogSort(sortBy, {
+      titleAsc: { name: 1, _id: -1 },
+      titleDesc: { name: -1, _id: -1 },
+      dateDesc: { first_air_date: -1, _id: -1 },
+      dateAsc: { first_air_date: 1, _id: -1 },
+    });
 
-    switch (sortBy) {
-      case "release_year":
-        sort = { first_air_date: -1, _id: -1 };
-        break;
-      case "popularity":
-        sort = { popularity: -1, _id: -1 };
-        break;
-      case "title_desc":
-        sort = { name: -1, _id: -1 };
-        break;
-      case "title":
-      default:
-        sort = { name: 1, _id: -1 };
-        break;
-    }
+    const filter = buildCatalogFilter(searchParams, {
+      type: "tv",
+      dateField: "first_air_date",
+    });
 
-    const total = await collection.countDocuments({ type: "tv" });
+    const total = await collection.countDocuments(filter);
 
     const results = await collection
-      .find({ type: "tv" })
+      .find(filter)
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -45,7 +43,7 @@ export async function GET(req) {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.max(1, Math.ceil(total / limit)),
         results: results.map((doc) => {
           const rawDate =
             doc.release_date ??
@@ -57,8 +55,8 @@ export async function GET(req) {
             rawDate == null
               ? null
               : typeof rawDate === "string"
-              ? rawDate
-              : rawDate.toISOString?.().split("T")[0] ?? null;
+                ? rawDate
+                : rawDate.toISOString?.().split("T")[0] ?? null;
           return {
             id: doc.id.toString(),
             title: doc.title ?? doc.name,
@@ -80,13 +78,9 @@ export async function GET(req) {
     );
   } catch (err) {
     console.error(err);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch tv shows" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: "Failed to fetch tv shows" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
-

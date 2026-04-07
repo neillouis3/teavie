@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongo";
+import { buildCatalogFilter, catalogSort } from "@/lib/catalogQuery";
 
 export async function GET(req) {
   try {
@@ -8,33 +9,30 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
 
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "15", 10);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(
+      48,
+      Math.max(1, parseInt(searchParams.get("limit") || "18", 10))
+    );
     const skip = (page - 1) * limit;
 
     const sortBy = searchParams.get("sort_by") || "title";
-    let sort = {};
+    const sort = catalogSort(sortBy, {
+      titleAsc: { title: 1, _id: -1 },
+      titleDesc: { title: -1, _id: -1 },
+      dateDesc: { release_date: -1, _id: -1 },
+      dateAsc: { release_date: 1, _id: -1 },
+    });
 
-    switch (sortBy) {
-      case "release_year":
-        sort = { release_date: -1, _id: -1 };
-        break;
-      case "popularity":
-        sort = { popularity: -1, _id: -1 };
-        break;
-      case "title_desc":
-        sort = { title: -1, _id: -1 };
-        break;
-      case "title":
-      default:
-        sort = { title: 1, _id: -1 };
-        break;
-    }
+    const filter = buildCatalogFilter(searchParams, {
+      type: "movie",
+      dateField: "release_date",
+    });
 
-    const total = await collection.countDocuments({ type: "movie" });
+    const total = await collection.countDocuments(filter);
 
     const results = await collection
-      .find({ type: "movie" })
+      .find(filter)
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -45,7 +43,7 @@ export async function GET(req) {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.max(1, Math.ceil(total / limit)),
         results: results.map((doc) => {
           const rawDate =
             doc.release_date ??
@@ -57,8 +55,8 @@ export async function GET(req) {
             rawDate == null
               ? null
               : typeof rawDate === "string"
-              ? rawDate
-              : rawDate.toISOString?.().split("T")[0] ?? null;
+                ? rawDate
+                : rawDate.toISOString?.().split("T")[0] ?? null;
           return {
             id: doc.id.toString(),
             title: doc.title ?? doc.name,
@@ -80,13 +78,9 @@ export async function GET(req) {
     );
   } catch (err) {
     console.error(err);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch movies" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: "Failed to fetch movies" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
-
