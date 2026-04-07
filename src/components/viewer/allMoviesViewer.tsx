@@ -1,33 +1,45 @@
 'use client';
-import React from "react";
-import SmallCard from "../ui/smallCard";
-import { ContentItem } from "@/types/content";
+
+import React from 'react';
+import CatalogCard from '../ui/catalogCard';
+import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
+import { ContentItem } from '@/types/content';
 
 interface AllMovieViewerProps {
   allContentData: ContentItem[];
 }
 
+function toNumericId(id: ContentItem['id']): number {
+  if (typeof id === 'number' && !Number.isNaN(id)) return id;
+  const n = parseInt(String(id), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
 const AllMovieViewer: React.FC<AllMovieViewerProps> = ({ allContentData }) => {
+  const { mode } = useCatalogCardStyle();
+
   return (
-    <div className="w-full h-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <div className="grid h-full w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
       {allContentData.map((item, index) => {
-        // derive year safely
-        const title = item.title ?? item.name ?? "Untitled";
-        const releaseDate = item.release_date ?? item.first_air_date ?? "";
+        const title = item.title ?? item.name ?? 'Untitled';
+        const releaseDate = item.release_date ?? item.first_air_date ?? '';
         const year = releaseDate
           ? String(new Date(releaseDate).getFullYear())
-          : "TBA";
+          : 'TBA';
 
         return (
-          <SmallCard
-            key={item.id || index}
-            id={item.id}
-            title={title ?? item.name ?? "Untitled"}
-            year={year}  // ✅ now a string
-            type={item.type || "movie"}
-            runtimeSeconds={item.runtimeSeconds ?? undefined}
-            seasonAmount={item.season_amount ?? 0}
-            posterPath={item.poster_path || ""}
+          <CatalogCard
+            key={item.id ?? index}
+            id={toNumericId(item.id)}
+            title={title}
+            year={year}
+            voteAverage={item.vote_average ?? null}
+            runtimeSeconds={item.runtimeSeconds ?? null}
+            seasonAmount={item.season_amount ?? null}
+            type={item.type || 'movie'}
+            posterPath={item.poster_path}
+            backdropPath={item.backdrop_path}
+            styleMode={mode}
           />
         );
       })}

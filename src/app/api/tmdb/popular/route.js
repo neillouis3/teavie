@@ -50,6 +50,7 @@ export async function GET() {
       type: "movie",
       runtimeSeconds: null,
       season_amount: 0,
+      vote_average: r.vote_average ?? null,
     }));
 
     const tv = (tvData.results || []).slice(0, 10).map((r) => ({
@@ -64,6 +65,7 @@ export async function GET() {
       type: "tv",
       runtimeSeconds: null,
       season_amount: r.number_of_seasons ?? 0,
+      vote_average: r.vote_average ?? null,
     }));
 
     return Response.json({ movies, tv });

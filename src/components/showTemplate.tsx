@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import SimilarShows from "./similarShows";
 import ShowPlayer, { SHOW_SERVERS } from "./showPlayer";
-import SimilarViewerLoading from "@/components/viewer/skeleton/similarViewerLoading";
-import { Image, Chip, Button, Divider } from "@heroui/react";
+import YouMightLike from "./youMightLike";
+import { Image, Chip, Button } from "@heroui/react";
 
 interface Season {
   season_number: number;
@@ -286,6 +285,8 @@ export default function ShowTemplate({ id }: { id: string }) {
             )
           )}
         </div>
+
+        {!loading && <YouMightLike mediaType="tv" id={id} />}
       </div>
     </div>
   );

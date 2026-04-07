@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SidebarProvider } from "@/components/ui/sidebarContext";
 import SideBar from "@/components/ui/sideBar";
+import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
 import { Suspense } from "react";
 
 export interface ProvidersProps {
@@ -19,14 +20,16 @@ export function Providers({ children }: ProvidersProps) {
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider attribute="class" defaultTheme="light">
         <SidebarProvider>
-          <Suspense
-            fallback={
-              <div className="fixed left-0 top-0 hidden h-screen w-16 border-r border-divider bg-background lg:block lg:w-64" />
-            }
-          >
-            <SideBar />
-          </Suspense>
-          {children}
+          <CatalogCardStyleProvider>
+            <Suspense
+              fallback={
+                <div className="fixed left-0 top-0 hidden h-screen w-16 border-r border-divider bg-background lg:block lg:w-64" />
+              }
+            >
+              <SideBar />
+            </Suspense>
+            {children}
+          </CatalogCardStyleProvider>
         </SidebarProvider>
       </NextThemesProvider>
     </HeroUIProvider>

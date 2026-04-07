@@ -64,6 +64,7 @@ export async function GET(req) {
             runtimeSeconds: doc.runtimeSeconds ?? null,
             season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
             popularity: doc.popularity ?? 0,
+            vote_average: doc.vote_average ?? null,
             genre_ids: doc.genre_ids ?? [],
             poster_path: doc.poster_path ?? null,
             backdrop_path: doc.backdrop_path ?? null,

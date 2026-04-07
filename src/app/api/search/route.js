@@ -70,6 +70,7 @@ export async function GET(req) {
           runtimeSeconds: null,
           season_amount: 0,
           popularity: r.popularity ?? 0,
+          vote_average: r.vote_average ?? null,
         };
       }
       return {
@@ -85,6 +86,7 @@ export async function GET(req) {
         runtimeSeconds: null,
         season_amount: r.number_of_seasons ?? 0,
         popularity: r.popularity ?? 0,
+        vote_average: r.vote_average ?? null,
       };
     });
 

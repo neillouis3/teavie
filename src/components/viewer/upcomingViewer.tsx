@@ -8,25 +8,16 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "../ui/largeCard";
+import type { ContentItem } from "@/types/content";
 
-// Type for upcoming items
-type ContentItem = {
-  id: number;
-  title?: string;          // movies
-  name?: string;           // TV shows
-  release_date?: string;   // movies
-  first_air_date?: string; // TV shows
-  poster_path?: string;
-  backdrop_path?: string;
-  overview?: string;
-  type?: "movie" | "tv";
-  runtimeSeconds?: number;
-  season_amount?: number;
-};
-
-// Props
 interface UpcomingViewerProps {
   upcomingContentData: ContentItem[];
+}
+
+function toNumericId(id: ContentItem["id"]): number {
+  if (typeof id === "number" && !Number.isNaN(id)) return id;
+  const n = parseInt(String(id), 10);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerProps) {
@@ -66,7 +57,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
             return (
               <CarouselItem key={item.id} className="pl-4 basis-2/3">
                 <LargeCard
-                  id={item.id}
+                  id={toNumericId(item.id)}
                   title={title}
                   year={year}
                   runtimeSeconds={item.runtimeSeconds}

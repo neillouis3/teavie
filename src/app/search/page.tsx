@@ -5,8 +5,10 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Input, Chip, Pagination } from '@heroui/react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Header from '@/components/ui/header';
-import SmallCard from '@/components/ui/smallCard';
-import SmallCardLoading from '@/components/ui/smallCardLoading';
+import CatalogCard from '@/components/ui/catalogCard';
+import CatalogCardLoading from '@/components/ui/catalogCardLoading';
+import CatalogCardStyleToggle from '@/components/ui/CatalogCardStyleToggle';
+import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
 import { ContentItem } from '@/types/content';
 
@@ -16,7 +18,7 @@ function CardGridSkeleton({ count }: { count: number }) {
   return (
     <div className={GRID}>
       {Array.from({ length: count }).map((_, i) => (
-        <SmallCardLoading key={i} />
+        <CatalogCardLoading key={i} />
       ))}
     </div>
   );
@@ -40,6 +42,7 @@ function SearchContent() {
   const [popularMovies, setPopularMovies] = useState<ContentItem[]>([]);
   const [popularTv, setPopularTv] = useState<ContentItem[]>([]);
   const [popularLoading, setPopularLoading] = useState(false);
+  const { mode: cardStyleMode } = useCatalogCardStyle();
 
   useEffect(() => { setInputValue(qParam); }, [qParam]);
 
@@ -114,17 +117,23 @@ function SearchContent() {
     <div className={GRID}>
       {items.map((item, index) => {
         const title = item.title || item.name || 'Untitled';
-        const year = item.release_date?.split('-')[0] || item.first_air_date?.split('-')[0] || '—';
+        const release = item.release_date || item.first_air_date || '';
+        const year = release ? String(new Date(release).getFullYear()) : '—';
+        const nid =
+          typeof item.id === 'number' ? item.id : parseInt(String(item.id), 10);
         return (
-          <SmallCard
+          <CatalogCard
             key={`${keyPrefix}-${item.type ?? 'x'}-${item.id}-${index}`}
-            id={typeof item.id === 'string' ? parseInt(item.id, 10) : item.id}
+            id={Number.isFinite(nid) ? nid : 0}
             title={title}
             year={year}
+            voteAverage={item.vote_average ?? null}
+            runtimeSeconds={item.runtimeSeconds ?? null}
+            seasonAmount={item.season_amount ?? null}
             type={item.type || 'movie'}
-            runtimeSeconds={item.runtimeSeconds ?? undefined}
-            seasonAmount={item.season_amount ?? 0}
-            posterPath={item.poster_path || ''}
+            posterPath={item.poster_path}
+            backdropPath={item.backdrop_path}
+            styleMode={cardStyleMode}
           />
         );
       })}
@@ -136,7 +145,8 @@ function SearchContent() {
       <Header pageName="Search" />
 
       <div className="space-y-6 px-4 pb-6 pt-8">
-        <form onSubmit={submitSearch} className="w-full">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <form onSubmit={submitSearch} className="w-full min-w-0 sm:flex-1">
           <Input
             aria-label="Search query"
             placeholder="Search titles…"
@@ -155,7 +165,9 @@ function SearchContent() {
               inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
             }}
           />
-        </form>
+          </form>
+          <CatalogCardStyleToggle className="shrink-0" />
+        </div>
 
         {/* Popular (no query) */}
         {!hasQuery && (

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import MoviePlayer, { MOVIE_SERVERS } from './moviePlayer';
+import YouMightLike from './youMightLike';
 import { Image, Chip, Button } from '@heroui/react';
 
 interface Movie {
@@ -238,6 +239,7 @@ export default function MovieTemplate({ id }: { id: string }) {
           )}
         </div>
 
+        {!loading && <YouMightLike mediaType="movie" id={id} />}
       </div>
     </div>
   );

@@ -7,6 +7,12 @@ interface NewViewerProps {
   newContent: ContentItem[];
 }
 
+function toNumericId(id: ContentItem["id"]): number {
+  if (typeof id === "number" && !Number.isNaN(id)) return id;
+  const n = parseInt(String(id), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export default function NewViewer({ newContent }: NewViewerProps) {
   return (
     <div className="w-full h-full grid grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -21,7 +27,7 @@ export default function NewViewer({ newContent }: NewViewerProps) {
           return (
             <SmallCard
               key={index}
-              id={item.id}
+              id={toNumericId(item.id)}
               title={title}
               year={year}
               type={item.type || "movie"}
