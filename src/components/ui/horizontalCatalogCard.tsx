@@ -18,7 +18,7 @@ const BACKDROP_SIZE = 'w1280';
 const POSTER_SIZE = 'w500';
 
 const pill =
-  'rounded-sm bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm tabular-nums';
+  'rounded-sm bg-black/55 px-2.5 py-1 text-[10px] uppercase tracking-wide text-white backdrop-blur-sm tabular-nums';
 
 /**
  * Wide tile: backdrop/poster, type + year pills, title on bottom-left overlay.
@@ -62,7 +62,7 @@ export default function HorizontalCatalogCard({
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-1 p-2 text-center">
-            <p className="line-clamp-2 text-xs font-semibold text-foreground">
+            <p className="line-clamp-2 text-xs text-foreground">
               {title}
             </p>
             <span className="text-[10px] text-default-500">No image</span>
