@@ -1,5 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
+import {
+  EMBED_IFRAME_ALLOW,
+  EMBED_IFRAME_SANDBOX,
+} from '@/lib/embedPlayerIframe';
 
 /** Videasy — https://www.videasy.net/docs — overlay = Netflix-style pause overlay */
 const VIDEASY_QUERY = '?color=22c55e&overlay=true';
@@ -22,9 +26,6 @@ export const MOVIE_SERVERS = {
   moviesapi: { base: 'https://moviesapi.club', path: (id) => `/movie/${id}` },
 };
 
-const IFRAME_ALLOW =
-  'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-
 const MoviePlayer = ({ videoId, server = 'videasy' }) => {
   const [playerUrl, setPlayerUrl] = useState('');
 
@@ -41,8 +42,10 @@ const MoviePlayer = ({ videoId, server = 'videasy' }) => {
         <iframe
           title="Movie player"
           src={playerUrl}
-          allow={IFRAME_ALLOW}
+          allow={EMBED_IFRAME_ALLOW}
+          sandbox={EMBED_IFRAME_SANDBOX}
           allowFullScreen
+          referrerPolicy="no-referrer-when-downgrade"
           className="absolute inset-0 h-full w-full border-0"
         />
       ) : (
