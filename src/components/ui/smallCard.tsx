@@ -1,6 +1,6 @@
-import React from "react";
-import Link from "next/link";
-import { Image } from "@heroui/react";
+import React from 'react';
+import Link from 'next/link';
+import { Image } from '@heroui/react';
 
 interface SmallCardProps {
   id: number;
@@ -21,23 +21,24 @@ export default function SmallCard({
   type,
   posterPath,
 }: SmallCardProps) {
-  const typeLower = (type ?? "").toLowerCase();
-  const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
-  const baseUrl = "https://image.tmdb.org/t/p/";
-  const size = "w500";
+  const typeLower = (type ?? '').toLowerCase();
+  const runtimeMin =
+    runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
+  const baseUrl = 'https://image.tmdb.org/t/p/';
+  const size = 'w500';
   const hasPoster = Boolean(posterPath?.trim());
-  const imageUrl = hasPoster ? `${baseUrl}${size}${posterPath}` : "";
-  const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
+  const imageUrl = hasPoster ? `${baseUrl}${size}${posterPath}` : '';
+  const href = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
 
   return (
-    <div className="w-full min-w-0 h-96 flex flex-col rounded-xl group">
+    <div className="group flex h-96 min-w-0 w-full flex-col rounded-xl">
       <Link href={href} className="block w-full shrink-0">
-        <div className="w-full h-72 relative overflow-hidden rounded-xl bg-default-200">
+        <div className="relative h-72 w-full overflow-hidden rounded-xl bg-default-200">
           {hasPoster ? (
             <Image
               src={imageUrl}
               alt={title}
-              className="w-full h-full object-cover transition-all duration-300 group-hover:opacity-50"
+              className="h-full w-full object-cover transition-all duration-300 group-hover:opacity-50"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-default-500">
@@ -47,22 +48,35 @@ export default function SmallCard({
         </div>
       </Link>
 
-      <div className="rounded-b-xl text-gray-500 w-full min-w-0 flex flex-col gap-1 pt-2 flex-1 min-h-0">
-        <div className="w-full flex flex-row justify-between items-center gap-1 shrink-0">
-          <p className="flex-1 text-xs text-start truncate">{year}</p>
-          <div className="uppercase flex-shrink-0 text-xs text-center border border-gray-500 group-hover:border-success rounded-2xl px-2 py-0.5 group-hover:text-success transition-colors duration-300">
-            {typeLower === "tv" ? "TV" : typeLower === "movie" ? "Movie" : type}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1 rounded-b-xl pt-2 text-gray-500">
+        <div className="flex w-full shrink-0 flex-row items-center justify-between gap-1">
+          <p className="flex-1 truncate text-start text-xs">{year}</p>
+          <div className="flex-shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs uppercase transition-colors duration-300 group-hover:border-success group-hover:text-success">
+            {typeLower === 'tv'
+              ? 'TV'
+              : typeLower === 'movie'
+                ? 'Movie'
+                : type}
           </div>
-          <p className="flex-1 text-xs text-end truncate">
-            {typeLower === "tv"
-              ? (seasonAmount != null && seasonAmount > 0 ? `SS ${seasonAmount}` : "—")
-              : typeLower === "movie"
-              ? runtimeMin != null ? `${runtimeMin} min` : "—"
-              : ""}
+          <p className="flex-1 truncate text-end text-xs">
+            {typeLower === 'tv'
+              ? seasonAmount != null && seasonAmount > 0
+                ? `SS ${seasonAmount}`
+                : '—'
+              : typeLower === 'movie'
+                ? runtimeMin != null
+                  ? `${runtimeMin} min`
+                  : '—'
+                : ''}
           </p>
         </div>
-        <h1 className="text-md group-hover:text-success transition-colors duration-300 truncate min-h-0" title={title}>
-          {title.length > 25 ? title.slice(0, title.length / 1.5) + "..." : title}
+        <h1
+          className="text-md min-h-0 truncate transition-colors duration-300 group-hover:text-success"
+          title={title}
+        >
+          {title.length > 25
+            ? `${title.slice(0, title.length / 1.5)}...`
+            : title}
         </h1>
       </div>
     </div>

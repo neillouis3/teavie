@@ -46,6 +46,7 @@ const AllMovieViewer: React.FC<AllMovieViewerProps> = ({ allContentData }) => {
               year={year}
               type={type}
               posterPath={poster}
+              backdropPath={item.backdrop_path || ''}
             />
           );
         }

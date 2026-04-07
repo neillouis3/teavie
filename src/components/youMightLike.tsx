@@ -8,6 +8,7 @@ type RecItem = {
   id: number;
   title: string;
   poster_path: string | null;
+  backdrop_path: string | null;
   year: string;
 };
 
@@ -49,6 +50,7 @@ export default function YouMightLike({
             title?: string;
             name?: string;
             poster_path?: string | null;
+            backdrop_path?: string | null;
             release_date?: string | null;
             first_air_date?: string | null;
           }) => {
@@ -60,6 +62,7 @@ export default function YouMightLike({
               id: r.id,
               title: r.title ?? r.name ?? 'Untitled',
               poster_path: r.poster_path ?? null,
+              backdrop_path: r.backdrop_path ?? null,
               year,
             };
           }
@@ -86,7 +89,7 @@ export default function YouMightLike({
           {Array.from({ length: mediaType === 'tv' ? 8 : 6 }).map((_, i) => (
             <div
               key={i}
-              className="aspect-[2/3] animate-pulse rounded-lg bg-default-200"
+              className="aspect-[16/10] animate-pulse rounded-lg bg-default-200"
             />
           ))}
         </div>
@@ -113,6 +116,7 @@ export default function YouMightLike({
               year={item.year}
               type={mediaType}
               posterPath={item.poster_path || ''}
+              backdropPath={item.backdrop_path || ''}
             />
           </li>
         ))}

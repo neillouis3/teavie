@@ -10,31 +10,41 @@ export type HorizontalCatalogCardProps = {
   title: string;
   year: string;
   type: 'movie' | 'tv' | string;
-  posterPath: string;
+  posterPath?: string;
+  /** Same as LargeCard: wide still preferred */
+  backdropPath?: string;
 };
 
-const TMDB = 'https://image.tmdb.org/t/p/w342';
+const BASE = 'https://image.tmdb.org/t/p/';
+const BACKDROP_SIZE = 'w1280';
+const POSTER_SIZE = 'w500';
 
 const pill =
   'rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm tabular-nums';
 
 /**
- * Minimal catalog tile: poster, MOVIE/TV + year badges only (no title).
- * Matches the compact style used under “You might like”.
+ * Minimal catalog tile: backdrop (or poster) like LargeCard, MOVIE/TV + year only (no title).
  */
 export default function HorizontalCatalogCard({
   id,
   title,
   year,
   type,
-  posterPath,
+  posterPath = '',
+  backdropPath = '',
 }: HorizontalCatalogCardProps) {
   const typeLower = String(type ?? '').toLowerCase();
   const isTv = typeLower === 'tv';
   const label = isTv ? 'TV' : 'MOVIE';
   const href = isTv ? `/shows/${id}` : `/movies/${id}`;
-  const hasPoster = Boolean(posterPath?.trim());
-  const src = hasPoster ? `${TMDB}${posterPath}` : null;
+
+  const backdrop = backdropPath?.trim();
+  const poster = posterPath?.trim();
+  const src = backdrop
+    ? `${BASE}${BACKDROP_SIZE}${backdrop}`
+    : poster
+      ? `${BASE}${POSTER_SIZE}${poster}`
+      : null;
 
   return (
     <Link
@@ -42,7 +52,7 @@ export default function HorizontalCatalogCard({
       className="group block min-w-0 w-full"
       aria-label={`${title}, ${label}, ${year}`}
     >
-      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-default-200 ring-1 ring-white/10">
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-default-200 ring-1 ring-white/10">
         {src ? (
           <Image
             src={src}
@@ -53,14 +63,14 @@ export default function HorizontalCatalogCard({
           />
         ) : (
           <div className="flex h-full items-center justify-center p-2 text-center text-[10px] text-default-500">
-            No poster
+            No image
           </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/25" />
-        <div className="absolute left-2 top-2">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
+        <div className="absolute left-2 top-2 sm:left-2.5 sm:top-2.5">
           <span className={pill}>{label}</span>
         </div>
-        <div className="absolute right-2 top-2">
+        <div className="absolute right-2 top-2 sm:right-2.5 sm:top-2.5">
           <span className={pill}>{year}</span>
         </div>
       </div>
