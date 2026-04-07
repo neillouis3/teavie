@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SidebarProvider } from "@/components/ui/sidebarContext";
 import SideBar from "@/components/ui/sideBar";
-import Header from "@/components/ui/header1";
 import { Suspense } from "react";
 
 export interface ProvidersProps {
@@ -27,7 +26,6 @@ export function Providers({ children }: ProvidersProps) {
           >
             <SideBar />
           </Suspense>
-          <Header />
           {children}
         </SidebarProvider>
       </NextThemesProvider>

@@ -3,11 +3,11 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Header from '@/components/ui/header';
-import { Pagination, Card, CardBody } from '@heroui/react';
-import { ContentItem } from '@/types/content';
 import AllShowsViewer from '@/components/viewer/allShowsViewer';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
 import BrowseCatalogFilters from '@/components/browse/BrowseCatalogFilters';
+import { Pagination } from '@heroui/react';
+import { ContentItem } from '@/types/content';
 
 function AllShowsPageContent() {
   const searchParams = useSearchParams();
@@ -15,8 +15,7 @@ function AllShowsPageContent() {
   const pathname = usePathname();
 
   const rawPage = parseInt(searchParams.get('page') || '1', 10);
-  const pageParam =
-    Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+  const pageParam = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   const sortParam = searchParams.get('sort_by') || 'title';
   const genreParam = searchParams.get('genre') ?? '';
   const yearMinParam = searchParams.get('year_min') ?? '';
@@ -28,9 +27,7 @@ function AllShowsPageContent() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    document.title = 'All TV Shows - Teavie';
-  }, []);
+  useEffect(() => { document.title = 'All TV Shows - Teavie'; }, []);
 
   useEffect(() => {
     const fetchShows = async () => {
@@ -45,29 +42,21 @@ function AllShowsPageContent() {
         if (yearMaxParam) qs.set('year_max', yearMaxParam);
         if (qParam.trim()) qs.set('q', qParam.trim());
 
-        const response = await fetch(`/api/tv?${qs.toString()}`);
-        if (response.ok) {
-          const data = await response.json();
+        const res = await fetch(`/api/tv?${qs.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
           setShows(data.results || []);
           setTotalPages(data.totalPages || 1);
           setTotal(typeof data.total === 'number' ? data.total : 0);
         }
-      } catch (error) {
-        console.error('Error fetching TV shows:', error);
+      } catch (err) {
+        console.error('Error fetching shows:', err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchShows();
-  }, [
-    pageParam,
-    sortParam,
-    genreParam,
-    yearMinParam,
-    yearMaxParam,
-    qParam,
-  ]);
+  }, [pageParam, sortParam, genreParam, yearMinParam, yearMaxParam, qParam]);
 
   const setPage = (p: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -76,39 +65,31 @@ function AllShowsPageContent() {
   };
 
   return (
-    <div className="bg-main flex h-full min-h-screen w-full flex-col">
+    <div className="bg-main min-h-screen w-full">
       <Header pageName="All TV Shows" />
-
-      <div className="my-4 flex w-full flex-col px-4 pb-10">
+      <div className="space-y-4 px-4 pb-8 pt-2">
         <BrowseCatalogFilters mode="tv" total={total} loading={loading} />
 
-        <div className="h-fit w-full">
-          {loading ? (
-            <AllMoviesViewerLoading />
-          ) : shows.length === 0 ? (
-            <Card shadow="none" className="border border-dashed border-default-300 bg-default-100/20">
-              <CardBody className="py-16 text-center">
-                <p className="text-default-600">
-                  No shows match these filters. Try clearing filters or broadening
-                  the year range.
-                </p>
-              </CardBody>
-            </Card>
-          ) : (
-            <AllShowsViewer allContentData={shows} />
-          )}
-        </div>
+        {loading ? (
+          <AllMoviesViewerLoading />
+        ) : shows.length === 0 ? (
+          <p className="py-16 text-center text-sm text-default-500">
+            No shows match these filters. Try adjusting your search.
+          </p>
+        ) : (
+          <AllShowsViewer allContentData={shows} />
+        )}
 
         {totalPages > 1 && !loading && shows.length > 0 && (
-          <div className="mt-6 flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <div className="flex justify-center pt-2">
             <Pagination
               total={totalPages}
               page={pageParam}
               onChange={setPage}
               showControls
-              size="lg"
-              color="success"
-              variant="flat"
+              size="sm"
+              color="default"
+              variant="light"
             />
           </div>
         )}
@@ -121,9 +102,9 @@ export default function AllShowsPage() {
   return (
     <Suspense
       fallback={
-        <div className="bg-main flex min-h-screen w-full flex-col">
+        <div className="bg-main min-h-screen w-full">
           <Header pageName="All TV Shows" />
-          <div className="px-4 py-6">
+          <div className="px-4 pb-8 pt-2">
             <AllMoviesViewerLoading />
           </div>
         </div>

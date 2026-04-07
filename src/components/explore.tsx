@@ -29,9 +29,9 @@ export default function Explore({
       <Header pageName="Explore" />
 
       {/* New & Upcoming Section */}
-      <div className="flex-col my-4 h-fit w-full">
+      <div className="mt-6 mb-4 flex h-fit w-full flex-col">
         <div className="mb-4 pl-4">
-          <Chip color="success" size="lg" radius="sm">
+          <Chip color="success" size="md" radius="sm">
             New & Upcoming
           </Chip>
         </div>
@@ -52,7 +52,7 @@ export default function Explore({
             <Chip
               color="success"
               variant="flat"
-              size="lg"
+              size="md"
               className="mb-4"
               radius="sm"
             >
@@ -74,7 +74,7 @@ export default function Explore({
           <Chip
             color="success"
             variant="flat"
-            size="lg"
+            size="md"
             className="mb-4"
             radius="sm"
           >

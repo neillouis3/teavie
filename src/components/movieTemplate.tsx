@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Header from './ui/headerTemplate';
 import MoviePlayer, { MOVIE_SERVERS } from './moviePlayer';
 import { Image, Chip, Button } from '@heroui/react';
 
@@ -71,9 +70,9 @@ export default function MovieTemplate({ id }: { id: string }) {
     <div className="bg-background h-full w-full flex flex-col  px-4 py-4 pb-32">
       <div className="w-full  flex flex-col gap-6">
         {/* Video Player */}
-        <div className="h-[50vh] min-h-0 w-full rounded-lg bg-gray-500 lg:h-[80vh]">
+        <div className="h-[80vh] max-h-[80vh] min-h-0 w-full shrink-0 overflow-hidden rounded-lg bg-default-200">
           {loading ? (
-            <div className="bg-default-200 animate-pulse rounded-lg w-full h-full" />
+            <div className="h-full w-full animate-pulse rounded-lg bg-default-200" />
           ) : (
             <MoviePlayer videoId={id} server={server} />
           )}
@@ -138,7 +137,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                     {movie.title}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <Chip color="success" size="sm" variant="flat" className="font-medium">
+                    <Chip color="success" size="md" variant="flat" className="font-medium">
                       Movie
                     </Chip>
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-xs font-medium">

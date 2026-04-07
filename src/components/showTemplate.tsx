@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import SimilarShows from "./similarShows";
-import Header from "./ui/headerTemplate";
 import ShowPlayer, { SHOW_SERVERS } from "./showPlayer";
 import SimilarViewerLoading from "@/components/viewer/skeleton/similarViewerLoading";
 import { Image, Chip, Button, Divider } from "@heroui/react";
@@ -89,9 +88,9 @@ export default function ShowTemplate({ id }: { id: string }) {
       <div className="w-full flex flex-col gap-6">
 
         {/* ── Video Player ── */}
-        <div className="h-[50vh] min-h-0 w-full rounded-xl bg-default-200 lg:h-[80vh]">
+        <div className="h-[80vh] max-h-[80vh] min-h-0 w-full shrink-0 overflow-hidden rounded-xl bg-default-200">
           {loading ? (
-            <div className="bg-default-200 animate-pulse w-full h-full" />
+            <div className="h-full w-full animate-pulse bg-default-200" />
           ) : (
             <ShowPlayer
               videoId={show?.id ?? id}
@@ -115,11 +114,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                     {title}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <Chip color="success" size="sm" variant="flat" className="font-medium">
+                    <Chip color="success" size="md" variant="flat" className="font-medium">
                       TV
                     </Chip>
                     <Chip
-                      size="sm"
+                      size="md"
                       variant="flat"
                       color="warning"
                       startContent={
@@ -131,10 +130,10 @@ export default function ShowTemplate({ id }: { id: string }) {
                     >
                       {show.vote_average.toFixed(1)}
                     </Chip>
-                    <Chip size="sm" variant="flat" className="font-medium">
+                    <Chip size="md" variant="flat" className="font-medium">
                       {year}
                     </Chip>
-                    <Chip size="sm" variant="flat" className="font-medium capitalize">
+                    <Chip size="md" variant="flat" className="font-medium capitalize">
                       {show.status}
                     </Chip>
                   </div>
@@ -203,11 +202,11 @@ export default function ShowTemplate({ id }: { id: string }) {
 
                   {/* Selection summary bar */}
                   <div className="flex items-center gap-2 px-4 py-3 border-t border-default-200/60 bg-default-50/50 dark:bg-default-100/10">
-                    <Chip size="sm" variant="flat" color="success" className="font-mono">
+                    <Chip size="md" variant="flat" color="success" className="font-mono">
                       S{selectedSeason}
                     </Chip>
                     <span className="text-default-400 text-xs">›</span>
-                    <Chip size="sm" variant="flat" color="success" className="font-mono">
+                    <Chip size="md" variant="flat" color="success" className="font-mono">
                       E{selectedEpisode}
                     </Chip>
                   </div>

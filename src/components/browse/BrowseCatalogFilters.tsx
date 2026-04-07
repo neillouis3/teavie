@@ -1,31 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  useSearchParams,
-  useRouter,
-  usePathname,
-} from 'next/navigation';
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  Input,
-  Button,
-  Select,
-  SelectItem,
-  Chip,
-  Divider,
-} from '@heroui/react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { Input, Button, Select, SelectItem, Chip } from '@heroui/react';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import {
-  TMDB_MOVIE_GENRES,
-  TMDB_TV_GENRES,
-} from '@/lib/tmdbGenres';
+import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from '@/lib/tmdbGenres';
 
 const SORT_OPTIONS = [
-  { key: 'title', label: 'Title A–Z' },
-  { key: 'title_desc', label: 'Title Z–A' },
+  { key: 'title', label: 'Title A-Z' },
+  { key: 'title_desc', label: 'Title Z-A' },
   { key: 'release_year', label: 'Newest first' },
   { key: 'release_year_asc', label: 'Oldest first' },
   { key: 'popularity', label: 'Most popular' },
@@ -34,6 +17,28 @@ const SORT_OPTIONS = [
 ] as const;
 
 type SelectRow = { id: string; label: string };
+
+const BORDERED_FIELD =
+  'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
+
+/** Fixed trigger width (8rem) per design */
+const SELECT_BASE = 'w-32 min-w-32 max-w-32 shrink-0';
+
+const sortSelectClassNames = {
+  base: SELECT_BASE,
+  value: 'font-normal text-foreground',
+  selectorIcon: 'text-default-400',
+  trigger: BORDERED_FIELD,
+} as const;
+
+function filterSelectClassNames(hasValue: boolean) {
+  return {
+    base: SELECT_BASE,
+    value: hasValue ? 'font-normal text-foreground' : 'font-normal text-default-500',
+    selectorIcon: 'text-default-400',
+    trigger: BORDERED_FIELD,
+  } as const;
+}
 
 function yearChoices() {
   const y = new Date().getFullYear();
@@ -58,16 +63,13 @@ export default function BrowseCatalogFilters({
   const pathname = usePathname();
 
   const rawSort = searchParams.get('sort_by') || 'title';
-  const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort)
-    ? rawSort
-    : 'title';
+  const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort) ? rawSort : 'title';
   const genre = searchParams.get('genre') || '';
   const yearMin = searchParams.get('year_min') || '';
   const yearMax = searchParams.get('year_max') || '';
   const qUrl = searchParams.get('q') || '';
 
   const [searchDraft, setSearchDraft] = useState(qUrl);
-
   useEffect(() => {
     setSearchDraft(qUrl);
   }, [qUrl]);
@@ -81,237 +83,149 @@ export default function BrowseCatalogFilters({
 
   const genreItems: SelectRow[] = useMemo(() => {
     const list = mode === 'movie' ? TMDB_MOVIE_GENRES : TMDB_TV_GENRES;
-    const rows: SelectRow[] = [{ id: 'all', label: 'All genres' }];
-    for (const g of list) {
-      rows.push({ id: String(g.id), label: g.name });
-    }
-    return rows;
+    return list.map((g) => ({ id: String(g.id), label: g.name }));
   }, [mode]);
 
-  const yearItems: SelectRow[] = useMemo(() => {
-    const rows: SelectRow[] = [{ id: 'all', label: 'Any' }];
-    for (const y of years) rows.push({ id: y, label: y });
-    return rows;
-  }, [years]);
+  const yearItems: SelectRow[] = useMemo(
+    () => years.map((y) => ({ id: y, label: y })),
+    [years]
+  );
 
   const mergeParams = useCallback(
     (patch: Record<string, string | null | undefined>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [k, v] of Object.entries(patch)) {
-        if (v === null || v === undefined || v === '') {
-          params.delete(k);
-        } else {
-          params.set(k, String(v));
-        }
+        if (!v) params.delete(k);
+        else params.set(k, String(v));
       }
       router.push(`${pathname}?${params.toString()}`);
     },
     [pathname, router, searchParams]
   );
 
-  const hasActiveFilters = useMemo(
-    () =>
-      Boolean(genre) ||
-      Boolean(yearMin) ||
-      Boolean(yearMax) ||
-      Boolean(qUrl.trim()),
-    [genre, yearMin, yearMax, qUrl]
-  );
+  const hasActiveFilters =
+    Boolean(genre) || Boolean(yearMin) || Boolean(yearMax) || Boolean(qUrl.trim());
 
-  const clearFilters = () => {
-    mergeParams({
-      genre: null,
-      year_min: null,
-      year_max: null,
-      q: null,
-      page: '1',
-    });
-  };
+  const clearFilters = () =>
+    mergeParams({ genre: null, year_min: null, year_max: null, q: null, page: '1' });
 
   const onSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mergeParams({
-      q: searchDraft.trim() || null,
-      page: '1',
-    });
+    mergeParams({ q: searchDraft.trim() || null, page: '1' });
   };
 
-  const title = mode === 'movie' ? 'Movies' : 'TV shows';
-  const subtitle =
-    mode === 'movie'
-      ? 'Sort, filter by genre or year, or search by title.'
-      : 'Sort, filter by genre or first-air year, or search by name.';
+  const countLabel = loading ? 'Loading…' : `${total.toLocaleString()} titles`;
+
+  const searchPlaceholder = 'Search titles…';
 
   return (
-    <Card
-      shadow="sm"
-      className="mb-6 w-full border border-default-200/60 bg-content1/40 backdrop-blur-sm"
-    >
-      <CardHeader className="flex flex-col items-start gap-3 pb-0 pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">
-            Browse {title}
-          </h2>
-          <p className="text-small text-default-500">{subtitle}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Chip
-            color="success"
-            variant="flat"
-            size="md"
-            radius="sm"
-            classNames={{ content: 'font-medium' }}
-          >
-            {loading ? 'Loading…' : `${total.toLocaleString()} in library`}
-          </Chip>
-          {hasActiveFilters && (
-            <Button
-              size="sm"
-              variant="flat"
-              color="default"
-              startContent={<XMarkIcon className="h-4 w-4" />}
-              onPress={clearFilters}
-            >
-              Clear filters
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardBody className="gap-5 pt-4">
-        <form
-          onSubmit={onSearchSubmit}
-          className="flex w-full flex-col gap-3 sm:flex-row sm:items-end"
+    <section className="mb-4 w-full space-y-3" aria-label="Browse">
+      <form onSubmit={onSearchSubmit} className="w-full">
+        <Input
+          aria-label="Search titles"
+          placeholder={searchPlaceholder}
+          value={searchDraft}
+          onValueChange={setSearchDraft}
+          size="sm"
+          variant="flat"
+          radius="sm"
+          className="w-full"
+          startContent={<MagnifyingGlassIcon className="h-4 w-4 shrink-0 text-default-400" />}
+          classNames={{
+            base: 'w-full',
+            input: 'text-sm',
+            inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
+          }}
+        />
+      </form>
+
+      <div className="flex w-full flex-wrap items-end gap-2">
+        <Select<SelectRow>
+          aria-label="Sort by"
+          placeholder="Sort"
+          items={sortItems}
+          selectedKeys={new Set([sortBy])}
+          onSelectionChange={(keys) => {
+            const v = Array.from(keys)[0] as string | undefined;
+            if (v) mergeParams({ sort_by: v, page: '1' });
+          }}
+          size="sm"
+          variant="bordered"
+          radius="sm"
+          classNames={sortSelectClassNames}
         >
-          <Input
-            aria-label={`Search ${title.toLowerCase()}`}
-            label="Search"
-            placeholder={`Search ${mode === 'movie' ? 'movie titles' : 'show names'}…`}
-            value={searchDraft}
-            onValueChange={setSearchDraft}
-            variant="bordered"
-            radius="lg"
-            classNames={{
-              base: 'flex-1 w-full',
-              inputWrapper: 'bg-default-100/50',
-            }}
-            startContent={
-              <MagnifyingGlassIcon className="h-5 w-5 text-default-400" />
-            }
-          />
-          <Button
-            type="submit"
-            color="success"
-            radius="lg"
-            className="w-full shrink-0 sm:w-auto"
-          >
-            Search
-          </Button>
-        </form>
+          {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
+        </Select>
 
-        <Divider className="bg-default-200/80" />
+        <Select<SelectRow>
+          aria-label="Genre"
+          placeholder="Genre"
+          items={genreItems}
+          selectedKeys={genre ? new Set([genre]) : new Set()}
+          onSelectionChange={(keys) => {
+            const v = Array.from(keys)[0] as string | undefined;
+            if (v) mergeParams({ genre: v, page: '1' });
+          }}
+          size="sm"
+          variant="bordered"
+          radius="sm"
+          classNames={filterSelectClassNames(Boolean(genre))}
+        >
+          {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
+        </Select>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Select<SelectRow>
-            label="Sort by"
-            placeholder="Choose order"
-            items={sortItems}
-            selectedKeys={new Set([sortBy])}
-            onSelectionChange={(keys) => {
-              const v = Array.from(keys)[0] as string | undefined;
-              if (v) mergeParams({ sort_by: v, page: '1' });
-            }}
-            variant="bordered"
-            radius="lg"
-            classNames={{
-              trigger: 'bg-default-100/50',
-            }}
-          >
-            {(item) => (
-              <SelectItem key={item.id} textValue={item.label}>
-                {item.label}
-              </SelectItem>
-            )}
-          </Select>
+        <Select<SelectRow>
+          aria-label="Year from"
+          placeholder="From"
+          items={yearItems}
+          selectedKeys={yearMin ? new Set([yearMin]) : new Set()}
+          onSelectionChange={(keys) => {
+            const v = Array.from(keys)[0] as string | undefined;
+            if (v) mergeParams({ year_min: v, page: '1' });
+          }}
+          size="sm"
+          variant="bordered"
+          radius="sm"
+          classNames={filterSelectClassNames(Boolean(yearMin))}
+        >
+          {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
+        </Select>
 
-          <Select<SelectRow>
-            label="Genre"
-            placeholder="All genres"
-            items={genreItems}
-            selectedKeys={new Set([genre || 'all'])}
-            onSelectionChange={(keys) => {
-              const v = Array.from(keys)[0] as string | undefined;
-              if (!v) return;
-              mergeParams({
-                genre: v === 'all' ? null : v,
-                page: '1',
-              });
-            }}
-            variant="bordered"
-            radius="lg"
-            classNames={{
-              trigger: 'bg-default-100/50',
-            }}
-          >
-            {(item) => (
-              <SelectItem key={item.id} textValue={item.label}>
-                {item.label}
-              </SelectItem>
-            )}
-          </Select>
+        <Select<SelectRow>
+          aria-label="Year to"
+          placeholder="To"
+          items={yearItems}
+          selectedKeys={yearMax ? new Set([yearMax]) : new Set()}
+          onSelectionChange={(keys) => {
+            const v = Array.from(keys)[0] as string | undefined;
+            if (v) mergeParams({ year_max: v, page: '1' });
+          }}
+          size="sm"
+          variant="bordered"
+          radius="sm"
+          classNames={filterSelectClassNames(Boolean(yearMax))}
+        >
+          {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
+        </Select>
 
-          <Select<SelectRow>
-            label="Year from"
-            placeholder="Any"
-            items={yearItems}
-            selectedKeys={new Set([yearMin || 'all'])}
-            onSelectionChange={(keys) => {
-              const v = Array.from(keys)[0] as string | undefined;
-              if (!v) return;
-              mergeParams({
-                year_min: v === 'all' ? null : v,
-                page: '1',
-              });
-            }}
-            variant="bordered"
-            radius="lg"
-            classNames={{
-              trigger: 'bg-default-100/50',
-            }}
-          >
-            {(item) => (
-              <SelectItem key={item.id} textValue={item.label}>
-                {item.label}
-              </SelectItem>
-            )}
-          </Select>
+        <Button
+          variant="bordered"
+          size="sm"
+          radius="md"
+          isDisabled={!hasActiveFilters}
+          className="h-9 min-w-0 shrink-0 border-default-300 px-3 text-default-500 dark:border-white/15"
+          startContent={<XMarkIcon className="h-3.5 w-3.5" />}
+          onPress={clearFilters}
+        >
+          Clear
+        </Button>
+      </div>
 
-          <Select<SelectRow>
-            label="Year to"
-            placeholder="Any"
-            items={yearItems}
-            selectedKeys={new Set([yearMax || 'all'])}
-            onSelectionChange={(keys) => {
-              const v = Array.from(keys)[0] as string | undefined;
-              if (!v) return;
-              mergeParams({
-                year_max: v === 'all' ? null : v,
-                page: '1',
-              });
-            }}
-            variant="bordered"
-            radius="lg"
-            classNames={{
-              trigger: 'bg-default-100/50',
-            }}
-          >
-            {(item) => (
-              <SelectItem key={item.id} textValue={item.label}>
-                {item.label}
-              </SelectItem>
-            )}
-          </Select>
-        </div>
-      </CardBody>
-    </Card>
+      <div className="flex flex-wrap items-center gap-2">
+        <Chip color="success" size="md" radius="sm" variant="flat">
+          {countLabel}
+        </Chip>
+      </div>
+    </section>
   );
 }

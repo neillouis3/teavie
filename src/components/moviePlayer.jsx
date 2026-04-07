@@ -36,7 +36,7 @@ const MoviePlayer = ({ videoId, server = 'videasy' }) => {
   }, [videoId, server]);
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+    <div className="relative h-full min-h-0 w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
       {playerUrl ? (
         <iframe
           title="Movie player"

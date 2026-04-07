@@ -2,16 +2,7 @@
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import {
-  Input,
-  Button,
-  Chip,
-  Card,
-  CardBody,
-  Alert,
-  Pagination,
-  Divider,
-} from '@heroui/react';
+import { Input, Chip, Pagination } from '@heroui/react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Header from '@/components/ui/header';
 import SmallCard from '@/components/ui/smallCard';
@@ -19,8 +10,7 @@ import SmallCardLoading from '@/components/ui/smallCardLoading';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
 import { ContentItem } from '@/types/content';
 
-const GRID =
-  'grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
+const GRID = 'grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
 
 function CardGridSkeleton({ count }: { count: number }) {
   return (
@@ -50,50 +40,27 @@ function SearchContent() {
   const [popularMovies, setPopularMovies] = useState<ContentItem[]>([]);
   const [popularTv, setPopularTv] = useState<ContentItem[]>([]);
   const [popularLoading, setPopularLoading] = useState(false);
-  const [popularError, setPopularError] = useState<string | null>(null);
+
+  useEffect(() => { setInputValue(qParam); }, [qParam]);
 
   useEffect(() => {
-    setInputValue(qParam);
-  }, [qParam]);
-
-  useEffect(() => {
-    if (qParam.trim()) {
-      document.title = `Search: ${qParam} - Teavie`;
-    } else {
-      document.title = 'Search - Teavie';
-    }
+    document.title = qParam.trim() ? `Search: ${qParam} - Teavie` : 'Search - Teavie';
   }, [qParam]);
 
   const hasQuery = qParam.trim().length > 0;
 
   useEffect(() => {
     if (hasQuery) return;
-
     const controller = new AbortController();
     setPopularLoading(true);
-    setPopularError(null);
 
     fetch('/api/tmdb/popular', { signal: controller.signal })
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error || 'Could not load popular titles');
-        }
-        return data;
-      })
+      .then((res) => res.json())
       .then((data) => {
         setPopularMovies(data.movies ?? []);
         setPopularTv(data.tv ?? []);
       })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setPopularMovies([]);
-          setPopularTv([]);
-          setPopularError(
-            err instanceof Error ? err.message : 'Something went wrong'
-          );
-        }
-      })
+      .catch(() => {})
       .finally(() => setPopularLoading(false));
 
     return () => controller.abort();
@@ -101,28 +68,14 @@ function SearchContent() {
 
   useEffect(() => {
     const q = qParam.trim();
-    if (!q) {
-      setResults([]);
-      setTotal(0);
-      setTotalPages(0);
-      setError(null);
-      return;
-    }
+    if (!q) { setResults([]); setTotal(0); setTotalPages(0); setError(null); return; }
 
     const controller = new AbortController();
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=${encodeURIComponent(q)}&page=${pageParam}`, {
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error || 'Search failed');
-        }
-        return data;
-      })
+    fetch(`/api/search?q=${encodeURIComponent(q)}&page=${pageParam}`, { signal: controller.signal })
+      .then((res) => res.json())
       .then((data) => {
         setResults(data.results ?? []);
         setTotal(data.total ?? 0);
@@ -130,9 +83,7 @@ function SearchContent() {
       })
       .catch((err) => {
         if (err.name !== 'AbortError') {
-          setResults([]);
-          setTotal(0);
-          setTotalPages(0);
+          setResults([]); setTotal(0); setTotalPages(0);
           setError(err instanceof Error ? err.message : 'Something went wrong');
         }
       })
@@ -146,9 +97,7 @@ function SearchContent() {
       e.preventDefault();
       const trimmed = inputValue.trim();
       const params = new URLSearchParams();
-      if (trimmed) {
-        params.set('q', trimmed);
-      }
+      if (trimmed) params.set('q', trimmed);
       router.push(trimmed ? `${pathname}?${params}` : pathname);
     },
     [inputValue, pathname, router]
@@ -161,20 +110,15 @@ function SearchContent() {
     router.push(params.toString() ? `${pathname}?${params}` : pathname);
   };
 
-  const renderSmallCards = (items: ContentItem[], keyPrefix: string) => (
+  const renderCards = (items: ContentItem[], keyPrefix: string) => (
     <div className={GRID}>
       {items.map((item, index) => {
         const title = item.title || item.name || 'Untitled';
-        const year =
-          item.release_date?.split('-')[0] ||
-          item.first_air_date?.split('-')[0] ||
-          '—';
+        const year = item.release_date?.split('-')[0] || item.first_air_date?.split('-')[0] || '—';
         return (
           <SmallCard
             key={`${keyPrefix}-${item.type ?? 'x'}-${item.id}-${index}`}
-            id={
-              typeof item.id === 'string' ? parseInt(item.id, 10) : item.id
-            }
+            id={typeof item.id === 'string' ? parseInt(item.id, 10) : item.id}
             title={title}
             year={year}
             type={item.type || 'movie'}
@@ -188,165 +132,90 @@ function SearchContent() {
   );
 
   return (
-    <div className="bg-main flex h-full w-full flex-col">
+    <div className="bg-main min-h-screen w-full">
       <Header pageName="Search" />
 
-      <div className="my-4 flex w-full flex-col px-4">
-        <Card shadow="sm" className="mb-6 w-full border border-default-200/60">
-          <CardBody className="gap-4">
-            <p className="text-small text-default-500">
-              Find movies and TV by title. Results use TMDB and open on Teavie
-              detail pages.
-            </p>
-            <form
-              onSubmit={submitSearch}
-              className="flex w-full flex-col gap-3 sm:flex-row sm:items-center"
-            >
-              <Input
-                aria-label="Search query"
-                placeholder="Search movies and shows…"
-                value={inputValue}
-                onValueChange={setInputValue}
-                size="lg"
-                variant="bordered"
-                radius="lg"
-                classNames={{
-                  input: 'text-base',
-                  inputWrapper: 'bg-default-100/50 flex-1',
-                  base: 'flex-1 w-full',
-                }}
-                startContent={
-                  <MagnifyingGlassIcon className="h-5 w-5 shrink-0 text-default-400" />
-                }
-              />
-              <Button
-                type="submit"
-                color="success"
-                size="lg"
-                radius="lg"
-                className="w-full shrink-0 font-semibold sm:w-auto sm:min-w-[120px]"
-              >
-                Search
-              </Button>
-            </form>
-          </CardBody>
-        </Card>
+      <div className="space-y-6 px-4 pb-6 pt-8">
+        <form onSubmit={submitSearch} className="w-full">
+          <Input
+            aria-label="Search query"
+            placeholder="Search titles…"
+            value={inputValue}
+            onValueChange={setInputValue}
+            size="sm"
+            variant="flat"
+            radius="sm"
+            className="w-full"
+            startContent={
+              <MagnifyingGlassIcon className="h-4 w-4 shrink-0 text-default-400" />
+            }
+            classNames={{
+              base: 'w-full',
+              input: 'text-sm',
+              inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
+            }}
+          />
+        </form>
 
+        {/* Popular (no query) */}
         {!hasQuery && (
-          <div className="flex w-full flex-col gap-8">
-            {popularError && (
-              <Alert
-                color="danger"
-                variant="flat"
-                title="Couldn’t load popular titles"
-                description={popularError}
-              />
-            )}
-
-            {popularLoading && (
-              <div className="flex flex-col gap-8">
-                <div>
-                  <Chip
-                    color="success"
-                    size="lg"
-                    radius="sm"
-                    variant="flat"
-                    className="mb-4"
-                  >
-                    Popular movies
-                  </Chip>
-                  <CardGridSkeleton count={6} />
-                </div>
-                <div>
-                  <Chip
-                    color="success"
-                    size="lg"
-                    radius="sm"
-                    variant="flat"
-                    className="mb-4"
-                  >
-                    Popular TV
-                  </Chip>
-                  <CardGridSkeleton count={6} />
-                </div>
-              </div>
-            )}
-
-            {!popularLoading && !popularError && (
+          <div className="space-y-8">
+            {popularLoading ? (
               <>
-                <div className="flex flex-col">
-                  <div className="mb-4 pl-0">
-                    <Chip color="success" size="lg" radius="sm" variant="flat">
-                      Popular movies
-                    </Chip>
-                  </div>
-                  {popularMovies.length === 0 ? (
-                    <p className="text-small text-default-500">
-                      No titles to show.
-                    </p>
-                  ) : (
-                    renderSmallCards(popularMovies, 'pop-m')
-                  )}
-                </div>
+                <CardGridSkeleton count={6} />
+                <CardGridSkeleton count={6} />
+              </>
+            ) : (
+              <>
+                <section className="space-y-3">
+                  <Chip color="success" size="md" radius="sm" variant="flat">Popular Movies</Chip>
+                  {popularMovies.length === 0
+                    ? <p className="text-sm text-default-500">Nothing to show.</p>
+                    : renderCards(popularMovies, 'pop-m')}
+                </section>
 
-                <Divider className="my-2" />
-
-                <div className="flex flex-col">
-                  <div className="mb-4 pl-0">
-                    <Chip color="success" size="lg" radius="sm" variant="flat">
-                      Popular TV
-                    </Chip>
-                  </div>
-                  {popularTv.length === 0 ? (
-                    <p className="text-small text-default-500">
-                      No titles to show.
-                    </p>
-                  ) : (
-                    renderSmallCards(popularTv, 'pop-tv')
-                  )}
-                </div>
+                <section className="space-y-3">
+                  <Chip color="success" size="md" radius="sm" variant="flat">Popular TV</Chip>
+                  {popularTv.length === 0
+                    ? <p className="text-sm text-default-500">Nothing to show.</p>
+                    : renderCards(popularTv, 'pop-tv')}
+                </section>
               </>
             )}
           </div>
         )}
 
+        {/* Search results */}
         {hasQuery && (
-          <div className="flex w-full flex-col">
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Chip color="success" size="lg" radius="sm" variant="flat">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Chip color="success" size="md" radius="sm" variant="flat">
                 {loading ? 'Searching…' : `${total} result${total === 1 ? '' : 's'}`}
               </Chip>
               {!loading && (
-                <span className="text-small text-default-500">
-                  for &ldquo;{qParam}&rdquo;
-                  {totalPages > 1 && ` · page ${pageParam} of ${totalPages}`}
+                <span className="text-xs text-default-500">
+                  for &ldquo;{qParam}&rdquo;{totalPages > 1 && ` · page ${pageParam} of ${totalPages}`}
                 </span>
               )}
             </div>
 
             {error && (
-              <Alert
-                color="danger"
-                variant="flat"
-                title="Search failed"
-                description={error}
-                className="mb-4"
-              />
+              <p className="text-sm text-danger">{error}</p>
             )}
 
             {loading && <CardGridSkeleton count={12} />}
 
             {!loading && !error && results.length > 0 && (
               <>
-                {renderSmallCards(results, 'q')}
+                {renderCards(results, 'q')}
                 {totalPages > 1 && (
-                  <div className="mb-4 mt-6 flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex justify-center pt-2">
                     <Pagination
                       total={totalPages}
                       page={pageParam}
-                      onChange={(p) => goPage(p)}
+                      onChange={goPage}
                       showControls
-                      size="lg"
+                      size="sm"
                       color="success"
                       variant="flat"
                     />
@@ -355,14 +224,10 @@ function SearchContent() {
               </>
             )}
 
-            {!loading && !error && hasQuery && results.length === 0 && (
-              <Card shadow="none" className="border border-dashed border-default-300 bg-default-100/30">
-                <CardBody className="py-10 text-center">
-                  <p className="text-default-600">
-                    No matches. Try another title or check spelling.
-                  </p>
-                </CardBody>
-              </Card>
+            {!loading && !error && results.length === 0 && (
+              <p className="py-12 text-center text-sm text-default-500">
+                No matches for &ldquo;{qParam}&rdquo;. Try another title.
+              </p>
             )}
           </div>
         )}
@@ -375,9 +240,9 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <div className="bg-main flex h-full min-h-[50vh] w-full flex-col">
+        <div className="bg-main min-h-screen w-full">
           <Header pageName="Search" />
-          <div className="my-4 flex w-full flex-col px-4">
+          <div className="px-4 pb-6 pt-8">
             <AllMoviesViewerLoading />
           </div>
         </div>
