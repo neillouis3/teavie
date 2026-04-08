@@ -1,23 +1,23 @@
-import type { ComponentType, SVGProps } from 'react';
+import type { IconSvgElement } from '@hugeicons/react';
 import {
-  HomeIcon,
-  FilmIcon,
-  TvIcon,
-  TrophyIcon,
-} from '@heroicons/react/24/outline';
+  Home01Icon,
+  Film01Icon,
+  Tv01Icon,
+  Award01Icon,
+} from '@hugeicons/core-free-icons';
 
-export type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
+export type NavIcon = IconSvgElement;
 
 export type AppNavItem = {
   key: string;
   label: string;
   href: string;
-  Icon: NavIcon;
+  icon: NavIcon;
 };
 
 export const APP_NAV_ITEMS: AppNavItem[] = [
-  { key: 'explore', label: 'Explore', href: '/explore', Icon: HomeIcon },
-  { key: 'movies', label: 'Movies', href: '/movies/all', Icon: FilmIcon },
-  { key: 'shows', label: 'TV Shows', href: '/shows/all', Icon: TvIcon },
-  { key: 'sports', label: 'Sports', href: '/sports', Icon: TrophyIcon },
+  { key: 'explore', label: 'Explore', href: '/explore', icon: Home01Icon },
+  { key: 'movies', label: 'Movies', href: '/movies/all', icon: Film01Icon },
+  { key: 'shows', label: 'TV Shows', href: '/shows/all', icon: Tv01Icon },
+  { key: 'sports', label: 'Sports', href: '/sports', icon: Award01Icon },
 ];

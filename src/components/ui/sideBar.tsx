@@ -5,12 +5,13 @@ import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSidebar } from "./sidebarContext";
 import Link from "next/link";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  MagnifyingGlassIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  Cog6ToothIcon,
-} from "@heroicons/react/24/outline";
+  Search01Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  Settings01Icon,
+} from "@hugeicons/core-free-icons";
 import { Input, Alert, Tooltip } from "@heroui/react";
 import { APP_NAV_ITEMS } from "@/components/ui/navItems";
 
@@ -100,9 +101,9 @@ export default function SideBar() {
             title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
           >
             {isCollapsed ? (
-              <ChevronRightIcon className="w-5 h-5" />
+              <HugeiconsIcon icon={ArrowRight01Icon} size={20} className="shrink-0" />
             ) : (
-              <ChevronLeftIcon className="w-5 h-5" />
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="shrink-0" />
             )}
           </button>
         </div>
@@ -110,8 +111,6 @@ export default function SideBar() {
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
           {APP_NAV_ITEMS.map((item) => {
             const isActive = selectedKey === item.key;
-            const Icon = item.Icon;
-
             return (
               <Link
                 key={item.key}
@@ -127,7 +126,7 @@ export default function SideBar() {
                 `}
                 title={isCollapsed ? item.label : undefined}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                <HugeiconsIcon icon={item.icon} size={20} className="shrink-0" />
                 <AnimatePresence mode="wait">
                   {!isCollapsed && (
                     <motion.span
@@ -159,7 +158,7 @@ export default function SideBar() {
                 `}
                 aria-label="Search"
               >
-                <MagnifyingGlassIcon className="h-5 w-5 shrink-0" />
+                <HugeiconsIcon icon={Search01Icon} size={20} className="shrink-0" />
               </Link>
             </Tooltip>
           ) : (
@@ -178,7 +177,13 @@ export default function SideBar() {
                     placeholder="Search..."
                     value={searchValue}
                     onValueChange={setSearchValue}
-                    startContent={<MagnifyingGlassIcon className="h-4 w-4 text-default-400" />}
+                    startContent={
+                      <HugeiconsIcon
+                        icon={Search01Icon}
+                        size={16}
+                        className="shrink-0 text-default-400"
+                      />
+                    }
                     classNames={{
                       input: "text-sm",
                       inputWrapper: "h-9 bg-default-100 hover:bg-default-200",
@@ -229,7 +234,7 @@ export default function SideBar() {
                 `}
                 aria-label="Settings"
               >
-                <Cog6ToothIcon className="h-5 w-5 shrink-0" />
+                <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
               </Link>
             </Tooltip>
           ) : (
@@ -244,7 +249,7 @@ export default function SideBar() {
                 }
               `}
             >
-              <Cog6ToothIcon className="h-5 w-5 shrink-0" />
+              <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
               <span className="text-sm font-medium">Settings</span>
             </Link>
           )}

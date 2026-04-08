@@ -13,11 +13,12 @@ import {
   Input,
   Alert,
 } from '@heroui/react';
+import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  Bars3Icon,
-  MagnifyingGlassIcon,
-  Cog6ToothIcon,
-} from '@heroicons/react/24/outline';
+  Menu01Icon,
+  Search01Icon,
+  Settings01Icon,
+} from '@hugeicons/core-free-icons';
 import { APP_NAV_ITEMS } from '@/components/ui/navItems';
 
 export default function MobileTopNav() {
@@ -83,7 +84,7 @@ export default function MobileTopNav() {
           className="shrink-0 text-foreground"
           onPress={() => setOpen(true)}
         >
-          <Bars3Icon className="h-6 w-6" />
+          <HugeiconsIcon icon={Menu01Icon} size={24} className="shrink-0" />
         </Button>
         <Link
           href="/explore"
@@ -99,7 +100,7 @@ export default function MobileTopNav() {
             searchActive ? 'text-success' : 'text-foreground'
           }`}
         >
-          <MagnifyingGlassIcon className="h-6 w-6" />
+          <HugeiconsIcon icon={Search01Icon} size={24} className="shrink-0" />
         </Link>
       </header>
 
@@ -120,7 +121,6 @@ export default function MobileTopNav() {
             <nav className="flex flex-col gap-1">
               {APP_NAV_ITEMS.map((item) => {
                 const isActive = selectedKey === item.key;
-                const Icon = item.Icon;
                 return (
                   <Link
                     key={item.key}
@@ -132,7 +132,7 @@ export default function MobileTopNav() {
                         : 'text-foreground hover:bg-default-100'
                     }`}
                   >
-                    <Icon className="h-5 w-5 shrink-0" />
+                    <HugeiconsIcon icon={item.icon} size={20} className="shrink-0" />
                     {item.label}
                   </Link>
                 );
@@ -147,7 +147,7 @@ export default function MobileTopNav() {
                     : 'text-foreground hover:bg-default-100'
                 }`}
               >
-                <MagnifyingGlassIcon className="h-5 w-5 shrink-0" />
+                <HugeiconsIcon icon={Search01Icon} size={20} className="shrink-0" />
                 Search
               </Link>
             </nav>
@@ -160,7 +160,11 @@ export default function MobileTopNav() {
                 value={searchValue}
                 onValueChange={setSearchValue}
                 startContent={
-                  <MagnifyingGlassIcon className="h-4 w-4 text-default-400" />
+                  <HugeiconsIcon
+                    icon={Search01Icon}
+                    size={16}
+                    className="shrink-0 text-default-400"
+                  />
                 }
                 classNames={{
                   input: 'text-sm',
@@ -188,7 +192,7 @@ export default function MobileTopNav() {
                   : 'text-foreground hover:bg-default-100'
               }`}
             >
-              <Cog6ToothIcon className="h-5 w-5 shrink-0" />
+              <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
               Settings
             </Link>
           </DrawerBody>

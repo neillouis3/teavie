@@ -3,7 +3,8 @@
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Input, Chip, Pagination } from '@heroui/react';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Search01Icon } from '@hugeicons/core-free-icons';
 import Header from '@/components/ui/header';
 import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
@@ -195,7 +196,11 @@ function SearchContent() {
             radius="sm"
             className="w-full"
             startContent={
-              <MagnifyingGlassIcon className="h-4 w-4 shrink-0 text-default-400" />
+              <HugeiconsIcon
+                icon={Search01Icon}
+                size={16}
+                className="shrink-0 text-default-400"
+              />
             }
             classNames={{
               base: 'w-full',

@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Button, Chip } from '@heroui/react';
-import { ChevronLeftIcon } from '@heroicons/react/24/outline';
+import { Chip } from '@heroui/react';
 import Header from '@/components/ui/header';
 import { EMBED_IFRAME_ALLOW } from '@/lib/embedPlayerIframe';
 import { getSportsStreamBySlug } from '@/lib/sportsStreams';

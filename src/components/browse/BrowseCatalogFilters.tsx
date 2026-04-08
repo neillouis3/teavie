@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Input, Button, Select, SelectItem, Chip } from '@heroui/react';
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from '@/lib/tmdbGenres';
 
 const SORT_OPTIONS = [
@@ -131,7 +132,13 @@ export default function BrowseCatalogFilters({
           variant="flat"
           radius="sm"
           className="w-full"
-          startContent={<MagnifyingGlassIcon className="h-4 w-4 shrink-0 text-default-400" />}
+          startContent={
+            <HugeiconsIcon
+              icon={Search01Icon}
+              size={16}
+              className="shrink-0 text-default-400"
+            />
+          }
           classNames={{
             base: 'w-full',
             input: 'text-sm',
@@ -215,7 +222,9 @@ export default function BrowseCatalogFilters({
           radius="md"
           isDisabled={!hasActiveFilters}
           className="h-9 min-w-0 shrink-0 border-default-300 px-3 text-default-500 dark:border-white/15"
-          startContent={<XMarkIcon className="h-3.5 w-3.5" />}
+          startContent={
+            <HugeiconsIcon icon={Cancel01Icon} size={14} className="shrink-0" />
+          }
           onPress={clearFilters}
         >
           Clear
