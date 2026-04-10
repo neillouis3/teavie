@@ -15,7 +15,7 @@ interface Season {
 }
 
 interface Show {
-  id: number;
+  id: number | string;
   name: string;
   first_air_date: string;
   overview: string;
@@ -37,6 +37,7 @@ export default function ShowTemplate({ id }: { id: string }) {
   const size = "w500";
   const { server } = useStreamingSource();
   const [show, setShow] = useState<Show | null>(null);
+  const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
@@ -45,7 +46,32 @@ export default function ShowTemplate({ id }: { id: string }) {
     const fetchShowDetails = async () => {
       try {
         setLoading(true);
-        const url = `https://api.themoviedb.org/3/tv/${id}?language=en-US`;
+        setResolvedPlayerId(id);
+
+        let targetTmdbId = id;
+        let fallbackShow: Show | null = null;
+        const isNumericId = /^\d+$/.test(id);
+
+        if (!isNumericId) {
+          const resolveRes = await fetch(`/api/tv/resolve?id=${encodeURIComponent(id)}`);
+          if (resolveRes.ok) {
+            const resolved = await resolveRes.json();
+            if (resolved?.playerId != null) {
+              targetTmdbId = String(resolved.playerId);
+              setResolvedPlayerId(String(resolved.playerId));
+            }
+            if (resolved?.fallback && typeof resolved.fallback === "object") {
+              fallbackShow = resolved.fallback as Show;
+            }
+          }
+        }
+
+        if (!/^\d+$/.test(targetTmdbId)) {
+          setShow(fallbackShow);
+          return;
+        }
+
+        const url = `https://api.themoviedb.org/3/tv/${targetTmdbId}?language=en-US`;
         const options = {
           method: "GET",
           headers: {
@@ -54,8 +80,20 @@ export default function ShowTemplate({ id }: { id: string }) {
           },
         };
         const res = await fetch(url, options);
-        if (!res.ok) throw new Error("Failed to fetch show details");
-        const data = await res.json();
+        if (!res.ok) {
+          if (fallbackShow) {
+            setShow(fallbackShow);
+            return;
+          }
+          throw new Error("Failed to fetch show details");
+        }
+        const data = (await res.json()) as Show;
+        if (fallbackShow && !data?.poster_path && fallbackShow.poster_path) {
+          data.poster_path = fallbackShow.poster_path;
+        }
+        if (fallbackShow && !data?.backdrop_path && fallbackShow.backdrop_path) {
+          data.backdrop_path = fallbackShow.backdrop_path;
+        }
         setShow(data);
         if (data.seasons?.length) {
           const firstSeason = data.seasons.find((s: Season) => s.season_number === 1) ?? data.seasons[0];
@@ -82,7 +120,12 @@ export default function ShowTemplate({ id }: { id: string }) {
 
   const currentSeason = show?.seasons?.find((s) => s.season_number === selectedSeason);
   const episodeCount = currentSeason?.episode_count ?? 0;
-  const imageUrl = show?.poster_path ? `${baseUrl}${size}${show.poster_path}` : "";
+  const canPlay = /^\d+$/.test(resolvedPlayerId);
+  const imageUrl = show?.poster_path
+    ? /^https?:\/\//i.test(show.poster_path)
+      ? show.poster_path
+      : `${baseUrl}${size}${show.poster_path}`
+    : "";
   const title = show?.name ?? "";
   const year = show?.first_air_date?.slice(0, 4) ?? "TBA";
 
@@ -94,9 +137,13 @@ export default function ShowTemplate({ id }: { id: string }) {
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {loading ? (
             <div className="h-full w-full animate-pulse bg-default-200" />
+          ) : !canPlay ? (
+            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+              No TMDB mapping yet for this anime, so the player is unavailable right now.
+            </div>
           ) : (
             <ShowPlayer
-              videoId={show?.id ?? id}
+              videoId={resolvedPlayerId}
               season={selectedSeason}
               episode={selectedEpisode}
               server={server}
@@ -259,7 +306,9 @@ export default function ShowTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        {!loading && <YouMightLike mediaType="tv" id={id} />}
+        {!loading && /^\d+$/.test(resolvedPlayerId) ? (
+          <YouMightLike mediaType="tv" id={resolvedPlayerId} />
+        ) : null}
       </div>
     </div>
   );
