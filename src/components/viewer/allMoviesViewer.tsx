@@ -14,12 +14,6 @@ interface AllMovieViewerProps {
   allContentData: ContentItem[];
 }
 
-function toNumericId(id: ContentItem['id']): number {
-  if (typeof id === 'number' && !Number.isNaN(id)) return id;
-  const n = parseInt(String(id), 10);
-  return Number.isFinite(n) ? n : 0;
-}
-
 const AllMovieViewer: React.FC<AllMovieViewerProps> = ({ allContentData }) => {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === 'horizontal';
@@ -32,7 +26,7 @@ const AllMovieViewer: React.FC<AllMovieViewerProps> = ({ allContentData }) => {
         const year = releaseDate
           ? String(new Date(releaseDate).getFullYear())
           : 'TBA';
-        const id = toNumericId(item.id);
+        const id = item.id;
         const type = item.type || 'movie';
         const poster = item.poster_path || '';
 

@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 
 type LargeCardProps = {
-  id: number;
+  id: number | string;
   title: string;
   year: string | number;
   runtimeSeconds?: number;
@@ -32,9 +32,13 @@ export default function LargeCard({
 
   // Prefer backdrop image, fallback to poster
   const imageUrl = backdropPath
-    ? `${baseUrl}${backdropSize}${backdropPath}`
+    ? /^https?:\/\//i.test(backdropPath)
+      ? backdropPath
+      : `${baseUrl}${backdropSize}${backdropPath}`
     : posterPath
-    ? `${baseUrl}${posterSize}${posterPath}`
+    ? /^https?:\/\//i.test(posterPath)
+      ? posterPath
+      : `${baseUrl}${posterSize}${posterPath}`
     : "/placeholder.jpg";
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;

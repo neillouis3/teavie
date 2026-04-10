@@ -8,12 +8,6 @@ interface UpdatedViewerProps {
   updatedContent: ContentItem[];
 }
 
-function toNumericId(id: ContentItem["id"]): number {
-  if (typeof id === "number" && !Number.isNaN(id)) return id;
-  const n = parseInt(String(id), 10);
-  return Number.isFinite(n) ? n : 0;
-}
-
 const UpdatedViewer: React.FC<UpdatedViewerProps> = ({ updatedContent }) => {
   return (
     <div className="flex flex-col gap-2 h-fit">
@@ -32,7 +26,7 @@ const UpdatedViewer: React.FC<UpdatedViewerProps> = ({ updatedContent }) => {
               type={movie.type || ''}
               runtimeSeconds={movie.runtimeSeconds}
               seasonAmount={movie.season_amount || 0}
-              id={toNumericId(movie.id)}
+              id={movie.id}
               backDropPath={movie.backdrop_path || ''}
             />
           ) : null;

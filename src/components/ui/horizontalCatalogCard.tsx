@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export type HorizontalCatalogCardProps = {
-  id: number;
+  id: number | string;
   title: string;
   year: string;
   type: 'movie' | 'tv' | string;
@@ -39,9 +39,13 @@ export default function HorizontalCatalogCard({
   const backdrop = backdropPath?.trim();
   const poster = posterPath?.trim();
   const src = backdrop
-    ? `${BASE}${BACKDROP_SIZE}${backdrop}`
+    ? /^https?:\/\//i.test(backdrop)
+      ? backdrop
+      : `${BASE}${BACKDROP_SIZE}${backdrop}`
     : poster
-      ? `${BASE}${POSTER_SIZE}${poster}`
+      ? /^https?:\/\//i.test(poster)
+        ? poster
+        : `${BASE}${POSTER_SIZE}${poster}`
       : null;
 
   return (

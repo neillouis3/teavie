@@ -14,12 +14,6 @@ interface AllShowsViewerProps {
   allContentData: ContentItem[];
 }
 
-function toNumericId(id: ContentItem['id']): number {
-  if (typeof id === 'number' && !Number.isNaN(id)) return id;
-  const n = parseInt(String(id), 10);
-  return Number.isFinite(n) ? n : 0;
-}
-
 const AllShowsViewer: React.FC<AllShowsViewerProps> = ({ allContentData }) => {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === 'horizontal';
@@ -32,7 +26,7 @@ const AllShowsViewer: React.FC<AllShowsViewerProps> = ({ allContentData }) => {
         const year = releaseDate
           ? String(new Date(releaseDate).getFullYear())
           : 'TBA';
-        const id = toNumericId(item.id);
+        const id = item.id;
         const type = item.type || 'tv';
         const poster = item.poster_path || '';
 

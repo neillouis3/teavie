@@ -14,12 +14,6 @@ interface UpcomingViewerProps {
   upcomingContentData: ContentItem[];
 }
 
-function toNumericId(id: ContentItem["id"]): number {
-  if (typeof id === "number" && !Number.isNaN(id)) return id;
-  const n = parseInt(String(id), 10);
-  return Number.isFinite(n) ? n : 0;
-}
-
 export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerProps) {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
@@ -60,7 +54,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
                 className="basis-[88%] pl-3 sm:basis-2/3 sm:pl-4"
               >
                 <LargeCard
-                  id={toNumericId(item.id)}
+                  id={item.id}
                   title={title}
                   year={year}
                   runtimeSeconds={item.runtimeSeconds}

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 interface SmallCardProps {
-  id: number;
+  id: number | string;
   title: string;
   year: string;
   runtimeSeconds?: number;
@@ -27,7 +27,11 @@ export default function SmallCard({
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
   const hasPoster = Boolean(posterPath?.trim());
-  const imageUrl = hasPoster ? `${baseUrl}${size}${posterPath}` : '';
+  const imageUrl = hasPoster
+    ? /^https?:\/\//i.test(posterPath)
+      ? posterPath
+      : `${baseUrl}${size}${posterPath}`
+    : '';
   const href = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
 
   return (

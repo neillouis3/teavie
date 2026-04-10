@@ -10,7 +10,7 @@ interface SimilarCardProps {
   type: "movie" | "tv" | string;
   runtimeSeconds?: number;
   seasonAmount?: number;
-  id: number;
+  id: number | string;
   backDropPath?: string;
 }
 
@@ -27,7 +27,11 @@ export default function SimilarCard({
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
 
-  const imageUrl = backDropPath ? `${baseUrl}${size}${backDropPath}` : "/fallback.jpg"; // add fallback
+  const imageUrl = backDropPath
+    ? /^https?:\/\//i.test(backDropPath)
+      ? backDropPath
+      : `${baseUrl}${size}${backDropPath}`
+    : "/fallback.jpg"; // add fallback
 
   return (
     <Link href={type === 'tv' ? `/shows/${id}` : `/movies/${id}`}>

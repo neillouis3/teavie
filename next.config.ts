@@ -14,6 +14,22 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/t/p/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.myanimelist.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'myanimelist.cdn-dena.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'm.media-amazon.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ia.media-imdb.com',
+      },
     ],
   },
   async headers() {
