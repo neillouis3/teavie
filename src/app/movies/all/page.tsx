@@ -9,6 +9,8 @@ import BrowseCatalogFilters from '@/components/browse/BrowseCatalogFilters';
 import { Pagination } from '@heroui/react';
 import { ContentItem } from '@/types/content';
 
+export const dynamic = 'force-dynamic';
+
 function AllMoviePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();

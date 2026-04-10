@@ -1,8 +1,7 @@
 // app/[id]/layout.tsx
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import SideBar from '@/components/ui/sideBar';
-import Footer from '@/components/ui/footer';
 
 export default function MovieLayout({
   children,
@@ -11,7 +10,9 @@ export default function MovieLayout({
 }) {
   return (
     <div className="bg-background h-full w-full flex flex-row justify-center">
-       <SideBar />
+      <Suspense fallback={null}>
+        <SideBar />
+      </Suspense>
        <div className="w-[15vw] top-0 h-screen">
       </div>
       <div className=" h-full flex flex-col items-center w-[85vw] ">
