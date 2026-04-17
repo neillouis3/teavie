@@ -243,6 +243,9 @@ async function fetchAnilistAndMerge(
 
 export type ShowServerKey = StreamServerId;
 
+/** Episode picker: tabs 0–99, 100–199, … (labels); grid uses 1-based episode numbers. */
+const EPISODE_RANGE_BLOCK = 100;
+
 export default function ShowTemplate({ id }: { id: string }) {
   const baseUrl = "https://image.tmdb.org/t/p/";
   const size = "w500";
@@ -252,6 +255,8 @@ export default function ShowTemplate({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
+  /** First episode index in current block: 0 → eps 1–100, 100 → 101–200, … */
+  const [episodeRangeStart, setEpisodeRangeStart] = useState(0);
   /** null = no cap (anime / error); number = last episode number aired by TMDB calendar */
   const [tmdbAiredEpCap, setTmdbAiredEpCap] = useState<number | null>(null);
   const [tmdbEpCapLoading, setTmdbEpCapLoading] = useState(false);
@@ -533,6 +538,26 @@ export default function ShowTemplate({ id }: { id: string }) {
   const animeHideSeasonRow =
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
 
+  const episodeBlockLo =
+    displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
+  const episodeBlockHi =
+    displayEpisodeCount > 0
+      ? Math.min(episodeRangeStart + EPISODE_RANGE_BLOCK, displayEpisodeCount)
+      : 0;
+  const showEpisodeRangeTabs = displayEpisodeCount > EPISODE_RANGE_BLOCK;
+
+  useEffect(() => {
+    setEpisodeRangeStart(0);
+  }, [id, selectedSeason]);
+
+  useEffect(() => {
+    if (displayEpisodeCount <= 0) return;
+    const maxStart =
+      Math.max(0, Math.floor((displayEpisodeCount - 1) / EPISODE_RANGE_BLOCK)) *
+      EPISODE_RANGE_BLOCK;
+    setEpisodeRangeStart((s) => Math.min(s, maxStart));
+  }, [displayEpisodeCount]);
+
   return (
     <div className="bg-background min-h-full w-full flex flex-col px-0 py-4 pb-32">
       <div className="w-full flex flex-col gap-6">
@@ -686,14 +711,54 @@ export default function ShowTemplate({ id }: { id: string }) {
                   )}
                   {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
                     <div className={`px-4 pb-4${animeHideSeasonRow ? " pt-4" : ""}`}>
+                      {showEpisodeRangeTabs && (
+                        <div className="mb-3">
+                          <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2">
+                            Range
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {Array.from(
+                              { length: Math.ceil(displayEpisodeCount / EPISODE_RANGE_BLOCK) },
+                              (_, b) => {
+                                const start = b * EPISODE_RANGE_BLOCK;
+                                const labelHi = Math.min(
+                                  start + EPISODE_RANGE_BLOCK - 1,
+                                  displayEpisodeCount - 1
+                                );
+                                return (
+                                  <Button
+                                    key={start}
+                                    size="sm"
+                                    variant={episodeRangeStart === start ? "solid" : "flat"}
+                                    color={episodeRangeStart === start ? "success" : "default"}
+                                    className="min-w-0 px-2.5 text-xs font-medium"
+                                    onPress={() => setEpisodeRangeStart(start)}
+                                  >
+                                    {start}–{labelHi}
+                                  </Button>
+                                );
+                              }
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
                         Episode{selectedEpisode ? ` — ${selectedEpisode}` : ""}
+                        {showEpisodeRangeTabs ? (
+                          <span className="font-normal text-default-400 normal-case">
+                            {" "}
+                            ({episodeBlockLo}–{episodeBlockHi})
+                          </span>
+                        ) : null}
                       </p>
                       <div
                         className="grid gap-1.5"
                         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))" }}
                       >
-                        {Array.from({ length: displayEpisodeCount }, (_, i) => i + 1).map((ep) => (
+                        {Array.from(
+                          { length: Math.max(0, episodeBlockHi - episodeBlockLo + 1) },
+                          (_, i) => episodeBlockLo + i
+                        ).map((ep) => (
                           <Button
                             key={ep}
                             size="sm"
