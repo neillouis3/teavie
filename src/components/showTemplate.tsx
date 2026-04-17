@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ShowPlayer from "./showPlayer";
 import YouMightLike from "./youMightLike";
-import { cumulativeTvEpisode } from "@/lib/cumulativeTvEpisode";
+import { cumulativeTvEpisode, tmdbSeasonEpisodeFromAbsolute } from "@/lib/cumulativeTvEpisode";
 import { Image, Chip, Button } from "@heroui/react";
 import {
   useStreamingSource,
@@ -35,6 +35,8 @@ interface Show {
   anilist_id?: number | null;
   mal_id?: number | null;
   external_ids?: { mal_id?: number | null; anilist_id?: number | null } | null;
+  /** TMDB season layout for embeds when UI seasons are flattened (anime). */
+  tmdb_playback_seasons?: Season[];
   anilist?: {
     siteUrl?: string | null;
     title?: {
@@ -348,6 +350,11 @@ export default function ShowTemplate({ id }: { id: string }) {
           data.external_ids = { ...fallbackShow.external_ids, ...data.external_ids };
         }
 
+        const tmdbSeasonsPlayback =
+          data.is_anime && Array.isArray(data.seasons)
+            ? tmdbSeasonsWithEpisodes(data.seasons as Season[])
+            : undefined;
+
         const forAni: Show = {
           ...data,
           anilist_id: data.anilist_id ?? fallbackShow?.anilist_id ?? undefined,
@@ -357,6 +364,9 @@ export default function ShowTemplate({ id }: { id: string }) {
         const merged = await fetchAnilistAndMerge(forAni, fallbackShow);
         if (merged.seasons?.length && !merged.is_anime) {
           merged.seasons = filterReleasedSeasons(merged.seasons, todayYmd) ?? merged.seasons;
+        }
+        if (tmdbSeasonsPlayback?.length) {
+          merged.tmdb_playback_seasons = tmdbSeasonsPlayback;
         }
         const forUi = withAnimeFlatEpisodeLayout(merged);
         setShow(forUi);
@@ -382,7 +392,8 @@ export default function ShowTemplate({ id }: { id: string }) {
   }, [show, selectedSeason, selectedEpisode]);
 
   useEffect(() => {
-    if (!show || show.is_anime || !/^\d+$/.test(String(resolvedPlayerId))) {
+    // Per-episode air dates are TMDB-season-local; skip for anime (flat UI ≠ TMDB season index).
+    if (!show || !/^\d+$/.test(String(resolvedPlayerId)) || show.is_anime) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
       return;
@@ -449,12 +460,20 @@ export default function ShowTemplate({ id }: { id: string }) {
 
   const currentSeason = show?.seasons?.find((s) => s.season_number === selectedSeason);
   const rawEpisodeCount = currentSeason?.episode_count ?? 0;
-  const isTmdbTvPlayback =
-    Boolean(show && !show.is_anime && /^\d+$/.test(String(resolvedPlayerId)));
+  const resolvedIsNumeric = /^\d+$/.test(String(resolvedPlayerId));
+  const playerUsesAnilist =
+    Boolean(show?.is_anime) &&
+    typeof show?.anilist_id === "number" &&
+    show.anilist_id > 0 &&
+    !resolvedIsNumeric;
+  const playerUsesTmdb = resolvedIsNumeric;
+  /** Live-action TV only: TMDB /season/{n} air dates for capping the episode grid. */
+  const useTmdbSeasonAiringCap =
+    Boolean(show && playerUsesTmdb && !playerUsesAnilist && !show.is_anime);
 
   let displayEpisodeCount = rawEpisodeCount;
   let episodeGridStatus: "normal" | "loading" | "none" = "normal";
-  if (isTmdbTvPlayback) {
+  if (useTmdbSeasonAiringCap) {
     if (tmdbEpCapLoading) {
       episodeGridStatus = "loading";
       displayEpisodeCount = 0;
@@ -466,11 +485,6 @@ export default function ShowTemplate({ id }: { id: string }) {
     }
   }
 
-  const playerUsesAnilist =
-    Boolean(show?.is_anime) &&
-    typeof show?.anilist_id === "number" &&
-    show.anilist_id > 0;
-  const playerUsesTmdb = /^\d+$/.test(resolvedPlayerId) && !playerUsesAnilist;
   const tmdbShowPremiered =
     !show ||
     !show.first_air_date ||
@@ -480,9 +494,28 @@ export default function ShowTemplate({ id }: { id: string }) {
   const animeMovieEmbed =
     playerUsesAnilist &&
     (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
-  const absoluteEpisodeForPlayer = show
+  const absoluteEpisodeForPlayer =
+    playerUsesAnilist && show
+      ? cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode)
+      : 1;
+  const absoluteUiForTmdbMap = show
     ? cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode)
     : 1;
+  let tmdbPlayerSeason = selectedSeason;
+  let tmdbPlayerEpisode = selectedEpisode;
+  if (
+    playerUsesTmdb &&
+    show?.is_anime &&
+    Array.isArray(show.tmdb_playback_seasons) &&
+    show.tmdb_playback_seasons.length > 0
+  ) {
+    const mapped = tmdbSeasonEpisodeFromAbsolute(
+      show.tmdb_playback_seasons,
+      absoluteUiForTmdbMap
+    );
+    tmdbPlayerSeason = mapped.season;
+    tmdbPlayerEpisode = mapped.episode;
+  }
   const imageUrl = show?.poster_path
     ? /^https?:\/\//i.test(show.poster_path)
       ? show.poster_path
@@ -514,11 +547,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                 ? `This series has not premiered yet (first episode ${String(show.first_air_date).slice(0, 10)}).`
                 : "No TMDB TV id and no AniList id available for playback. Try again later or check AniList / TMDB."}
             </div>
-          ) : isTmdbTvPlayback && tmdbEpCapLoading ? (
+          ) : useTmdbSeasonAiringCap && tmdbEpCapLoading ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               Loading aired episodes…
             </div>
-          ) : isTmdbTvPlayback && displayEpisodeCount < 1 ? (
+          ) : useTmdbSeasonAiringCap && displayEpisodeCount < 1 ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               No released episodes to play in this season yet.
             </div>
@@ -530,8 +563,8 @@ export default function ShowTemplate({ id }: { id: string }) {
               anilistId={playerUsesAnilist ? show?.anilist_id ?? undefined : undefined}
               absoluteEpisode={absoluteEpisodeForPlayer}
               animeMovie={animeMovieEmbed}
-              season={selectedSeason}
-              episode={selectedEpisode}
+              season={tmdbPlayerSeason}
+              episode={tmdbPlayerEpisode}
             />
           )}
         </div>

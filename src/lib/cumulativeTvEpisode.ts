@@ -20,3 +20,28 @@ export function cumulativeTvEpisode(
   }
   return sum > 0 ? sum + ep : ep;
 }
+
+/** Map 1-based absolute episode index across TMDB seasons → TMDB (season, episode) for embeds. */
+export function tmdbSeasonEpisodeFromAbsolute(
+  seasons: { season_number: number; episode_count?: number }[] | undefined,
+  absoluteEp: number
+): { season: number; episode: number } {
+  const abs = Math.max(1, Math.floor(Number(absoluteEp)) || 1);
+  const list = (seasons ?? [])
+    .filter((s) => s.season_number >= 1 && (s.episode_count ?? 0) > 0)
+    .sort((a, b) => a.season_number - b.season_number);
+  if (list.length === 0) return { season: 1, episode: abs };
+  let remaining = abs;
+  for (const s of list) {
+    const cnt = Math.max(1, Math.floor(Number(s.episode_count)) || 0);
+    if (remaining <= cnt) {
+      return { season: s.season_number, episode: Math.max(1, remaining) };
+    }
+    remaining -= cnt;
+  }
+  const last = list[list.length - 1];
+  return {
+    season: last.season_number,
+    episode: Math.max(1, Math.floor(Number(last.episode_count)) || 1),
+  };
+}
