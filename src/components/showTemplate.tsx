@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ShowPlayer from "./showPlayer";
 import YouMightLike from "./youMightLike";
-import { cumulativeTvEpisode, tmdbSeasonEpisodeFromAbsolute } from "@/lib/cumulativeTvEpisode";
+import { cumulativeTvEpisode } from "@/lib/cumulativeTvEpisode";
 import { Image, Chip, Button } from "@heroui/react";
 import {
   useStreamingSource,
@@ -35,7 +35,7 @@ interface Show {
   anilist_id?: number | null;
   mal_id?: number | null;
   external_ids?: { mal_id?: number | null; anilist_id?: number | null } | null;
-  /** TMDB season layout for embeds when UI seasons are flattened (anime). */
+  /** TMDB season layout: when set on anime, picker uses these counts and embed uses same S/E as the UI. */
   tmdb_playback_seasons?: Season[];
   anilist?: {
     siteUrl?: string | null;
@@ -90,6 +90,9 @@ function filterReleasedSeasons(seasons: Season[] | undefined, todayYmd: string):
 /** If AniList merge did not run, still avoid TMDB multi-season UI for anime (flat absolute episode list). */
 function withAnimeFlatEpisodeLayout(show: Show): Show {
   if (!show.is_anime) return show;
+  if (Array.isArray(show.tmdb_playback_seasons) && show.tmdb_playback_seasons.length > 0) {
+    return show;
+  }
   const g = tmdbSeasonsWithEpisodes(show.seasons);
   if (g.length === 0) return show;
   const total = g.reduce(
@@ -163,7 +166,7 @@ function mergeAnilistIntoShow(
     averageScore: ani.averageScore ?? next.anilist?.averageScore ?? null,
   };
 
-  // Live-action TV: keep TMDB season/episode structure. Anime: never use TMDB for seasons/episodes UI — AniList (or flat counts) only.
+  // Live-action TV: keep TMDB season/episode structure. Anime without TMDB playback snapshot: AniList (or flat counts) only.
   const goodTmdb = tmdbSeasonsWithEpisodes(next.seasons);
   if (!next.is_anime && goodTmdb.length > 0) {
     if (typeof next.number_of_episodes !== "number" || next.number_of_episodes <= 0) {
@@ -372,6 +375,16 @@ export default function ShowTemplate({ id }: { id: string }) {
         }
         if (tmdbSeasonsPlayback?.length) {
           merged.tmdb_playback_seasons = tmdbSeasonsPlayback;
+          if (merged.is_anime) {
+            const list = tmdbSeasonsWithEpisodes(tmdbSeasonsPlayback as Season[]);
+            merged.seasons = list;
+            merged.number_of_seasons = list.length;
+            merged.number_of_episodes = list.reduce(
+              (acc, s) =>
+                acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
+              0
+            );
+          }
         }
         const forUi = withAnimeFlatEpisodeLayout(merged);
         setShow(forUi);
@@ -397,8 +410,7 @@ export default function ShowTemplate({ id }: { id: string }) {
   }, [show, selectedSeason, selectedEpisode]);
 
   useEffect(() => {
-    // Per-episode air dates are TMDB-season-local; skip for anime (flat UI ≠ TMDB season index).
-    if (!show || !/^\d+$/.test(String(resolvedPlayerId)) || show.is_anime) {
+    if (!show || !/^\d+$/.test(String(resolvedPlayerId))) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
       return;
@@ -454,7 +466,7 @@ export default function ShowTemplate({ id }: { id: string }) {
     return () => {
       cancelled = true;
     };
-  }, [show, show?.is_anime, resolvedPlayerId, selectedSeason]);
+  }, [show, resolvedPlayerId, selectedSeason]);
 
   useEffect(() => {
     if (tmdbEpCapLoading) return;
@@ -472,9 +484,8 @@ export default function ShowTemplate({ id }: { id: string }) {
     show.anilist_id > 0 &&
     !resolvedIsNumeric;
   const playerUsesTmdb = resolvedIsNumeric;
-  /** Live-action TV only: TMDB /season/{n} air dates for capping the episode grid. */
-  const useTmdbSeasonAiringCap =
-    Boolean(show && playerUsesTmdb && !playerUsesAnilist && !show.is_anime);
+  /** TMDB /season/{n} air dates for capping the episode grid (season index matches TMDB for all TMDB playback). */
+  const useTmdbSeasonAiringCap = Boolean(show && playerUsesTmdb);
 
   let displayEpisodeCount = rawEpisodeCount;
   let episodeGridStatus: "normal" | "loading" | "none" = "normal";
@@ -503,24 +514,6 @@ export default function ShowTemplate({ id }: { id: string }) {
     playerUsesAnilist && show
       ? cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode)
       : 1;
-  const absoluteUiForTmdbMap = show
-    ? cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode)
-    : 1;
-  let tmdbPlayerSeason = selectedSeason;
-  let tmdbPlayerEpisode = selectedEpisode;
-  if (
-    playerUsesTmdb &&
-    show?.is_anime &&
-    Array.isArray(show.tmdb_playback_seasons) &&
-    show.tmdb_playback_seasons.length > 0
-  ) {
-    const mapped = tmdbSeasonEpisodeFromAbsolute(
-      show.tmdb_playback_seasons,
-      absoluteUiForTmdbMap
-    );
-    tmdbPlayerSeason = mapped.season;
-    tmdbPlayerEpisode = mapped.episode;
-  }
   const imageUrl = show?.poster_path
     ? /^https?:\/\//i.test(show.poster_path)
       ? show.poster_path
@@ -588,8 +581,8 @@ export default function ShowTemplate({ id }: { id: string }) {
               anilistId={playerUsesAnilist ? show?.anilist_id ?? undefined : undefined}
               absoluteEpisode={absoluteEpisodeForPlayer}
               animeMovie={animeMovieEmbed}
-              season={tmdbPlayerSeason}
-              episode={tmdbPlayerEpisode}
+              season={selectedSeason}
+              episode={selectedEpisode}
             />
           )}
         </div>

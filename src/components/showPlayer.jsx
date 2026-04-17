@@ -60,63 +60,68 @@ const ShowPlayer = ({
   const [playerUrl, setPlayerUrl] = useState('');
   const [error, setError] = useState(null);
 
+  const useAnilist =
+    source === 'anilist' &&
+    typeof anilistId === 'number' &&
+    Number.isFinite(anilistId) &&
+    anilistId > 0;
+
+  /** TMDB TV embed: only recompute when TMDB coordinates change (not AniList-only props). */
   useEffect(() => {
+    if (useAnilist) return;
     try {
-      const useAnilist =
-        source === 'anilist' &&
-        typeof anilistId === 'number' &&
-        Number.isFinite(anilistId) &&
-        anilistId > 0;
-
       let config = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
-      if (useAnilist && typeof config.animePath !== 'function') {
-        config = SHOW_SERVERS.videasy;
+      const id = String(videoId ?? '').trim();
+      if (!/^\d+$/.test(id)) {
+        throw new Error('Missing TMDB TV id');
       }
-
-      let path;
-      let suffix = '';
-      if (useAnilist) {
-        if (animeMovie && typeof config.animeMoviePath === 'function') {
-          path = config.animeMoviePath(anilistId);
-        } else if (typeof config.animePath === 'function') {
-          const abs = Math.max(
-            1,
-            Math.floor(Number(absoluteEpisode)) || Math.floor(Number(episode)) || 1
-          );
-          path = config.animePath(anilistId, abs);
-        } else {
-          throw new Error('No AniList player for this server');
-        }
-        const sfx =
-          typeof config.suffixAnime === 'function'
-            ? config.suffixAnime
-            : config.suffix;
-        suffix = typeof sfx === 'function' ? sfx() : '';
-      } else {
-        const id = String(videoId ?? '').trim();
-        if (!/^\d+$/.test(id)) {
-          throw new Error('Missing TMDB TV id');
-        }
-        path = config.path(id, season, episode);
-        suffix = typeof config.suffix === 'function' ? config.suffix() : '';
-      }
-
-      setPlayerUrl(`${config.base}${path}${suffix}`);
+      const s = Math.max(0, Math.floor(Number(season)) || 0);
+      const e = Math.max(1, Math.floor(Number(episode)) || 1);
+      const path = config.path(id, s, e);
+      const suffix = typeof config.suffix === 'function' ? config.suffix() : '';
+      const nextUrl = `${config.base}${path}${suffix}`;
+      setPlayerUrl((prev) => (prev === nextUrl ? prev : nextUrl));
       setError(null);
     } catch (err) {
       console.error('Error setting player URL:', err);
       setError(err.message || 'Unknown error');
     }
-  }, [
-    videoId,
-    season,
-    episode,
-    server,
-    source,
-    anilistId,
-    absoluteEpisode,
-    animeMovie,
-  ]);
+  }, [useAnilist, videoId, season, episode, server]);
+
+  /** AniList / anime embed path. */
+  useEffect(() => {
+    if (!useAnilist) return;
+    try {
+      let config = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
+      if (typeof config.animePath !== 'function') {
+        config = SHOW_SERVERS.videasy;
+      }
+
+      let path;
+      let suffix = '';
+      if (animeMovie && typeof config.animeMoviePath === 'function') {
+        path = config.animeMoviePath(anilistId);
+      } else if (typeof config.animePath === 'function') {
+        const abs = Math.max(
+          1,
+          Math.floor(Number(absoluteEpisode)) || Math.floor(Number(episode)) || 1
+        );
+        path = config.animePath(anilistId, abs);
+      } else {
+        throw new Error('No AniList player for this server');
+      }
+      const sfx =
+        typeof config.suffixAnime === 'function' ? config.suffixAnime : config.suffix;
+      suffix = typeof sfx === 'function' ? sfx() : '';
+
+      const nextUrl = `${config.base}${path}${suffix}`;
+      setPlayerUrl((prev) => (prev === nextUrl ? prev : nextUrl));
+      setError(null);
+    } catch (err) {
+      console.error('Error setting player URL:', err);
+      setError(err.message || 'Unknown error');
+    }
+  }, [useAnilist, server, anilistId, absoluteEpisode, animeMovie, episode]);
 
   if (error) {
     return (
@@ -130,6 +135,7 @@ const ShowPlayer = ({
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
       {playerUrl ? (
         <iframe
+          key={playerUrl}
           title="Episode player"
           src={playerUrl}
           allow={EMBED_IFRAME_ALLOW}
