@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ShowPlayer from "./showPlayer";
 import YouMightLike from "./youMightLike";
+import { cumulativeTvEpisode } from "@/lib/cumulativeTvEpisode";
 import { Image, Chip, Button } from "@heroui/react";
 import {
   useStreamingSource,
@@ -311,7 +312,18 @@ export default function ShowTemplate({ id }: { id: string }) {
 
   const currentSeason = show?.seasons?.find((s) => s.season_number === selectedSeason);
   const episodeCount = currentSeason?.episode_count ?? 0;
-  const canPlay = /^\d+$/.test(resolvedPlayerId);
+  const playerUsesAnilist =
+    Boolean(show?.is_anime) &&
+    typeof show?.anilist_id === "number" &&
+    show.anilist_id > 0;
+  const playerUsesTmdb = /^\d+$/.test(resolvedPlayerId) && !playerUsesAnilist;
+  const canPlay = playerUsesAnilist || playerUsesTmdb;
+  const animeMovieEmbed =
+    playerUsesAnilist &&
+    (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
+  const absoluteEpisodeForPlayer = show
+    ? cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode)
+    : 1;
   const imageUrl = show?.poster_path
     ? /^https?:\/\//i.test(show.poster_path)
       ? show.poster_path
@@ -329,20 +341,24 @@ export default function ShowTemplate({ id }: { id: string }) {
     <div className="bg-background min-h-full w-full flex flex-col px-4 py-4 pb-32">
       <div className="w-full flex flex-col gap-6">
 
-        {/* ── Video Player ── */}
+        {/* ── Video Player (horizontal inset matches root py-4 / px-4) ── */}
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {loading ? (
             <div className="h-full w-full animate-pulse bg-default-200" />
           ) : !canPlay ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-              This title could not be matched to a TMDB TV id for the embed player. Try again later, or check the title on TMDB.
+              No TMDB TV id and no AniList id available for playback. Try again later or check AniList / TMDB.
             </div>
           ) : (
             <ShowPlayer
-              videoId={resolvedPlayerId}
+              server={server}
+              source={playerUsesAnilist ? "anilist" : "tmdb"}
+              videoId={playerUsesTmdb ? resolvedPlayerId : undefined}
+              anilistId={playerUsesAnilist ? show?.anilist_id ?? undefined : undefined}
+              absoluteEpisode={absoluteEpisodeForPlayer}
+              animeMovie={animeMovieEmbed}
               season={selectedSeason}
               episode={selectedEpisode}
-              server={server}
             />
           )}
         </div>

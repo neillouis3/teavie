@@ -8,11 +8,18 @@ const VIDEASY_TV_QUERY =
 
 const VIDKING_QUERY = '?color=22c55e&nextEpisode=true&episodeSelector=true';
 
+/** Videasy anime: https://www.videasy.net/docs — /anime/{anilistId}/{episode} or /anime/{anilistId} for films */
+const VIDEASY_ANIME_QUERY = '?color=22c55e&nextEpisode=true&episodeSelector=true&overlay=true';
+
 export const SHOW_SERVERS = {
   videasy: {
     base: 'https://player.videasy.net',
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
     suffix: () => VIDEASY_TV_QUERY,
+    animePath: (anilistId, absoluteEpisode) =>
+      `/anime/${anilistId}/${Math.max(1, absoluteEpisode)}`,
+    animeMoviePath: (anilistId) => `/anime/${anilistId}`,
+    suffixAnime: () => VIDEASY_ANIME_QUERY,
   },
   vidking: {
     base: 'https://www.vidking.net',
@@ -29,22 +36,87 @@ export const SHOW_SERVERS = {
   },
 };
 
-const ShowPlayer = ({ videoId, season, episode, server = 'videasy' }) => {
+/**
+ * @param {object} props
+ * @param {string} [props.videoId] TMDB TV id when using TV embed
+ * @param {number} props.season
+ * @param {number} props.episode TMDB season episode, or ignored for AniList movie
+ * @param {string} [props.server]
+ * @param {'tmdb' | 'anilist'} [props.source] Embed id type (default tmdb)
+ * @param {number} [props.anilistId] AniList media id when source is anilist
+ * @param {number} [props.absoluteEpisode] 1-based cumulative episode for AniList series embeds
+ * @param {boolean} [props.animeMovie] AniList one-shot / movie URL (no episode segment)
+ */
+const ShowPlayer = ({
+  videoId,
+  season,
+  episode,
+  server = 'videasy',
+  source = 'tmdb',
+  anilistId,
+  absoluteEpisode,
+  animeMovie = false,
+}) => {
   const [playerUrl, setPlayerUrl] = useState('');
   const [error, setError] = useState(null);
 
   useEffect(() => {
     try {
-      const config = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
-      const path = config.path(videoId, season, episode);
-      const suffix = typeof config.suffix === 'function' ? config.suffix() : '';
+      const useAnilist =
+        source === 'anilist' &&
+        typeof anilistId === 'number' &&
+        Number.isFinite(anilistId) &&
+        anilistId > 0;
+
+      let config = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
+      if (useAnilist && typeof config.animePath !== 'function') {
+        config = SHOW_SERVERS.videasy;
+      }
+
+      let path;
+      let suffix = '';
+      if (useAnilist) {
+        if (animeMovie && typeof config.animeMoviePath === 'function') {
+          path = config.animeMoviePath(anilistId);
+        } else if (typeof config.animePath === 'function') {
+          const abs = Math.max(
+            1,
+            Math.floor(Number(absoluteEpisode)) || Math.floor(Number(episode)) || 1
+          );
+          path = config.animePath(anilistId, abs);
+        } else {
+          throw new Error('No AniList player for this server');
+        }
+        const sfx =
+          typeof config.suffixAnime === 'function'
+            ? config.suffixAnime
+            : config.suffix;
+        suffix = typeof sfx === 'function' ? sfx() : '';
+      } else {
+        const id = String(videoId ?? '').trim();
+        if (!/^\d+$/.test(id)) {
+          throw new Error('Missing TMDB TV id');
+        }
+        path = config.path(id, season, episode);
+        suffix = typeof config.suffix === 'function' ? config.suffix() : '';
+      }
+
       setPlayerUrl(`${config.base}${path}${suffix}`);
       setError(null);
     } catch (err) {
       console.error('Error setting player URL:', err);
       setError(err.message || 'Unknown error');
     }
-  }, [videoId, season, episode, server]);
+  }, [
+    videoId,
+    season,
+    episode,
+    server,
+    source,
+    anilistId,
+    absoluteEpisode,
+    animeMovie,
+  ]);
 
   if (error) {
     return (
