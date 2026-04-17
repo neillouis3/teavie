@@ -23,6 +23,13 @@ interface Movie {
 
 export type MovieServerKey = StreamServerId;
 
+function isReleasedByDate(releaseDate: string | undefined | null): boolean {
+  const d = String(releaseDate ?? "").trim();
+  if (d.length < 10) return true;
+  const ymd = d.slice(0, 10);
+  return ymd <= new Date().toISOString().slice(0, 10);
+}
+
 export default function MovieTemplate({ id }: { id: string }) {
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
@@ -67,6 +74,7 @@ export default function MovieTemplate({ id }: { id: string }) {
   }, [movie]);
 
   const imageUrl = movie?.poster_path ? `${baseUrl}${size}${movie.poster_path}` : '';
+  const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
 
   return (
     <div className="bg-background h-full w-full flex flex-col  px-4 py-4 pb-32">
@@ -75,6 +83,12 @@ export default function MovieTemplate({ id }: { id: string }) {
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {loading ? (
             <div className="h-full w-full animate-pulse rounded-lg bg-default-200" />
+          ) : !movieReleased ? (
+            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+              {movie?.release_date
+                ? `This title is not available yet (releases ${movie.release_date.slice(0, 10)}).`
+                : "Release date is not available; playback is disabled until a date is confirmed."}
+            </div>
           ) : (
             <MoviePlayer videoId={id} server={server} />
           )}

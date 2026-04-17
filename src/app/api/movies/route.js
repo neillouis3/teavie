@@ -1,5 +1,10 @@
 import clientPromise from "@/lib/mongo";
-import { buildCatalogFilter, catalogSort } from "@/lib/catalogQuery";
+import {
+  buildCatalogFilter,
+  catalogSort,
+  catalogTodayIsoUtc,
+  releasedCatalogClause,
+} from "@/lib/catalogQuery";
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
 
 export async function GET(req) {
@@ -25,10 +30,15 @@ export async function GET(req) {
       dateAsc: { release_date: 1, _id: -1 },
     });
 
-    const filter = buildCatalogFilter(searchParams, {
+    const base = buildCatalogFilter(searchParams, {
       type: "movie",
       dateField: "release_date",
     });
+    const includeUnreleased = searchParams.get("include_unreleased") === "1";
+    const todayIso = catalogTodayIsoUtc();
+    const filter = includeUnreleased
+      ? base
+      : { $and: [base, releasedCatalogClause("release_date", todayIso)] };
 
     const total = await collection.countDocuments(filter);
 

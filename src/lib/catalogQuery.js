@@ -2,6 +2,47 @@
  * Shared helpers for /api/movies and /api/tv catalog filters.
  */
 
+/** UTC calendar day YYYY-MM-DD for catalog filters. */
+export function catalogTodayIsoUtc() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Require a TMDB-style date on `dateField` that is on or before `todayIso`.
+ * @param {string} dateField
+ * @param {string} todayIso YYYY-MM-DD
+ */
+export function releasedCatalogClause(dateField, todayIso) {
+  return {
+    $and: [
+      { [dateField]: { $type: "string" } },
+      { [dateField]: { $regex: /^\d{4}-\d{2}-\d{2}/ } },
+      { [dateField]: { $lte: todayIso } },
+    ],
+  };
+}
+
+/**
+ * Anime rows: hide when `first_air_date` is a future YYYY-MM-DD; keep rows with missing/empty date.
+ * @param {string} todayIso
+ */
+export function releasedAnimeFirstAirClause(todayIso) {
+  return {
+    $or: [
+      {
+        $and: [
+          { first_air_date: { $type: "string" } },
+          { first_air_date: { $regex: /^\d{4}-\d{2}-\d{2}/ } },
+          { first_air_date: { $lte: todayIso } },
+        ],
+      },
+      { first_air_date: { $exists: false } },
+      { first_air_date: null },
+      { first_air_date: "" },
+    ],
+  };
+}
+
 export function escapeRegex(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

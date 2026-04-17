@@ -13,6 +13,7 @@ import {
 interface Season {
   season_number: number;
   episode_count: number;
+  air_date?: string | null;
 }
 
 interface Show {
@@ -66,6 +67,22 @@ function tmdbSeasonsWithEpisodes(seasons: Season[] | undefined): Season[] {
   return (seasons ?? []).filter(
     (s) => s.season_number >= 1 && typeof s.episode_count === "number" && s.episode_count > 0
   );
+}
+
+function catalogTodayYmdUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Drop TMDB seasons whose `air_date` is in the future (keep unknown / empty air_date). */
+function filterReleasedSeasons(seasons: Season[] | undefined, todayYmd: string): Season[] | undefined {
+  if (!seasons?.length) return seasons;
+  const next = seasons.filter((s) => {
+    if ((s.season_number ?? 0) < 1) return false;
+    const ad = String(s.air_date ?? "").trim();
+    if (ad.length < 10) return true;
+    return ad <= todayYmd;
+  });
+  return next.length ? next : seasons;
 }
 
 function mapAnilistStatus(s: string | null | undefined): string {
@@ -201,6 +218,9 @@ export default function ShowTemplate({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
+  /** null = no cap (anime / error); number = last episode number aired by TMDB calendar */
+  const [tmdbAiredEpCap, setTmdbAiredEpCap] = useState<number | null>(null);
+  const [tmdbEpCapLoading, setTmdbEpCapLoading] = useState(false);
 
   useEffect(() => {
     const fetchShowDetails = async () => {
@@ -241,6 +261,10 @@ export default function ShowTemplate({ id }: { id: string }) {
             return;
           }
           const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow);
+          const today = catalogTodayYmdUtc();
+          if (merged.seasons?.length) {
+            merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
+          }
           setShow(merged);
           pickFirstSeason(merged.seasons);
           setSelectedEpisode(1);
@@ -259,6 +283,10 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (!res.ok) {
           if (fallbackShow) {
             const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow);
+            const today = catalogTodayYmdUtc();
+            if (merged.seasons?.length) {
+              merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
+            }
             setShow(merged);
             pickFirstSeason(merged.seasons);
             setSelectedEpisode(1);
@@ -267,6 +295,11 @@ export default function ShowTemplate({ id }: { id: string }) {
           throw new Error("Failed to fetch show details");
         }
         const data = (await res.json()) as Show;
+        const todayYmd = catalogTodayYmdUtc();
+        if (Array.isArray(data.seasons) && data.seasons.length) {
+          const rel = filterReleasedSeasons(data.seasons as Season[], todayYmd);
+          if (rel?.length) data.seasons = rel as Show["seasons"];
+        }
         if (fallbackShow && !data?.poster_path && fallbackShow.poster_path) {
           data.poster_path = fallbackShow.poster_path;
         }
@@ -288,6 +321,9 @@ export default function ShowTemplate({ id }: { id: string }) {
           external_ids: data.external_ids ?? fallbackShow?.external_ids ?? undefined,
         };
         const merged = await fetchAnilistAndMerge(forAni, fallbackShow);
+        if (merged.seasons?.length) {
+          merged.seasons = filterReleasedSeasons(merged.seasons, todayYmd) ?? merged.seasons;
+        }
         setShow(merged);
         pickFirstSeason(merged.seasons);
         setSelectedEpisode(1);
@@ -310,14 +346,102 @@ export default function ShowTemplate({ id }: { id: string }) {
     }
   }, [show, selectedSeason, selectedEpisode]);
 
+  useEffect(() => {
+    if (!show || show.is_anime || !/^\d+$/.test(String(resolvedPlayerId))) {
+      setTmdbAiredEpCap(null);
+      setTmdbEpCapLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setTmdbEpCapLoading(true);
+    setTmdbAiredEpCap(null);
+
+    const run = async () => {
+      const token = process.env.NEXT_PUBLIC_TMDB_BEARER;
+      if (!token) {
+        if (!cancelled) {
+          setTmdbAiredEpCap(null);
+          setTmdbEpCapLoading(false);
+        }
+        return;
+      }
+      try {
+        const url = `https://api.themoviedb.org/3/tv/${resolvedPlayerId}/season/${selectedSeason}?language=en-US`;
+        const res = await fetch(url, {
+          headers: { accept: "application/json", Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("season fetch failed");
+        const json = (await res.json()) as {
+          air_date?: string | null;
+          episodes?: { air_date?: string | null; episode_number?: number }[];
+        };
+        const today = catalogTodayYmdUtc();
+        let max = 0;
+        const eps = json.episodes ?? [];
+        for (const ep of eps) {
+          const ad = String(ep.air_date ?? "").trim();
+          if (!ad || ad.length < 10) continue;
+          if (ad > today) continue;
+          const n = Number(ep.episode_number);
+          if (Number.isFinite(n) && n > max) max = n;
+        }
+        const seasonAir = String(json.air_date ?? "").trim();
+        if (max === 0 && eps.length > 0 && seasonAir.length >= 10 && seasonAir <= today) {
+          max = eps.length;
+        }
+        if (!cancelled) setTmdbAiredEpCap(max);
+      } catch {
+        if (!cancelled) setTmdbAiredEpCap(null);
+      } finally {
+        if (!cancelled) setTmdbEpCapLoading(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [show, show?.is_anime, resolvedPlayerId, selectedSeason]);
+
+  useEffect(() => {
+    if (tmdbEpCapLoading) return;
+    if (tmdbAiredEpCap != null && tmdbAiredEpCap > 0 && selectedEpisode > tmdbAiredEpCap) {
+      setSelectedEpisode(tmdbAiredEpCap);
+    }
+  }, [tmdbEpCapLoading, tmdbAiredEpCap, selectedEpisode]);
+
   const currentSeason = show?.seasons?.find((s) => s.season_number === selectedSeason);
-  const episodeCount = currentSeason?.episode_count ?? 0;
+  const rawEpisodeCount = currentSeason?.episode_count ?? 0;
+  const isTmdbTvPlayback =
+    Boolean(show && !show.is_anime && /^\d+$/.test(String(resolvedPlayerId)));
+
+  let displayEpisodeCount = rawEpisodeCount;
+  let episodeGridStatus: "normal" | "loading" | "none" = "normal";
+  if (isTmdbTvPlayback) {
+    if (tmdbEpCapLoading) {
+      episodeGridStatus = "loading";
+      displayEpisodeCount = 0;
+    } else if (tmdbAiredEpCap === 0 && rawEpisodeCount > 0) {
+      episodeGridStatus = "none";
+      displayEpisodeCount = 0;
+    } else if (tmdbAiredEpCap != null && tmdbAiredEpCap > 0) {
+      displayEpisodeCount = Math.min(rawEpisodeCount, tmdbAiredEpCap);
+    }
+  }
+
   const playerUsesAnilist =
     Boolean(show?.is_anime) &&
     typeof show?.anilist_id === "number" &&
     show.anilist_id > 0;
   const playerUsesTmdb = /^\d+$/.test(resolvedPlayerId) && !playerUsesAnilist;
-  const canPlay = playerUsesAnilist || playerUsesTmdb;
+  const tmdbShowPremiered =
+    !show ||
+    !show.first_air_date ||
+    String(show.first_air_date).trim().length < 10 ||
+    String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
+  const canPlay = playerUsesAnilist || (playerUsesTmdb && tmdbShowPremiered);
   const animeMovieEmbed =
     playerUsesAnilist &&
     (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
@@ -338,7 +462,7 @@ export default function ShowTemplate({ id }: { id: string }) {
   const voteLabel = Number.isFinite(displayVote) ? displayVote.toFixed(1) : "—";
 
   return (
-    <div className="bg-background min-h-full w-full flex flex-col px-4 py-4 pb-32">
+    <div className="bg-background min-h-full w-full flex flex-col px-0 py-4 pb-32">
       <div className="w-full flex flex-col gap-6">
 
         {/* ── Video Player (horizontal inset matches root py-4 / px-4) ── */}
@@ -347,7 +471,17 @@ export default function ShowTemplate({ id }: { id: string }) {
             <div className="h-full w-full animate-pulse bg-default-200" />
           ) : !canPlay ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-              No TMDB TV id and no AniList id available for playback. Try again later or check AniList / TMDB.
+              {playerUsesTmdb && show && !tmdbShowPremiered
+                ? `This series has not premiered yet (first episode ${String(show.first_air_date).slice(0, 10)}).`
+                : "No TMDB TV id and no AniList id available for playback. Try again later or check AniList / TMDB."}
+            </div>
+          ) : isTmdbTvPlayback && tmdbEpCapLoading ? (
+            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+              Loading aired episodes…
+            </div>
+          ) : isTmdbTvPlayback && displayEpisodeCount < 1 ? (
+            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+              No released episodes to play in this season yet.
             </div>
           ) : (
             <ShowPlayer
@@ -448,7 +582,15 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </div>
 
                   {/* Episode grid */}
-                  {episodeCount > 0 && (
+                  {episodeGridStatus === "loading" && (
+                    <div className="px-4 pb-4 text-sm text-default-500">Loading aired episodes…</div>
+                  )}
+                  {episodeGridStatus === "none" && (
+                    <div className="px-4 pb-4 text-sm text-default-500">
+                      No episodes have aired in this season yet.
+                    </div>
+                  )}
+                  {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
                     <div className="px-4 pb-4">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
                         Episode{selectedEpisode ? ` — ${selectedEpisode}` : ""}
@@ -457,7 +599,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                         className="grid gap-1.5"
                         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))" }}
                       >
-                        {Array.from({ length: episodeCount }, (_, i) => i + 1).map((ep) => (
+                        {Array.from({ length: displayEpisodeCount }, (_, i) => i + 1).map((ep) => (
                           <Button
                             key={ep}
                             size="sm"

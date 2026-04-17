@@ -1,5 +1,10 @@
 import clientPromise from "@/lib/mongo";
-import { buildCatalogFilter, catalogSort } from "@/lib/catalogQuery";
+import {
+  buildCatalogFilter,
+  catalogSort,
+  catalogTodayIsoUtc,
+  releasedAnimeFirstAirClause,
+} from "@/lib/catalogQuery";
 import {
   catalogPopularityScore,
   mongoAnimeCatalogPopularityExpr,
@@ -65,7 +70,10 @@ export async function GET(req) {
       $or: [{ tags: "anime" }, { is_anime: true }],
     };
 
-    const filter = { $and: [base, animeFilter] };
+    const includeUnreleased = searchParams.get("include_unreleased") === "1";
+    const todayIso = catalogTodayIsoUtc();
+    const released = includeUnreleased ? [] : [releasedAnimeFirstAirClause(todayIso)];
+    const filter = { $and: [base, animeFilter, ...released] };
 
     const total = await collection.countDocuments(filter);
 
