@@ -71,6 +71,14 @@ function tmdbSeasonsWithEpisodes(seasons: Season[] | undefined): Season[] {
   );
 }
 
+/** Sum of `episode_count` for TMDB seasons strictly before `seasonNum` (for continuous ep labels). */
+function episodeOffsetBeforeSeason(seasons: Season[] | undefined, seasonNum: number): number {
+  const list = tmdbSeasonsWithEpisodes(seasons).sort((a, b) => a.season_number - b.season_number);
+  return list
+    .filter((s) => s.season_number < seasonNum)
+    .reduce((acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0), 0);
+}
+
 function catalogTodayYmdUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -402,7 +410,14 @@ export default function ShowTemplate({ id }: { id: string }) {
   useEffect(() => {
     if (show?.name) {
       const year = show.first_air_date?.slice(0, 4);
-      const seasonEpisode = `S${selectedSeason}E${selectedEpisode}`;
+      const multiSeason =
+        (show.seasons?.filter((s) => s.season_number >= 1).length ?? 0) > 1;
+      const cum =
+        (multiSeason ? episodeOffsetBeforeSeason(show.seasons, selectedSeason) : 0) +
+        selectedEpisode;
+      const seasonEpisode = multiSeason
+        ? `S${selectedSeason} · Ep ${cum}`
+        : `S${selectedSeason}E${selectedEpisode}`;
       document.title = year
         ? `${show.name} (${year}) ${seasonEpisode} - Teavie`
         : `${show.name} ${seasonEpisode} - Teavie`;
@@ -530,6 +545,12 @@ export default function ShowTemplate({ id }: { id: string }) {
   const releasedSeasonsForUi = show?.seasons?.filter((s) => s.season_number >= 1) ?? [];
   const animeHideSeasonRow =
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
+  const useContinuousEpisodeLabels = releasedSeasonsForUi.length > 1;
+  const episodeDisplayOffset =
+    useContinuousEpisodeLabels && show
+      ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
+      : 0;
+  const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -718,6 +739,14 @@ export default function ShowTemplate({ id }: { id: string }) {
                                   start + EPISODE_RANGE_BLOCK - 1,
                                   displayEpisodeCount - 1
                                 );
+                                const withinLo = start + 1;
+                                const withinHi = Math.min(
+                                  start + EPISODE_RANGE_BLOCK,
+                                  displayEpisodeCount
+                                );
+                                const rangeLabel = useContinuousEpisodeLabels
+                                  ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
+                                  : `${start}–${labelHi}`;
                                 return (
                                   <Button
                                     key={start}
@@ -727,7 +756,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                                     className="min-w-0 px-2.5 text-xs font-medium"
                                     onPress={() => setEpisodeRangeStart(start)}
                                   >
-                                    {start}–{labelHi}
+                                    {rangeLabel}
                                   </Button>
                                 );
                               }
@@ -736,11 +765,18 @@ export default function ShowTemplate({ id }: { id: string }) {
                         </div>
                       )}
                       <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
-                        Episode{selectedEpisode ? ` — ${selectedEpisode}` : ""}
+                        Episode
+                        {selectedEpisode
+                          ? ` — ${useContinuousEpisodeLabels ? cumulativeEpisodeSelected : selectedEpisode}`
+                          : ""}
                         {showEpisodeRangeTabs ? (
                           <span className="font-normal text-default-400 normal-case">
                             {" "}
-                            ({episodeBlockLo}–{episodeBlockHi})
+                            (
+                            {useContinuousEpisodeLabels
+                              ? `${episodeBlockLo + episodeDisplayOffset}–${episodeBlockHi + episodeDisplayOffset}`
+                              : `${episodeBlockLo}–${episodeBlockHi}`}
+                            )
                           </span>
                         ) : null}
                       </p>
@@ -761,7 +797,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                             onPress={() => setSelectedEpisode(ep)}
                             className="text-xs font-medium aspect-square"
                           >
-                            {ep}
+                            {useContinuousEpisodeLabels ? ep + episodeDisplayOffset : ep}
                           </Button>
                         ))}
                       </div>
@@ -775,7 +811,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                     </Chip>
                     <span className="text-default-400 text-xs">›</span>
                     <Chip size="md" variant="flat" color="success" className="font-mono">
-                      E{selectedEpisode}
+                      E{useContinuousEpisodeLabels ? cumulativeEpisodeSelected : selectedEpisode}
                     </Chip>
                   </div>
                 </div>
