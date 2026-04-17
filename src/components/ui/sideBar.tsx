@@ -13,7 +13,7 @@ import {
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { Input, Alert, Tooltip } from "@heroui/react";
-import { APP_NAV_ITEMS } from "@/components/ui/navItems";
+import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -64,11 +64,13 @@ export default function SideBar() {
       ? "explore"
       : pathname.startsWith("/movies")
         ? "movies"
-        : pathname.startsWith("/shows")
-          ? "shows"
-          : pathname.startsWith("/sports")
-            ? "sports"
-            : null;
+        : pathname.startsWith("/anime")
+          ? "anime"
+          : pathname.startsWith("/shows")
+            ? "shows"
+            : pathname.startsWith("/sports")
+              ? "sports"
+              : null;
 
   const settingsActive = pathname.startsWith("/settings");
 
@@ -109,13 +111,29 @@ export default function SideBar() {
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
-          {APP_NAV_ITEMS.map((item) => {
-            const isActive = selectedKey === item.key;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={`
+          {APP_NAV_SECTIONS.map((section, sectionIndex) => (
+            <div key={section.id} className="flex flex-col gap-1">
+              {sectionIndex > 0 && isCollapsed ? (
+                <div
+                  className="mx-2 my-2 border-t border-divider"
+                  aria-hidden
+                />
+              ) : null}
+              {sectionIndex > 0 && !isCollapsed ? (
+                <div className="mt-3 border-t border-divider pt-3" />
+              ) : null}
+              {!isCollapsed && section.title ? (
+                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-default-500">
+                  {section.title}
+                </p>
+              ) : null}
+              {section.items.map((item) => {
+                const isActive = selectedKey === item.key;
+                return (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
                   ${
                     isActive
@@ -124,25 +142,33 @@ export default function SideBar() {
                   }
                   ${isCollapsed ? "justify-center" : ""}
                 `}
-                title={isCollapsed ? item.label : undefined}
-              >
-                <HugeiconsIcon icon={item.icon} size={20} className="shrink-0" />
-                <AnimatePresence mode="wait">
-                  {!isCollapsed && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: "auto" }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="text-sm font-medium overflow-hidden whitespace-nowrap"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Link>
-            );
-          })}
+                    title={
+                      isCollapsed
+                        ? section.title
+                          ? `${item.label} · ${section.title}`
+                          : item.label
+                        : undefined
+                    }
+                  >
+                    <HugeiconsIcon icon={item.icon} size={20} className="shrink-0" />
+                    <AnimatePresence mode="wait">
+                      {!isCollapsed && (
+                        <motion.span
+                          initial={{ opacity: 0, width: 0 }}
+                          animate={{ opacity: 1, width: "auto" }}
+                          exit={{ opacity: 0, width: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="text-sm font-medium overflow-hidden whitespace-nowrap"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
 
           {isCollapsed ? (
             <Tooltip placement="right" content="Search">

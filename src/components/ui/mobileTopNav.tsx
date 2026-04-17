@@ -19,7 +19,7 @@ import {
   Search01Icon,
   Settings01Icon,
 } from '@hugeicons/core-free-icons';
-import { APP_NAV_ITEMS } from '@/components/ui/navItems';
+import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
 
 export default function MobileTopNav() {
   const pathname = usePathname();
@@ -53,11 +53,13 @@ export default function MobileTopNav() {
       ? 'explore'
       : pathname.startsWith('/movies')
         ? 'movies'
-        : pathname.startsWith('/shows')
-          ? 'shows'
-          : pathname.startsWith('/sports')
-            ? 'sports'
-            : null;
+        : pathname.startsWith('/anime')
+          ? 'anime'
+          : pathname.startsWith('/shows')
+            ? 'shows'
+            : pathname.startsWith('/sports')
+              ? 'sports'
+              : null;
 
   const settingsActive = pathname.startsWith('/settings');
   const searchActive = pathname.startsWith('/search');
@@ -119,24 +121,36 @@ export default function MobileTopNav() {
           </DrawerHeader>
           <DrawerBody className="gap-0 px-3 py-4">
             <nav className="flex flex-col gap-1">
-              {APP_NAV_ITEMS.map((item) => {
-                const isActive = selectedKey === item.key;
-                return (
-                  <Link
-                    key={item.key}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-success text-success-foreground shadow-sm'
-                        : 'text-foreground hover:bg-default-100'
-                    }`}
-                  >
-                    <HugeiconsIcon icon={item.icon} size={20} className="shrink-0" />
-                    {item.label}
-                  </Link>
-                );
-              })}
+              {APP_NAV_SECTIONS.map((section, sectionIndex) => (
+                <div key={section.id} className="flex flex-col gap-1">
+                  {sectionIndex > 0 ? (
+                    <div className="mt-3 border-t border-divider pt-3" />
+                  ) : null}
+                  {section.title ? (
+                    <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-default-500">
+                      {section.title}
+                    </p>
+                  ) : null}
+                  {section.items.map((item) => {
+                    const isActive = selectedKey === item.key;
+                    return (
+                      <Link
+                        key={item.key}
+                        href={item.href}
+                        onClick={() => setOpen(false)}
+                        className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-success text-success-foreground shadow-sm'
+                            : 'text-foreground hover:bg-default-100'
+                        }`}
+                      >
+                        <HugeiconsIcon icon={item.icon} size={20} className="shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
 
               <Link
                 href="/search"
