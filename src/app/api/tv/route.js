@@ -24,10 +24,14 @@ export async function GET(req) {
       dateAsc: { first_air_date: 1, _id: -1 },
     });
 
-    const filter = buildCatalogFilter(searchParams, {
+    const base = buildCatalogFilter(searchParams, {
       type: "tv",
       dateField: "first_air_date",
     });
+    const notAnime = {
+      $nor: [{ is_anime: true }, { tags: "anime" }],
+    };
+    const filter = { $and: [base, notAnime] };
 
     const total = await collection.countDocuments(filter);
 

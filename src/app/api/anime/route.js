@@ -17,12 +17,16 @@ export async function GET(req) {
     const skip = (page - 1) * limit;
 
     const sortBy = searchParams.get("sort_by") || "title";
-    const sort = catalogSort(sortBy, {
-      titleAsc: { name: 1, _id: -1 },
-      titleDesc: { name: -1, _id: -1 },
-      dateDesc: { first_air_date: -1, _id: -1 },
-      dateAsc: { first_air_date: 1, _id: -1 },
-    });
+    // MAL/Jikan `popularity` is rank (lower = more popular), unlike TMDB where higher = more popular.
+    const sort =
+      sortBy === "popularity"
+        ? { popularity: 1, _id: -1 }
+        : catalogSort(sortBy, {
+            titleAsc: { name: 1, _id: -1 },
+            titleDesc: { name: -1, _id: -1 },
+            dateDesc: { first_air_date: -1, _id: -1 },
+            dateAsc: { first_air_date: 1, _id: -1 },
+          });
 
     const base = buildCatalogFilter(searchParams, {
       type: "tv",
