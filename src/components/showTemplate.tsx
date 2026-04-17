@@ -603,7 +603,7 @@ export default function ShowTemplate({ id }: { id: string }) {
               absoluteEpisode={absoluteEpisodeForPlayer}
               animeMovie={animeMovieEmbed}
               season={selectedSeason}
-              episode={selectedEpisode}
+              episode={playerUsesTmdb ? cumulativeEpisodeSelected : selectedEpisode}
             />
           )}
         </div>

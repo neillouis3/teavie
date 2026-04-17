@@ -40,7 +40,7 @@ export const SHOW_SERVERS = {
  * @param {object} props
  * @param {string} [props.videoId] TMDB TV id when using TV embed
  * @param {number} props.season
- * @param {number} props.episode TMDB season episode, or ignored for AniList movie
+ * @param {number} props.episode TMDB embed episode index (running / cumulative across prior seasons when Teavie uses continuous labels; same as within-season when only one season)
  * @param {string} [props.server]
  * @param {'tmdb' | 'anilist'} [props.source] Embed id type (default tmdb)
  * @param {number} [props.anilistId] AniList media id when source is anilist
