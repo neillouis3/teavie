@@ -3,7 +3,10 @@
 import React, { useState, useEffect } from "react";
 import ShowPlayer from "./showPlayer";
 import YouMightLike from "./youMightLike";
-import { cumulativeTvEpisode } from "@/lib/cumulativeTvEpisode";
+import {
+  cumulativeTvEpisode,
+  tmdbSeasonEpisodeFromAbsolute,
+} from "@/lib/cumulativeTvEpisode";
 import { Image, Chip, Button } from "@heroui/react";
 import {
   useStreamingSource,
@@ -430,6 +433,13 @@ export default function ShowTemplate({ id }: { id: string }) {
       setTmdbEpCapLoading(false);
       return;
     }
+    const multiSeasonPicker =
+      (show.seasons?.filter((s) => s.season_number >= 1).length ?? 0) > 1;
+    if (multiSeasonPicker) {
+      setTmdbAiredEpCap(null);
+      setTmdbEpCapLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setTmdbEpCapLoading(true);
@@ -492,6 +502,12 @@ export default function ShowTemplate({ id }: { id: string }) {
 
   const currentSeason = show?.seasons?.find((s) => s.season_number === selectedSeason);
   const rawEpisodeCount = currentSeason?.episode_count ?? 0;
+  const releasedSeasonsForUi = show?.seasons?.filter((s) => s.season_number >= 1) ?? [];
+  const useFlatAllEpisodesPicker = releasedSeasonsForUi.length > 1;
+  const totalEpisodesAcrossSeasons = tmdbSeasonsWithEpisodes(show?.seasons).reduce(
+    (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
+    0
+  );
   const resolvedIsNumeric = /^\d+$/.test(String(resolvedPlayerId));
   const playerUsesAnilist =
     Boolean(show?.is_anime) &&
@@ -501,10 +517,16 @@ export default function ShowTemplate({ id }: { id: string }) {
   const playerUsesTmdb = resolvedIsNumeric;
   /** TMDB /season/{n} air dates for capping the episode grid (season index matches TMDB for all TMDB playback). */
   const useTmdbSeasonAiringCap = Boolean(show && playerUsesTmdb);
+  /** Per-season aired cap only when the grid is per-season (not the all-episodes flat list). */
+  const useTmdbSeasonAiringCapForPlayer =
+    useTmdbSeasonAiringCap && !useFlatAllEpisodesPicker;
 
   let displayEpisodeCount = rawEpisodeCount;
   let episodeGridStatus: "normal" | "loading" | "none" = "normal";
-  if (useTmdbSeasonAiringCap) {
+  if (useFlatAllEpisodesPicker) {
+    displayEpisodeCount = totalEpisodesAcrossSeasons;
+    episodeGridStatus = totalEpisodesAcrossSeasons > 0 ? "normal" : "none";
+  } else if (useTmdbSeasonAiringCap) {
     if (tmdbEpCapLoading) {
       episodeGridStatus = "loading";
       displayEpisodeCount = 0;
@@ -542,7 +564,6 @@ export default function ShowTemplate({ id }: { id: string }) {
   const displayVote = Number(show?.vote_average);
   const voteLabel = Number.isFinite(displayVote) ? displayVote.toFixed(1) : "—";
 
-  const releasedSeasonsForUi = show?.seasons?.filter((s) => s.season_number >= 1) ?? [];
   const animeHideSeasonRow =
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
   const useContinuousEpisodeLabels = releasedSeasonsForUi.length > 1;
@@ -562,7 +583,20 @@ export default function ShowTemplate({ id }: { id: string }) {
 
   useEffect(() => {
     setEpisodeRangeStart(0);
-  }, [id, selectedSeason]);
+  }, [id]);
+
+  useEffect(() => {
+    if (useFlatAllEpisodesPicker) return;
+    setEpisodeRangeStart(0);
+  }, [selectedSeason, useFlatAllEpisodesPicker]);
+
+  useEffect(() => {
+    if (!useFlatAllEpisodesPicker) return;
+    const c = cumulativeEpisodeSelected;
+    const start =
+      Math.floor(Math.max(0, c - 1) / EPISODE_RANGE_BLOCK) * EPISODE_RANGE_BLOCK;
+    setEpisodeRangeStart(start);
+  }, [useFlatAllEpisodesPicker, cumulativeEpisodeSelected]);
 
   useEffect(() => {
     if (displayEpisodeCount <= 0) return;
@@ -586,11 +620,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                 ? `This series has not premiered yet (first episode ${String(show.first_air_date).slice(0, 10)}).`
                 : "No TMDB TV id and no AniList id available for playback. Try again later or check AniList / TMDB."}
             </div>
-          ) : useTmdbSeasonAiringCap && tmdbEpCapLoading ? (
+          ) : useTmdbSeasonAiringCapForPlayer && tmdbEpCapLoading ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               Loading aired episodes…
             </div>
-          ) : useTmdbSeasonAiringCap && displayEpisodeCount < 1 ? (
+          ) : useTmdbSeasonAiringCapForPlayer && displayEpisodeCount < 1 ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               No released episodes to play in this season yet.
             </div>
@@ -663,7 +697,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3.5 border-b border-default-200/60">
                     <span className="text-sm font-medium text-foreground">
-                      {show.is_anime ? "Episodes" : "Season & Episode"}
+                      {useFlatAllEpisodesPicker
+                        ? "All episodes"
+                        : show.is_anime
+                          ? "Episodes"
+                          : "Season & Episode"}
                     </span>
                     {show.is_anime ? (
                       typeof show.number_of_episodes === "number" && show.number_of_episodes > 0 ? (
@@ -681,8 +719,8 @@ export default function ShowTemplate({ id }: { id: string }) {
                     )}
                   </div>
 
-                  {/* Season pills (TMDB-style; anime uses AniList flat cour — hide when single season) */}
-                  {!animeHideSeasonRow && (
+                  {/* Season pills — hidden for single-season anime, or when using one flat list for all eps */}
+                  {!animeHideSeasonRow && !useFlatAllEpisodesPicker && (
                     <div className="px-4 pt-4 pb-3">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
                         Season
@@ -711,20 +749,20 @@ export default function ShowTemplate({ id }: { id: string }) {
                   {/* Episode grid */}
                   {episodeGridStatus === "loading" && (
                     <div
-                      className={`px-4 pb-4 text-sm text-default-500${animeHideSeasonRow ? " pt-4" : ""}`}
+                      className={`px-4 pb-4 text-sm text-default-500${animeHideSeasonRow || useFlatAllEpisodesPicker ? " pt-4" : ""}`}
                     >
                       Loading aired episodes…
                     </div>
                   )}
                   {episodeGridStatus === "none" && (
                     <div
-                      className={`px-4 pb-4 text-sm text-default-500${animeHideSeasonRow ? " pt-4" : ""}`}
+                      className={`px-4 pb-4 text-sm text-default-500${animeHideSeasonRow || useFlatAllEpisodesPicker ? " pt-4" : ""}`}
                     >
                       No episodes have aired in this season yet.
                     </div>
                   )}
                   {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
-                    <div className={`px-4 pb-4${animeHideSeasonRow ? " pt-4" : ""}`}>
+                    <div className={`px-4 pb-4${animeHideSeasonRow || useFlatAllEpisodesPicker ? " pt-4" : ""}`}>
                       {showEpisodeRangeTabs && (
                         <div className="mb-3">
                           <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2">
@@ -744,9 +782,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                                   start + EPISODE_RANGE_BLOCK,
                                   displayEpisodeCount
                                 );
-                                const rangeLabel = useContinuousEpisodeLabels
-                                  ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
-                                  : `${start}–${labelHi}`;
+                                const rangeLabel = useFlatAllEpisodesPicker
+                                  ? `${withinLo}–${withinHi}`
+                                  : useContinuousEpisodeLabels
+                                    ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
+                                    : `${start}–${labelHi}`;
                                 return (
                                   <Button
                                     key={start}
@@ -767,15 +807,21 @@ export default function ShowTemplate({ id }: { id: string }) {
                       <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
                         Episode
                         {selectedEpisode
-                          ? ` — ${useContinuousEpisodeLabels ? cumulativeEpisodeSelected : selectedEpisode}`
+                          ? ` — ${
+                              useFlatAllEpisodesPicker || useContinuousEpisodeLabels
+                                ? cumulativeEpisodeSelected
+                                : selectedEpisode
+                            }`
                           : ""}
                         {showEpisodeRangeTabs ? (
                           <span className="font-normal text-default-400 normal-case">
                             {" "}
                             (
-                            {useContinuousEpisodeLabels
-                              ? `${episodeBlockLo + episodeDisplayOffset}–${episodeBlockHi + episodeDisplayOffset}`
-                              : `${episodeBlockLo}–${episodeBlockHi}`}
+                            {useFlatAllEpisodesPicker
+                              ? `${episodeBlockLo}–${episodeBlockHi}`
+                              : useContinuousEpisodeLabels
+                                ? `${episodeBlockLo + episodeDisplayOffset}–${episodeBlockHi + episodeDisplayOffset}`
+                                : `${episodeBlockLo}–${episodeBlockHi}`}
                             )
                           </span>
                         ) : null}
@@ -792,12 +838,43 @@ export default function ShowTemplate({ id }: { id: string }) {
                             key={ep}
                             size="sm"
                             isIconOnly
-                            variant={selectedEpisode === ep ? "solid" : "flat"}
-                            color={selectedEpisode === ep ? "success" : "default"}
-                            onPress={() => setSelectedEpisode(ep)}
+                            variant={
+                              useFlatAllEpisodesPicker
+                                ? cumulativeEpisodeSelected === ep
+                                  ? "solid"
+                                  : "flat"
+                                : selectedEpisode === ep
+                                  ? "solid"
+                                  : "flat"
+                            }
+                            color={
+                              useFlatAllEpisodesPicker
+                                ? cumulativeEpisodeSelected === ep
+                                  ? "success"
+                                  : "default"
+                                : selectedEpisode === ep
+                                  ? "success"
+                                  : "default"
+                            }
+                            onPress={() => {
+                              if (useFlatAllEpisodesPicker && show?.seasons) {
+                                const coords = tmdbSeasonEpisodeFromAbsolute(
+                                  show.seasons,
+                                  ep
+                                );
+                                setSelectedSeason(coords.season);
+                                setSelectedEpisode(coords.episode);
+                              } else {
+                                setSelectedEpisode(ep);
+                              }
+                            }}
                             className="text-xs font-medium aspect-square"
                           >
-                            {useContinuousEpisodeLabels ? ep + episodeDisplayOffset : ep}
+                            {useFlatAllEpisodesPicker
+                              ? ep
+                              : useContinuousEpisodeLabels
+                                ? ep + episodeDisplayOffset
+                                : ep}
                           </Button>
                         ))}
                       </div>
@@ -811,7 +888,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                     </Chip>
                     <span className="text-default-400 text-xs">›</span>
                     <Chip size="md" variant="flat" color="success" className="font-mono">
-                      E{useContinuousEpisodeLabels ? cumulativeEpisodeSelected : selectedEpisode}
+                      {`E${
+                        useFlatAllEpisodesPicker || useContinuousEpisodeLabels
+                          ? cumulativeEpisodeSelected
+                          : selectedEpisode
+                      }`}
                     </Chip>
                   </div>
                 </div>
