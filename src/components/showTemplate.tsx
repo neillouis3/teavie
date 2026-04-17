@@ -85,6 +85,27 @@ function filterReleasedSeasons(seasons: Season[] | undefined, todayYmd: string):
   return next.length ? next : seasons;
 }
 
+/** If AniList merge did not run, still avoid TMDB multi-season UI for anime (flat absolute episode list). */
+function withAnimeFlatEpisodeLayout(show: Show): Show {
+  if (!show.is_anime) return show;
+  const g = tmdbSeasonsWithEpisodes(show.seasons);
+  if (g.length === 0) return show;
+  const total = g.reduce(
+    (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
+    0
+  );
+  if (total <= 0) return show;
+  if (g.length === 1 && g[0].season_number === 1 && (g[0].episode_count ?? 0) === total) {
+    return show;
+  }
+  return {
+    ...show,
+    seasons: [{ season_number: 1, episode_count: total }],
+    number_of_seasons: 1,
+    number_of_episodes: total,
+  };
+}
+
 function mapAnilistStatus(s: string | null | undefined): string {
   if (!s) return "Unknown";
   const m: Record<string, string> = {
@@ -140,8 +161,9 @@ function mergeAnilistIntoShow(
     averageScore: ani.averageScore ?? next.anilist?.averageScore ?? null,
   };
 
+  // Live-action TV: keep TMDB season/episode structure. Anime: never use TMDB for seasons/episodes UI — AniList (or flat counts) only.
   const goodTmdb = tmdbSeasonsWithEpisodes(next.seasons);
-  if (goodTmdb.length > 0) {
+  if (!next.is_anime && goodTmdb.length > 0) {
     if (typeof next.number_of_episodes !== "number" || next.number_of_episodes <= 0) {
       next.number_of_episodes = goodTmdb.reduce((acc, s) => acc + s.episode_count, 0);
     }
@@ -164,6 +186,16 @@ function mergeAnilistIntoShow(
     next.seasons = [{ season_number: 1, episode_count: eps }];
     next.number_of_seasons = 1;
     next.number_of_episodes = eps;
+  } else if (next.is_anime && goodTmdb.length > 0) {
+    const total = goodTmdb.reduce(
+      (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
+      0
+    );
+    if (total > 0) {
+      next.seasons = [{ season_number: 1, episode_count: total }];
+      next.number_of_seasons = 1;
+      next.number_of_episodes = total;
+    }
   }
 
   return next;
@@ -262,11 +294,12 @@ export default function ShowTemplate({ id }: { id: string }) {
           }
           const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow);
           const today = catalogTodayYmdUtc();
-          if (merged.seasons?.length) {
+          if (merged.seasons?.length && !merged.is_anime) {
             merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
           }
-          setShow(merged);
-          pickFirstSeason(merged.seasons);
+          const forUi = withAnimeFlatEpisodeLayout(merged);
+          setShow(forUi);
+          pickFirstSeason(forUi.seasons);
           setSelectedEpisode(1);
           return;
         }
@@ -284,19 +317,21 @@ export default function ShowTemplate({ id }: { id: string }) {
           if (fallbackShow) {
             const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow);
             const today = catalogTodayYmdUtc();
-            if (merged.seasons?.length) {
+            if (merged.seasons?.length && !merged.is_anime) {
               merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
             }
-            setShow(merged);
-            pickFirstSeason(merged.seasons);
+            const forUi = withAnimeFlatEpisodeLayout(merged);
+            setShow(forUi);
+            pickFirstSeason(forUi.seasons);
             setSelectedEpisode(1);
             return;
           }
           throw new Error("Failed to fetch show details");
         }
         const data = (await res.json()) as Show;
+        if (fallbackShow?.is_anime) data.is_anime = true;
         const todayYmd = catalogTodayYmdUtc();
-        if (Array.isArray(data.seasons) && data.seasons.length) {
+        if (!data.is_anime && Array.isArray(data.seasons) && data.seasons.length) {
           const rel = filterReleasedSeasons(data.seasons as Season[], todayYmd);
           if (rel?.length) data.seasons = rel as Show["seasons"];
         }
@@ -306,7 +341,6 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (fallbackShow && !data?.backdrop_path && fallbackShow.backdrop_path) {
           data.backdrop_path = fallbackShow.backdrop_path;
         }
-        if (fallbackShow?.is_anime) data.is_anime = true;
         if (fallbackShow?.anilist_id != null) data.anilist_id = fallbackShow.anilist_id;
         if (fallbackShow?.anilist) data.anilist = fallbackShow.anilist;
         if (fallbackShow?.mal_id != null) data.mal_id = fallbackShow.mal_id;
@@ -321,11 +355,12 @@ export default function ShowTemplate({ id }: { id: string }) {
           external_ids: data.external_ids ?? fallbackShow?.external_ids ?? undefined,
         };
         const merged = await fetchAnilistAndMerge(forAni, fallbackShow);
-        if (merged.seasons?.length) {
+        if (merged.seasons?.length && !merged.is_anime) {
           merged.seasons = filterReleasedSeasons(merged.seasons, todayYmd) ?? merged.seasons;
         }
-        setShow(merged);
-        pickFirstSeason(merged.seasons);
+        const forUi = withAnimeFlatEpisodeLayout(merged);
+        setShow(forUi);
+        pickFirstSeason(forUi.seasons);
         setSelectedEpisode(1);
       } catch (err) {
         console.error("Error fetching show details:", err);
@@ -461,6 +496,10 @@ export default function ShowTemplate({ id }: { id: string }) {
   const displayVote = Number(show?.vote_average);
   const voteLabel = Number.isFinite(displayVote) ? displayVote.toFixed(1) : "—";
 
+  const releasedSeasonsForUi = show?.seasons?.filter((s) => s.season_number >= 1) ?? [];
+  const animeHideSeasonRow =
+    Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
+
   return (
     <div className="bg-background min-h-full w-full flex flex-col px-0 py-4 pb-32">
       <div className="w-full flex flex-col gap-6">
@@ -551,47 +590,69 @@ export default function ShowTemplate({ id }: { id: string }) {
                 <div className="rounded-xl border border-default-200/60 bg-default-100/60 dark:bg-default-100/20 overflow-hidden">
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3.5 border-b border-default-200/60">
-                    <span className="text-sm font-medium text-foreground">Season & Episode</span>
-                    {show.number_of_seasons && show.number_of_episodes && (
-                      <span className="text-xs text-default-500">
-                        {show.number_of_seasons} seasons · {show.number_of_episodes} eps
-                      </span>
+                    <span className="text-sm font-medium text-foreground">
+                      {show.is_anime ? "Episodes" : "Season & Episode"}
+                    </span>
+                    {show.is_anime ? (
+                      typeof show.number_of_episodes === "number" && show.number_of_episodes > 0 ? (
+                        <span className="text-xs text-default-500">
+                          {show.number_of_episodes} episode{show.number_of_episodes === 1 ? "" : "s"}
+                        </span>
+                      ) : null
+                    ) : (
+                      show.number_of_seasons &&
+                      show.number_of_episodes && (
+                        <span className="text-xs text-default-500">
+                          {show.number_of_seasons} seasons · {show.number_of_episodes} eps
+                        </span>
+                      )
                     )}
                   </div>
 
-                  {/* Season pills */}
-                  <div className="px-4 pt-4 pb-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
-                      Season
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {show.seasons
-                        ?.filter((s) => s.season_number >= 1)
-                        .map((s) => (
-                          <Button
-                            key={s.season_number}
-                            size="sm"
-                            variant={selectedSeason === s.season_number ? "solid" : "flat"}
-                            color={selectedSeason === s.season_number ? "success" : "default"}
-                            onPress={() => { setSelectedSeason(s.season_number); setSelectedEpisode(1); }}
-                          >
-                            Season {s.season_number}
-                          </Button>
-                        ))}
+                  {/* Season pills (TMDB-style; anime uses AniList flat cour — hide when single season) */}
+                  {!animeHideSeasonRow && (
+                    <div className="px-4 pt-4 pb-3">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
+                        Season
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {show.seasons
+                          ?.filter((s) => s.season_number >= 1)
+                          .map((s) => (
+                            <Button
+                              key={s.season_number}
+                              size="sm"
+                              variant={selectedSeason === s.season_number ? "solid" : "flat"}
+                              color={selectedSeason === s.season_number ? "success" : "default"}
+                              onPress={() => {
+                                setSelectedSeason(s.season_number);
+                                setSelectedEpisode(1);
+                              }}
+                            >
+                              Season {s.season_number}
+                            </Button>
+                          ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Episode grid */}
                   {episodeGridStatus === "loading" && (
-                    <div className="px-4 pb-4 text-sm text-default-500">Loading aired episodes…</div>
+                    <div
+                      className={`px-4 pb-4 text-sm text-default-500${animeHideSeasonRow ? " pt-4" : ""}`}
+                    >
+                      Loading aired episodes…
+                    </div>
                   )}
                   {episodeGridStatus === "none" && (
-                    <div className="px-4 pb-4 text-sm text-default-500">
+                    <div
+                      className={`px-4 pb-4 text-sm text-default-500${animeHideSeasonRow ? " pt-4" : ""}`}
+                    >
                       No episodes have aired in this season yet.
                     </div>
                   )}
                   {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
-                    <div className="px-4 pb-4">
+                    <div className={`px-4 pb-4${animeHideSeasonRow ? " pt-4" : ""}`}>
                       <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
                         Episode{selectedEpisode ? ` — ${selectedEpisode}` : ""}
                       </p>

@@ -77,7 +77,7 @@ export default function MovieTemplate({ id }: { id: string }) {
   const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
 
   return (
-    <div className="bg-background h-full w-full flex flex-col  px-4 py-4 pb-32">
+    <div className="bg-background h-full w-full flex flex-col  px-0 py-4 pb-32">
       <div className="w-full  flex flex-col gap-6">
         {/* Video Player (horizontal inset matches root py-4 / px-4) */}
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
