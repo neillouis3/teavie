@@ -29,6 +29,20 @@ interface Show {
   number_of_seasons?: number;
   number_of_episodes?: number;
   seasons?: Season[];
+  is_anime?: boolean;
+  anilist_id?: number | null;
+  anilist?: {
+    siteUrl?: string | null;
+    title?: {
+      romaji?: string | null;
+      english?: string | null;
+      native?: string | null;
+    };
+    averageScore?: number | null;
+    season?: string | null;
+    seasonYear?: number | null;
+    format?: string | null;
+  } | null;
 }
 
 export type ShowServerKey = StreamServerId;
@@ -95,6 +109,9 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (fallbackShow && !data?.backdrop_path && fallbackShow.backdrop_path) {
           data.backdrop_path = fallbackShow.backdrop_path;
         }
+        if (fallbackShow?.is_anime) data.is_anime = true;
+        if (fallbackShow?.anilist_id != null) data.anilist_id = fallbackShow.anilist_id;
+        if (fallbackShow?.anilist) data.anilist = fallbackShow.anilist;
         setShow(data);
         if (data.seasons?.length) {
           const firstSeason = data.seasons.find((s: Season) => s.season_number === 1) ?? data.seasons[0];
@@ -129,6 +146,9 @@ export default function ShowTemplate({ id }: { id: string }) {
     : "";
   const title = show?.name ?? "";
   const year = show?.first_air_date?.slice(0, 4) ?? "TBA";
+  const aniListUrl =
+    show?.anilist?.siteUrl ||
+    (show?.anilist_id ? `https://anilist.co/anime/${show.anilist_id}` : null);
 
   return (
     <div className="bg-background min-h-full w-full flex flex-col px-4 py-4 pb-32">
@@ -187,6 +207,18 @@ export default function ShowTemplate({ id }: { id: string }) {
                     <Chip size="md" variant="flat" className="font-medium capitalize">
                       {show.status}
                     </Chip>
+                    {show.is_anime && show.anilist_id ? (
+                      <a
+                        href={aniListUrl || undefined}
+                        target={aniListUrl ? "_blank" : undefined}
+                        rel={aniListUrl ? "noreferrer noopener" : undefined}
+                        className="inline-flex"
+                      >
+                        <Chip size="md" variant="flat" color="secondary" className="font-medium">
+                          AniList #{show.anilist_id}
+                        </Chip>
+                      </a>
+                    ) : null}
                   </div>
                 </section>
 

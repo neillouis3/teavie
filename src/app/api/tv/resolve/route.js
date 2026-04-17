@@ -28,6 +28,10 @@ function normalizeFallback(doc) {
     number_of_episodes:
       typeof doc.number_of_episodes === "number" ? doc.number_of_episodes : null,
     seasons: [],
+    is_anime: Boolean(doc.is_anime || (Array.isArray(doc.tags) && doc.tags.includes("anime"))),
+    anilist_id: typeof doc.anilist_id === "number" ? doc.anilist_id : null,
+    anilist: doc.anilist && typeof doc.anilist === "object" ? doc.anilist : null,
+    external_ids: doc.external_ids && typeof doc.external_ids === "object" ? doc.external_ids : null,
   };
 }
 
@@ -62,6 +66,11 @@ export async function GET(req) {
           season_amount: 1,
           number_of_seasons: 1,
           number_of_episodes: 1,
+          is_anime: 1,
+          tags: 1,
+          anilist_id: 1,
+          anilist: 1,
+          external_ids: 1,
         },
       }
     );
