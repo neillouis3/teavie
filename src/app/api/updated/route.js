@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongo";
+import { catalogPopularityScore } from "@/lib/catalogPopularity";
 
 export async function GET(req) {
   try {
@@ -37,7 +38,7 @@ export async function GET(req) {
           date: doc.updatedAt ?? doc.release_date ?? doc.first_air_date ?? null,
           release_date,
           first_air_date: release_date,
-          popularity: doc.popularity ?? 0,
+          popularity: catalogPopularityScore(doc),
           genre_ids: doc.genre_ids ?? [],
           poster_path: doc.poster_path ?? null,
           backdrop_path: doc.backdrop_path ?? null,

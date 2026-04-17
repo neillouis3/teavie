@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongo";
+import { catalogPopularityScore } from "@/lib/catalogPopularity";
 
 export async function GET(req) {
   try {
@@ -52,7 +53,7 @@ export async function GET(req) {
           updatedAt: doc.updatedAt ?? null,
           runtimeSeconds: doc.runtimeSeconds ?? null,
           season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
-          popularity: doc.popularity ?? 0,
+          popularity: catalogPopularityScore(doc),
           genre_ids: doc.genre_ids ?? [],
           poster_path: doc.poster_path ?? null,
           backdrop_path: doc.backdrop_path ?? null,

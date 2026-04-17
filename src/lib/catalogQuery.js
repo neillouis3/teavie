@@ -52,6 +52,7 @@ export function catalogSort(sortBy, fields) {
     case "release_year":
       return fields.dateDesc;
     case "popularity":
+      // TMDB: higher popularity = more popular. Anime uses aggregation + catalogPopularityScore.
       return { popularity: -1, _id: -1 };
     case "title_desc":
       return fields.titleDesc;
