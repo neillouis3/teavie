@@ -7,6 +7,7 @@ const DB_NAME = "teavie";
 const COLLECTION = "content";
 const INPUT_FILE = path.join(__dirname, "anime-tv-import.jsonl");
 const DEFAULT_KOMETA_FILE = path.join(__dirname, "anime-ids.json");
+const DEFAULT_BULK_BATCH = 200;
 
 function loadEnvLocal() {
   const envPath = path.join(__dirname, "..", ".env.local");
@@ -30,6 +31,12 @@ function argValue(flag, fallback = null) {
 function parseMaybeNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function parseIntArg(flag, fallback) {
+  const raw = argValue(flag, String(fallback));
+  const n = parseInt(String(raw), 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
 function splitIds(value) {
@@ -164,6 +171,7 @@ async function run() {
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGODB_URI is missing in .env.local");
   const kometaFile = argValue("--kometa-file", DEFAULT_KOMETA_FILE);
+  const batchSize = parseIntArg("--batch", DEFAULT_BULK_BATCH);
   const kometaMap = loadKometaMap(kometaFile);
   const kometaIndexes = buildKometaIndexes(kometaMap || {});
 
@@ -180,10 +188,11 @@ async function run() {
   const collection = db.collection(COLLECTION);
 
   try {
-    let inserted = 0;
-    let updated = 0;
-    let unchanged = 0;
     let kometaMatched = 0;
+    let upserted = 0;
+    let modified = 0;
+    let matched = 0;
+    const ops = [];
 
     for (const raw of incomingRaw) {
       let doc = ensureAnimeFields(raw);
@@ -210,25 +219,30 @@ async function run() {
       if (doc.tmdb_id != null) matchClauses.push({ tmdb_id: doc.tmdb_id });
       if (doc.imdb_id) matchClauses.push({ imdb_id: doc.imdb_id });
 
-      const existing = await collection.findOne({
-        type: "tv",
-        $or: matchClauses,
-      });
-
-      if (!existing) {
-        await collection.insertOne(doc);
-        inserted++;
-        continue;
-      }
-
       const payload = { ...doc, updated_at: new Date().toISOString() };
-      const result = await collection.updateOne({ _id: existing._id }, { $set: payload });
-      if (result.modifiedCount > 0) updated++;
-      else unchanged++;
+      ops.push({
+        updateOne: {
+          filter: { type: "tv", $or: matchClauses },
+          update: { $set: payload },
+          upsert: true,
+        },
+      });
+    }
+
+    for (let i = 0; i < ops.length; i += batchSize) {
+      const chunk = ops.slice(i, i + batchSize);
+      const result = await collection.bulkWrite(chunk, { ordered: false });
+      upserted += result.upsertedCount;
+      modified += result.modifiedCount;
+      matched += result.matchedCount;
+      const done = Math.min(i + chunk.length, ops.length);
+      console.log(
+        `bulk ${done}/${ops.length}: upserted+=${result.upsertedCount}, modified+=${result.modifiedCount}, matched+=${result.matchedCount}`
+      );
     }
 
     console.log(
-      `done: input=${incomingRaw.length}, inserted=${inserted}, updated=${updated}, unchanged=${unchanged}, kometa_matches=${kometaMatched}, kometa_file=${kometaMap ? kometaFile : "not_found"}, db=${DB_NAME}.${COLLECTION}`
+      `done: input=${incomingRaw.length}, upserted_new=${upserted}, modified=${modified}, matched_total=${matched}, kometa_row_hits=${kometaMatched}, batch=${batchSize}, kometa_file=${kometaMap ? kometaFile : "not_found"}, db=${DB_NAME}.${COLLECTION}`
     );
   } finally {
     await client.close();

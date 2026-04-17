@@ -144,9 +144,13 @@ function SearchContent() {
         const title = item.title || item.name || 'Untitled';
         const release = item.release_date || item.first_air_date || '';
         const year = release ? String(new Date(release).getFullYear()) : '—';
-        const nid =
-          typeof item.id === 'number' ? item.id : parseInt(String(item.id), 10);
-        const id = Number.isFinite(nid) ? nid : 0;
+        const rawId = item.id;
+        const id =
+          typeof rawId === 'number' && Number.isFinite(rawId)
+            ? rawId
+            : /^\d+$/.test(String(rawId))
+              ? Number(rawId)
+              : rawId;
         const type = item.type || 'movie';
         const poster = item.poster_path || '';
 

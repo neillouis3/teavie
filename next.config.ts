@@ -20,6 +20,25 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'api-cdn.myanimelist.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 's4.anilist.co',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.anilist.co',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'anilist.co',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'myanimelist.net',
       },
       {

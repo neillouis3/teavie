@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongo";
+import { resolveTmdbTvFromDoc } from "@/lib/tmdbResolveFromTitle";
 
 function normalizeDate(dateValue) {
   if (dateValue == null) return null;
@@ -15,8 +16,9 @@ function normalizeFallback(doc) {
     poster_path: doc.poster_path ?? null,
     backdrop_path: doc.backdrop_path ?? null,
     vote_average: typeof doc.vote_average === "number" ? doc.vote_average : 0,
-    status: "Released",
-    genres: [],
+    status: typeof doc.status === "string" && doc.status ? doc.status : "Released",
+    genres: Array.isArray(doc.genres) ? doc.genres : [],
+    mal_id: typeof doc.mal_id === "number" ? doc.mal_id : null,
     origin_country: [],
     tagline: null,
     number_of_seasons:
@@ -51,7 +53,7 @@ export async function GET(req) {
       { type: "tv", id },
       {
         projection: {
-          _id: 0,
+          _id: 1,
           id: 1,
           tmdb_id: 1,
           imdb_id: 1,
@@ -71,6 +73,9 @@ export async function GET(req) {
           anilist_id: 1,
           anilist: 1,
           external_ids: 1,
+          mal_id: 1,
+          genres: 1,
+          status: 1,
         },
       }
     );
@@ -84,17 +89,49 @@ export async function GET(req) {
       return Response.json({ error: "Show not found" }, { status: 404 });
     }
 
-    const tmdbIdNum =
+    let tmdbIdNum =
       typeof doc.tmdb_id === "number"
         ? doc.tmdb_id
         : typeof doc.tmdb_id === "string"
           ? Number(doc.tmdb_id)
           : Number(doc.id);
 
+    let merged = { ...doc };
+    const hasPlayer = Number.isFinite(tmdbIdNum) && tmdbIdNum > 0;
+
+    const token = process.env.TMDB_BEARER || process.env.NEXT_PUBLIC_TMDB_BEARER;
+    if (!hasPlayer && token && doc._id) {
+      try {
+        const hit = await resolveTmdbTvFromDoc(doc, token);
+        if (hit) {
+          const setDoc = {
+            tmdb_id: hit.tmdbId,
+            imdb_id: hit.imdbId,
+            last_tmdb_resolved_at: new Date().toISOString(),
+          };
+          if (hit.poster_path) setDoc.poster_path = hit.poster_path;
+          if (hit.backdrop_path) setDoc.backdrop_path = hit.backdrop_path;
+          await collection.updateOne({ _id: doc._id }, { $set: setDoc });
+          merged = {
+            ...merged,
+            tmdb_id: hit.tmdbId,
+            imdb_id: hit.imdbId,
+            poster_path: hit.poster_path || merged.poster_path,
+            backdrop_path: hit.backdrop_path || merged.backdrop_path,
+          };
+          tmdbIdNum = hit.tmdbId;
+        }
+      } catch (e) {
+        console.error("Lazy TMDB resolve failed:", e);
+      }
+    }
+
+    const { _id, ...docForFallback } = merged;
+
     return Response.json({
       playerId: Number.isFinite(tmdbIdNum) && tmdbIdNum > 0 ? tmdbIdNum : null,
-      imdbId: typeof doc.imdb_id === "string" ? doc.imdb_id : null,
-      fallback: normalizeFallback(doc),
+      imdbId: typeof merged.imdb_id === "string" ? merged.imdb_id : null,
+      fallback: normalizeFallback(docForFallback),
     });
   } catch (err) {
     console.error(err);

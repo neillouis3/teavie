@@ -31,6 +31,8 @@ interface Show {
   seasons?: Season[];
   is_anime?: boolean;
   anilist_id?: number | null;
+  mal_id?: number | null;
+  external_ids?: { mal_id?: number | null; anilist_id?: number | null } | null;
   anilist?: {
     siteUrl?: string | null;
     title?: {
@@ -43,6 +45,148 @@ interface Show {
     seasonYear?: number | null;
     format?: string | null;
   } | null;
+}
+
+type AnilistMediaPayload = {
+  id: number;
+  idMal?: number | null;
+  siteUrl?: string | null;
+  episodes?: number | null;
+  overview?: string;
+  genres?: string[];
+  averageScore?: number | null;
+  status?: string | null;
+  format?: string | null;
+  first_air_date?: string | null;
+  title?: { romaji?: string | null; english?: string | null; native?: string | null };
+};
+
+function tmdbSeasonsWithEpisodes(seasons: Season[] | undefined): Season[] {
+  return (seasons ?? []).filter(
+    (s) => s.season_number >= 1 && typeof s.episode_count === "number" && s.episode_count > 0
+  );
+}
+
+function mapAnilistStatus(s: string | null | undefined): string {
+  if (!s) return "Unknown";
+  const m: Record<string, string> = {
+    FINISHED: "Finished",
+    RELEASING: "Returning Series",
+    NOT_YET_RELEASED: "Not Yet Aired",
+    CANCELLED: "Canceled",
+    HIATUS: "On Hiatus",
+  };
+  return m[s] ?? s;
+}
+
+function mergeAnilistIntoShow(
+  base: Show,
+  ani: AnilistMediaPayload,
+  fallback: Show | null
+): Show {
+  const next: Show = { ...base };
+  const desc = (ani.overview || "").trim();
+  if (desc && (!next.overview || next.overview.trim().length < 40)) {
+    next.overview = desc;
+  }
+  if (Array.isArray(ani.genres) && ani.genres.length && (!next.genres?.length)) {
+    next.genres = ani.genres.map((name, i) => ({ id: 9000 + i, name }));
+  }
+  if (ani.averageScore != null) {
+    const tmdbScore = Number(next.vote_average);
+    if (!Number.isFinite(tmdbScore) || tmdbScore <= 0) {
+      next.vote_average = Math.round((ani.averageScore / 10) * 10) / 10;
+    }
+  }
+  if (ani.first_air_date && !next.first_air_date) {
+    next.first_air_date = ani.first_air_date;
+  }
+  if (ani.status) {
+    next.status = mapAnilistStatus(ani.status);
+  }
+  const displayTitle =
+    ani.title?.english || ani.title?.romaji || ani.title?.native;
+  if (displayTitle && (!next.name || next.name === "Untitled")) {
+    next.name = displayTitle;
+  }
+  next.anilist_id = ani.id;
+  next.anilist = {
+    ...next.anilist,
+    siteUrl: ani.siteUrl ?? next.anilist?.siteUrl ?? null,
+    title: {
+      romaji: ani.title?.romaji ?? next.anilist?.title?.romaji ?? null,
+      english: ani.title?.english ?? next.anilist?.title?.english ?? null,
+      native: ani.title?.native ?? next.anilist?.title?.native ?? null,
+    },
+    format: ani.format ?? next.anilist?.format ?? null,
+    averageScore: ani.averageScore ?? next.anilist?.averageScore ?? null,
+  };
+
+  const goodTmdb = tmdbSeasonsWithEpisodes(next.seasons);
+  if (goodTmdb.length > 0) {
+    if (typeof next.number_of_episodes !== "number" || next.number_of_episodes <= 0) {
+      next.number_of_episodes = goodTmdb.reduce((acc, s) => acc + s.episode_count, 0);
+    }
+    if (typeof next.number_of_seasons !== "number" || next.number_of_seasons <= 0) {
+      next.number_of_seasons = goodTmdb.length;
+    }
+    return next;
+  }
+
+  const eps =
+    (typeof ani.episodes === "number" && ani.episodes > 0 ? ani.episodes : null) ??
+    (typeof next.number_of_episodes === "number" && next.number_of_episodes > 0
+      ? next.number_of_episodes
+      : null) ??
+    (typeof fallback?.number_of_episodes === "number" && fallback.number_of_episodes > 0
+      ? fallback.number_of_episodes
+      : null);
+
+  if (eps != null && eps > 0) {
+    next.seasons = [{ season_number: 1, episode_count: eps }];
+    next.number_of_seasons = 1;
+    next.number_of_episodes = eps;
+  }
+
+  return next;
+}
+
+async function fetchAnilistAndMerge(
+  base: Show,
+  fallback: Show | null
+): Promise<Show> {
+  const aid =
+    typeof base.anilist_id === "number" && base.anilist_id > 0
+      ? base.anilist_id
+      : typeof fallback?.anilist_id === "number" && fallback.anilist_id > 0
+        ? fallback.anilist_id
+        : null;
+  const malRaw =
+    typeof base.mal_id === "number" && base.mal_id > 0
+      ? base.mal_id
+      : typeof base.external_ids?.mal_id === "number" && base.external_ids.mal_id > 0
+        ? base.external_ids.mal_id
+        : typeof fallback?.mal_id === "number" && fallback.mal_id > 0
+          ? fallback.mal_id
+          : typeof fallback?.external_ids?.mal_id === "number" && fallback.external_ids.mal_id > 0
+            ? fallback.external_ids.mal_id
+            : null;
+
+  let url: string | null = null;
+  if (aid != null) url = `/api/anilist/media?anilistId=${aid}`;
+  else if (malRaw != null) url = `/api/anilist/media?idMal=${malRaw}`;
+  else return base;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return base;
+    const ani = (await res.json()) as AnilistMediaPayload & { error?: string };
+    if (!ani || typeof ani !== "object" || "error" in ani) return base;
+    if (typeof ani.id !== "number") return base;
+    return mergeAnilistIntoShow(base, ani, fallback);
+  } catch {
+    return base;
+  }
 }
 
 export type ShowServerKey = StreamServerId;
@@ -81,8 +225,24 @@ export default function ShowTemplate({ id }: { id: string }) {
           }
         }
 
+        const pickFirstSeason = (seasons: Season[] | undefined) => {
+          if (!seasons?.length) return;
+          const first =
+            seasons.find((s) => s.season_number === 1 && (s.episode_count ?? 0) > 0) ??
+            seasons.find((s) => s.season_number >= 1 && (s.episode_count ?? 0) > 0) ??
+            seasons[0];
+          if (first) setSelectedSeason(first.season_number);
+        };
+
         if (!/^\d+$/.test(targetTmdbId)) {
-          setShow(fallbackShow);
+          if (!fallbackShow) {
+            setShow(null);
+            return;
+          }
+          const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow);
+          setShow(merged);
+          pickFirstSeason(merged.seasons);
+          setSelectedEpisode(1);
           return;
         }
 
@@ -97,7 +257,10 @@ export default function ShowTemplate({ id }: { id: string }) {
         const res = await fetch(url, options);
         if (!res.ok) {
           if (fallbackShow) {
-            setShow(fallbackShow);
+            const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow);
+            setShow(merged);
+            pickFirstSeason(merged.seasons);
+            setSelectedEpisode(1);
             return;
           }
           throw new Error("Failed to fetch show details");
@@ -112,11 +275,21 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (fallbackShow?.is_anime) data.is_anime = true;
         if (fallbackShow?.anilist_id != null) data.anilist_id = fallbackShow.anilist_id;
         if (fallbackShow?.anilist) data.anilist = fallbackShow.anilist;
-        setShow(data);
-        if (data.seasons?.length) {
-          const firstSeason = data.seasons.find((s: Season) => s.season_number === 1) ?? data.seasons[0];
-          setSelectedSeason(firstSeason.season_number);
+        if (fallbackShow?.mal_id != null) data.mal_id = fallbackShow.mal_id;
+        if (fallbackShow?.external_ids) {
+          data.external_ids = { ...fallbackShow.external_ids, ...data.external_ids };
         }
+
+        const forAni: Show = {
+          ...data,
+          anilist_id: data.anilist_id ?? fallbackShow?.anilist_id ?? undefined,
+          mal_id: data.mal_id ?? fallbackShow?.mal_id ?? undefined,
+          external_ids: data.external_ids ?? fallbackShow?.external_ids ?? undefined,
+        };
+        const merged = await fetchAnilistAndMerge(forAni, fallbackShow);
+        setShow(merged);
+        pickFirstSeason(merged.seasons);
+        setSelectedEpisode(1);
       } catch (err) {
         console.error("Error fetching show details:", err);
       } finally {
@@ -149,6 +322,8 @@ export default function ShowTemplate({ id }: { id: string }) {
   const aniListUrl =
     show?.anilist?.siteUrl ||
     (show?.anilist_id ? `https://anilist.co/anime/${show.anilist_id}` : null);
+  const displayVote = Number(show?.vote_average);
+  const voteLabel = Number.isFinite(displayVote) ? displayVote.toFixed(1) : "—";
 
   return (
     <div className="bg-background min-h-full w-full flex flex-col px-4 py-4 pb-32">
@@ -160,7 +335,7 @@ export default function ShowTemplate({ id }: { id: string }) {
             <div className="h-full w-full animate-pulse bg-default-200" />
           ) : !canPlay ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-              No TMDB mapping yet for this anime, so the player is unavailable right now.
+              This title could not be matched to a TMDB TV id for the embed player. Try again later, or check the title on TMDB.
             </div>
           ) : (
             <ShowPlayer
@@ -186,7 +361,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
                     <Chip color="success" size="md" variant="flat" className="font-medium">
-                      TV
+                      {show.is_anime ? "Anime" : "TV"}
                     </Chip>
                     <Chip
                       size="md"
@@ -199,7 +374,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                       }
                       className="font-medium"
                     >
-                      {show.vote_average.toFixed(1)}
+                      {voteLabel}
                     </Chip>
                     <Chip size="md" variant="flat" className="font-medium">
                       {year}

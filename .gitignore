@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Kometa Anime-IDs mapping (large; refresh from Kometa-Team/Anime-IDs when importing)
+scripts/anime-ids.json
+
 # vercel
 .vercel
 
