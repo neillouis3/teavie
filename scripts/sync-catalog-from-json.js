@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 /**
  * Upsert movies + TV from enriched TMDB JSON (default: ../test relative to repo).
+ * TV: skips Japanese animation without AniList id (see scripts/lib/tvJpAnimePrune.cjs).
  *
  * Usage (from teavie/):
  *   node scripts/sync-catalog-from-json.js
@@ -12,6 +13,7 @@
 const fs = require("fs");
 const path = require("path");
 const { MongoClient } = require("mongodb");
+const { shouldPruneTvJpAnimeWithoutAnilist } = require("./lib/tvJpAnimePrune.cjs");
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";
@@ -59,13 +61,14 @@ function mapMovieRow(row) {
 
 function mapTvRow(row) {
   const id = row.id;
-  if (typeof id !== "number" || !Number.isFinite(id)) return null;
-  return {
+  const doc = {
     ...row,
     type: "tv",
     name: row.name ?? row.title ?? `TV ${id}`,
     updatedAt: new Date(),
   };
+  if (shouldPruneTvJpAnimeWithoutAnilist(doc)) return null;
+  return doc;
 }
 
 async function run() {
@@ -116,11 +119,17 @@ async function run() {
   if (fs.existsSync(tvFile)) {
     const data = loadJson(tvFile);
     const shows = data.shows ?? [];
-    let skipped = 0;
+    let skippedId = 0;
+    let skippedJpAnime = 0;
     for (const row of shows) {
+      const id = row.id;
+      if (typeof id !== "number" || !Number.isFinite(id)) {
+        skippedId++;
+        continue;
+      }
       const doc = mapTvRow(row);
       if (!doc) {
-        skipped++;
+        skippedJpAnime++;
         continue;
       }
       ops.push({
@@ -131,7 +140,9 @@ async function run() {
         },
       });
     }
-    console.log(`tv: ${shows.length} rows from ${tvFile} (${skipped} skipped id)`);
+    console.log(
+      `tv: ${shows.length} rows from ${tvFile} (${skippedId} bad id, ${skippedJpAnime} JP animation w/o AniList skipped)`
+    );
   } else {
     console.warn(`skip tv (file missing): ${tvFile}`);
   }
