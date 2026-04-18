@@ -6,12 +6,12 @@ import {
   releasedCatalogClause,
 } from "@/lib/catalogQuery";
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
+import { catalogDocReleaseDateString } from "@/lib/mapContentDocToItem";
 
 export async function GET(req) {
   try {
     const client = await clientPromise;
-    const db = client.db("teavie");
-    const collection = db.collection("content");
+    const collection = client.db("teavie").collection("content");
 
     const { searchParams } = new URL(req.url);
 
@@ -40,59 +40,32 @@ export async function GET(req) {
       ? base
       : { $and: [base, releasedCatalogClause("release_date", todayIso)] };
 
-    const total = await collection.countDocuments(filter);
+    const [total, results] = await Promise.all([
+      collection.countDocuments(filter),
+      collection.find(filter).sort(sort).skip(skip).limit(limit).toArray(),
+    ]);
 
-    const results = await collection
-      .find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .toArray();
-
-    return new Response(
-      JSON.stringify({
-        page,
-        limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
-        results: results.map((doc) => {
-          const rawDate =
-            doc.release_date ??
-            doc.releaseDate ??
-            doc.first_air_date ??
-            doc.firstAirDate ??
-            null;
-          const release_date =
-            rawDate == null
-              ? null
-              : typeof rawDate === "string"
-                ? rawDate
-                : rawDate.toISOString?.().split("T")[0] ?? null;
-          return {
-            id: doc.id.toString(),
-            title: doc.title ?? doc.name,
-            release_date,
-            runtimeSeconds: doc.runtimeSeconds ?? null,
-            season_amount: doc.season_amount ?? null,
-            popularity: catalogPopularityScore(doc),
-            vote_average: doc.vote_average ?? null,
-            genre_ids: doc.genre_ids ?? [],
-            poster_path: doc.poster_path ?? null,
-            backdrop_path: doc.backdrop_path ?? null,
-            type: doc.type,
-          };
-        }),
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return Response.json({
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      results: results.map((doc) => ({
+        id: doc.id.toString(),
+        title: doc.title ?? doc.name,
+        release_date: catalogDocReleaseDateString(doc),
+        runtimeSeconds: doc.runtimeSeconds ?? null,
+        season_amount: doc.season_amount ?? null,
+        popularity: catalogPopularityScore(doc),
+        vote_average: doc.vote_average ?? null,
+        genre_ids: doc.genre_ids ?? [],
+        poster_path: doc.poster_path ?? null,
+        backdrop_path: doc.backdrop_path ?? null,
+        type: doc.type,
+      })),
+    });
   } catch (err) {
     console.error(err);
-    return new Response(JSON.stringify({ error: "Failed to fetch movies" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return Response.json({ error: "Failed to fetch movies" }, { status: 500 });
   }
 }

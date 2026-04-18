@@ -1,5 +1,6 @@
 import clientPromise from "@/lib/mongo";
 import { resolveTmdbTvFromDoc } from "@/lib/tmdbResolveFromTitle";
+import { tmdbBearerToken } from "@/lib/tmdbAuth";
 
 function normalizeDate(dateValue) {
   if (dateValue == null) return null;
@@ -109,7 +110,7 @@ export async function GET(req) {
     let merged = { ...doc };
     const hasPlayer = Number.isFinite(tmdbIdNum) && tmdbIdNum > 0;
 
-    const token = process.env.TMDB_BEARER || process.env.NEXT_PUBLIC_TMDB_BEARER;
+    const token = tmdbBearerToken();
     if (!hasPlayer && token && doc._id) {
       try {
         const hit = await resolveTmdbTvFromDoc(doc, token);

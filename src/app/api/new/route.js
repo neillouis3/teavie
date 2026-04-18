@@ -1,19 +1,15 @@
 import clientPromise from "@/lib/mongo";
-import { catalogPopularityScore } from "@/lib/catalogPopularity";
-import { tvEpisodeCountFromDoc } from "@/lib/mapContentDocToItem";
+import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
 
 export async function GET(req) {
   try {
     const client = await clientPromise;
-    const db = client.db("teavie");
-
-    const contentCollection = db.collection("content");
+    const contentCollection = client.db("teavie").collection("content");
 
     const { searchParams } = new URL(req.url);
 
-    // Only take titles released recently: from N days ago up to today
     const now = new Date();
-    const daysBack = 30; // adjust this window as needed
+    const daysBack = 30;
     const past = new Date(now);
     past.setDate(past.getDate() - daysBack);
     const toDateString = (d) => d.toISOString().split("T")[0];
@@ -22,8 +18,11 @@ export async function GET(req) {
 
     const type = (searchParams.get("type") || "").trim().toLowerCase();
 
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(
+      48,
+      Math.max(1, parseInt(searchParams.get("limit") || "20", 10))
+    );
     const skip = (page - 1) * limit;
 
     // New = most recently released in the recent window (by release_date / first_air_date)
@@ -70,39 +69,20 @@ export async function GET(req) {
       .skip(skip)
       .limit(limit);
 
-    const results = await cursor.toArray();
-    const total = await contentCollection.countDocuments(filter);
+    const [results, total] = await Promise.all([
+      cursor.toArray(),
+      contentCollection.countDocuments(filter),
+    ]);
 
-    return new Response(
-      JSON.stringify({
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        results: results.map((doc) => {
-          const rawDate = doc.release_date ?? doc.releaseDate ?? doc.first_air_date ?? doc.firstAirDate ?? null;
-          const release_date = rawDate == null ? null : typeof rawDate === "string" ? rawDate : rawDate.toISOString?.().split("T")[0] ?? null;
-          return {
-          id: doc.id.toString(),
-          title: doc.title ?? doc.name,
-          release_date,
-          runtimeSeconds: doc.runtimeSeconds ?? null,
-          season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
-          number_of_episodes: tvEpisodeCountFromDoc(doc),
-          popularity: catalogPopularityScore(doc),
-          genre_ids: doc.genre_ids ?? [],
-          poster_path: doc.poster_path ?? null,
-          backdrop_path: doc.backdrop_path ?? null,
-          type: doc.type, // "movie" | "tv"
-          };
-        }),
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    return Response.json({
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      results: results.map(mapCatalogListDoc),
+    });
   } catch (err) {
     console.error(err);
-    return new Response(JSON.stringify({ error: "Failed to fetch new content" }), {
-      status: 500,
-    });
+    return Response.json({ error: "Failed to fetch new content" }, { status: 500 });
   }
 }

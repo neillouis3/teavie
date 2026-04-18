@@ -5,6 +5,7 @@
 
 import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
+import { tmdbBearerToken } from "@/lib/tmdbAuth";
 
 const LIMIT = 12;
 
@@ -101,8 +102,7 @@ export async function GET() {
   };
 
   try {
-    const token =
-      process.env.NEXT_PUBLIC_TMDB_BEARER || process.env.TMDB_BEARER;
+    const token = tmdbBearerToken();
     if (!token) {
       return Response.json(
         {

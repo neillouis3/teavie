@@ -1,5 +1,29 @@
 const ANILIST_GRAPHQL = "https://graphql.anilist.co";
 
+const MEDIA_SELECTION = `
+          id
+          idMal
+          siteUrl
+          episodes
+          description
+          genres
+          averageScore
+          status
+          format
+          startDate { year month day }
+          title { romaji english native }
+`;
+
+const QUERY_BY_ANILIST_ID = `query ($id: Int) {
+        Media(id: $id, type: ANIME) {${MEDIA_SELECTION}
+        }
+      }`;
+
+const QUERY_BY_MAL = `query ($idMal: Int) {
+        Media(idMal: $idMal, type: ANIME) {${MEDIA_SELECTION}
+        }
+      }`;
+
 function stripHtml(html) {
   if (typeof html !== "string") return "";
   return html
@@ -33,42 +57,7 @@ export async function GET(req) {
     }
 
     const useAnilistId = Number.isFinite(anilistId) && anilistId > 0;
-    const query = useAnilistId
-      ? `
-      query ($id: Int) {
-        Media(id: $id, type: ANIME) {
-          id
-          idMal
-          siteUrl
-          episodes
-          description
-          genres
-          averageScore
-          status
-          format
-          startDate { year month day }
-          title { romaji english native }
-        }
-      }
-    `
-      : `
-      query ($idMal: Int) {
-        Media(idMal: $idMal, type: ANIME) {
-          id
-          idMal
-          siteUrl
-          episodes
-          description
-          genres
-          averageScore
-          status
-          format
-          startDate { year month day }
-          title { romaji english native }
-        }
-      }
-    `;
-
+    const query = useAnilistId ? QUERY_BY_ANILIST_ID : QUERY_BY_MAL;
     const variables = useAnilistId ? { id: anilistId } : { idMal };
 
     const res = await fetch(ANILIST_GRAPHQL, {

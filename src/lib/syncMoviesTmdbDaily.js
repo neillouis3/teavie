@@ -7,6 +7,7 @@
  * Used by `scripts/sync-movies-tmdb-daily.mjs` and `src/app/api/cron/sync-movies`.
  */
 import { MongoClient } from "mongodb";
+import { tmdbBearerToken } from "./tmdbAuth.js";
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";
@@ -17,11 +18,7 @@ const SLEEP_MS = 35;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export function tmdbTokenFromEnv() {
-  return (
-    process.env.TMDB_BEARER ||
-    process.env.NEXT_PUBLIC_TMDB_BEARER ||
-    ""
-  ).trim();
+  return tmdbBearerToken().trim();
 }
 
 function isoDate(d) {

@@ -92,13 +92,15 @@ export async function GET(req) {
     const col = client.db("teavie").collection("content");
     const skip = (clientPage - 1) * limit;
 
-    const total = await col.countDocuments(filter);
-    const docs = await col
-      .find(filter)
-      .sort({ popularity: -1, _id: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    const [total, docs] = await Promise.all([
+      col.countDocuments(filter),
+      col
+        .find(filter)
+        .sort({ popularity: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+    ]);
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
 

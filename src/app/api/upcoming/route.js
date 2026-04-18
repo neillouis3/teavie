@@ -1,13 +1,10 @@
 import clientPromise from "@/lib/mongo";
-import { catalogPopularityScore } from "@/lib/catalogPopularity";
-import { tvEpisodeCountFromDoc } from "@/lib/mapContentDocToItem";
+import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
 
 export async function GET(req) {
   try {
     const client = await clientPromise;
-    const db = client.db("teavie");
-
-    const contentCollection = db.collection("content");
+    const contentCollection = client.db("teavie").collection("content");
 
     const { searchParams } = new URL(req.url);
     const type = (searchParams.get("type") || "").trim().toLowerCase();
@@ -53,41 +50,15 @@ export async function GET(req) {
 
     const results = await cursor.toArray();
 
-    return new Response(
-      JSON.stringify({
-        count: results.length,
-        results: results.map((doc) => {
-          const rawDate = doc.release_date ?? doc.releaseDate ?? doc.first_air_date ?? doc.firstAirDate ?? null;
-          const release_date = rawDate == null ? null : typeof rawDate === "string" ? rawDate : rawDate.toISOString?.().split("T")[0] ?? null;
-          return {
-          id: doc.id.toString(),
-          title: doc.title ?? doc.name,
-          release_date,
-          updatedAt: doc.updatedAt ?? null,
-          runtimeSeconds: doc.runtimeSeconds ?? null,
-          season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
-          number_of_episodes: tvEpisodeCountFromDoc(doc),
-          popularity: catalogPopularityScore(doc),
-          genre_ids: doc.genre_ids ?? [],
-          poster_path: doc.poster_path ?? null,
-          backdrop_path: doc.backdrop_path ?? null,
-          type: doc.type,
-          };
-        }),
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return Response.json({
+      count: results.length,
+      results: results.map((doc) => ({
+        ...mapCatalogListDoc(doc),
+        updatedAt: doc.updatedAt ?? null,
+      })),
+    });
   } catch (err) {
     console.error(err);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch random content" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return Response.json({ error: "Failed to fetch random content" }, { status: 500 });
   }
 }

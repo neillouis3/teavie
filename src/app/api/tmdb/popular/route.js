@@ -1,10 +1,11 @@
+import { tmdbBearerToken } from "@/lib/tmdbAuth";
+
 /**
  * TMDB popular movies + TV for browse state on /search (no query).
  */
 export async function GET() {
   try {
-    const token =
-      process.env.NEXT_PUBLIC_TMDB_BEARER || process.env.TMDB_BEARER;
+    const token = tmdbBearerToken();
     if (!token) {
       return Response.json(
         { error: "Missing TMDB bearer token", movies: [], tv: [] },
@@ -35,8 +36,7 @@ export async function GET() {
       );
     }
 
-    const movieData = await movieRes.json();
-    const tvData = await tvRes.json();
+    const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
 
     const movies = (movieData.results || []).slice(0, 10).map((r) => ({
       id: r.id,

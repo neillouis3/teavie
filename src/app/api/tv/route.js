@@ -12,20 +12,10 @@ import {
   catalogPopularityScore,
   mongoMixedTvCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
+import { catalogDocReleaseDateString } from "@/lib/mapContentDocToItem";
 
 function mapTvRow(doc) {
-  const rawDate =
-    doc.release_date ??
-    doc.releaseDate ??
-    doc.first_air_date ??
-    doc.firstAirDate ??
-    null;
-  const release_date =
-    rawDate == null
-      ? null
-      : typeof rawDate === "string"
-        ? rawDate
-        : rawDate.toISOString?.().split("T")[0] ?? null;
+  const release_date = catalogDocReleaseDateString(doc);
   const ep =
     typeof doc.number_of_episodes === "number" && doc.number_of_episodes > 0
       ? doc.number_of_episodes
@@ -49,8 +39,7 @@ function mapTvRow(doc) {
 export async function GET(req) {
   try {
     const client = await clientPromise;
-    const db = client.db("teavie");
-    const collection = db.collection("content");
+    const collection = client.db("teavie").collection("content");
 
     const { searchParams } = new URL(req.url);
 
@@ -94,47 +83,31 @@ export async function GET(req) {
     ];
     const filter = { $and: clauses };
 
-    const total = await collection.countDocuments(filter);
+    const popPipeline = [
+      { $match: filter },
+      { $addFields: { _catalogPop: mongoMixedTvCatalogPopularityExpr() } },
+      { $sort: { _catalogPop: -1, _id: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      { $project: { _catalogPop: 0 } },
+    ];
 
-    let results;
-    if (sortBy === "popularity") {
-      results = await collection
-        .aggregate([
-          { $match: filter },
-          { $addFields: { _catalogPop: mongoMixedTvCatalogPopularityExpr() } },
-          { $sort: { _catalogPop: -1, _id: -1 } },
-          { $skip: skip },
-          { $limit: limit },
-          { $project: { _catalogPop: 0 } },
-        ])
-        .toArray();
-    } else {
-      results = await collection
-        .find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .toArray();
-    }
+    const [total, results] = await Promise.all([
+      collection.countDocuments(filter),
+      sortBy === "popularity"
+        ? collection.aggregate(popPipeline).toArray()
+        : collection.find(filter).sort(sort).skip(skip).limit(limit).toArray(),
+    ]);
 
-    return new Response(
-      JSON.stringify({
-        page,
-        limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
-        results: results.map((doc) => mapTvRow(doc)),
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return Response.json({
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      results: results.map(mapTvRow),
+    });
   } catch (err) {
     console.error(err);
-    return new Response(JSON.stringify({ error: "Failed to fetch tv shows" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return Response.json({ error: "Failed to fetch tv shows" }, { status: 500 });
   }
 }

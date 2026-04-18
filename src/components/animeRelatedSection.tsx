@@ -6,7 +6,8 @@ import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 
 type RelatedItem = {
   catalogId: string | null;
-  anilistId: number;
+  catalogType?: "movie" | "tv" | string | null;
+  anilistId: number | null;
   title: string;
   year: string;
   posterPath: string;
@@ -15,8 +16,10 @@ type RelatedItem = {
 
 export default function AnimeRelatedSection({
   anilistId,
+  tmdbTvId,
 }: {
   anilistId: number;
+  tmdbTvId?: number | null;
 }) {
   const [items, setItems] = useState<RelatedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,14 +31,18 @@ export default function AnimeRelatedSection({
     }
     const controller = new AbortController();
     setLoading(true);
-    fetch(`/api/anilist/related?anilistId=${anilistId}`, { signal: controller.signal })
+    const qs = new URLSearchParams({ anilistId: String(anilistId) });
+    if (tmdbTvId != null && Number.isFinite(tmdbTvId) && tmdbTvId > 0) {
+      qs.set("tmdbTvId", String(tmdbTvId));
+    }
+    fetch(`/api/anilist/related?${qs.toString()}`, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : { items: [] }))
       .then((data) => setItems(Array.isArray(data.items) ? data.items : []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [anilistId]);
+  }, [anilistId, tmdbTvId]);
 
   const gridClass =
     "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4";
@@ -67,26 +74,31 @@ export default function AnimeRelatedSection({
           Related in franchise
         </h2>
         <Chip size="sm" variant="flat" color="success" className="font-normal">
-          AniList
+          AniList + catalog
         </Chip>
       </div>
       <p className="mb-4 text-xs text-default-500">
-        Sequels, prequels, and similar titles from AniList. In-catalog tiles link to Teavie; others open
-        on AniList until you import them.
+        Franchise links from AniList matched to movies and TV in Teavie; similar titles from TMDB fill in
+        when needed. External tiles open on AniList until imported.
       </p>
       <ul className={gridClass}>
         {items.map((item) => {
-          const key = item.catalogId ?? `al-${item.anilistId}`;
-          const href = item.catalogId
-            ? undefined
-            : `https://anilist.co/anime/${item.anilistId}`;
+          const key = item.catalogId ?? `al-${item.anilistId ?? "ext"}`;
+          const catalogKind =
+            item.catalogType === "movie" ? "movie" : item.catalogType === "tv" ? "tv" : "tv";
+          const href =
+            item.catalogId != null && item.catalogId !== ""
+              ? undefined
+              : item.anilistId != null
+                ? `https://anilist.co/anime/${item.anilistId}`
+                : undefined;
           return (
-            <li key={`${key}-${item.anilistId}`} className="min-w-0">
+            <li key={`${key}-${item.anilistId ?? "na"}`} className="min-w-0">
               <HorizontalCatalogCard
-                id={item.catalogId ?? `al-${item.anilistId}`}
+                id={item.catalogId ?? `al-${item.anilistId ?? "x"}`}
                 title={item.title}
                 year={item.year}
-                type="tv"
+                type={item.catalogId ? catalogKind : "tv"}
                 posterPath={item.posterPath || ""}
                 backdropPath=""
                 topNote={

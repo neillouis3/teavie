@@ -3,6 +3,20 @@
  */
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
 
+/** YYYY-MM-DD or null from mixed TMDB / catalog date fields. */
+export function catalogDocReleaseDateString(doc) {
+  const rawDate =
+    doc?.release_date ??
+    doc?.releaseDate ??
+    doc?.first_air_date ??
+    doc?.firstAirDate ??
+    null;
+  if (rawDate == null) return null;
+  return typeof rawDate === "string"
+    ? rawDate
+    : rawDate.toISOString?.().split("T")[0] ?? null;
+}
+
 /** Exported for API mappers (new, etc.). */
 export function tvEpisodeCountFromDoc(doc) {
   if (doc.type !== "tv") return null;
@@ -15,19 +29,32 @@ export function tvEpisodeCountFromDoc(doc) {
   return null;
 }
 
+/**
+ * Compact row for /api/new, /api/upcoming, /api/updated (shared shape, avoids duplicate mapping).
+ */
+export function mapCatalogListDoc(doc) {
+  const release_date = catalogDocReleaseDateString(doc);
+  const isAnimeRow = doc.type === "tv" && String(doc.id ?? "").startsWith("anime_");
+  return {
+    id: doc.id.toString(),
+    title: doc.title ?? doc.name,
+    release_date,
+    runtimeSeconds: doc.runtimeSeconds ?? null,
+    season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
+    number_of_episodes: tvEpisodeCountFromDoc(doc),
+    popularity: catalogPopularityScore(
+      doc,
+      isAnimeRow ? { anime: true } : undefined
+    ),
+    genre_ids: doc.genre_ids ?? [],
+    poster_path: doc.poster_path ?? null,
+    backdrop_path: doc.backdrop_path ?? null,
+    type: doc.type,
+  };
+}
+
 export function mapContentDocToItem(doc) {
-  const rawDate =
-    doc.release_date ??
-    doc.releaseDate ??
-    doc.first_air_date ??
-    doc.firstAirDate ??
-    null;
-  const release_date =
-    rawDate == null
-      ? null
-      : typeof rawDate === "string"
-        ? rawDate
-        : rawDate.toISOString?.().split("T")[0] ?? null;
+  const release_date = catalogDocReleaseDateString(doc);
   const isAnimeRow =
     doc.type === "tv" && String(doc.id ?? "").startsWith("anime_");
   return {
