@@ -53,6 +53,35 @@ export function catalogPopularityScore(doc, opts = {}) {
 }
 
 /**
+ * Single 0–10 display score for catalog cards/API: prefer TMDB/Jikan `vote_average`,
+ * else AniList `averageScore` (0–100) scaled to 0–10 for `anime_*` rows.
+ * @param {unknown} doc
+ */
+export function catalogDisplayVoteAverage(doc) {
+  if (!doc || typeof doc !== "object") return null;
+  const d = /** @type {Record<string, unknown>} */ (doc);
+  const raw = d.vote_average;
+  if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
+    return Math.round(raw * 10) / 10;
+  }
+  const id = String(d.id ?? "");
+  if (id.startsWith("anime_")) {
+    const anilist = d.anilist;
+    const avg =
+      anilist && typeof anilist === "object"
+        ? Number(/** @type {Record<string, unknown>} */ (anilist).averageScore)
+        : NaN;
+    if (Number.isFinite(avg) && avg > 0) {
+      return Math.round((avg / 10) * 10) / 10;
+    }
+  }
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return Math.round(raw * 10) / 10;
+  }
+  return null;
+}
+
+/**
  * Mongo `$addFields` / `$sort` expression (anime-only collections / filters).
  * Mirrors {@link catalogPopularityScore} for documents where `is_anime` / `tags` / `id` imply anime.
  */
@@ -94,6 +123,32 @@ export function mongoAnimeCatalogPopularityExpr() {
         },
       ],
       default: 0,
+    },
+  };
+}
+
+/**
+ * Mongo sort key for /api/tv when mixing TMDB TV and catalog `anime_*` rows.
+ */
+export function mongoMixedTvCatalogPopularityExpr() {
+  return {
+    $cond: {
+      if: {
+        $regexMatch: {
+          input: { $toString: "$id" },
+          regex: "^anime_",
+        },
+      },
+      then: mongoAnimeCatalogPopularityExpr(),
+      else: {
+        $cond: {
+          if: {
+            $in: [{ $type: "$popularity" }, ["double", "decimal", "int", "long"]],
+          },
+          then: { $ifNull: ["$popularity", 0] },
+          else: 0,
+        },
+      },
     },
   };
 }

@@ -9,6 +9,13 @@ export async function GET(req) {
 
     const contentCollection = db.collection("content");
 
+    const { searchParams } = new URL(req.url);
+    const type = (searchParams.get("type") || "").trim().toLowerCase();
+    const sampleSize = Math.min(
+      40,
+      Math.max(1, parseInt(searchParams.get("limit") || "20", 10))
+    );
+
     // Define date window: from today through one month ahead
     const now = new Date();
     const oneMonthAhead = new Date();
@@ -16,6 +23,10 @@ export async function GET(req) {
     const toDateString = (d) => d.toISOString().split("T")[0];
     const startDate = toDateString(now);
     const endDate = toDateString(oneMonthAhead);
+
+    /** @type {Record<string, unknown>} */
+    const typeMatch =
+      type === "movie" || type === "tv" ? { type } : {};
 
     // Aggregation: only items releasing between now and one month ahead
     const cursor = contentCollection.aggregate([
@@ -28,6 +39,7 @@ export async function GET(req) {
       },
       {
         $match: {
+          ...typeMatch,
           sortDate: {
             $gte: startDate,
             $lte: endDate,
@@ -35,8 +47,8 @@ export async function GET(req) {
         },
       },
       { $sort: { sortDate: 1 } }, // soonest releases first
-      { $limit: 100 },            // only take top 100
-      { $sample: { size: 20 } },  // randomly pick 20 from those
+      { $limit: 120 },
+      { $sample: { size: sampleSize } },
     ]);
 
     const results = await cursor.toArray();

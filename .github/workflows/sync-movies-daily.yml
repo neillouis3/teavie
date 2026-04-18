@@ -1,0 +1,21 @@
+# Daily TMDB → Mongo movie upsert for teavie.content (requires repo secrets).
+name: Sync movies (TMDB → Mongo)
+
+on:
+  schedule:
+    - cron: "10 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run movie sync
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          TMDB_BEARER: ${{ secrets.TMDB_BEARER }}
+        run: node scripts/sync-movies-tmdb-daily.mjs --stale-cap=300

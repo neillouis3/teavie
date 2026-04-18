@@ -2,7 +2,7 @@
  * Catalog search only: `teavie.content` in MongoDB (no TMDB).
  * - Movies: released `release_date`
  * - Anime TV: `anime_*` ids + `releasedAnimeFirstAirClause`
- * - Other TV: same exclusion as /api/tv (`$nor` anime) + released `first_air_date`
+ * - Other TV: legacy duplicate anime excluded like /api/tv; released `first_air_date`
  */
 
 import clientPromise from "@/lib/mongo";

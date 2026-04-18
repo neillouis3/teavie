@@ -7,6 +7,7 @@ import {
   releasedAnimeFirstAirClause,
 } from "@/lib/catalogQuery";
 import {
+  catalogDisplayVoteAverage,
   catalogPopularityScore,
   mongoAnimeCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
@@ -38,7 +39,7 @@ function mapAnimeRow(doc) {
     season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
     number_of_episodes: ep,
     popularity: catalogPopularityScore(doc, { anime: true }),
-    vote_average: doc.vote_average ?? null,
+    vote_average: catalogDisplayVoteAverage(doc),
     genre_ids: doc.genre_ids ?? [],
     poster_path: doc.poster_path ?? null,
     backdrop_path: doc.backdrop_path ?? null,

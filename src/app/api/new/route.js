@@ -20,27 +20,49 @@ export async function GET(req) {
     const startDate = toDateString(past);
     const endDate = toDateString(now);
 
+    const type = (searchParams.get("type") || "").trim().toLowerCase();
+
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const skip = (page - 1) * limit;
 
     // New = most recently released in the recent window (by release_date / first_air_date)
-    const filter = {
-      $or: [
-        {
-          release_date: {
-            $gte: startDate,
-            $lte: endDate,
-          },
+    /** @type {Record<string, unknown>} */
+    let filter;
+    if (type === "movie") {
+      filter = {
+        type: "movie",
+        release_date: {
+          $gte: startDate,
+          $lte: endDate,
         },
-        {
-          first_air_date: {
-            $gte: startDate,
-            $lte: endDate,
-          },
+      };
+    } else if (type === "tv") {
+      filter = {
+        type: "tv",
+        first_air_date: {
+          $gte: startDate,
+          $lte: endDate,
         },
-      ],
-    };
+      };
+    } else {
+      filter = {
+        $or: [
+          {
+            release_date: {
+              $gte: startDate,
+              $lte: endDate,
+            },
+          },
+          {
+            first_air_date: {
+              $gte: startDate,
+              $lte: endDate,
+            },
+          },
+        ],
+      };
+    }
 
     const cursor = contentCollection
       .find(filter)

@@ -79,6 +79,107 @@ export function catalogAnimeIdMongoExpr() {
   };
 }
 
+/** Catalog TV rows that are not imported `anime_{malId}` ids. */
+export function catalogNotAnimeCatalogIdMongoExpr() {
+  return {
+    $expr: {
+      $not: {
+        $regexMatch: {
+          input: { $toString: "$id" },
+          regex: "^anime_",
+        },
+      },
+    },
+  };
+}
+
+/**
+ * All TV browse: canonical catalog anime (`anime_*`) plus non-anime TV.
+ * Excludes legacy duplicate anime rows (TMDB JP, etc.) that are not `anime_*`.
+ */
+export function catalogTvBrowseAudienceClause() {
+  return {
+    $or: [
+      catalogAnimeIdMongoExpr(),
+      { $nor: [{ is_anime: true }, { tags: "anime" }] },
+    ],
+  };
+}
+
+/**
+ * Released rule for combined TV + catalog anime: anime uses lenient first-air
+ * (same as /api/anime); everything else uses strict TMDB-style date.
+ * @param {string} dateField
+ * @param {string} todayIso
+ */
+export function catalogTvBrowseReleasedClause(dateField, todayIso) {
+  return {
+    $or: [
+      {
+        $and: [
+          catalogAnimeIdMongoExpr(),
+          releasedAnimeFirstAirClause(todayIso),
+        ],
+      },
+      {
+        $and: [
+          catalogNotAnimeCatalogIdMongoExpr(),
+          releasedCatalogClause(dateField, todayIso),
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * TMDB TV genre id filter that also matches catalog anime rows:
+ * `genre_ids` on anime are MAL ids, so we match Jikan `genres.name` / AniList `genres`.
+ * @param {number} tmdbGenreId
+ */
+export function catalogTmdbTvGenreMatchClause(tmdbGenreId) {
+  /** @type {Record<number, string | null>} null = no extra anime branch */
+  const animeRegexByTmdb = {
+    10759: "^(Action|Adventure)$",
+    16: "__ALL_ANIME__",
+    35: "^(Comedy|Parody)$",
+    80: "^Crime$",
+    99: "^Documentary$",
+    18: "^Drama$",
+    10751: "^Family$",
+    10762: "^(Kids|Children)$",
+    9648: "^(Mystery|Suspense)$",
+    10763: null,
+    10764: "^Reality$",
+    10765: "^(Science Fiction|Sci-Fi|Fantasy|Supernatural)$",
+    10766: "^Soap$",
+    10767: "^Talk$",
+    10768: "^(War|Military)$",
+    37: "^Western$",
+  };
+  const token = animeRegexByTmdb[tmdbGenreId];
+  const parts = [{ genre_ids: tmdbGenreId }];
+
+  if (token === "__ALL_ANIME__") {
+    parts.push(catalogAnimeIdMongoExpr());
+    return { $or: parts };
+  }
+  if (typeof token === "string" && token.length > 0) {
+    const rx = new RegExp(token, "i");
+    parts.push({
+      $and: [
+        catalogAnimeIdMongoExpr(),
+        {
+          $or: [
+            { genres: { $elemMatch: { name: rx } } },
+            { "anilist.genres": rx },
+          ],
+        },
+      ],
+    });
+  }
+  return parts.length === 1 ? parts[0] : { $or: parts };
+}
+
 /**
  * @param {URLSearchParams} searchParams
  * @param {{ type: "movie" | "tv"; dateField: string; animeMultilingualTitleSearch?: boolean }} opts

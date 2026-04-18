@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs"
   },
   "dependencies": {
     "@heroui/react": "^2.8.4",
