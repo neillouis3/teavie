@@ -2,6 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
+import SmallCard from "@/components/ui/smallCard";
+import HorizontalCatalogCardLoading from "@/components/ui/horizontalCatalogCardLoading";
+import SmallCardLoading from "@/components/ui/smallCardLoading";
+import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
+import {
+  CATALOG_GRID_HORIZONTAL_SEARCH,
+  CATALOG_GRID_VERTICAL_SEARCH,
+} from "@/lib/catalogGrid";
 
 type RelatedItem = {
   catalogId: string | null;
@@ -25,6 +33,8 @@ export default function AnimeRelatedSection({
 }) {
   const [items, setItems] = useState<RelatedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { mode: cardLayout } = useCatalogCardStyle();
+  const horizontal = cardLayout === "horizontal";
 
   useEffect(() => {
     const malOk = typeof idMal === "number" && Number.isFinite(idMal) && idMal > 0;
@@ -55,21 +65,22 @@ export default function AnimeRelatedSection({
     return () => controller.abort();
   }, [idMal]);
 
-  const railClass =
-    "grid w-full grid-flow-col grid-rows-2 auto-rows-min items-start content-start gap-x-3 gap-y-2 overflow-x-auto pb-2 pr-2 [scrollbar-width:thin]";
-  const wrapClass = "w-[240px] sm:w-[280px] md:w-[320px] lg:w-[340px]";
+  const gridClass = horizontal
+    ? CATALOG_GRID_HORIZONTAL_SEARCH
+    : CATALOG_GRID_VERTICAL_SEARCH;
 
   if (loading) {
     return (
       <section className="w-full pt-6">
         <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
-        <div className={railClass}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className={`${wrapClass} aspect-[16/10] animate-pulse rounded-lg bg-default-200`}
-            />
-          ))}
+        <div className={`${gridClass} items-start`}>
+          {Array.from({ length: 6 }).map((_, i) =>
+            horizontal ? (
+              <HorizontalCatalogCardLoading key={i} />
+            ) : (
+              <SmallCardLoading key={i} />
+            )
+          )}
         </div>
       </section>
     );
@@ -80,26 +91,45 @@ export default function AnimeRelatedSection({
   return (
     <section className="w-full pt-6">
       <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
-      <ul className={railClass}>
+      <ul className={`${gridClass} items-start`}>
         {items.map((item) => {
           const key = item.catalogId ?? `al-${item.anilistId ?? "ext"}`;
           const catalogKind =
             item.catalogType === "movie" ? "movie" : item.catalogType === "tv" ? "tv" : "tv";
+          const outHref =
+            item.catalogId && String(item.catalogId).trim().length > 0
+              ? undefined
+              : item.externalUrl && String(item.externalUrl).trim().length > 0
+                ? String(item.externalUrl).trim()
+                : undefined;
           return (
             <li
               key={`${key}-${item.anilistId ?? "na"}-${item.topNote}`}
-              className={`min-w-0 ${wrapClass}`}
+              className="min-w-0"
             >
-              <HorizontalCatalogCard
-                id={item.catalogId ?? ""}
-                title={item.title}
-                year={item.year}
-                type={catalogKind}
-                posterPath={item.posterPath || ""}
-                backdropPath=""
-                topNote={item.topNote}
-                href={undefined}
-              />
+              {horizontal ? (
+                <HorizontalCatalogCard
+                  id={item.catalogId ?? ""}
+                  title={item.title}
+                  year={item.year}
+                  type={catalogKind}
+                  posterPath={item.posterPath || ""}
+                  backdropPath=""
+                  topNote={item.topNote}
+                  href={outHref}
+                />
+              ) : (
+                <SmallCard
+                  id={item.catalogId ?? `al-${item.anilistId ?? 0}`}
+                  title={item.title}
+                  year={item.year}
+                  type={catalogKind}
+                  seasonAmount={0}
+                  posterPath={item.posterPath || ""}
+                  linkHref={outHref}
+                  releaseNote={item.topNote}
+                />
+              )}
             </li>
           );
         })}

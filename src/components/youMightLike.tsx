@@ -2,7 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
+import SmallCard from '@/components/ui/smallCard';
+import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
+import SmallCardLoading from '@/components/ui/smallCardLoading';
 import { tmdbBearerToken } from '@/lib/tmdbAuth';
+import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
+import {
+  CATALOG_GRID_HORIZONTAL_SEARCH,
+  CATALOG_GRID_VERTICAL_SEARCH,
+} from '@/lib/catalogGrid';
 
 const YOU_MIGHT_LIKE_MAX = 8;
 
@@ -31,6 +39,8 @@ export default function YouMightLike({
 }) {
   const [items, setItems] = useState<RecItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { mode: cardLayout } = useCatalogCardStyle();
+  const horizontal = cardLayout === 'horizontal';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -158,21 +168,22 @@ export default function YouMightLike({
     return () => controller.abort();
   }, [mediaType, id, isAnime, idMal]);
 
-  const railClass =
-    'grid w-full grid-flow-col grid-rows-2 auto-rows-min items-start content-start gap-x-3 gap-y-2 overflow-x-auto pb-2 pr-2 [scrollbar-width:thin]';
-  const wrapClass = 'w-[240px] sm:w-[280px] md:w-[320px] lg:w-[340px]';
+  const gridClass = horizontal
+    ? CATALOG_GRID_HORIZONTAL_SEARCH
+    : CATALOG_GRID_VERTICAL_SEARCH;
 
   if (loading) {
     return (
       <section className="mt-10 w-full pt-8">
         <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
-        <div className={railClass}>
-          {Array.from({ length: YOU_MIGHT_LIKE_MAX }).map((_, i) => (
-            <div
-              key={i}
-              className={`${wrapClass} aspect-[16/10] animate-pulse rounded-lg bg-default-200`}
-            />
-          ))}
+        <div className={`${gridClass} items-start`}>
+          {Array.from({ length: YOU_MIGHT_LIKE_MAX }).map((_, i) =>
+            horizontal ? (
+              <HorizontalCatalogCardLoading key={i} />
+            ) : (
+              <SmallCardLoading key={i} />
+            )
+          )}
         </div>
       </section>
     );
@@ -183,18 +194,30 @@ export default function YouMightLike({
   return (
     <section className="mt-10 w-full pt-8">
       <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
-      <ul className={railClass}>
+      <ul className={`${gridClass} items-start`}>
         {items.map((item) => (
-          <li key={`${item.keyId}-${item.linkId}`} className={`min-w-0 ${wrapClass}`}>
-            <HorizontalCatalogCard
-              id={item.linkId}
-              title={item.title}
-              year={item.year}
-              type={mediaType}
-              posterPath={item.poster_path || ''}
-              backdropPath={item.backdrop_path || ''}
-              href={item.href ?? undefined}
-            />
+          <li key={`${item.keyId}-${item.linkId}`} className="min-w-0">
+            {horizontal ? (
+              <HorizontalCatalogCard
+                id={item.linkId}
+                title={item.title}
+                year={item.year}
+                type={mediaType}
+                posterPath={item.poster_path || ''}
+                backdropPath={item.backdrop_path || ''}
+                href={item.href ?? undefined}
+              />
+            ) : (
+              <SmallCard
+                id={item.linkId}
+                title={item.title}
+                year={item.year}
+                type={mediaType}
+                seasonAmount={0}
+                posterPath={item.poster_path || ''}
+                linkHref={item.href ?? undefined}
+              />
+            )}
           </li>
         ))}
       </ul>
