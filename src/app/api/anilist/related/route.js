@@ -1,7 +1,7 @@
 import clientPromise from "@/lib/mongo";
 import {
   jikanFetchRelationsAndRecommendations,
-  jikanPayloadsToCandidates,
+  pickFranchiseRelationCandidates,
 } from "@/lib/jikanFetch";
 import { mapMalIdsToAnilistIds } from "@/lib/malToAnilistId";
 
@@ -31,9 +31,14 @@ function anilistUrlForAnime(anilistId) {
   return `https://anilist.co/anime/${anilistId}`;
 }
 
+function malUrlForAnime(malId) {
+  return `https://myanimelist.net/anime/${malId}`;
+}
+
 /**
- * Related in franchise: **Jikan** MAL relations only **Sequel / Prequel / Parent story** (no recs,
- * no adaptations). Mongo + optional AniList id for out-of-catalog links.
+ * Related in franchise: **Jikan** MAL anime relations — sequel / prequel / parent first; if none,
+ * alternative version + side story (still no recommendations). Out-of-catalog: AniList when
+ * resolved, else MAL.
  *
  * GET `?idMal=` (MAL id) required for Jikan. `anilistId` is ignored for the Jikan root (no AniList idMal lookup).
  * Optional `?debug=1` for `meta`.
@@ -69,9 +74,7 @@ export async function GET(req) {
     meta.jikanRelationsStatus = jk.relationsStatus;
     meta.jikanRecsStatus = jk.recsStatus;
 
-    const candidates = jikanPayloadsToCandidates(rootMal, jk.relationsJson, null, {
-      franchiseOnly: true,
-    });
+    const candidates = pickFranchiseRelationCandidates(rootMal, jk.relationsJson);
     meta.candidateCount = candidates.length;
 
     if (candidates.length === 0) {
@@ -131,7 +134,7 @@ export async function GET(req) {
       pauseMs: 100,
     });
 
-    /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; title: string; year: string; posterPath: string; topNote: string; externalUrl?: string | null }>} */
+    /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; malId: number; title: string; year: string; posterPath: string; topNote: string; externalUrl?: string | null }>} */
     const items = [];
 
     for (const c of candidates) {
@@ -154,15 +157,17 @@ export async function GET(req) {
         }
       }
 
-      const externalUrl =
-        row == null && anilistNumeric != null ? anilistUrlForAnime(anilistNumeric) : null;
-
-      if (row == null && anilistNumeric == null) continue;
+      let externalUrl = null;
+      if (row == null) {
+        externalUrl =
+          anilistNumeric != null ? anilistUrlForAnime(anilistNumeric) : malUrlForAnime(c.malId);
+      }
 
       items.push({
         catalogId: row?.catalogId ?? null,
         catalogType: row?.catalogType ?? null,
         anilistId: anilistNumeric,
+        malId: c.malId,
         title,
         year,
         posterPath,

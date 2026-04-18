@@ -8,6 +8,7 @@ type RelatedItem = {
   catalogId: string | null;
   catalogType?: "movie" | "tv" | string | null;
   anilistId: number | null;
+  malId?: number;
   title: string;
   year: string;
   posterPath: string;
@@ -87,8 +88,8 @@ export default function AnimeRelatedSection({
         </Chip>
       </div>
       <p className="mb-4 text-xs text-default-500">
-        Sequel, prequel, and parent story links from Jikan (MAL). In-catalog tiles open on Teavie;
-        others on AniList when the id resolves from MAL.
+        Franchise links from Jikan (MAL): sequel, prequel, parent when present; otherwise alternative
+        version or side story. Out of catalog opens AniList or MAL.
       </p>
       <ul className={gridClass}>
         {items.map((item) => {
@@ -102,7 +103,9 @@ export default function AnimeRelatedSection({
                 ? item.externalUrl
                 : item.anilistId != null
                   ? `https://anilist.co/anime/${item.anilistId}`
-                  : undefined;
+                  : typeof item.malId === "number" && item.malId > 0
+                    ? `https://myanimelist.net/anime/${item.malId}`
+                    : undefined;
           return (
             <li key={`${key}-${item.anilistId ?? "na"}-${item.topNote}`} className="min-w-0">
               <HorizontalCatalogCard

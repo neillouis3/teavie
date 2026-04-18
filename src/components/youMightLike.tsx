@@ -5,6 +5,8 @@ import { Chip } from '@heroui/react';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import { tmdbBearerToken } from '@/lib/tmdbAuth';
 
+const YOU_MIGHT_LIKE_MAX = 8;
+
 type RecItem = {
   keyId: number;
   linkId: string;
@@ -47,7 +49,7 @@ export default function YouMightLike({
         const data = res.ok ? await res.json() : { items: [] };
         const rows = Array.isArray(data.items) ? data.items : [];
         setItems(
-          rows.map(
+          rows.slice(0, YOU_MIGHT_LIKE_MAX).map(
             (r: {
               catalogId: string | null;
               anilistId: number | null;
@@ -110,7 +112,7 @@ export default function YouMightLike({
           }
         );
         const data = res.ok ? await res.json() : { results: [] };
-        const slice = (data.results ?? []).slice(0, 12) as {
+        const slice = (data.results ?? []).slice(0, YOU_MIGHT_LIKE_MAX) as {
           id: number;
           title?: string;
           name?: string;
@@ -168,7 +170,7 @@ export default function YouMightLike({
       <section className="mt-10 w-full pt-8">
         <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
         <div className={gridClass}>
-          {Array.from({ length: mediaType === 'tv' ? 8 : 6 }).map((_, i) => (
+          {Array.from({ length: YOU_MIGHT_LIKE_MAX }).map((_, i) => (
             <div
               key={i}
               className="aspect-[16/10] animate-pulse rounded-lg bg-default-200"

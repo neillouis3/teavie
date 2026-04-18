@@ -73,12 +73,19 @@ export async function jikanFetchRelationsAndRecommendations(rootMal, opts = {}) 
   };
 }
 
-/** Jikan / MAL relation labels for same-franchise chain (not adaptations, summaries, etc.). */
-const FRANCHISE_RELATION_LABELS = new Set([
+/** Jikan / MAL relation labels: direct franchise chain. */
+export const FRANCHISE_RELATION_LABELS = new Set([
   "sequel",
   "prequel",
   "parent story",
   "parent",
+]);
+
+/** When strict set yields nothing (common on MAL), allow these anime relation types. */
+export const FRANCHISE_RELATION_LABELS_LOOSE = new Set([
+  ...FRANCHISE_RELATION_LABELS,
+  "alternative version",
+  "side story",
 ]);
 
 /**
@@ -89,6 +96,28 @@ export function isFranchiseRelationLabel(relation) {
     .trim()
     .toLowerCase();
   return FRANCHISE_RELATION_LABELS.has(r);
+}
+
+function normRelationLabel(s) {
+  return String(s || "")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Anime relation rows only (no Jikan recommendations). Prefer sequel/prequel/parent; if none,
+ * include alternative version + side story so the rail is not empty on typical catalog titles.
+ * @param {number} rootMal
+ * @param {unknown} relationsJson
+ */
+export function pickFranchiseRelationCandidates(rootMal, relationsJson) {
+  const all = jikanPayloadsToCandidates(rootMal, relationsJson, null, {
+    franchiseOnly: false,
+    includeRecommendations: false,
+  });
+  const strict = all.filter((c) => FRANCHISE_RELATION_LABELS.has(normRelationLabel(c.topNote)));
+  if (strict.length > 0) return strict;
+  return all.filter((c) => FRANCHISE_RELATION_LABELS_LOOSE.has(normRelationLabel(c.topNote)));
 }
 
 /**

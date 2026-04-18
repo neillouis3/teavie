@@ -31,6 +31,8 @@ function anilistUrlForAnime(anilistId) {
   return `https://anilist.co/anime/${anilistId}`;
 }
 
+const YOU_MIGHT_LIKE_MAX = 8;
+
 /**
  * Recommendations from **Jikan** (MAL), merged with catalog; out-of-catalog tiles use **AniList** id/URL.
  *
@@ -57,7 +59,10 @@ export async function GET(req) {
       includeRecommendations: true,
     });
 
-    const candidates = jikanPayloadsToCandidates(rootMal, null, jk.recsJson);
+    const candidates = jikanPayloadsToCandidates(rootMal, null, jk.recsJson).slice(
+      0,
+      YOU_MIGHT_LIKE_MAX
+    );
     if (candidates.length === 0) {
       return Response.json({ items: [] });
     }
@@ -87,7 +92,7 @@ export async function GET(req) {
           },
         }
       )
-      .limit(80)
+      .limit(YOU_MIGHT_LIKE_MAX)
       .toArray();
 
     /** @type {Map<number, number>} */
