@@ -8,6 +8,7 @@ import { Search01Icon } from '@hugeicons/core-free-icons';
 import Header from '@/components/ui/header';
 import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
+import CatalogRail from '@/components/explore/catalogRail';
 import SmallCardLoading from '@/components/ui/smallCardLoading';
 import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
 import {
@@ -226,17 +227,11 @@ function SearchContent() {
             ) : (
               <>
                 <section className="space-y-3">
-                  <Chip color="success" size="md" radius="sm" variant="flat">Popular Movies</Chip>
-                  {popularMovies.length === 0
-                    ? <p className="text-sm text-default-500">Nothing to show.</p>
-                    : renderCards(popularMovies, 'pop-m')}
+                  <CatalogRail title="Popular Movies" items={popularMovies} maxItems={24} />
                 </section>
 
                 <section className="space-y-3">
-                  <Chip color="success" size="md" radius="sm" variant="flat">Popular TV</Chip>
-                  {popularTv.length === 0
-                    ? <p className="text-sm text-default-500">Nothing to show.</p>
-                    : renderCards(popularTv, 'pop-tv')}
+                  <CatalogRail title="Popular TV" items={popularTv} maxItems={24} />
                 </section>
               </>
             )}

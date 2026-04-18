@@ -156,6 +156,7 @@ async function bulkUpsertMovies(col, docs, batchSize, dryRun, log) {
 export async function runDailyMovieSync(opts = {}) {
   const dryRun = Boolean(opts.dryRun);
   const staleCap = Math.max(0, Number(opts.staleCap) || 250);
+  const missingPosterCap = Math.max(0, Number(opts.missingPosterCap) || 0);
   const maxDiscoverPages = Math.max(1, Number(opts.maxDiscoverPages) || 40);
   const maxListPages = Math.max(1, Number(opts.maxListPages) || 5);
   const bulkBatch = Math.max(20, Number(opts.bulkBatch) || 100);
@@ -176,7 +177,7 @@ export async function runDailyMovieSync(opts = {}) {
   const windowEnd = isoDate(addDays(now, 31));
 
   log(
-    `movie sync | today=${todayIso} window=[${windowStart}..${windowEnd}] staleCap=${staleCap} dryRun=${dryRun}`
+    `movie sync | today=${todayIso} window=[${windowStart}..${windowEnd}] staleCap=${staleCap} missingPosterCap=${missingPosterCap} dryRun=${dryRun}`
   );
 
   const idSet = new Set();
@@ -209,6 +210,32 @@ export async function runDailyMovieSync(opts = {}) {
   const client = new MongoClient(uri);
   await client.connect();
   const col = client.db(DB_NAME).collection(COLLECTION);
+
+  if (missingPosterCap > 0) {
+    const missingDocs = await col
+      .find({
+        type: "movie",
+        $or: [
+          { poster_path: { $exists: false } },
+          { poster_path: null },
+          { poster_path: "" },
+        ],
+      })
+      .project({ id: 1 })
+      .limit(missingPosterCap)
+      .toArray();
+    let missingAdded = 0;
+    for (const d of missingDocs) {
+      const id = Number(d.id);
+      if (Number.isFinite(id) && id > 0) {
+        idSet.add(id);
+        missingAdded += 1;
+      }
+    }
+    log(
+      `missing poster queue: ${missingAdded} movies (limit ${missingPosterCap})`
+    );
+  }
 
   if (staleCap > 0) {
     const staleDocs = await col

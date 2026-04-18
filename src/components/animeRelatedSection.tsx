@@ -55,18 +55,19 @@ export default function AnimeRelatedSection({
     return () => controller.abort();
   }, [idMal]);
 
-  const gridClass =
-    "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4";
+  const railClass =
+    "grid w-full grid-flow-col grid-rows-2 gap-3 overflow-x-auto pb-2 pr-2 [scrollbar-width:thin]";
+  const wrapClass = "w-[240px] sm:w-[280px] md:w-[320px] lg:w-[340px]";
 
   if (loading) {
     return (
       <section className="w-full pt-6">
         <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
-        <div className={gridClass}>
+        <div className={railClass}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="aspect-[16/10] animate-pulse rounded-lg bg-default-200"
+              className={`${wrapClass} aspect-[16/10] animate-pulse rounded-lg bg-default-200`}
             />
           ))}
         </div>
@@ -79,13 +80,16 @@ export default function AnimeRelatedSection({
   return (
     <section className="w-full pt-6">
       <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
-      <ul className={gridClass}>
+      <ul className={railClass}>
         {items.map((item) => {
           const key = item.catalogId ?? `al-${item.anilistId ?? "ext"}`;
           const catalogKind =
             item.catalogType === "movie" ? "movie" : item.catalogType === "tv" ? "tv" : "tv";
           return (
-            <li key={`${key}-${item.anilistId ?? "na"}-${item.topNote}`} className="min-w-0">
+            <li
+              key={`${key}-${item.anilistId ?? "na"}-${item.topNote}`}
+              className={`min-w-0 ${wrapClass}`}
+            >
               <HorizontalCatalogCard
                 id={item.catalogId ?? ""}
                 title={item.title}

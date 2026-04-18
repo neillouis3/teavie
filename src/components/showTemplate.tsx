@@ -1178,13 +1178,14 @@ export default function ShowTemplate({ id }: { id: string }) {
         </div>
 
         {!loading && showAnimeRelated ? (
-          <AnimeRelatedSection idMal={idMalForAnilistRails ?? undefined} />
+          <AnimeRelatedSection key={`related-${idMalForAnilistRails ?? "na"}`} idMal={idMalForAnilistRails ?? undefined} />
         ) : null}
 
         {!loading &&
         ((Boolean(show?.is_anime) && idMalForAnilistRails != null) ||
           (!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)))) ? (
           <YouMightLike
+            key={`yml-${resolvedPlayerId}-${idMalForAnilistRails ?? "na"}`}
             mediaType="tv"
             id={resolvedPlayerId}
             isAnime={Boolean(show?.is_anime)}

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
+import MovieFranchiseSection from './movieFranchiseSection';
 import { Image, Chip } from '@heroui/react';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 
@@ -223,7 +224,12 @@ export default function MovieTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        {!loading && <YouMightLike mediaType="movie" id={id} />}
+        {!loading && (
+          <>
+            <MovieFranchiseSection key={`franchise-${id}`} id={id} />
+            <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} />
+          </>
+        )}
       </div>
     </div>
   );

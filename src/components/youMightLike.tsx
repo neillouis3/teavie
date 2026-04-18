@@ -158,21 +158,19 @@ export default function YouMightLike({
     return () => controller.abort();
   }, [mediaType, id, isAnime, idMal]);
 
-  const gridMovie =
-    'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4';
-  const gridTv =
-    'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4';
-  const gridClass = mediaType === 'tv' ? gridTv : gridMovie;
+  const railClass =
+    'grid w-full grid-flow-col grid-rows-2 gap-3 overflow-x-auto pb-2 pr-2 [scrollbar-width:thin]';
+  const wrapClass = 'w-[240px] sm:w-[280px] md:w-[320px] lg:w-[340px]';
 
   if (loading) {
     return (
       <section className="mt-10 w-full pt-8">
         <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
-        <div className={gridClass}>
+        <div className={railClass}>
           {Array.from({ length: YOU_MIGHT_LIKE_MAX }).map((_, i) => (
             <div
               key={i}
-              className="aspect-[16/10] animate-pulse rounded-lg bg-default-200"
+              className={`${wrapClass} aspect-[16/10] animate-pulse rounded-lg bg-default-200`}
             />
           ))}
         </div>
@@ -185,9 +183,9 @@ export default function YouMightLike({
   return (
     <section className="mt-10 w-full pt-8">
       <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
-      <ul className={gridClass}>
+      <ul className={railClass}>
         {items.map((item) => (
-          <li key={`${item.keyId}-${item.linkId}`} className="min-w-0">
+          <li key={`${item.keyId}-${item.linkId}`} className={`min-w-0 ${wrapClass}`}>
             <HorizontalCatalogCard
               id={item.linkId}
               title={item.title}
