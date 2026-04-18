@@ -62,15 +62,17 @@ export default function SideBar() {
   const selectedKey =
     pathname.startsWith("/explore")
       ? "explore"
-      : pathname.startsWith("/movies")
-        ? "movies"
-        : pathname.startsWith("/anime")
-          ? "anime"
-          : pathname.startsWith("/shows")
-            ? "shows"
-            : pathname.startsWith("/sports")
-              ? "sports"
-              : null;
+      : pathname.startsWith("/discover")
+        ? "discover"
+        : pathname.startsWith("/movies")
+          ? "movies"
+          : pathname.startsWith("/anime")
+            ? "anime"
+            : pathname.startsWith("/shows")
+              ? "shows"
+              : pathname.startsWith("/sports")
+                ? "sports"
+                : null;
 
   const settingsActive = pathname.startsWith("/settings");
 

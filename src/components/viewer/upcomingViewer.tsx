@@ -47,6 +47,10 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
             const year = releaseDate
               ? String(new Date(releaseDate).getFullYear())
               : "TBA";
+            const releaseIso =
+              releaseDate && String(releaseDate).length >= 10
+                ? String(releaseDate).slice(0, 10)
+                : null;
 
             return (
               <CarouselItem
@@ -57,6 +61,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
                   id={item.id}
                   title={title}
                   year={year}
+                  releaseDate={releaseIso}
                   runtimeSeconds={item.runtimeSeconds}
                   seasonAmount={item.season_amount ?? 0}
                   type={item.type ?? "movie"}

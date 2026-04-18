@@ -6,6 +6,8 @@ interface SmallCardProps {
   id: number | string;
   title: string;
   year: string;
+  /** e.g. “Released Apr 1, 2025” for Explore “new” rail */
+  releaseNote?: string;
   runtimeSeconds?: number;
   seasonAmount: number;
   type: string;
@@ -16,6 +18,7 @@ export default function SmallCard({
   id,
   title,
   year,
+  releaseNote,
   runtimeSeconds,
   seasonAmount,
   type,
@@ -84,6 +87,11 @@ export default function SmallCard({
             ? `${title.slice(0, title.length / 1.5)}...`
             : title}
         </h1>
+        {releaseNote ? (
+          <p className="line-clamp-2 text-[11px] leading-snug text-default-500" title={releaseNote}>
+            {releaseNote}
+          </p>
+        ) : null}
       </div>
     </div>
   );

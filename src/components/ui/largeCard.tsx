@@ -2,11 +2,14 @@
 
 import React from "react";
 import Link from "next/link";
+import { formatReleasePhrase } from "@/lib/formatRelease";
 
 type LargeCardProps = {
   id: number | string;
   title: string;
   year: string | number;
+  /** ISO date (e.g. release_date / first_air_date) for “Releases …” / “Released …” */
+  releaseDate?: string | null;
   runtimeSeconds?: number;
   seasonAmount?: number;
   type: "movie" | "tv";
@@ -18,6 +21,7 @@ export default function LargeCard({
   id,
   title,
   year,
+  releaseDate,
   runtimeSeconds,
   seasonAmount,
   type,
@@ -42,6 +46,10 @@ export default function LargeCard({
     : "/placeholder.jpg";
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
+  const when =
+    releaseDate != null && String(releaseDate).trim().length >= 10
+      ? formatReleasePhrase(releaseDate)
+      : null;
 
   return (
     <Link href={href} className="block min-w-0 w-full">
@@ -58,8 +66,8 @@ export default function LargeCard({
           </h1>
           <p className="mt-1 text-xs text-gray-300 sm:text-sm">
             {typeLower === "tv"
-              ? `TV Show • ${year} • SS ${seasonAmount ?? "?"}`
-              : `Movie • ${year} • ${runtimeMin != null ? `${runtimeMin} min` : "—"}`}
+              ? `TV Show • ${when ?? year} • SS ${seasonAmount ?? "?"}`
+              : `Movie • ${when ?? year} • ${runtimeMin != null ? `${runtimeMin} min` : "—"}`}
           </p>
         </div>
       </div>

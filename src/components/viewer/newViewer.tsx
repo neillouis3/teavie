@@ -2,6 +2,7 @@
 import React from "react";
 import SmallCard from "../ui/smallCard";
 import { ContentItem } from "@/types/content";
+import { formatReleasePhrase } from "@/lib/formatRelease";
 
 interface NewViewerProps {
   newContent: ContentItem[];
@@ -13,10 +14,14 @@ export default function NewViewer({ newContent }: NewViewerProps) {
       {newContent &&
         newContent.slice(0, 8).map((item) => {
           const title = item.title || item.name || "Untitled";
+          const rawDate = item.release_date ?? item.first_air_date ?? "";
           const year =
-            item.release_date?.split("-")[0] ||
-            item.first_air_date?.split("-")[0] ||
+            rawDate?.split("-")[0] ||
             "N/A";
+          const releaseNote =
+            rawDate && String(rawDate).length >= 10
+              ? formatReleasePhrase(rawDate)
+              : undefined;
 
           return (
             <SmallCard
@@ -24,6 +29,7 @@ export default function NewViewer({ newContent }: NewViewerProps) {
               id={item.id}
               title={title}
               year={year}
+              releaseNote={releaseNote}
               type={item.type || "movie"}
               runtimeSeconds={item.runtimeSeconds ?? undefined}
               seasonAmount={item.season_amount ?? 0}
