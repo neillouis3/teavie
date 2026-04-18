@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 /**
  * Upsert movies + TV from enriched TMDB JSON (default: ../test relative to repo).
- * TV: skips anime-like rows without AniList id (is_anime, anime tag, or JP+animation; see scripts/lib/tvJpAnimePrune.cjs).
+ * TV: skips anime-like rows (canonical anime uses `anime_*` ids only; see scripts/lib/tvJpAnimePrune.cjs).
  *
  * Usage (from teavie/):
  *   node scripts/sync-catalog-from-json.js

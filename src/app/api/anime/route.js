@@ -1,6 +1,7 @@
 import clientPromise from "@/lib/mongo";
 import {
   buildCatalogFilter,
+  catalogAnimeIdMongoExpr,
   catalogSort,
   catalogTodayIsoUtc,
   releasedAnimeFirstAirClause,
@@ -66,14 +67,10 @@ export async function GET(req) {
       dateField: "first_air_date",
     });
 
-    const animeFilter = {
-      $or: [{ tags: "anime" }, { is_anime: true }],
-    };
-
     const includeUnreleased = searchParams.get("include_unreleased") === "1";
     const todayIso = catalogTodayIsoUtc();
     const released = includeUnreleased ? [] : [releasedAnimeFirstAirClause(todayIso)];
-    const filter = { $and: [base, animeFilter, ...released] };
+    const filter = { $and: [base, catalogAnimeIdMongoExpr(), ...released] };
 
     const total = await collection.countDocuments(filter);
 

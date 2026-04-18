@@ -1,14 +1,35 @@
 /**
- * TV catalog cleanup: rows that are “anime” but not tied to AniList belong in the
- * anime import pipeline, not the general TV catalog from TMDB JSON.
+ * TV catalog cleanup: remove legacy TMDB-shaped JP animation that is not from
+ * `import-anime-to-tv.js` (Jikan + MAL id). Canonical imports carry
+ * `source: "jikan"`, `mal_id`, and `id: anime_{malId}`.
  *
- * Prune when ALL of:
- * - type is tv
- * - no AniList id (top-level or external_ids)
- * - looks like anime: is_anime flag, "anime" tag, or Japanese origin + animation genre
+ * Prune when: not `anime_*`, not Jikan import, and either JP+animation, or
+ * TMDB numeric id + Japanese origin + anime-like / missing genre arrays (bad sync).
  */
 
 const TMDB_ANIMATION_GENRE_ID = 16;
+
+/** Canonical anime rows from the anime pipeline use string ids like `anime_63816`. */
+function isCatalogAnimeId(doc) {
+  return String(doc.id ?? "").startsWith("anime_");
+}
+
+/** TMDB TV rows in Mongo use numeric ids (or string digits only), not `anime_*`. */
+function isTmdbNumericTvId(doc) {
+  const id = doc.id;
+  if (typeof id === "number" && Number.isFinite(id) && id > 0) return true;
+  if (typeof id === "string" && /^[1-9]\d*$/.test(id.trim())) return true;
+  return false;
+}
+
+/** Row produced by scripts/import-anime-to-tv.js (mapAnimeToTvDoc). */
+function isJikanAnimeImport(doc) {
+  if (doc.source !== "jikan") return false;
+  const mal = doc.mal_id;
+  if (typeof mal === "number" && Number.isFinite(mal) && mal > 0) return true;
+  if (typeof mal === "string" && /^[1-9]\d*$/.test(String(mal).trim())) return true;
+  return false;
+}
 
 function hasAnilistProvenance(doc) {
   const a = doc.anilist_id;
@@ -68,14 +89,40 @@ function isAnimeLike(doc) {
   return false;
 }
 
+/** Legacy “anime” TV from TMDB JSON: Japan + animation genre, not the Jikan pipeline. */
+function isOldCatalogJpAnimationTv(doc) {
+  return isJapaneseOrigin(doc) && hasAnimationGenreCore(doc);
+}
+
+/**
+ * TMDB sync sometimes drops genre arrays; JP/ja + both empty still matches many legacy anime rows (e.g. id 1429).
+ * @see https://developer.themoviedb.org/reference/tv-series-details
+ */
+function isJapaneseOriginWithNoGenreData(doc) {
+  if (!isJapaneseOrigin(doc)) return false;
+  const gids = doc.genre_ids;
+  const genres = doc.genres;
+  const gidsEmpty = !Array.isArray(gids) || gids.length === 0;
+  const genresEmpty = !Array.isArray(genres) || genres.length === 0;
+  return gidsEmpty && genresEmpty;
+}
+
 /**
  * @param {Record<string, unknown>} doc - TV row or Mongo doc (must include type: "tv" when from DB)
  */
 function shouldPruneTvAnimeWithoutAnilist(doc) {
   if (!doc || doc.type !== "tv") return false;
-  if (hasAnilistProvenance(doc)) return false;
-  if (!isAnimeLike(doc)) return false;
-  return true;
+  if (isCatalogAnimeId(doc)) return false;
+  if (isJikanAnimeImport(doc)) return false;
+
+  if (isTmdbNumericTvId(doc)) {
+    if (isOldCatalogJpAnimationTv(doc)) return true;
+    if (isJapaneseOriginWithNoGenreData(doc)) return true;
+    if (isJapaneseOrigin(doc) && isAnimeLike(doc)) return true;
+    return false;
+  }
+
+  return isOldCatalogJpAnimationTv(doc);
 }
 
 /** @deprecated use shouldPruneTvAnimeWithoutAnilist */
@@ -83,6 +130,11 @@ const shouldPruneTvJpAnimeWithoutAnilist = shouldPruneTvAnimeWithoutAnilist;
 
 module.exports = {
   TMDB_ANIMATION_GENRE_ID,
+  isCatalogAnimeId,
+  isTmdbNumericTvId,
+  isJikanAnimeImport,
+  isOldCatalogJpAnimationTv,
+  isJapaneseOriginWithNoGenreData,
   hasAnilistProvenance,
   hasAnimeTag,
   isJapaneseOrigin,

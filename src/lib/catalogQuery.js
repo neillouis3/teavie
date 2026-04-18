@@ -48,6 +48,21 @@ export function escapeRegex(str) {
 }
 
 /**
+ * Anime browse/search only includes rows from the anime import (`anime_{id}`).
+ * @returns {Record<string, unknown>} use inside `$and` for `find` / `$match`.
+ */
+export function catalogAnimeIdMongoExpr() {
+  return {
+    $expr: {
+      $regexMatch: {
+        input: { $toString: "$id" },
+        regex: "^anime_",
+      },
+    },
+  };
+}
+
+/**
  * @param {URLSearchParams} searchParams
  * @param {{ type: "movie" | "tv"; dateField: string }} opts
  */

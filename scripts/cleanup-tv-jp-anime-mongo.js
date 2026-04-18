@@ -1,47 +1,76 @@
 /* eslint-disable no-console */
 /**
- * Remove TV docs that are anime-like but have no AniList id:
- * is_anime, tags "anime", or JP/ja + animation genre — unless anilist_id / external_ids.anilist_id is set.
+ * Remove legacy TV: Japan + animation genre, but not from import-anime-to-tv.js
+ * (`source: "jikan"` + `mal_id`). Keeps `anime_*` ids, Jikan imports, and non-animation TV.
  *
  *   node scripts/cleanup-tv-jp-anime-mongo.js
  *   node scripts/cleanup-tv-jp-anime-mongo.js --dry-run
+ *   node scripts/cleanup-tv-jp-anime-mongo.js --check-id 1429
  *
- * Requires MONGODB_URI in teavie/.env.local
+ * Loads `teavie/.env` then `teavie/.env.local` (merged; shell env wins if already set).
+ * Prints host + counts after connect so you can confirm the target cluster.
  */
-const path = require("path");
-const fs = require("fs");
 const { MongoClient } = require("mongodb");
+const { loadMongoEnv, mongoHostHint } = require("./lib/mongoEnv.cjs");
 const { shouldPruneTvAnimeWithoutAnilist } = require("./lib/tvJpAnimePrune.cjs");
 
-function loadEnvLocal() {
-  const envPath = path.join(__dirname, "..", ".env.local");
-  if (!fs.existsSync(envPath)) return;
-  const content = fs.readFileSync(envPath, "utf8");
-  for (const line of content.split("\n")) {
-    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (!m) continue;
-    const k = m[1].trim();
-    const v = m[2].trim().replace(/^["']|["']$/g, "");
-    if (!process.env[k]) process.env[k] = v;
-  }
-}
+const DB_NAME = "teavie";
+const COLL = "content";
 
 function hasFlag(flag) {
   return process.argv.includes(flag);
 }
 
+function argAfter(flag) {
+  const i = process.argv.indexOf(flag);
+  if (i === -1) return null;
+  return process.argv[i + 1] ?? null;
+}
+
 async function run() {
-  loadEnvLocal();
+  loadMongoEnv();
   const uri = process.env.MONGODB_URI;
   if (!uri) {
-    console.error("MONGODB_URI missing. Set it in teavie/.env.local");
+    console.error(
+      "MONGODB_URI missing. Set it in the shell or teavie/.env.local (or teavie/.env)."
+    );
     process.exit(1);
   }
 
   const dryRun = hasFlag("--dry-run");
+  const checkIdRaw = argAfter("--check-id");
+
   const client = new MongoClient(uri);
   await client.connect();
-  const col = client.db("teavie").collection("content");
+  await client.db("admin").command({ ping: 1 });
+
+  const col = client.db(DB_NAME).collection(COLL);
+  const tvCount = await col.countDocuments({ type: "tv" });
+  const totalApprox = await col.estimatedDocumentCount();
+
+  console.log(
+    [
+      "mongo: ping ok",
+      `host: ${mongoHostHint(uri)}`,
+      `db: ${DB_NAME}`,
+      `collection: ${COLL}`,
+      `tv documents: ${tvCount}`,
+      `collection approx size: ${totalApprox}`,
+    ].join(" | ")
+  );
+
+  if (checkIdRaw != null && String(checkIdRaw).trim() !== "") {
+    const raw = String(checkIdRaw).trim();
+    const idOr = [{ id: raw }];
+    const n = Number(raw);
+    if (Number.isFinite(n)) idOr.push({ id: n });
+    const probe = await col.findOne({ type: "tv", $or: idOr });
+    console.log(
+      probe
+        ? `--check-id: FOUND tv id=${probe.id} name=${probe.name ?? probe.title ?? "?"}`
+        : `--check-id: no type:tv with id ${raw}`
+    );
+  }
 
   const cursor = col.find(
     { type: "tv" },
@@ -57,6 +86,8 @@ async function run() {
         genres: 1,
         is_anime: 1,
         tags: 1,
+        source: 1,
+        mal_id: 1,
         anilist_id: 1,
         external_ids: 1,
       },
