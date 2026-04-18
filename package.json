@@ -11,7 +11,8 @@
     "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs",
     "seed:popular": "node scripts/seed-popular-catalog.mjs",
     "purge:adult-movies": "node scripts/purge-adult-catalog-movies.mjs",
-    "catalog:delete": "node scripts/delete-catalog-content.mjs"
+    "catalog:delete": "node scripts/delete-catalog-content.mjs",
+    "seed:movies-omdb": "node scripts/seed-movies-omdb-filtered.mjs"
   },
   "dependencies": {
     "@heroui/react": "^2.8.4",
