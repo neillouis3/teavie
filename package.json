@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "round-icon": "node scripts/round-app-icon.mjs",
-    "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs"
+    "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs",
+    "seed:popular": "node scripts/seed-popular-catalog.mjs"
   },
   "dependencies": {
     "@heroui/react": "^2.8.4",
