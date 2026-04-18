@@ -152,3 +152,19 @@ export function mongoMixedTvCatalogPopularityExpr() {
     },
   };
 }
+
+/**
+ * Popularity sort key for mixed `content` rows (movies + TV + anime_*), aligned with
+ * {@link catalogPopularityScore} / {@link mongoMixedTvCatalogPopularityExpr}.
+ */
+export function mongoCatalogPopularitySortExpr() {
+  return {
+    $cond: {
+      if: { $eq: ["$type", "movie"] },
+      then: {
+        $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
+      },
+      else: mongoMixedTvCatalogPopularityExpr(),
+    },
+  };
+}

@@ -1,5 +1,9 @@
 import clientPromise from "@/lib/mongo";
 import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
+import {
+  mongoCatalogPopularitySortExpr,
+  mongoMixedTvCatalogPopularityExpr,
+} from "@/lib/catalogPopularity";
 
 export async function GET(req) {
   try {
@@ -25,7 +29,7 @@ export async function GET(req) {
     );
     const skip = (page - 1) * limit;
 
-    // New = most recently released in the recent window (by release_date / first_air_date)
+    // New = released in the recent window; order by catalog popularity then recency
     /** @type {Record<string, unknown>} */
     let filter;
     if (type === "movie") {
@@ -48,12 +52,14 @@ export async function GET(req) {
       filter = {
         $or: [
           {
+            type: "movie",
             release_date: {
               $gte: startDate,
               $lte: endDate,
             },
           },
           {
+            type: "tv",
             first_air_date: {
               $gte: startDate,
               $lte: endDate,
@@ -63,16 +69,42 @@ export async function GET(req) {
       };
     }
 
-    const cursor = contentCollection
-      .find(filter)
-      .sort({ release_date: -1, first_air_date: -1, _id: -1 })
-      .skip(skip)
-      .limit(limit);
+    const sortPopExpr =
+      type === "movie"
+        ? {
+            $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
+          }
+        : type === "tv"
+          ? mongoMixedTvCatalogPopularityExpr()
+          : mongoCatalogPopularitySortExpr();
 
-    const [results, total] = await Promise.all([
-      cursor.toArray(),
-      contentCollection.countDocuments(filter),
-    ]);
+    const pipeline = [
+      {
+        $match: filter,
+      },
+      {
+        $addFields: {
+          sortDate: {
+            $ifNull: ["$release_date", "$first_air_date"],
+          },
+          sortPop: sortPopExpr,
+        },
+      },
+      {
+        $sort: { sortPop: -1, sortDate: -1, _id: -1 },
+      },
+      {
+        $facet: {
+          pageItems: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: "n" }],
+        },
+      },
+    ];
+
+    const agg = await contentCollection.aggregate(pipeline).toArray();
+    const facet = agg[0] ?? { pageItems: [], totalCount: [] };
+    const results = facet.pageItems ?? [];
+    const total = facet.totalCount?.[0]?.n ?? 0;
 
     return Response.json({
       page,

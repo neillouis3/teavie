@@ -19,7 +19,7 @@ export default function ExplorePage() {
         const [newRes, updatedRes, upcomingRes] = await Promise.all([
           fetch("/api/new"),
           fetch("/api/updated"),
-          fetch("/api/upcoming"),
+          fetch("/api/upcoming?type=movie"),
         ]);
 
         if (!newRes.ok || !updatedRes.ok || !upcomingRes.ok) {

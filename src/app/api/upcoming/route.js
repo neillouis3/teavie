@@ -1,5 +1,9 @@
 import clientPromise from "@/lib/mongo";
 import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
+import {
+  mongoCatalogPopularitySortExpr,
+  mongoMixedTvCatalogPopularityExpr,
+} from "@/lib/catalogPopularity";
 
 export async function GET(req) {
   try {
@@ -8,7 +12,7 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
     const type = (searchParams.get("type") || "").trim().toLowerCase();
-    const sampleSize = Math.min(
+    const limit = Math.min(
       40,
       Math.max(1, parseInt(searchParams.get("limit") || "20", 10))
     );
@@ -25,13 +29,23 @@ export async function GET(req) {
     const typeMatch =
       type === "movie" || type === "tv" ? { type } : {};
 
-    // Aggregation: only items releasing between now and one month ahead
+    const sortPopExpr =
+      type === "movie"
+        ? {
+            $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
+          }
+        : type === "tv"
+          ? mongoMixedTvCatalogPopularityExpr()
+          : mongoCatalogPopularitySortExpr();
+
+    // Popular titles first, then soonest release (TMDB-style popularity on movies/TV)
     const cursor = contentCollection.aggregate([
       {
         $addFields: {
           sortDate: {
             $ifNull: ["$release_date", "$first_air_date"],
           },
+          sortPop: sortPopExpr,
         },
       },
       {
@@ -43,9 +57,8 @@ export async function GET(req) {
           },
         },
       },
-      { $sort: { sortDate: 1 } }, // soonest releases first
-      { $limit: 120 },
-      { $sample: { size: sampleSize } },
+      { $sort: { sortPop: -1, sortDate: 1 } },
+      { $limit: limit },
     ]);
 
     const results = await cursor.toArray();
@@ -59,6 +72,6 @@ export async function GET(req) {
     });
   } catch (err) {
     console.error(err);
-    return Response.json({ error: "Failed to fetch random content" }, { status: 500 });
+    return Response.json({ error: "Failed to fetch upcoming content" }, { status: 500 });
   }
 }
