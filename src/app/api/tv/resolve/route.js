@@ -7,6 +7,16 @@ function normalizeDate(dateValue) {
   return dateValue.toISOString?.().split("T")[0] ?? null;
 }
 
+function pickNumericAnilistId(doc) {
+  const raw = doc?.anilist_id ?? doc?.anilist?.id;
+  if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) return raw;
+  if (typeof raw === "string") {
+    const n = parseInt(raw, 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
 function normalizeFallback(doc) {
   return {
     id: doc.id,
@@ -31,7 +41,7 @@ function normalizeFallback(doc) {
       typeof doc.number_of_episodes === "number" ? doc.number_of_episodes : null,
     seasons: [],
     is_anime: Boolean(doc.is_anime || (Array.isArray(doc.tags) && doc.tags.includes("anime"))),
-    anilist_id: typeof doc.anilist_id === "number" ? doc.anilist_id : null,
+    anilist_id: pickNumericAnilistId(doc),
     anilist: doc.anilist && typeof doc.anilist === "object" ? doc.anilist : null,
     external_ids: doc.external_ids && typeof doc.external_ids === "object" ? doc.external_ids : null,
   };

@@ -13,6 +13,8 @@ export type HorizontalCatalogCardProps = {
   backdropPath?: string;
   /** Small label above title (e.g. Sequel, Prequel) */
   topNote?: string;
+  /** When set (e.g. external AniList URL), used instead of `/shows/` or `/movies/` */
+  href?: string;
 };
 
 const BASE = 'https://image.tmdb.org/t/p/';
@@ -33,11 +35,15 @@ export default function HorizontalCatalogCard({
   posterPath = '',
   backdropPath = '',
   topNote,
+  href: hrefProp,
 }: HorizontalCatalogCardProps) {
   const typeLower = String(type ?? '').toLowerCase();
   const isTv = typeLower === 'tv';
-  const label = isTv ? 'TV' : 'MOVIE';
-  const href = isTv ? `/shows/${id}` : `/movies/${id}`;
+  const href =
+    hrefProp?.trim() ||
+    (isTv ? `/shows/${id}` : `/movies/${id}`);
+  const isExternal = /^https?:\/\//i.test(href);
+  const label = isExternal ? 'WEB' : isTv ? 'TV' : 'MOVIE';
 
   const backdrop = backdropPath?.trim();
   const poster = posterPath?.trim();
@@ -56,6 +62,9 @@ export default function HorizontalCatalogCard({
       href={href}
       className="group block min-w-0 w-full"
       aria-label={`${title}, ${label}, ${year}`}
+      {...(isExternal
+        ? { target: "_blank", rel: "noopener noreferrer" }
+        : {})}
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-default-200 ring-1 ring-white/10">
         {src ? (

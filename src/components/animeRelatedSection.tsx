@@ -5,7 +5,7 @@ import { Chip } from "@heroui/react";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 
 type RelatedItem = {
-  catalogId: string;
+  catalogId: string | null;
   anilistId: number;
   title: string;
   year: string;
@@ -71,23 +71,34 @@ export default function AnimeRelatedSection({
         </Chip>
       </div>
       <p className="mb-4 text-xs text-default-500">
-        Sequels, prequels, and similar series in your catalog (separate seasons often
-        have their own entry).
+        Sequels, prequels, and similar titles from AniList. In-catalog tiles link to Teavie; others open
+        on AniList until you import them.
       </p>
       <ul className={gridClass}>
-        {items.map((item) => (
-          <li key={`${item.catalogId}-${item.anilistId}`} className="min-w-0">
-            <HorizontalCatalogCard
-              id={item.catalogId}
-              title={item.title}
-              year={item.year}
-              type="tv"
-              posterPath={item.posterPath || ""}
-              backdropPath=""
-              topNote={item.topNote}
-            />
-          </li>
-        ))}
+        {items.map((item) => {
+          const key = item.catalogId ?? `al-${item.anilistId}`;
+          const href = item.catalogId
+            ? undefined
+            : `https://anilist.co/anime/${item.anilistId}`;
+          return (
+            <li key={`${key}-${item.anilistId}`} className="min-w-0">
+              <HorizontalCatalogCard
+                id={item.catalogId ?? `al-${item.anilistId}`}
+                title={item.title}
+                year={item.year}
+                type="tv"
+                posterPath={item.posterPath || ""}
+                backdropPath=""
+                topNote={
+                  item.catalogId
+                    ? item.topNote
+                    : `${item.topNote} · not in catalog`
+                }
+                href={href}
+              />
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

@@ -47,6 +47,7 @@ interface Show {
   /** TMDB season layout: when set on anime, picker uses these counts and embed uses same S/E as the UI. */
   tmdb_playback_seasons?: Season[];
   anilist?: {
+    id?: number | null;
     siteUrl?: string | null;
     title?: {
       romaji?: string | null;
@@ -173,6 +174,7 @@ function mergeAnilistIntoShow(
   next.anilist_id = ani.id;
   next.anilist = {
     ...next.anilist,
+    id: ani.id,
     siteUrl: ani.siteUrl ?? next.anilist?.siteUrl ?? null,
     title: {
       romaji: ani.title?.romaji ?? next.anilist?.title?.romaji ?? null,
@@ -230,9 +232,13 @@ async function fetchAnilistAndMerge(
   const aid =
     typeof base.anilist_id === "number" && base.anilist_id > 0
       ? base.anilist_id
-      : typeof fallback?.anilist_id === "number" && fallback.anilist_id > 0
-        ? fallback.anilist_id
-        : null;
+      : typeof base.anilist?.id === "number" && base.anilist.id > 0
+        ? base.anilist.id
+        : typeof fallback?.anilist_id === "number" && fallback.anilist_id > 0
+          ? fallback.anilist_id
+          : typeof fallback?.anilist?.id === "number" && fallback.anilist.id > 0
+            ? fallback.anilist.id
+            : null;
   const malRaw =
     typeof base.mal_id === "number" && base.mal_id > 0
       ? base.mal_id
@@ -419,6 +425,12 @@ export default function ShowTemplate({ id }: { id: string }) {
           data.backdrop_path = fallbackShow.backdrop_path;
         }
         if (fallbackShow?.anilist_id != null) data.anilist_id = fallbackShow.anilist_id;
+        else if (
+          typeof fallbackShow?.anilist?.id === "number" &&
+          fallbackShow.anilist.id > 0
+        ) {
+          data.anilist_id = fallbackShow.anilist.id;
+        }
         if (fallbackShow?.anilist) data.anilist = fallbackShow.anilist;
         if (fallbackShow?.mal_id != null) data.mal_id = fallbackShow.mal_id;
         if (fallbackShow?.external_ids) {
@@ -430,9 +442,15 @@ export default function ShowTemplate({ id }: { id: string }) {
             ? tmdbSeasonsWithEpisodes(data.seasons as Season[])
             : undefined;
 
+        const fallbackAni =
+          typeof fallbackShow?.anilist_id === "number" && fallbackShow.anilist_id > 0
+            ? fallbackShow.anilist_id
+            : typeof fallbackShow?.anilist?.id === "number" && fallbackShow.anilist.id > 0
+              ? fallbackShow.anilist.id
+              : undefined;
         const forAni: Show = {
           ...data,
-          anilist_id: data.anilist_id ?? fallbackShow?.anilist_id ?? undefined,
+          anilist_id: data.anilist_id ?? fallbackAni ?? undefined,
           mal_id: data.mal_id ?? fallbackShow?.mal_id ?? undefined,
           external_ids: data.external_ids ?? fallbackShow?.external_ids ?? undefined,
         };
@@ -565,12 +583,17 @@ export default function ShowTemplate({ id }: { id: string }) {
     0
   );
   const resolvedIsNumeric = /^\d+$/.test(String(resolvedPlayerId));
-  const playerUsesAnilist =
-    Boolean(show?.is_anime) &&
-    typeof show?.anilist_id === "number" &&
-    show.anilist_id > 0 &&
-    !resolvedIsNumeric;
-  const playerUsesTmdb = resolvedIsNumeric;
+  /** Canonical AniList media id for this catalog row (top-level or nested). */
+  const effectiveAnilistId =
+    show &&
+    (typeof show.anilist_id === "number" && show.anilist_id > 0
+      ? show.anilist_id
+      : typeof show.anilist?.id === "number" && show.anilist.id > 0
+        ? show.anilist.id
+        : null);
+  // Always use AniList embed for anime when we have an id — TMDB id can be shared across different anime_* rows.
+  const playerUsesAnilist = Boolean(show?.is_anime) && effectiveAnilistId != null;
+  const playerUsesTmdb = !playerUsesAnilist && resolvedIsNumeric;
   /** TMDB /season/{n} air dates for capping the episode grid (season index matches TMDB for all TMDB playback). */
   const useTmdbSeasonAiringCap = Boolean(show && playerUsesTmdb);
   /** Per-season aired cap only when the grid is per-season (not the all-episodes flat list). */
@@ -616,7 +639,7 @@ export default function ShowTemplate({ id }: { id: string }) {
   const year = show?.first_air_date?.slice(0, 4) ?? "TBA";
   const aniListUrl =
     show?.anilist?.siteUrl ||
-    (show?.anilist_id ? `https://anilist.co/anime/${show.anilist_id}` : null);
+    (effectiveAnilistId ? `https://anilist.co/anime/${effectiveAnilistId}` : null);
   const displayVote = Number(show?.vote_average);
   const voteLabel = Number.isFinite(displayVote) ? displayVote.toFixed(1) : "—";
 
@@ -628,12 +651,12 @@ export default function ShowTemplate({ id }: { id: string }) {
       ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
       : 0;
   const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
+
   const showAnimeRelated =
     !loading &&
     show != null &&
     Boolean(show.is_anime) &&
-    typeof show.anilist_id === "number" &&
-    show.anilist_id > 0;
+    effectiveAnilistId != null;
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -692,10 +715,11 @@ export default function ShowTemplate({ id }: { id: string }) {
             </div>
           ) : (
             <ShowPlayer
+              key={id}
               server={server}
               source={playerUsesAnilist ? "anilist" : "tmdb"}
               videoId={playerUsesTmdb ? resolvedPlayerId : undefined}
-              anilistId={playerUsesAnilist ? show?.anilist_id ?? undefined : undefined}
+              anilistId={playerUsesAnilist ? effectiveAnilistId ?? undefined : undefined}
               absoluteEpisode={absoluteEpisodeForPlayer}
               animeMovie={animeMovieEmbed}
               season={selectedSeason}
@@ -704,8 +728,8 @@ export default function ShowTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        {showAnimeRelated && show.anilist_id ? (
-          <AnimeRelatedSection anilistId={show.anilist_id} />
+        {showAnimeRelated && effectiveAnilistId ? (
+          <AnimeRelatedSection anilistId={effectiveAnilistId} />
         ) : null}
 
         {/* ── Show Details ── */}
@@ -1040,7 +1064,7 @@ export default function ShowTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        {!loading && !showAnimeRelated && /^\d+$/.test(resolvedPlayerId) ? (
+        {!loading && /^\d+$/.test(resolvedPlayerId) ? (
           <YouMightLike mediaType="tv" id={resolvedPlayerId} />
         ) : null}
       </div>

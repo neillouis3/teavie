@@ -135,22 +135,41 @@ export async function GET(req) {
     const col = client.db("teavie").collection("content");
     const docs = await col
       .find(
-        { type: "tv", anilist_id: { $in: alIds } },
-        { projection: { id: 1, anilist_id: 1 } }
+        {
+          type: "tv",
+          $or: [{ anilist_id: { $in: alIds } }, { "anilist.id": { $in: alIds } }],
+        },
+        { projection: { id: 1, anilist_id: 1, anilist: 1 } }
       )
       .toArray();
 
+    function docAnilistKey(d) {
+      const a = d?.anilist_id;
+      if (typeof a === "number" && Number.isFinite(a) && a > 0) return a;
+      if (typeof a === "string") {
+        const n = parseInt(a, 10);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      const b = d?.anilist?.id;
+      if (typeof b === "number" && Number.isFinite(b) && b > 0) return b;
+      if (typeof b === "string") {
+        const n = parseInt(b, 10);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      return null;
+    }
+
     const byAni = new Map();
     for (const d of docs) {
-      if (typeof d.anilist_id === "number") {
-        byAni.set(d.anilist_id, d.id != null ? String(d.id) : null);
-      }
+      const k = docAnilistKey(d);
+      if (k == null || !alIds.includes(k)) continue;
+      if (d.id == null) continue;
+      if (!byAni.has(k)) byAni.set(k, String(d.id));
     }
 
     const items = [];
     for (const c of candidates) {
-      const catalogId = byAni.get(c.anilistId);
-      if (!catalogId) continue;
+      const catalogId = byAni.get(c.anilistId) ?? null;
       items.push({
         catalogId,
         anilistId: c.anilistId,
