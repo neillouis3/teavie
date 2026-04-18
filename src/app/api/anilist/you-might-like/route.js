@@ -26,7 +26,8 @@ function yearFromDoc(d) {
   return raw.slice(0, 4);
 }
 
-const YOU_MIGHT_LIKE_MAX = 8;
+const YOU_MIGHT_LIKE_MAX_DEFAULT = 8;
+const YOU_MIGHT_LIKE_MAX_CAP = 24;
 
 /**
  * Jikan **recommendations** order, **Teavie catalog only** (no external-only tiles).
@@ -39,6 +40,12 @@ export async function GET(req) {
     const malRaw = searchParams.get("idMal");
     const idMal = malRaw ? parseInt(malRaw, 10) : NaN;
     const useMal = Number.isFinite(idMal) && idMal > 0;
+    const limitRaw = searchParams.get("limit");
+    const parsedLimit = limitRaw ? parseInt(limitRaw, 10) : NaN;
+    const limit =
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, YOU_MIGHT_LIKE_MAX_CAP)
+        : YOU_MIGHT_LIKE_MAX_DEFAULT;
 
     if (!useMal) {
       return Response.json(
@@ -54,10 +61,7 @@ export async function GET(req) {
       includeRecommendations: true,
     });
 
-    const candidates = jikanPayloadsToCandidates(rootMal, null, jk.recsJson).slice(
-      0,
-      YOU_MIGHT_LIKE_MAX
-    );
+    const candidates = jikanPayloadsToCandidates(rootMal, null, jk.recsJson).slice(0, limit);
     if (candidates.length === 0) {
       return Response.json({ items: [] });
     }
@@ -87,7 +91,7 @@ export async function GET(req) {
           },
         }
       )
-      .limit(YOU_MIGHT_LIKE_MAX)
+      .limit(limit)
       .toArray();
 
     /** @type {Map<number, { catalogId: string }>} */

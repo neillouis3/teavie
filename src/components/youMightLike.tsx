@@ -54,6 +54,7 @@ export default function YouMightLike({
         if (typeof idMal === 'number' && Number.isFinite(idMal) && idMal > 0) {
           qs.set('idMal', String(idMal));
         }
+        qs.set('limit', String(maxItems));
         const res = await fetch(`/api/anilist/you-might-like?${qs.toString()}`, {
           signal: controller.signal,
         });
