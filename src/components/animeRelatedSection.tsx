@@ -9,6 +9,8 @@ type RelatedItem = {
   catalogType?: "movie" | "tv" | string | null;
   anilistId: number | null;
   malId?: number;
+  /** From Jikan when not in Teavie catalog (MAL `movie` vs `anime`). */
+  malKind?: "anime" | "movie";
   title: string;
   year: string;
   posterPath: string;
@@ -88,14 +90,17 @@ export default function AnimeRelatedSection({
         </Chip>
       </div>
       <p className="mb-4 text-xs text-default-500">
-        Franchise links from Jikan (MAL): sequel, prequel, parent when present; otherwise alternative
-        version or side story. Out of catalog opens AniList or MAL.
+        Franchise links from Jikan (MAL): sequel, prequel, parent story, alternative version, and
+        side story — TV and movie entries. Out of catalog opens AniList or MAL.
       </p>
       <ul className={gridClass}>
         {items.map((item) => {
           const key = item.catalogId ?? `al-${item.anilistId ?? "ext"}`;
+          const inCatalog = item.catalogId != null && item.catalogId !== "";
           const catalogKind =
             item.catalogType === "movie" ? "movie" : item.catalogType === "tv" ? "tv" : "tv";
+          const displayKind =
+            inCatalog ? catalogKind : item.malKind === "movie" ? "movie" : "tv";
           const href =
             item.catalogId != null && item.catalogId !== ""
               ? undefined
@@ -112,7 +117,7 @@ export default function AnimeRelatedSection({
                 id={item.catalogId ?? `al-${item.anilistId ?? "x"}`}
                 title={item.title}
                 year={item.year}
-                type={item.catalogId ? catalogKind : "tv"}
+                type={displayKind}
                 posterPath={item.posterPath || ""}
                 backdropPath=""
                 topNote={

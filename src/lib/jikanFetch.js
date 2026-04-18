@@ -81,7 +81,7 @@ export const FRANCHISE_RELATION_LABELS = new Set([
   "parent",
 ]);
 
-/** When strict set yields nothing (common on MAL), allow these anime relation types. */
+/** Franchise rail: chain links + same-work variants (always used together, not strict-then-loose). */
 export const FRANCHISE_RELATION_LABELS_LOOSE = new Set([
   ...FRANCHISE_RELATION_LABELS,
   "alternative version",
@@ -104,9 +104,16 @@ function normRelationLabel(s) {
     .toLowerCase();
 }
 
+/** MAL lists animated movies as `movie`; TV/specials as `anime`. Recommendations often omit `type`. */
+function isJikanAnimeOrMovieEntry(entry) {
+  const t = String(entry?.type || "").toLowerCase();
+  if (!t) return true;
+  return t === "anime" || t === "movie";
+}
+
 /**
- * Anime relation rows only (no Jikan recommendations). Prefer sequel/prequel/parent; if none,
- * include alternative version + side story so the rail is not empty on typical catalog titles.
+ * Franchise relation rows (no Jikan recommendations): sequel, prequel, parent, alternative version,
+ * side story — plus TV and **movie** entries from MAL.
  * @param {number} rootMal
  * @param {unknown} relationsJson
  */
@@ -115,9 +122,9 @@ export function pickFranchiseRelationCandidates(rootMal, relationsJson) {
     franchiseOnly: false,
     includeRecommendations: false,
   });
-  const strict = all.filter((c) => FRANCHISE_RELATION_LABELS.has(normRelationLabel(c.topNote)));
-  if (strict.length > 0) return strict;
-  return all.filter((c) => FRANCHISE_RELATION_LABELS_LOOSE.has(normRelationLabel(c.topNote)));
+  return all.filter((c) =>
+    FRANCHISE_RELATION_LABELS_LOOSE.has(normRelationLabel(c.topNote))
+  );
 }
 
 /**
@@ -133,7 +140,7 @@ export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload
     opts.includeRecommendations !== false && !franchiseOnly;
 
   const seen = new Set([rootMal]);
-  /** @type {Array<{ malId: number; topNote: string; title: string; year: string; posterPath: string }>} */
+  /** @type {Array<{ malId: number; topNote: string; title: string; year: string; posterPath: string; malKind: "anime" | "movie" }>} */
   const out = [];
 
   const dataRel =
@@ -149,10 +156,11 @@ export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload
       if (franchiseOnly && !isFranchiseRelationLabel(relation)) continue;
       const entries = Array.isArray(block?.entry) ? block.entry : [];
       for (const entry of entries) {
-        if (String(entry?.type || "").toLowerCase() !== "anime") continue;
+        if (!isJikanAnimeOrMovieEntry(entry)) continue;
         const malId = Number(entry?.mal_id);
         if (!Number.isFinite(malId) || malId <= 0 || seen.has(malId)) continue;
         seen.add(malId);
+        const malKind = String(entry?.type || "").toLowerCase() === "movie" ? "movie" : "anime";
         const title =
           typeof entry?.name === "string" && entry.name.trim()
             ? entry.name.trim()
@@ -163,6 +171,7 @@ export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload
           title,
           year: "—",
           posterPath: jikanPosterFromEntry(entry),
+          malKind,
         });
       }
     }
@@ -177,9 +186,11 @@ export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload
   if (Array.isArray(dataRec)) {
     for (const row of dataRec) {
       const entry = row?.entry;
+      if (!isJikanAnimeOrMovieEntry(entry)) continue;
       const malId = Number(entry?.mal_id);
       if (!Number.isFinite(malId) || malId <= 0 || seen.has(malId)) continue;
       seen.add(malId);
+      const malKind = String(entry?.type || "").toLowerCase() === "movie" ? "movie" : "anime";
       const title =
         typeof entry?.title === "string" && entry.title.trim()
           ? entry.title.trim()
@@ -192,6 +203,7 @@ export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload
         title,
         year: "—",
         posterPath: jikanPosterFromEntry(entry),
+        malKind,
       });
     }
   }

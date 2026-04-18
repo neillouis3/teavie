@@ -36,9 +36,9 @@ function malUrlForAnime(malId) {
 }
 
 /**
- * Related in franchise: **Jikan** MAL anime relations — sequel / prequel / parent first; if none,
- * alternative version + side story (still no recommendations). Out-of-catalog: AniList when
- * resolved, else MAL.
+ * Related in franchise: **Jikan** MAL relations — sequel, prequel, parent story, alternative version,
+ * side story (no recommendations). Includes **anime** and **movie** entries. Out-of-catalog: AniList
+ * when resolved, else MAL.
  *
  * GET `?idMal=` (MAL id) required for Jikan. `anilistId` is ignored for the Jikan root (no AniList idMal lookup).
  * Optional `?debug=1` for `meta`.
@@ -134,7 +134,7 @@ export async function GET(req) {
       pauseMs: 100,
     });
 
-    /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; malId: number; title: string; year: string; posterPath: string; topNote: string; externalUrl?: string | null }>} */
+    /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; malId: number; malKind: "anime" | "movie"; title: string; year: string; posterPath: string; topNote: string; externalUrl?: string | null }>} */
     const items = [];
 
     for (const c of candidates) {
@@ -163,11 +163,13 @@ export async function GET(req) {
           anilistNumeric != null ? anilistUrlForAnime(anilistNumeric) : malUrlForAnime(c.malId);
       }
 
+      const malKind = c.malKind === "movie" ? "movie" : "anime";
       items.push({
         catalogId: row?.catalogId ?? null,
         catalogType: row?.catalogType ?? null,
         anilistId: anilistNumeric,
         malId: c.malId,
+        malKind,
         title,
         year,
         posterPath,
