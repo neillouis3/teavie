@@ -33,6 +33,7 @@ export default function NewViewer({ newContent }: NewViewerProps) {
               type={item.type || "movie"}
               runtimeSeconds={item.runtimeSeconds ?? undefined}
               seasonAmount={item.season_amount ?? 0}
+              numberOfEpisodes={item.number_of_episodes ?? undefined}
               posterPath={item.poster_path || ""}
             />
           );

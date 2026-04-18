@@ -64,6 +64,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
                   releaseDate={releaseIso}
                   runtimeSeconds={item.runtimeSeconds}
                   seasonAmount={item.season_amount ?? 0}
+                  numberOfEpisodes={item.number_of_episodes ?? undefined}
                   type={item.type ?? "movie"}
                   posterPath={item.poster_path}
                   backdropPath={item.backdrop_path}

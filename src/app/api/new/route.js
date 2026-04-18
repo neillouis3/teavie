@@ -1,5 +1,6 @@
 import clientPromise from "@/lib/mongo";
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
+import { tvEpisodeCountFromDoc } from "@/lib/mapContentDocToItem";
 
 export async function GET(req) {
   try {
@@ -65,6 +66,7 @@ export async function GET(req) {
           release_date,
           runtimeSeconds: doc.runtimeSeconds ?? null,
           season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
+          number_of_episodes: tvEpisodeCountFromDoc(doc),
           popularity: catalogPopularityScore(doc),
           genre_ids: doc.genre_ids ?? [],
           poster_path: doc.poster_path ?? null,

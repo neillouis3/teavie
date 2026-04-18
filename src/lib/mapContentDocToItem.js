@@ -3,6 +3,18 @@
  */
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
 
+/** Exported for API mappers (new, etc.). */
+export function tvEpisodeCountFromDoc(doc) {
+  if (doc.type !== "tv") return null;
+  const n = doc.number_of_episodes;
+  if (typeof n === "number" && n > 0) return n;
+  if (String(doc.id ?? "").startsWith("anime_")) {
+    const s = doc.season_amount;
+    if (typeof s === "number" && s > 0) return s;
+  }
+  return null;
+}
+
 export function mapContentDocToItem(doc) {
   const rawDate =
     doc.release_date ??
@@ -33,6 +45,7 @@ export function mapContentDocToItem(doc) {
       doc.type === "tv"
         ? doc.season_amount ?? doc.number_of_seasons ?? 0
         : 0,
+    number_of_episodes: tvEpisodeCountFromDoc(doc),
     popularity: catalogPopularityScore(
       doc,
       isAnimeRow ? { anime: true } : undefined

@@ -10,6 +10,8 @@ interface SmallCardProps {
   releaseNote?: string;
   runtimeSeconds?: number;
   seasonAmount: number;
+  /** When set, TV tiles show episode count instead of seasons only. */
+  numberOfEpisodes?: number | null;
   type: string;
   posterPath: string;
 }
@@ -21,6 +23,7 @@ export default function SmallCard({
   releaseNote,
   runtimeSeconds,
   seasonAmount,
+  numberOfEpisodes,
   type,
   posterPath,
 }: SmallCardProps) {
@@ -69,9 +72,16 @@ export default function SmallCard({
           </div>
           <p className="flex-1 truncate text-end text-xs">
             {typeLower === 'tv'
-              ? seasonAmount != null && seasonAmount > 0
-                ? `SS ${seasonAmount}`
-                : '—'
+              ? (() => {
+                  const eps =
+                    typeof numberOfEpisodes === "number" && numberOfEpisodes > 0
+                      ? numberOfEpisodes
+                      : null;
+                  if (eps != null) return `${eps} ep${eps === 1 ? "" : "s"}`;
+                  if (seasonAmount != null && seasonAmount > 0)
+                    return `${seasonAmount} season${seasonAmount === 1 ? "" : "s"}`;
+                  return "—";
+                })()
               : typeLower === 'movie'
                 ? runtimeMin != null
                   ? `${runtimeMin} min`

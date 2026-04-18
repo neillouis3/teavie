@@ -53,6 +53,7 @@ const AllShowsViewer: React.FC<AllShowsViewerProps> = ({ allContentData }) => {
             type={type}
             runtimeSeconds={item.runtimeSeconds ?? undefined}
             seasonAmount={item.season_amount ?? 0}
+            numberOfEpisodes={item.number_of_episodes ?? undefined}
             posterPath={poster}
           />
         );

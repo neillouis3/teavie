@@ -26,6 +26,7 @@ const UpdatedViewer: React.FC<UpdatedViewerProps> = ({ updatedContent }) => {
               type={movie.type || ''}
               runtimeSeconds={movie.runtimeSeconds}
               seasonAmount={movie.season_amount || 0}
+              numberOfEpisodes={movie.number_of_episodes ?? undefined}
               id={movie.id}
               backDropPath={movie.backdrop_path || ''}
             />

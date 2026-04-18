@@ -10,6 +10,7 @@ interface SimilarCardProps {
   type: "movie" | "tv" | string;
   runtimeSeconds?: number;
   seasonAmount?: number;
+  numberOfEpisodes?: number | null;
   id: number | string;
   backDropPath?: string;
 }
@@ -20,6 +21,7 @@ export default function SimilarCard({
   type,
   runtimeSeconds,
   seasonAmount,
+  numberOfEpisodes,
   id,
   backDropPath,
 }: SimilarCardProps) {
@@ -48,7 +50,19 @@ export default function SimilarCard({
           <div className="h-fit">
             <h1 className="text-gray-500 group-hover:text-main text-xs">
                 {type === 'tv'
-                ? `TV Show / ${year} / SS ${seasonAmount ?? "-"}`
+                ? (() => {
+                    const eps =
+                      typeof numberOfEpisodes === "number" && numberOfEpisodes > 0
+                        ? numberOfEpisodes
+                        : null;
+                    const meta =
+                      eps != null
+                        ? `${eps} ep${eps === 1 ? "" : "s"}`
+                        : seasonAmount != null && seasonAmount > 0
+                          ? `${seasonAmount} season${seasonAmount === 1 ? "" : "s"}`
+                          : "—";
+                    return `TV Show / ${year} / ${meta}`;
+                  })()
                 : `Movie / ${year} / ${runtimeMin ?? "-"} min`}
             </h1>
 

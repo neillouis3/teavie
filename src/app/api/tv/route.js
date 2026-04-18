@@ -72,12 +72,17 @@ export async function GET(req) {
               : typeof rawDate === "string"
                 ? rawDate
                 : rawDate.toISOString?.().split("T")[0] ?? null;
+          const ep =
+            typeof doc.number_of_episodes === "number" && doc.number_of_episodes > 0
+              ? doc.number_of_episodes
+              : null;
           return {
             id: doc.id.toString(),
             title: doc.title ?? doc.name,
             release_date,
             runtimeSeconds: doc.runtimeSeconds ?? null,
             season_amount: doc.season_amount ?? doc.number_of_seasons ?? null,
+            number_of_episodes: ep,
             popularity: catalogPopularityScore(doc),
             vote_average: doc.vote_average ?? null,
             genre_ids: doc.genre_ids ?? [],

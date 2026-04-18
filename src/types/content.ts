@@ -11,6 +11,8 @@ export interface ContentItem {
   type?: 'movie' | 'tv';
   runtimeSeconds?: number;
   season_amount?: number;
+  /** Total episodes when known (TV / anime). */
+  number_of_episodes?: number | null;
   vote_average?: number | null;
 }
   
