@@ -84,6 +84,40 @@ function toGenres(anime) {
     .filter(Boolean);
 }
 
+const MAX_TITLE_ALIASES = 64;
+
+/** All known title strings for search (JP/EN/romaji/synonyms). */
+function buildTitleAliases(anime, anilist) {
+  const set = new Set();
+  const add = (s) => {
+    const t = pickString(s);
+    if (t) set.add(t);
+  };
+  add(anime?.title);
+  add(anime?.title_english);
+  add(anime?.title_japanese);
+  if (anilist && typeof anilist === "object") {
+    add(anilist?.title?.romaji);
+    add(anilist?.title?.english);
+    add(anilist?.title?.native);
+    for (const s of pickArrayStrings(anilist?.synonyms)) add(s);
+  }
+  return [...set].slice(0, MAX_TITLE_ALIASES);
+}
+
+/** Prefer English / Latin title for cards; keep Japanese in `title_aliases`. */
+function preferredAnimeDisplayTitle(anime, anilist, malId) {
+  return (
+    pickString(anilist?.title?.english) ||
+    pickString(anime?.title_english) ||
+    pickString(anime?.title) ||
+    pickString(anilist?.title?.romaji) ||
+    pickString(anime?.title_japanese) ||
+    pickString(anilist?.title?.native) ||
+    `Anime ${malId}`
+  );
+}
+
 async function fetchJsonWithTimeout(url, init = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -259,14 +293,8 @@ function mapAnimeToTvDoc(anime, anilist) {
   const runtimeSeconds =
     parseRuntimeSeconds(anime.duration) ||
     (Number.isFinite(Number(anilist?.duration)) ? Number(anilist.duration) * 60 : null);
-  const title =
-    anime.title ||
-    anime.title_english ||
-    anime.title_japanese ||
-    pickString(anilist?.title?.english) ||
-    pickString(anilist?.title?.romaji) ||
-    pickString(anilist?.title?.native) ||
-    `Anime ${malId}`;
+  const title = preferredAnimeDisplayTitle(anime, anilist, malId);
+  const title_aliases = buildTitleAliases(anime, anilist);
   const anilistGenres = pickArrayStrings(anilist?.genres);
 
   return {
@@ -282,6 +310,7 @@ function mapAnimeToTvDoc(anime, anilist) {
     tags: dedupedTags,
     title,
     name: title,
+    title_aliases,
     release_date: null,
     first_air_date: firstDate(anime.aired),
     poster_path: poster,

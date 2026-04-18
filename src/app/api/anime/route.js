@@ -65,6 +65,7 @@ export async function GET(req) {
     const base = buildCatalogFilter(searchParams, {
       type: "tv",
       dateField: "first_air_date",
+      animeMultilingualTitleSearch: true,
     });
 
     const includeUnreleased = searchParams.get("include_unreleased") === "1";

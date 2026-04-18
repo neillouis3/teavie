@@ -7,6 +7,7 @@
 
 import clientPromise from "@/lib/mongo";
 import {
+  animeTitleSearchConditions,
   catalogAnimeIdMongoExpr,
   catalogTodayIsoUtc,
   escapeRegex,
@@ -48,6 +49,7 @@ export async function GET(req) {
         { name: { $regex: safe, $options: "i" } },
       ],
     };
+    const animeTitleOr = { $or: animeTitleSearchConditions(safe) };
 
     const todayIso = catalogTodayIsoUtc();
     const includeUnreleased = searchParams.get("include_unreleased") === "1";
@@ -62,12 +64,12 @@ export async function GET(req) {
     const tvAnimeReleased = includeUnreleased ? {} : releasedAnimeFirstAirClause(todayIso);
     const tvAnimeBranch = includeUnreleased
       ? {
-          $and: [{ type: "tv" }, titleNameOr, catalogAnimeIdMongoExpr()],
+          $and: [{ type: "tv" }, animeTitleOr, catalogAnimeIdMongoExpr()],
         }
       : {
           $and: [
             { type: "tv" },
-            titleNameOr,
+            animeTitleOr,
             catalogAnimeIdMongoExpr(),
             tvAnimeReleased,
           ],

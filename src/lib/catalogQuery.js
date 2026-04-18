@@ -48,6 +48,23 @@ export function escapeRegex(str) {
 }
 
 /**
+ * Title/name match for anime catalog rows: primary fields + `title_aliases` + nested AniList titles/synonyms.
+ * @param {string} safe - output of `escapeRegex(q)`
+ * @returns {Record<string, unknown>[]} conditions for use inside `$or`
+ */
+export function animeTitleSearchConditions(safe) {
+  return [
+    { title: { $regex: safe, $options: "i" } },
+    { name: { $regex: safe, $options: "i" } },
+    { title_aliases: { $regex: safe, $options: "i" } },
+    { "anilist.title.romaji": { $regex: safe, $options: "i" } },
+    { "anilist.title.english": { $regex: safe, $options: "i" } },
+    { "anilist.title.native": { $regex: safe, $options: "i" } },
+    { "anilist.synonyms": { $regex: safe, $options: "i" } },
+  ];
+}
+
+/**
  * Anime browse/search only includes rows from the anime import (`anime_{id}`).
  * @returns {Record<string, unknown>} use inside `$and` for `find` / `$match`.
  */
@@ -64,9 +81,12 @@ export function catalogAnimeIdMongoExpr() {
 
 /**
  * @param {URLSearchParams} searchParams
- * @param {{ type: "movie" | "tv"; dateField: string }} opts
+ * @param {{ type: "movie" | "tv"; dateField: string; animeMultilingualTitleSearch?: boolean }} opts
  */
-export function buildCatalogFilter(searchParams, { type, dateField }) {
+export function buildCatalogFilter(
+  searchParams,
+  { type, dateField, animeMultilingualTitleSearch = false }
+) {
   /** @type {Record<string, unknown>} */
   const filter = { type };
 
@@ -88,10 +108,12 @@ export function buildCatalogFilter(searchParams, { type, dateField }) {
   const q = searchParams.get("q")?.trim();
   if (q && q.length > 0) {
     const safe = escapeRegex(q);
-    filter.$or = [
-      { title: { $regex: safe, $options: "i" } },
-      { name: { $regex: safe, $options: "i" } },
-    ];
+    filter.$or = animeMultilingualTitleSearch
+      ? animeTitleSearchConditions(safe)
+      : [
+          { title: { $regex: safe, $options: "i" } },
+          { name: { $regex: safe, $options: "i" } },
+        ];
   }
 
   return filter;
