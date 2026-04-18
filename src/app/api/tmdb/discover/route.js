@@ -10,8 +10,12 @@ import { tmdbBearerToken } from "@/lib/tmdbAuth";
 /**
  * Pull enough TMDB-ordered rows so UI can render 14 in vertical mode
  * after catalog matching / dedupe.
+ *
+ * We fetch multiple TMDB pages because many TMDB ids may not exist
+ * in the Teavie catalog yet (or are stored under `anime_*` etc).
  */
-const LIMIT = 20;
+const LIMIT = 20; // max items we return per rail
+const SOURCE_PAGES = 3; // TMDB pages to pull per endpoint (20 * pages)
 
 function uniquePositiveIds(rows) {
   const ids = (rows || [])
@@ -21,8 +25,8 @@ function uniquePositiveIds(rows) {
 }
 
 async function movieItemsFromTmdbOrder(col, tmdbRows) {
-  const slice = (tmdbRows || []).slice(0, LIMIT);
-  const ids = uniquePositiveIds(slice);
+  const ordered = Array.isArray(tmdbRows) ? tmdbRows : [];
+  const ids = uniquePositiveIds(ordered);
   if (ids.length === 0) return [];
 
   const variants = [...ids, ...ids.map(String)];
@@ -36,7 +40,7 @@ async function movieItemsFromTmdbOrder(col, tmdbRows) {
     byKey.set(String(d.id), d);
   }
 
-  return slice
+  return ordered
     .map((r) => byKey.get(r.id) ?? byKey.get(String(r.id)))
     .filter(Boolean)
     .map(mapContentDocToItem);
@@ -74,8 +78,8 @@ function buildTvTmdbLookupMap(docs) {
 }
 
 async function tvItemsFromTmdbOrder(col, tmdbRows) {
-  const slice = (tmdbRows || []).slice(0, LIMIT);
-  const ids = uniquePositiveIds(slice);
+  const ordered = Array.isArray(tmdbRows) ? tmdbRows : [];
+  const ids = uniquePositiveIds(ordered);
   if (ids.length === 0) return [];
 
   const idVariants = [...ids, ...ids.map(String)];
@@ -91,10 +95,29 @@ async function tvItemsFromTmdbOrder(col, tmdbRows) {
     .toArray();
 
   const byTmdb = buildTvTmdbLookupMap(docs);
-  return slice
+  return ordered
     .map((r) => byTmdb.get(Number(r.id)))
     .filter(Boolean)
     .map(mapContentDocToItem);
+}
+
+async function fetchTmdbPaged(url, headers) {
+  const out = [];
+  for (let p = 1; p <= SOURCE_PAGES; p += 1) {
+    const u = url.includes("?") ? `${url}&page=${p}` : `${url}?page=${p}`;
+    const res = await fetch(u, { headers, next: { revalidate: 3600 } });
+    if (!res.ok) break;
+    const json = await res.json().catch(() => null);
+    const rows = json && typeof json === "object" ? json.results : null;
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    out.push(...rows);
+    if (rows.length < 20) break;
+  }
+  return out;
+}
+
+function capOrdered(items, cap = LIMIT) {
+  return (items ?? []).slice(0, cap);
 }
 
 export async function GET() {
@@ -122,55 +145,41 @@ export async function GET() {
       Authorization: `Bearer ${token}`,
     };
 
-    const [tMovieRes, tTvRes, pMovieRes, pTvRes] = await Promise.all([
-      fetch(
+    const [tMovieRows, tTvRows, pMovieRows, pTvRows] = await Promise.all([
+      fetchTmdbPaged(
         "https://api.themoviedb.org/3/trending/movie/week?language=en-US",
-        { headers, next: { revalidate: 3600 } }
+        headers
       ),
-      fetch(
+      fetchTmdbPaged(
         "https://api.themoviedb.org/3/trending/tv/week?language=en-US",
-        { headers, next: { revalidate: 3600 } }
+        headers
       ),
-      fetch(
-        "https://api.themoviedb.org/3/movie/popular?language=en-US&page=1",
-        { headers, next: { revalidate: 3600 } }
+      fetchTmdbPaged(
+        "https://api.themoviedb.org/3/movie/popular?language=en-US",
+        headers
       ),
-      fetch("https://api.themoviedb.org/3/tv/popular?language=en-US&page=1", {
-        headers,
-        next: { revalidate: 3600 },
-      }),
-    ]);
-
-    if (!tMovieRes.ok || !tTvRes.ok || !pMovieRes.ok || !pTvRes.ok) {
-      return Response.json(
-        { error: "One or more TMDB discover requests failed", ...empty },
-        { status: 502 }
-      );
-    }
-
-    const [tMovieJson, tTvJson, pMovieJson, pTvJson] = await Promise.all([
-      tMovieRes.json(),
-      tTvRes.json(),
-      pMovieRes.json(),
-      pTvRes.json(),
+      fetchTmdbPaged(
+        "https://api.themoviedb.org/3/tv/popular?language=en-US",
+        headers
+      ),
     ]);
 
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
 
-    const [trendingMovies, trendingTv, popularMovies, popularTv] =
+    const [trendingMoviesAll, trendingTvAll, popularMoviesAll, popularTvAll] =
       await Promise.all([
-        movieItemsFromTmdbOrder(col, tMovieJson.results || []),
-        tvItemsFromTmdbOrder(col, tTvJson.results || []),
-        movieItemsFromTmdbOrder(col, pMovieJson.results || []),
-        tvItemsFromTmdbOrder(col, pTvJson.results || []),
+        movieItemsFromTmdbOrder(col, tMovieRows),
+        tvItemsFromTmdbOrder(col, tTvRows),
+        movieItemsFromTmdbOrder(col, pMovieRows),
+        tvItemsFromTmdbOrder(col, pTvRows),
       ]);
 
     return Response.json({
-      trendingMovies,
-      trendingTv,
-      popularMovies,
-      popularTv,
+      trendingMovies: capOrdered(trendingMoviesAll),
+      trendingTv: capOrdered(trendingTvAll),
+      popularMovies: capOrdered(popularMoviesAll),
+      popularTv: capOrdered(popularTvAll),
     });
   } catch (err) {
     console.error(err);
