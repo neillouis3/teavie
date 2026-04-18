@@ -73,13 +73,36 @@ export async function jikanFetchRelationsAndRecommendations(rootMal, opts = {}) 
   };
 }
 
+/** Jikan / MAL relation labels for same-franchise chain (not adaptations, summaries, etc.). */
+const FRANCHISE_RELATION_LABELS = new Set([
+  "sequel",
+  "prequel",
+  "parent story",
+  "parent",
+]);
+
 /**
- * Jikan relations + recommendations → unique anime rows (MAL id, note, title, poster).
+ * @param {string} relation raw label from Jikan
+ */
+export function isFranchiseRelationLabel(relation) {
+  const r = String(relation || "")
+    .trim()
+    .toLowerCase();
+  return FRANCHISE_RELATION_LABELS.has(r);
+}
+
+/**
+ * Jikan relations (+ optional recommendations) → unique anime rows (MAL id, note, title, poster).
  * @param {number} rootMal
  * @param {unknown} relationsPayload
  * @param {unknown} recsPayload
+ * @param {{ franchiseOnly?: boolean; includeRecommendations?: boolean }} [opts]
  */
-export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload) {
+export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload, opts = {}) {
+  const franchiseOnly = opts.franchiseOnly === true;
+  const includeRecommendations =
+    opts.includeRecommendations !== false && !franchiseOnly;
+
   const seen = new Set([rootMal]);
   /** @type {Array<{ malId: number; topNote: string; title: string; year: string; posterPath: string }>} */
   const out = [];
@@ -94,6 +117,7 @@ export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload
         typeof block?.relation === "string" && block.relation.trim()
           ? block.relation.trim()
           : "Related";
+      if (franchiseOnly && !isFranchiseRelationLabel(relation)) continue;
       const entries = Array.isArray(block?.entry) ? block.entry : [];
       for (const entry of entries) {
         if (String(entry?.type || "").toLowerCase() !== "anime") continue;
@@ -114,6 +138,8 @@ export function jikanPayloadsToCandidates(rootMal, relationsPayload, recsPayload
       }
     }
   }
+
+  if (!includeRecommendations) return out;
 
   const dataRec =
     recsPayload && typeof recsPayload === "object" && "data" in recsPayload

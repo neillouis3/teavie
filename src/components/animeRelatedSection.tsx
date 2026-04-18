@@ -87,8 +87,8 @@ export default function AnimeRelatedSection({
         </Chip>
       </div>
       <p className="mb-4 text-xs text-default-500">
-        Relations and recommendations from Jikan (MAL); Teavie catalog matches play here, others open
-        on AniList when we can resolve the id from MAL.
+        Sequel, prequel, and parent story links from Jikan (MAL). In-catalog tiles open on Teavie;
+        others on AniList when the id resolves from MAL.
       </p>
       <ul className={gridClass}>
         {items.map((item) => {

@@ -32,8 +32,8 @@ function anilistUrlForAnime(anilistId) {
 }
 
 /**
- * Related anime: **Jikan** (MAL relations + recommendations), then Mongo + AniList `idMal` → id
- * so tiles prefer Teavie catalog links and otherwise open **AniList** by numeric id.
+ * Related in franchise: **Jikan** MAL relations only **Sequel / Prequel / Parent story** (no recs,
+ * no adaptations). Mongo + optional AniList id for out-of-catalog links.
  *
  * GET `?idMal=` (MAL id) required for Jikan. `anilistId` is ignored for the Jikan root (no AniList idMal lookup).
  * Optional `?debug=1` for `meta`.
@@ -63,11 +63,15 @@ export async function GET(req) {
       candidateCount: 0,
     };
 
-    const jk = await jikanFetchRelationsAndRecommendations(rootMal);
+    const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
+      includeRecommendations: false,
+    });
     meta.jikanRelationsStatus = jk.relationsStatus;
     meta.jikanRecsStatus = jk.recsStatus;
 
-    const candidates = jikanPayloadsToCandidates(rootMal, jk.relationsJson, jk.recsJson);
+    const candidates = jikanPayloadsToCandidates(rootMal, jk.relationsJson, null, {
+      franchiseOnly: true,
+    });
     meta.candidateCount = candidates.length;
 
     if (candidates.length === 0) {
