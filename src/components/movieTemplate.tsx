@@ -30,6 +30,18 @@ function isReleasedByDate(releaseDate: string | undefined | null): boolean {
   return ymd <= new Date().toISOString().slice(0, 10);
 }
 
+/** TMDB sometimes lists stray co-prod codes; hide from the Country row. */
+const HIDDEN_ORIGIN_COUNTRY_CODES = new Set(["FR", "CL"]);
+
+function formatOriginCountriesForDisplay(
+  countries: string[] | undefined
+): string {
+  const list = (countries ?? []).filter(
+    (c) => !HIDDEN_ORIGIN_COUNTRY_CODES.has(String(c).toUpperCase())
+  );
+  return list.length > 0 ? list.join(", ") : "N/A";
+}
+
 export default function MovieTemplate({ id }: { id: string }) {
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
@@ -199,7 +211,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                         <div>
                           <dt className="text-default-500 font-medium">Country</dt>
                           <dd className="text-foreground mt-0.5">
-                            {movie.origin_country?.join(", ") || "N/A"}
+                            {formatOriginCountriesForDisplay(movie.origin_country)}
                           </dd>
                         </div>
                         <div>
