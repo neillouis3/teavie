@@ -12,31 +12,38 @@ type RelatedItem = {
   year: string;
   posterPath: string;
   topNote: string;
+  externalUrl?: string | null;
 };
 
 export default function AnimeRelatedSection({
   anilistId,
   tmdbTvId,
 }: {
-  anilistId: number;
+  anilistId?: number | null;
   tmdbTvId?: number | null;
 }) {
   const [items, setItems] = useState<RelatedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!Number.isFinite(anilistId) || anilistId <= 0) {
+    const hasAl = typeof anilistId === "number" && Number.isFinite(anilistId) && anilistId > 0;
+    const hasTmdb =
+      tmdbTvId != null && typeof tmdbTvId === "number" && Number.isFinite(tmdbTvId) && tmdbTvId > 0;
+    if (!hasAl && !hasTmdb) {
       setLoading(false);
+      setItems([]);
       return;
     }
     const controller = new AbortController();
     setLoading(true);
-    const qs = new URLSearchParams({ anilistId: String(anilistId) });
-    if (tmdbTvId != null && Number.isFinite(tmdbTvId) && tmdbTvId > 0) {
-      qs.set("tmdbTvId", String(tmdbTvId));
-    }
+    const qs = new URLSearchParams();
+    if (hasAl) qs.set("anilistId", String(anilistId));
+    if (hasTmdb) qs.set("tmdbTvId", String(tmdbTvId));
     fetch(`/api/anilist/related?${qs.toString()}`, { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : { items: [] }))
+      .then(async (res) => {
+        const data = res.ok ? await res.json() : { items: [] };
+        return data;
+      })
       .then((data) => setItems(Array.isArray(data.items) ? data.items : []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
@@ -89,9 +96,11 @@ export default function AnimeRelatedSection({
           const href =
             item.catalogId != null && item.catalogId !== ""
               ? undefined
-              : item.anilistId != null
-                ? `https://anilist.co/anime/${item.anilistId}`
-                : undefined;
+              : typeof item.externalUrl === "string" && item.externalUrl.length > 0
+                ? item.externalUrl
+                : item.anilistId != null
+                  ? `https://anilist.co/anime/${item.anilistId}`
+                  : undefined;
           return (
             <li key={`${key}-${item.anilistId ?? "na"}`} className="min-w-0">
               <HorizontalCatalogCard

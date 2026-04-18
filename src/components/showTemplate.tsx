@@ -88,7 +88,14 @@ function catalogTmdbTvId(show: Show | null | undefined): number | null {
         : null);
   const t =
     typeof raw === "number" ? raw : typeof raw === "string" ? parseInt(raw, 10) : NaN;
-  return Number.isFinite(t) && t > 0 ? t : null;
+  if (Number.isFinite(t) && t > 0) return t;
+  /** TMDB detail payloads use numeric `id` as the TV id; catalog anime uses `anime_*`. */
+  const idStr = String(show.id ?? "");
+  if (!idStr.startsWith("anime_") && /^\d+$/.test(idStr)) {
+    const n = parseInt(idStr, 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
 }
 
 type AnilistMediaPayload = {
@@ -670,9 +677,6 @@ export default function ShowTemplate({ id }: { id: string }) {
       : 0;
   const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
 
-  const showAnimeRelated =
-    !loading && show != null && Boolean(show.is_anime) && aniId != null;
-
   const tmdbTvIdForRelated = (() => {
     const fromDoc = catalogTmdbTvId(show);
     if (fromDoc != null) return fromDoc;
@@ -682,6 +686,12 @@ export default function ShowTemplate({ id }: { id: string }) {
     }
     return null;
   })();
+
+  const showAnimeRelated =
+    !loading &&
+    show != null &&
+    Boolean(show.is_anime) &&
+    (aniId != null || tmdbTvIdForRelated != null);
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -754,7 +764,10 @@ export default function ShowTemplate({ id }: { id: string }) {
         </div>
 
         {showAnimeRelated ? (
-          <AnimeRelatedSection anilistId={aniId!} tmdbTvId={tmdbTvIdForRelated} />
+          <AnimeRelatedSection
+            anilistId={aniId ?? undefined}
+            tmdbTvId={tmdbTvIdForRelated}
+          />
         ) : null}
 
         {/* ── Show Details ── */}
@@ -1090,7 +1103,11 @@ export default function ShowTemplate({ id }: { id: string }) {
         </div>
 
         {!loading && /^\d+$/.test(resolvedPlayerId) ? (
-          <YouMightLike mediaType="tv" id={resolvedPlayerId} />
+          <YouMightLike
+            mediaType="tv"
+            id={resolvedPlayerId}
+            isAnime={Boolean(show?.is_anime)}
+          />
         ) : null}
       </div>
     </div>

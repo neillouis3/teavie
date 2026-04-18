@@ -3,9 +3,10 @@ import { tmdbBearerToken } from "@/lib/tmdbAuth";
 
 const ANILIST_GRAPHQL = "https://graphql.anilist.co";
 
+/** No `type: ANIME` filter: some catalog ids resolve as plain `Media(id)`; relations still populate. */
 const QUERY = `
 query ($id: Int) {
-  Media(id: $id, type: ANIME) {
+  Media(id: $id) {
     id
     relations {
       edges {
@@ -15,18 +16,20 @@ query ($id: Int) {
           idMal
           type
           format
+          siteUrl
           title { romaji english native }
           coverImage { large }
           startDate { year month day }
         }
       }
     }
-    recommendations(perPage: 18, sort: RATING_DESC) {
+    recommendations(perPage: 24, sort: RATING_DESC) {
       nodes {
         id
         idMal
         type
         format
+        siteUrl
         title { romaji english native }
         coverImage { large }
         startDate { year month day }
@@ -59,6 +62,21 @@ function yearFromStart(d) {
 function pickMal(node) {
   const m = Number(node?.idMal);
   return Number.isFinite(m) && m > 0 ? m : null;
+}
+
+/** Related `Media` nodes only (skip empty / invalid ids). */
+function isRelatedMediaNode(node) {
+  if (!node || typeof node !== "object") return false;
+  const nid = Number(node.id);
+  return Number.isFinite(nid) && nid > 0;
+}
+
+function anilistExternalUrl(node, anilistId) {
+  const u = typeof node?.siteUrl === "string" ? node.siteUrl.trim() : "";
+  if (u) return u;
+  const t = String(node?.type || "").toUpperCase();
+  const slug = t === "MANGA" ? "manga" : "anime";
+  return `https://anilist.co/${slug}/${anilistId}`;
 }
 
 function docAnilistKey(d) {
@@ -195,86 +213,85 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const raw = searchParams.get("anilistId");
     const anilistId = raw ? parseInt(raw, 10) : NaN;
-    if (!Number.isFinite(anilistId) || anilistId <= 0) {
-      return Response.json({ error: "Provide anilistId" }, { status: 400 });
-    }
+    const anilistOk = Number.isFinite(anilistId) && anilistId > 0;
 
     const tmdbRaw = searchParams.get("tmdbTvId");
     const tmdbTvId = tmdbRaw ? parseInt(tmdbRaw, 10) : NaN;
     const tmdbTvOk = Number.isFinite(tmdbTvId) && tmdbTvId > 0;
 
-    const res = await fetch(ANILIST_GRAPHQL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ query: QUERY, variables: { id: anilistId } }),
-    });
-
-    if (!res.ok) {
-      return Response.json({ error: "AniList request failed" }, { status: 502 });
-    }
-
-    const payload = await res.json();
-    if (payload.errors?.length) {
-      return Response.json(
-        { error: payload.errors.map((e) => e.message).join("; ") },
-        { status: 404 }
-      );
-    }
-
-    const media = payload?.data?.Media;
-    if (!media) {
-      return Response.json({ error: "Media not found" }, { status: 404 });
-    }
-
-    const seen = new Set([anilistId]);
-    const candidates = [];
-
-    const edges = media.relations?.edges;
-    if (Array.isArray(edges)) {
-      for (const edge of edges) {
-        const node = edge?.node;
-        if (!node || node.type !== "ANIME") continue;
-        const nid = Number(node.id);
-        if (!Number.isFinite(nid) || seen.has(nid)) continue;
-        seen.add(nid);
-        candidates.push({
-          anilistId: nid,
-          malId: pickMal(node),
-          title: pickTitle(node),
-          year: yearFromStart(node.startDate),
-          posterPath: node.coverImage?.large || "",
-          topNote: formatRelationLabel(edge.relationType),
-        });
-      }
-    }
-
-    const recNodes = media.recommendations?.nodes;
-    if (Array.isArray(recNodes)) {
-      for (const node of recNodes) {
-        if (!node || node.type !== "ANIME") continue;
-        const nid = Number(node.id);
-        if (!Number.isFinite(nid) || seen.has(nid)) continue;
-        seen.add(nid);
-        candidates.push({
-          anilistId: nid,
-          malId: pickMal(node),
-          title: pickTitle(node),
-          year: yearFromStart(node.startDate),
-          posterPath: node.coverImage?.large || "",
-          topNote: "Similar",
-        });
-      }
+    if (!anilistOk && !tmdbTvOk) {
+      return Response.json({ error: "Provide anilistId and/or tmdbTvId" }, { status: 400 });
     }
 
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
     const token = tmdbBearerToken();
 
-    /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; title: string; year: string; posterPath: string; topNote: string }>} */
+    /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; title: string; year: string; posterPath: string; topNote: string; externalUrl?: string | null }>} */
     const items = [];
+
+    let media = null;
+    if (anilistOk) {
+      const res = await fetch(ANILIST_GRAPHQL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ query: QUERY, variables: { id: anilistId } }),
+      });
+
+      if (res.ok) {
+        const payload = await res.json();
+        if (!payload.errors?.length && payload?.data?.Media) {
+          media = payload.data.Media;
+        }
+      }
+    }
+
+    const seen = new Set(anilistOk ? [anilistId] : []);
+    const candidates = [];
+
+    if (media) {
+      const edges = media.relations?.edges;
+      if (Array.isArray(edges)) {
+        for (const edge of edges) {
+          const node = edge?.node;
+          if (!isRelatedMediaNode(node)) continue;
+          const nid = Number(node.id);
+          if (seen.has(nid)) continue;
+          seen.add(nid);
+          candidates.push({
+            anilistId: nid,
+            malId: pickMal(node),
+            title: pickTitle(node),
+            year: yearFromStart(node.startDate),
+            posterPath: node.coverImage?.large || "",
+            topNote: formatRelationLabel(edge.relationType),
+            externalUrl: anilistExternalUrl(node, nid),
+          });
+        }
+      }
+
+      const recNodes = media.recommendations?.nodes;
+      if (Array.isArray(recNodes)) {
+        for (const node of recNodes) {
+          if (!isRelatedMediaNode(node)) continue;
+          const nid = Number(node.id);
+          if (seen.has(nid)) continue;
+          seen.add(nid);
+          candidates.push({
+            anilistId: nid,
+            malId: pickMal(node),
+            title: pickTitle(node),
+            year: yearFromStart(node.startDate),
+            posterPath: node.coverImage?.large || "",
+            topNote: "Similar",
+            externalUrl: anilistExternalUrl(node, nid),
+          });
+        }
+      }
+    }
 
     if (candidates.length > 0) {
       const alIds = candidates.map((c) => c.anilistId);
@@ -357,6 +374,7 @@ export async function GET(req) {
           year,
           posterPath,
           topNote: c.topNote,
+          externalUrl: row ? null : c.externalUrl ?? null,
         });
       }
     }
