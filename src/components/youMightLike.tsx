@@ -12,7 +12,8 @@ import {
   CATALOG_GRID_VERTICAL_SEARCH,
 } from '@/lib/catalogGrid';
 
-const YOU_MIGHT_LIKE_MAX = 8;
+const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
+const YOU_MIGHT_LIKE_MAX_VERTICAL = 14;
 
 type RecItem = {
   keyId: number;
@@ -41,6 +42,7 @@ export default function YouMightLike({
   const [loading, setLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === 'horizontal';
+  const maxItems = horizontal ? YOU_MIGHT_LIKE_MAX_HORIZONTAL : YOU_MIGHT_LIKE_MAX_VERTICAL;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -58,7 +60,7 @@ export default function YouMightLike({
         const data = res.ok ? await res.json() : { items: [] };
         const rows = Array.isArray(data.items) ? data.items : [];
         setItems(
-          rows.slice(0, YOU_MIGHT_LIKE_MAX).map(
+          rows.slice(0, maxItems).map(
             (r: {
               catalogId: string | null;
               anilistId: number | null;
@@ -121,7 +123,7 @@ export default function YouMightLike({
           }
         );
         const data = res.ok ? await res.json() : { results: [] };
-        const slice = (data.results ?? []).slice(0, YOU_MIGHT_LIKE_MAX) as {
+        const slice = (data.results ?? []).slice(0, maxItems) as {
           id: number;
           title?: string;
           name?: string;
@@ -166,7 +168,7 @@ export default function YouMightLike({
     }
 
     return () => controller.abort();
-  }, [mediaType, id, isAnime, idMal]);
+  }, [mediaType, id, isAnime, idMal, maxItems]);
 
   const gridClass = horizontal
     ? CATALOG_GRID_HORIZONTAL_SEARCH
@@ -177,7 +179,7 @@ export default function YouMightLike({
       <section className="mt-10 w-full pt-8">
         <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
         <div className={`${gridClass} items-start`}>
-          {Array.from({ length: YOU_MIGHT_LIKE_MAX }).map((_, i) =>
+          {Array.from({ length: maxItems }).map((_, i) =>
             horizontal ? (
               <HorizontalCatalogCardLoading key={i} />
             ) : (
