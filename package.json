@@ -9,7 +9,8 @@
     "lint": "eslint",
     "round-icon": "node scripts/round-app-icon.mjs",
     "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs",
-    "seed:popular": "node scripts/seed-popular-catalog.mjs"
+    "seed:popular": "node scripts/seed-popular-catalog.mjs",
+    "purge:adult-movies": "node scripts/purge-adult-catalog-movies.mjs"
   },
   "dependencies": {
     "@heroui/react": "^2.8.4",

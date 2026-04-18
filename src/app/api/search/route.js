@@ -9,6 +9,7 @@ import clientPromise from "@/lib/mongo";
 import {
   animeTitleSearchConditions,
   catalogAnimeIdMongoExpr,
+  catalogMovieHideAdultClause,
   catalogTodayIsoUtc,
   escapeRegex,
   releasedAnimeFirstAirClause,
@@ -58,8 +59,21 @@ export async function GET(req) {
       ? {}
       : releasedCatalogClause("release_date", todayIso);
     const movieBranch = includeUnreleased
-      ? { $and: [{ type: "movie" }, titleNameOr] }
-      : { $and: [{ type: "movie" }, titleNameOr, movieReleased] };
+      ? {
+          $and: [
+            { type: "movie" },
+            titleNameOr,
+            catalogMovieHideAdultClause(),
+          ],
+        }
+      : {
+          $and: [
+            { type: "movie" },
+            titleNameOr,
+            movieReleased,
+            catalogMovieHideAdultClause(),
+          ],
+        };
 
     const tvAnimeReleased = includeUnreleased ? {} : releasedAnimeFirstAirClause(todayIso);
     const tvAnimeBranch = includeUnreleased

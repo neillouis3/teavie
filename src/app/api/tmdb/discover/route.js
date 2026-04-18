@@ -5,6 +5,7 @@
 
 import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
+import { catalogMovieHideAdultClause } from "@/lib/catalogQuery";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
 
 /**
@@ -25,13 +26,19 @@ function uniquePositiveIds(rows) {
 }
 
 async function movieItemsFromTmdbOrder(col, tmdbRows) {
-  const ordered = Array.isArray(tmdbRows) ? tmdbRows : [];
+  const ordered = Array.isArray(tmdbRows)
+    ? tmdbRows.filter((r) => !r?.adult)
+    : [];
   const ids = uniquePositiveIds(ordered);
   if (ids.length === 0) return [];
 
   const variants = [...ids, ...ids.map(String)];
   const docs = await col
-    .find({ type: "movie", id: { $in: variants } })
+    .find({
+      type: "movie",
+      id: { $in: variants },
+      ...catalogMovieHideAdultClause(),
+    })
     .toArray();
 
   const byKey = new Map();
@@ -78,7 +85,9 @@ function buildTvTmdbLookupMap(docs) {
 }
 
 async function tvItemsFromTmdbOrder(col, tmdbRows) {
-  const ordered = Array.isArray(tmdbRows) ? tmdbRows : [];
+  const ordered = Array.isArray(tmdbRows)
+    ? tmdbRows.filter((r) => !r?.adult)
+    : [];
   const ids = uniquePositiveIds(ordered);
   if (ids.length === 0) return [];
 
@@ -147,19 +156,19 @@ export async function GET() {
 
     const [tMovieRows, tTvRows, pMovieRows, pTvRows] = await Promise.all([
       fetchTmdbPaged(
-        "https://api.themoviedb.org/3/trending/movie/week?language=en-US",
+        "https://api.themoviedb.org/3/trending/movie/week?language=en-US&include_adult=false",
         headers
       ),
       fetchTmdbPaged(
-        "https://api.themoviedb.org/3/trending/tv/week?language=en-US",
+        "https://api.themoviedb.org/3/trending/tv/week?language=en-US&include_adult=false",
         headers
       ),
       fetchTmdbPaged(
-        "https://api.themoviedb.org/3/movie/popular?language=en-US",
+        "https://api.themoviedb.org/3/movie/popular?language=en-US&include_adult=false",
         headers
       ),
       fetchTmdbPaged(
-        "https://api.themoviedb.org/3/tv/popular?language=en-US",
+        "https://api.themoviedb.org/3/tv/popular?language=en-US&include_adult=false",
         headers
       ),
     ]);

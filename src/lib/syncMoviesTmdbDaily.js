@@ -8,6 +8,10 @@
  */
 import { MongoClient } from "mongodb";
 import { tmdbBearerToken } from "./tmdbAuth.js";
+import {
+  shouldRejectTmdbMovieFromCatalog,
+  tmdbListMovieLooksAdult,
+} from "./tmdbMovieContentPolicy.js";
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";
@@ -34,6 +38,7 @@ function addDays(d, n) {
 export function mapTmdbMovieToDoc(movie) {
   const id = movie.id;
   if (typeof id !== "number" || !Number.isFinite(id)) return null;
+  if (shouldRejectTmdbMovieFromCatalog(movie)) return null;
   const title = movie.title ?? movie.original_title ?? `Movie ${id}`;
   return {
     ...movie,
@@ -81,7 +86,13 @@ async function discoverMovieIdsInWindow(token, gteIso, lteIso, maxPages, log) {
     const json = await tmdbGet(`/discover/movie?${q}`, token);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
-      if (typeof r.id === "number" && r.id > 0) ids.add(r.id);
+      if (
+        typeof r.id === "number" &&
+        r.id > 0 &&
+        !tmdbListMovieLooksAdult(r)
+      ) {
+        ids.add(r.id);
+      }
     }
     log(`discover page ${page}/${maxPages}: +${results.length} rows (total ids=${ids.size})`);
     if (results.length === 0 || page >= (json.total_pages || 0)) break;
@@ -101,7 +112,13 @@ async function listEndpointMovieIds(endpoint, token, maxPages, log) {
     const json = await tmdbGet(`${endpoint}?${q}`, token);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
-      if (typeof r.id === "number" && r.id > 0) ids.add(r.id);
+      if (
+        typeof r.id === "number" &&
+        r.id > 0 &&
+        !tmdbListMovieLooksAdult(r)
+      ) {
+        ids.add(r.id);
+      }
     }
     log(`${endpoint} page ${page}: +${results.length}`);
     if (results.length === 0 || page >= (json.total_pages || 0)) break;
@@ -111,7 +128,11 @@ async function listEndpointMovieIds(endpoint, token, maxPages, log) {
 }
 
 async function fetchMovieDetail(id, token) {
-  const q = new URLSearchParams({ language: "en-US", include_adult: "false" });
+  const q = new URLSearchParams({
+    language: "en-US",
+    include_adult: "false",
+    append_to_response: "release_dates",
+  });
   return tmdbGet(`/movie/${id}?${q}`, token);
 }
 

@@ -27,7 +27,7 @@ export async function GET(req) {
 
     const [movieRes, tvRes] = await Promise.all([
       fetch(
-        "https://api.themoviedb.org/3/movie/popular?language=en-US&page=1",
+        "https://api.themoviedb.org/3/movie/popular?language=en-US&include_adult=false&page=1",
         { headers, next: { revalidate: 3600 } }
       ),
       fetch("https://api.themoviedb.org/3/tv/popular?language=en-US&page=1", {
@@ -45,7 +45,10 @@ export async function GET(req) {
 
     const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
 
-    const movies = (movieData.results || []).slice(0, cap).map((r) => ({
+    const movies = (movieData.results || [])
+      .filter((r) => !r.adult)
+      .slice(0, cap)
+      .map((r) => ({
       id: r.id,
       title: r.title,
       name: r.title,
@@ -60,7 +63,10 @@ export async function GET(req) {
       vote_average: r.vote_average ?? null,
     }));
 
-    const tv = (tvData.results || []).slice(0, cap).map((r) => ({
+    const tv = (tvData.results || [])
+      .filter((r) => !r.adult)
+      .slice(0, cap)
+      .map((r) => ({
       id: r.id,
       title: r.name,
       name: r.name,

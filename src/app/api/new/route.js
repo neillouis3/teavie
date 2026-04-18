@@ -4,6 +4,7 @@ import {
   mongoCatalogPopularitySortExpr,
   mongoMixedTvCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
+import { catalogMovieHideAdultClause } from "@/lib/catalogQuery";
 
 export async function GET(req) {
   try {
@@ -34,11 +35,16 @@ export async function GET(req) {
     let filter;
     if (type === "movie") {
       filter = {
-        type: "movie",
-        release_date: {
-          $gte: startDate,
-          $lte: endDate,
-        },
+        $and: [
+          {
+            type: "movie",
+            release_date: {
+              $gte: startDate,
+              $lte: endDate,
+            },
+          },
+          catalogMovieHideAdultClause(),
+        ],
       };
     } else if (type === "tv") {
       filter = {
@@ -52,11 +58,16 @@ export async function GET(req) {
       filter = {
         $or: [
           {
-            type: "movie",
-            release_date: {
-              $gte: startDate,
-              $lte: endDate,
-            },
+            $and: [
+              {
+                type: "movie",
+                release_date: {
+                  $gte: startDate,
+                  $lte: endDate,
+                },
+              },
+              catalogMovieHideAdultClause(),
+            ],
           },
           {
             type: "tv",

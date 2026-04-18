@@ -4,6 +4,7 @@ import {
   mongoCatalogPopularitySortExpr,
   mongoMixedTvCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
+import { catalogMovieHideAdultClause } from "@/lib/catalogQuery";
 
 export async function GET(req) {
   try {
@@ -57,6 +58,7 @@ export async function GET(req) {
           },
         },
       },
+      { $match: catalogMovieHideAdultClause() },
       { $sort: { sortPop: -1, sortDate: 1 } },
       { $limit: limit },
     ]);

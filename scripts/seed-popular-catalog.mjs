@@ -14,6 +14,10 @@ import { createRequire } from "node:module";
 import { MongoClient } from "mongodb";
 import { mapTmdbMovieToDoc } from "../src/lib/syncMoviesTmdbDaily.js";
 import { tmdbBearerToken } from "../src/lib/tmdbAuth.js";
+import {
+  shouldRejectTmdbTvFromCatalog,
+  tmdbListMovieLooksAdult,
+} from "../src/lib/tmdbMovieContentPolicy.js";
 
 const require = createRequire(import.meta.url);
 const { loadMongoEnv, mongoHostHint } = require(path.join(
@@ -51,6 +55,7 @@ function parseIntFlag(name, def) {
 function mapTmdbTvToDoc(show) {
   const id = show.id;
   if (typeof id !== "number" || !Number.isFinite(id)) return null;
+  if (shouldRejectTmdbTvFromCatalog(show)) return null;
   const name = show.name ?? show.original_name ?? `TV ${id}`;
   return {
     ...show,
@@ -123,7 +128,7 @@ async function animeClaimedTmdbIds(col) {
   return blocked;
 }
 
-async function popularIds(endpoint, token, maxPages) {
+async function popularIds(endpoint, token, maxPages, listRowSkip) {
   const ids = [];
   const seen = new Set();
   for (let page = 1; page <= maxPages; page += 1) {
@@ -135,6 +140,7 @@ async function popularIds(endpoint, token, maxPages) {
     const json = await tmdbGet(`${endpoint}?${q}`, token);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
+      if (listRowSkip && listRowSkip(r)) continue;
       const id = Number(r.id);
       if (!Number.isFinite(id) || id <= 0 || seen.has(id)) continue;
       seen.add(id);
@@ -181,14 +187,20 @@ async function main() {
   const ops = [];
 
   if (!tvOnly) {
-    const movieIds = await popularIds("/movie/popular", token, pages);
+    const movieIds = await popularIds("/movie/popular", token, pages, (r) =>
+      tmdbListMovieLooksAdult(r)
+    );
     console.log(`popular movies: ${movieIds.length} ids`);
     let ok = 0;
     let err = 0;
     for (let i = 0; i < movieIds.length; i += 1) {
       const id = movieIds[i];
       try {
-        const q = new URLSearchParams({ language: "en-US", include_adult: "false" });
+        const q = new URLSearchParams({
+          language: "en-US",
+          include_adult: "false",
+          append_to_response: "release_dates",
+        });
         const movie = await tmdbGet(`/movie/${id}?${q}`, token);
         const doc = mapTmdbMovieToDoc(movie);
         if (doc) {
@@ -212,7 +224,9 @@ async function main() {
   }
 
   if (!moviesOnly) {
-    const tvIds = await popularIds("/tv/popular", token, pages);
+    const tvIds = await popularIds("/tv/popular", token, pages, (r) =>
+      shouldRejectTmdbTvFromCatalog(r)
+    );
     const toFetch = tvIds.filter((id) => !animeBlocked.has(id));
     console.log(
       `popular tv: ${tvIds.length} ids (${tvIds.length - toFetch.length} skipped — already anime in catalog)`

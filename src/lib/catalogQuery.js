@@ -47,6 +47,11 @@ export function escapeRegex(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** Exclude TMDB-flagged adult / pornographic movies from catalog queries. */
+export function catalogMovieHideAdultClause() {
+  return { $nor: [{ adult: true }] };
+}
+
 /**
  * Title/name match for anime catalog rows: primary fields + `title_aliases` + nested AniList titles/synonyms.
  * @param {string} safe - output of `escapeRegex(q)`
@@ -215,6 +220,10 @@ export function buildCatalogFilter(
           { title: { $regex: safe, $options: "i" } },
           { name: { $regex: safe, $options: "i" } },
         ];
+  }
+
+  if (type === "movie") {
+    return { $and: [filter, catalogMovieHideAdultClause()] };
   }
 
   return filter;
