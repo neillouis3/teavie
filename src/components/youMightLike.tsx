@@ -26,6 +26,16 @@ type RecItem = {
   href?: string | null;
 };
 
+type TmdbRecRow = {
+  id: number;
+  title?: string;
+  name?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  release_date?: string | null;
+  first_air_date?: string | null;
+};
+
 export default function YouMightLike({
   mediaType,
   id,
@@ -55,6 +65,7 @@ export default function YouMightLike({
           qs.set('idMal', String(idMal));
         }
         qs.set('limit', String(maxItems));
+        qs.set('includeExternal', '1');
         const res = await fetch(`/api/anilist/you-might-like?${qs.toString()}`, {
           signal: controller.signal,
         });
@@ -113,42 +124,67 @@ export default function YouMightLike({
       }
       setLoading(true);
       try {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/${mediaType}/${id}/recommendations?language=en-US&page=1`,
-          {
-            signal: controller.signal,
-            headers: {
-              accept: 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        const data = res.ok ? await res.json() : { results: [] };
-        const slice = (data.results ?? []).slice(0, maxItems) as {
-          id: number;
-          title?: string;
-          name?: string;
-          poster_path?: string | null;
-          backdrop_path?: string | null;
-          release_date?: string | null;
-          first_air_date?: string | null;
-        }[];
-        setItems(
-          slice.map((r) => {
+        const headers = {
+          accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        } as const;
+
+        const takeRows = (payload: unknown): TmdbRecRow[] =>
+          (Array.isArray(payload) ? payload : []) as TmdbRecRow[];
+
+        const mergeRows = (seen: Set<number>, out: RecItem[], rows: TmdbRecRow[]) => {
+          for (const r of rows) {
+            const tmdbId = Number(r?.id);
+            if (!Number.isFinite(tmdbId) || tmdbId <= 0) continue;
+            if (tmdbId === Number(id)) continue;
+            if (seen.has(tmdbId)) continue;
+            seen.add(tmdbId);
             const date = r.release_date ?? r.first_air_date ?? '';
             const year = date ? String(new Date(date).getFullYear()) : '—';
-            const tmdbId = Number(r.id);
-            return {
-              keyId: Number.isFinite(tmdbId) && tmdbId > 0 ? tmdbId : 0,
-              linkId:
-                Number.isFinite(tmdbId) && tmdbId > 0 ? String(tmdbId) : String(r.id),
+            out.push({
+              keyId: tmdbId,
+              linkId: String(tmdbId),
               title: r.title ?? r.name ?? 'Untitled',
               poster_path: r.poster_path ?? null,
               backdrop_path: r.backdrop_path ?? null,
               year,
-            };
-          })
+            });
+            if (out.length >= maxItems) break;
+          }
+        };
+
+        const out: RecItem[] = [];
+        const seen = new Set<number>();
+
+        // 1) recommendations
+        const recRes = await fetch(
+          `https://api.themoviedb.org/3/${mediaType}/${id}/recommendations?language=en-US&page=1`,
+          { signal: controller.signal, headers }
         );
+        const recJson = recRes.ok ? await recRes.json() : { results: [] };
+        mergeRows(seen, out, takeRows(recJson.results));
+
+        // 2) similar
+        if (out.length < maxItems) {
+          const simRes = await fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${id}/similar?language=en-US&page=1`,
+            { signal: controller.signal, headers }
+          );
+          const simJson = simRes.ok ? await simRes.json() : { results: [] };
+          mergeRows(seen, out, takeRows(simJson.results));
+        }
+
+        // 3) popular fallback
+        if (out.length < maxItems) {
+          const popRes = await fetch(
+            `https://api.themoviedb.org/3/${mediaType}/popular?language=en-US&page=1`,
+            { signal: controller.signal, headers }
+          );
+          const popJson = popRes.ok ? await popRes.json() : { results: [] };
+          mergeRows(seen, out, takeRows(popJson.results));
+        }
+
+        setItems(out.slice(0, maxItems));
       } catch {
         setItems([]);
       } finally {

@@ -46,6 +46,7 @@ export async function GET(req) {
       Number.isFinite(parsedLimit) && parsedLimit > 0
         ? Math.min(parsedLimit, YOU_MIGHT_LIKE_MAX_CAP)
         : YOU_MIGHT_LIKE_MAX_DEFAULT;
+    const includeExternal = searchParams.get("includeExternal") === "1";
 
     if (!useMal) {
       return Response.json(
@@ -108,7 +109,20 @@ export async function GET(req) {
     const items = [];
     for (const c of candidates) {
       const row = byMal.get(c.malId) ?? null;
-      if (row == null) continue;
+      if (row == null) {
+        if (!includeExternal) continue;
+        items.push({
+          catalogId: null,
+          malId: c.malId,
+          anilistId: null,
+          title: c.title,
+          year: c.year,
+          posterPath: c.posterPath,
+          externalUrl: `https://myanimelist.net/anime/${c.malId}`,
+        });
+        if (items.length >= limit) break;
+        continue;
+      }
 
       let title = c.title;
       let year = c.year;
@@ -132,6 +146,7 @@ export async function GET(req) {
         posterPath,
         externalUrl: null,
       });
+      if (items.length >= limit) break;
     }
 
     return Response.json({ items });
