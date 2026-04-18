@@ -66,6 +66,7 @@ function SearchContent() {
   const [popularLoading, setPopularLoading] = useState(false);
   const { mode: cardLayoutMode } = useCatalogCardStyle();
   const horizontal = cardLayoutMode === 'horizontal';
+  const popularSectionMax = horizontal ? 8 : 14;
 
   useEffect(() => { setInputValue(qParam); }, [qParam]);
 
@@ -80,7 +81,7 @@ function SearchContent() {
     const controller = new AbortController();
     setPopularLoading(true);
 
-    fetch('/api/tmdb/popular', { signal: controller.signal })
+    fetch('/api/tmdb/popular?limit=20', { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         setPopularMovies(data.movies ?? []);
@@ -221,17 +222,25 @@ function SearchContent() {
           <div className="space-y-8">
             {popularLoading ? (
               <>
-                <CardGridSkeleton count={6} layoutMode={cardLayoutMode} />
-                <CardGridSkeleton count={6} layoutMode={cardLayoutMode} />
+                <CardGridSkeleton count={popularSectionMax} layoutMode={cardLayoutMode} />
+                <CardGridSkeleton count={popularSectionMax} layoutMode={cardLayoutMode} />
               </>
             ) : (
               <>
                 <section className="space-y-3">
-                  <CatalogRail title="Popular Movies" items={popularMovies} maxItems={24} />
+                  <CatalogRail
+                    title="Popular Movies"
+                    items={popularMovies}
+                    maxItems={popularSectionMax}
+                  />
                 </section>
 
                 <section className="space-y-3">
-                  <CatalogRail title="Popular TV" items={popularTv} maxItems={24} />
+                  <CatalogRail
+                    title="Popular TV"
+                    items={popularTv}
+                    maxItems={popularSectionMax}
+                  />
                 </section>
               </>
             )}

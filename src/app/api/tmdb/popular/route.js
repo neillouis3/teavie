@@ -2,9 +2,16 @@ import { tmdbBearerToken } from "@/lib/tmdbAuth";
 
 /**
  * TMDB popular movies + TV for browse state on /search (no query).
+ * First page has up to 20 rows; optional `?limit=` (default 20, max 20).
  */
-export async function GET() {
+export async function GET(req) {
   try {
+    const { searchParams } = new URL(req.url);
+    const limitRaw = searchParams.get("limit");
+    const parsed = limitRaw ? parseInt(limitRaw, 10) : NaN;
+    const cap =
+      Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 20) : 20;
+
     const token = tmdbBearerToken();
     if (!token) {
       return Response.json(
@@ -38,7 +45,7 @@ export async function GET() {
 
     const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
 
-    const movies = (movieData.results || []).slice(0, 10).map((r) => ({
+    const movies = (movieData.results || []).slice(0, cap).map((r) => ({
       id: r.id,
       title: r.title,
       name: r.title,
@@ -53,7 +60,7 @@ export async function GET() {
       vote_average: r.vote_average ?? null,
     }));
 
-    const tv = (tvData.results || []).slice(0, 10).map((r) => ({
+    const tv = (tvData.results || []).slice(0, cap).map((r) => ({
       id: r.id,
       title: r.name,
       name: r.name,
