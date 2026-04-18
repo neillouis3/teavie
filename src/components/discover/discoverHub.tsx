@@ -56,6 +56,7 @@ export default function DiscoverHub() {
   const [loading, setLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === "horizontal";
+  const sectionMaxItems = horizontal ? 8 : 14;
 
   useEffect(() => {
     document.title = "Discover - Teavie";
@@ -110,28 +111,28 @@ export default function DiscoverHub() {
                 <CatalogRail
                   title="Trending movies this week"
                   items={data.trendingMovies}
-                  maxItems={14}
+                  maxItems={sectionMaxItems}
                   moreHref="/search"
                   moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Trending TV this week"
                   items={data.trendingTv}
-                  maxItems={14}
+                  maxItems={sectionMaxItems}
                   moreHref="/search"
                   moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Popular movies"
                   items={data.popularMovies}
-                  maxItems={14}
+                  maxItems={sectionMaxItems}
                   moreHref="/search"
                   moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Popular TV shows"
                   items={data.popularTv}
-                  maxItems={14}
+                  maxItems={sectionMaxItems}
                   moreHref="/search"
                   moreLabel="Search & more"
                 />
