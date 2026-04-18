@@ -111,10 +111,11 @@ export default function DiscoverHub() {
         <div className="mt-8 flex w-full flex-col gap-10 px-3 pb-8 sm:px-4">
           <div className="mb-1">
             <Chip color="success" size="md" radius="sm">
-              Trending & popular (TMDB)
+              Trending & popular
             </Chip>
             <p className="mt-1 text-xs text-default-500">
-              From The Movie Database — same picks as empty Search.
+              TMDB sets the order; tiles and links come from your catalog (anime resolves by stored TMDB
+              id so routes use catalog ids).
             </p>
           </div>
           {loading ? (
