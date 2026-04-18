@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 /**
- * Rewrite tmdb-tvshows.json without JP+animation rows that lack AniList ids
- * (same rules as cleanup-tv-jp-anime-mongo.js / sync-catalog-from-json).
+ * Rewrite tmdb-tvshows.json without anime-like TV rows that lack AniList ids
+ * (is_anime, anime tag, JP+animation — same rules as cleanup-tv-jp-anime-mongo.js).
  *
  *   node scripts/prune-jp-anime-tvshows-json.js --dry-run
  *   node scripts/prune-jp-anime-tvshows-json.js --write
@@ -10,7 +10,7 @@
  */
 const fs = require("fs");
 const path = require("path");
-const { shouldPruneTvJpAnimeWithoutAnilist } = require("./lib/tvJpAnimePrune.cjs");
+const { shouldPruneTvAnimeWithoutAnilist } = require("./lib/tvJpAnimePrune.cjs");
 
 function argValue(flag, fallback = null) {
   const idx = process.argv.indexOf(flag);
@@ -46,7 +46,7 @@ function run() {
 
   for (const row of shows) {
     const doc = { ...row, type: "tv" };
-    if (shouldPruneTvJpAnimeWithoutAnilist(doc)) {
+    if (shouldPruneTvAnimeWithoutAnilist(doc)) {
       pruned++;
       continue;
     }

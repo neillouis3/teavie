@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 /**
  * Upsert movies + TV from enriched TMDB JSON (default: ../test relative to repo).
- * TV: skips Japanese animation without AniList id (see scripts/lib/tvJpAnimePrune.cjs).
+ * TV: skips anime-like rows without AniList id (is_anime, anime tag, or JP+animation; see scripts/lib/tvJpAnimePrune.cjs).
  *
  * Usage (from teavie/):
  *   node scripts/sync-catalog-from-json.js
@@ -13,7 +13,7 @@
 const fs = require("fs");
 const path = require("path");
 const { MongoClient } = require("mongodb");
-const { shouldPruneTvJpAnimeWithoutAnilist } = require("./lib/tvJpAnimePrune.cjs");
+const { shouldPruneTvAnimeWithoutAnilist } = require("./lib/tvJpAnimePrune.cjs");
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";
@@ -67,7 +67,7 @@ function mapTvRow(row) {
     name: row.name ?? row.title ?? `TV ${id}`,
     updatedAt: new Date(),
   };
-  if (shouldPruneTvJpAnimeWithoutAnilist(doc)) return null;
+  if (shouldPruneTvAnimeWithoutAnilist(doc)) return null;
   return doc;
 }
 
@@ -141,7 +141,7 @@ async function run() {
       });
     }
     console.log(
-      `tv: ${shows.length} rows from ${tvFile} (${skippedId} bad id, ${skippedJpAnime} JP animation w/o AniList skipped)`
+      `tv: ${shows.length} rows from ${tvFile} (${skippedId} bad id, ${skippedJpAnime} anime-like w/o AniList skipped)`
     );
   } else {
     console.warn(`skip tv (file missing): ${tvFile}`);

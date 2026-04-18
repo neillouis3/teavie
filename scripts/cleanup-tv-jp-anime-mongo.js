@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 /**
- * Remove TV docs: Japanese + animation, with no AniList id (or external_ids.anilist_id).
- * Anime titles should come from the anime JSONL import instead.
+ * Remove TV docs that are anime-like but have no AniList id:
+ * is_anime, tags "anime", or JP/ja + animation genre — unless anilist_id / external_ids.anilist_id is set.
  *
  *   node scripts/cleanup-tv-jp-anime-mongo.js
  *   node scripts/cleanup-tv-jp-anime-mongo.js --dry-run
@@ -11,7 +11,7 @@
 const path = require("path");
 const fs = require("fs");
 const { MongoClient } = require("mongodb");
-const { shouldPruneTvJpAnimeWithoutAnilist } = require("./lib/tvJpAnimePrune.cjs");
+const { shouldPruneTvAnimeWithoutAnilist } = require("./lib/tvJpAnimePrune.cjs");
 
 function loadEnvLocal() {
   const envPath = path.join(__dirname, "..", ".env.local");
@@ -65,7 +65,7 @@ async function run() {
 
   const toDelete = [];
   for await (const doc of cursor) {
-    if (shouldPruneTvJpAnimeWithoutAnilist(doc)) {
+    if (shouldPruneTvAnimeWithoutAnilist(doc)) {
       toDelete.push(doc._id);
     }
   }

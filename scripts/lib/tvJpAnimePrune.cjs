@@ -1,6 +1,11 @@
 /**
- * TV catalog cleanup: Japanese animation that is not tied to AniList belongs in the
- * anime import pipeline, not the live-action TV catalog from TMDB JSON.
+ * TV catalog cleanup: rows that are “anime” but not tied to AniList belong in the
+ * anime import pipeline, not the general TV catalog from TMDB JSON.
+ *
+ * Prune when ALL of:
+ * - type is tv
+ * - no AniList id (top-level or external_ids)
+ * - looks like anime: is_anime flag, "anime" tag, or Japanese origin + animation genre
  */
 
 const TMDB_ANIMATION_GENRE_ID = 16;
@@ -19,6 +24,12 @@ function hasAnilistProvenance(doc) {
   return false;
 }
 
+function hasAnimeTag(doc) {
+  const tags = doc.tags;
+  if (!Array.isArray(tags)) return false;
+  return tags.some((t) => String(t).toLowerCase() === "anime");
+}
+
 function isJapaneseOrigin(doc) {
   const oc = doc.origin_country;
   if (Array.isArray(oc) && oc.some((c) => String(c).toUpperCase() === "JP")) return true;
@@ -26,11 +37,8 @@ function isJapaneseOrigin(doc) {
   return false;
 }
 
-function hasAnimationGenre(doc) {
-  if (doc.is_anime === true) return true;
-  const tags = doc.tags;
-  if (Array.isArray(tags) && tags.some((t) => String(t).toLowerCase() === "anime")) return true;
-
+/** TMDB animation genre only (does not use is_anime / tags). */
+function hasAnimationGenreCore(doc) {
   const gids = doc.genre_ids;
   if (Array.isArray(gids) && gids.includes(TMDB_ANIMATION_GENRE_ID)) return true;
 
@@ -50,20 +58,36 @@ function hasAnimationGenre(doc) {
 }
 
 /**
+ * Anime-like catalog row: explicit flag/tag, or JP (or ja audio) + animation genre.
+ * Does not treat US cartoons as anime unless is_anime / anime tag is set.
+ */
+function isAnimeLike(doc) {
+  if (doc.is_anime === true) return true;
+  if (hasAnimeTag(doc)) return true;
+  if (isJapaneseOrigin(doc) && hasAnimationGenreCore(doc)) return true;
+  return false;
+}
+
+/**
  * @param {Record<string, unknown>} doc - TV row or Mongo doc (must include type: "tv" when from DB)
  */
-function shouldPruneTvJpAnimeWithoutAnilist(doc) {
+function shouldPruneTvAnimeWithoutAnilist(doc) {
   if (!doc || doc.type !== "tv") return false;
   if (hasAnilistProvenance(doc)) return false;
-  if (!isJapaneseOrigin(doc)) return false;
-  if (!hasAnimationGenre(doc)) return false;
+  if (!isAnimeLike(doc)) return false;
   return true;
 }
+
+/** @deprecated use shouldPruneTvAnimeWithoutAnilist */
+const shouldPruneTvJpAnimeWithoutAnilist = shouldPruneTvAnimeWithoutAnilist;
 
 module.exports = {
   TMDB_ANIMATION_GENRE_ID,
   hasAnilistProvenance,
+  hasAnimeTag,
   isJapaneseOrigin,
-  hasAnimationGenre,
+  hasAnimationGenreCore,
+  isAnimeLike,
+  shouldPruneTvAnimeWithoutAnilist,
   shouldPruneTvJpAnimeWithoutAnilist,
 };
