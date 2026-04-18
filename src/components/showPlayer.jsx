@@ -79,7 +79,7 @@ function buildEmbedUrl(p) {
         );
         path = cfg.animePath(anilistId, abs);
       } else {
-        return { url: '', error: 'No AniList player for this server' };
+        return { url: '', error: 'No anime player for this server' };
       }
       const sfx =
         typeof cfg.suffixAnime === 'function' ? cfg.suffixAnime : cfg.suffix;

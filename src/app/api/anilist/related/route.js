@@ -1,5 +1,5 @@
 import clientPromise from "@/lib/mongo";
-import { jikanFranchiseRailOrderedSteps } from "@/lib/jikanFetch";
+import { jikanGet, pickFranchiseRelationCandidates } from "@/lib/jikanFetch";
 
 function docAnilistKey(d) {
   const a = d?.anilist_id;
@@ -24,11 +24,8 @@ function yearFromDoc(d) {
 }
 
 /**
- * Franchise rail from Jikan (MAL), **catalog-only**:
- * - Transitive **prequels** (oldest → newer toward the current show)
- * - Transitive **sequels** (forward chain)
- * - **Side stories** on the root (TV + movie)
- * - Other **movies** on the root (summary, sequel/prequel movie, alt version, parent story)
+ * Related anime: **direct** MAL↔MAL links on the current title (sequel, prequel, parent, alt, side story).
+ * **Teavie catalog only** — one Jikan `relations` request, then Mongo by `mal_id`.
  *
  * GET `?idMal=` (MAL id of the current show). Optional `?debug=1` for `meta`.
  */
@@ -48,27 +45,25 @@ export async function GET(req) {
     }
 
     const rootMal = idMal;
-    const chain = await jikanFranchiseRailOrderedSteps(rootMal, {
-      staggerMs: 400,
-      maxHops: 24,
-      maxNodes: 36,
-    });
+    const relRes = await jikanGet(`anime/${rootMal}/relations`);
+    const relationsJson = relRes.ok ? await relRes.json().catch(() => null) : null;
+    const candidates = pickFranchiseRelationCandidates(rootMal, relationsJson);
 
-    /** @type {{ source: string; rootMal: number; stepCount: number; catalogMatches: number }} */
+    /** @type {{ source: string; rootMal: number; directLinkCount: number; catalogMatches: number }} */
     const meta = {
-      source: "jikan-franchise-rail",
+      source: "jikan-relations-direct-catalog",
       rootMal,
-      stepCount: chain.length,
+      directLinkCount: candidates.length,
       catalogMatches: 0,
     };
 
-    if (chain.length === 0) {
+    if (candidates.length === 0) {
       const body = { items: [] };
       if (debug) body.meta = meta;
       return Response.json(body);
     }
 
-    const malIds = chain.map((s) => s.malId);
+    const malIds = candidates.map((s) => s.malId);
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
 
@@ -107,7 +102,7 @@ export async function GET(req) {
     /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; malId: number; malKind: "anime" | "movie"; title: string; year: string; posterPath: string; topNote: string; externalUrl?: string | null }>} */
     const items = [];
 
-    for (const step of chain) {
+    for (const step of candidates) {
       const d = docByMal.get(step.malId);
       if (!d) continue;
       const catalogId = String(d.id);

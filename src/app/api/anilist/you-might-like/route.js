@@ -3,7 +3,6 @@ import {
   jikanFetchRelationsAndRecommendations,
   jikanPayloadsToCandidates,
 } from "@/lib/jikanFetch";
-import { mapMalIdsToAnilistIds } from "@/lib/malToAnilistId";
 
 function docAnilistKey(d) {
   const a = d?.anilist_id;
@@ -27,16 +26,12 @@ function yearFromDoc(d) {
   return raw.slice(0, 4);
 }
 
-function anilistUrlForAnime(anilistId) {
-  return `https://anilist.co/anime/${anilistId}`;
-}
-
 const YOU_MIGHT_LIKE_MAX = 8;
 
 /**
- * Recommendations from **Jikan** (MAL), merged with catalog; out-of-catalog tiles use **AniList** id/URL.
+ * Jikan **recommendations** order, **Teavie catalog only** (no external-only tiles).
  *
- * GET `?idMal=` (MAL anime id) required. `anilistId` is ignored for the Jikan root (no AniList idMal lookup).
+ * GET `?idMal=` (MAL anime id) required.
  */
 export async function GET(req) {
   try {
@@ -95,8 +90,6 @@ export async function GET(req) {
       .limit(YOU_MIGHT_LIKE_MAX)
       .toArray();
 
-    /** @type {Map<number, number>} */
-    const malToAlFromMongo = new Map();
     /** @type {Map<number, { catalogId: string }>} */
     const byMal = new Map();
 
@@ -105,61 +98,35 @@ export async function GET(req) {
       if (!cid.startsWith("anime_")) continue;
       const m = typeof d.mal_id === "number" ? d.mal_id : null;
       if (m == null || !malIds.includes(m)) continue;
-      const ak = docAnilistKey(d);
-      if (ak != null && !malToAlFromMongo.has(m)) malToAlFromMongo.set(m, ak);
       if (!byMal.has(m)) byMal.set(m, { catalogId: cid });
     }
-
-    const malToAl = await mapMalIdsToAnilistIds(malIds, malToAlFromMongo, {
-      concurrency: 6,
-      pauseMs: 100,
-    });
 
     const items = [];
     for (const c of candidates) {
       const row = byMal.get(c.malId) ?? null;
-      const resolvedAl = malToAl.get(c.malId);
-      const anilistNumeric =
-        typeof resolvedAl === "number" && Number.isFinite(resolvedAl) && resolvedAl > 0
-          ? resolvedAl
-          : null;
-
-      if (row == null && anilistNumeric == null) continue;
+      if (row == null) continue;
 
       let title = c.title;
       let year = c.year;
       let posterPath = c.posterPath;
-      if (row) {
-        const doc = docs.find((x) => String(x.id) === row.catalogId);
-        if (doc) {
-          title = doc.title ?? doc.name ?? title;
-          year = yearFromDoc(doc);
-          posterPath = doc.poster_path || posterPath;
-        }
+      const doc = docs.find((x) => String(x.id) === row.catalogId);
+      if (doc) {
+        title = doc.title ?? doc.name ?? title;
+        year = yearFromDoc(doc);
+        posterPath = doc.poster_path || posterPath;
       }
 
-      const docForRow = row ? docs.find((x) => String(x.id) === row.catalogId) : null;
-      const fromDoc = docForRow != null ? docAnilistKey(docForRow) : null;
-      const finalAl =
-        anilistNumeric != null && anilistNumeric > 0
-          ? anilistNumeric
-          : fromDoc != null && fromDoc > 0
-            ? fromDoc
-            : null;
-
-      if (row == null && finalAl == null) continue;
-
-      const externalUrl =
-        row == null && finalAl != null ? anilistUrlForAnime(finalAl) : null;
+      const finalAl = doc != null ? docAnilistKey(doc) : null;
 
       items.push({
-        catalogId: row?.catalogId ?? null,
+        catalogId: row.catalogId,
         malId: c.malId,
-        anilistId: finalAl,
+        anilistId:
+          typeof finalAl === "number" && Number.isFinite(finalAl) && finalAl > 0 ? finalAl : null,
         title,
         year,
         posterPath,
-        externalUrl,
+        externalUrl: null,
       });
     }
 

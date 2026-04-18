@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Chip } from '@heroui/react';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import { tmdbBearerToken } from '@/lib/tmdbAuth';
 
@@ -183,21 +182,9 @@ export default function YouMightLike({
 
   if (items.length === 0) return null;
 
-  const chipLabel =
-    mediaType === 'movie'
-      ? 'Movies'
-      : isAnime
-        ? 'Jikan'
-        : 'TV';
-
   return (
     <section className="mt-10 w-full pt-8">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold text-foreground">You might like</h2>
-        <Chip size="sm" variant="flat" color="success" className="font-normal">
-          {chipLabel}
-        </Chip>
-      </div>
+      <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
       <ul className={gridClass}>
         {items.map((item) => (
           <li key={`${item.keyId}-${item.linkId}`} className="min-w-0">

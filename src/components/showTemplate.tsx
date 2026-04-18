@@ -108,6 +108,21 @@ function anilistEpisodeCap(show: Show | null | undefined): number | null {
   return e;
 }
 
+/** Page / tab title: AniList English → Romaji → Native when linked anime; else TMDB/catalog `name`. */
+function showDisplayTitle(show: Show | null | undefined): string {
+  if (!show) return "";
+  if (Boolean(show.is_anime) && catalogAnilistId(show) != null) {
+    const t = show.anilist?.title;
+    if (t) {
+      const fromAni = [t.english, t.romaji, t.native]
+        .map((x) => (typeof x === "string" ? x.trim() : ""))
+        .find((s) => s.length > 0);
+      if (fromAni) return fromAni;
+    }
+  }
+  return String(show.name ?? "").trim();
+}
+
 type AnilistMediaPayload = {
   id: number;
   idMal?: number | null;
@@ -249,6 +264,18 @@ function mergeAnilistIntoShow(
     return next;
   }
 
+  // Anime: never replace TMDB season/episode layout with a single synthetic S1 when TMDB already
+  // has episode counts (AniList `episodes` is only for embed/grid cap via `anilist.episodes`).
+  if (next.is_anime && goodTmdb.length > 0) {
+    next.seasons = goodTmdb.map((s) => ({ ...s }));
+    next.number_of_seasons = goodTmdb.length;
+    next.number_of_episodes = goodTmdb.reduce(
+      (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
+      0
+    );
+    return next;
+  }
+
   const eps =
     (typeof ani.episodes === "number" && ani.episodes > 0 ? ani.episodes : null) ??
     (typeof next.number_of_episodes === "number" && next.number_of_episodes > 0
@@ -262,16 +289,6 @@ function mergeAnilistIntoShow(
     next.seasons = [{ season_number: 1, episode_count: eps }];
     next.number_of_seasons = 1;
     next.number_of_episodes = eps;
-  } else if (next.is_anime && goodTmdb.length > 0) {
-    const total = goodTmdb.reduce(
-      (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
-      0
-    );
-    if (total > 0) {
-      next.seasons = [{ season_number: 1, episode_count: total }];
-      next.number_of_seasons = 1;
-      next.number_of_episodes = total;
-    }
   }
 
   return next;
@@ -356,12 +373,38 @@ export default function ShowTemplate({ id }: { id: string }) {
 
     const saved = loadWatchProgress(String(id));
     if (saved) {
-      const list = tmdbSeasonsWithEpisodes(show.seasons);
-      const seasonObj = list.find((s) => s.season_number === saved.lastSeason);
-      const max = seasonObj?.episode_count ?? 0;
-      if (max > 0 && saved.lastEpisode >= 1 && saved.lastEpisode <= max) {
-        setSelectedSeason(saved.lastSeason);
-        setSelectedEpisode(saved.lastEpisode);
+      const aniIdH = catalogAnilistId(show);
+      const playerAniH = Boolean(show.is_anime) && aniIdH != null;
+      const movieH =
+        show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC";
+      const aniOnlyH = playerAniH && !movieH;
+      if (aniOnlyH) {
+        const capH = anilistEpisodeCap(show);
+        const sumH = tmdbSeasonsWithEpisodes(show.seasons).reduce(
+          (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
+          0
+        );
+        const maxEp =
+          capH ??
+          (typeof show.number_of_episodes === "number" && show.number_of_episodes > 0
+            ? show.number_of_episodes
+            : sumH > 0
+              ? sumH
+              : 0);
+        setSelectedSeason(1);
+        if (maxEp > 0 && saved.lastSeason === 1 && saved.lastEpisode >= 1 && saved.lastEpisode <= maxEp) {
+          setSelectedEpisode(saved.lastEpisode);
+        } else {
+          setSelectedEpisode(1);
+        }
+      } else {
+        const list = tmdbSeasonsWithEpisodes(show.seasons);
+        const seasonObj = list.find((s) => s.season_number === saved.lastSeason);
+        const max = seasonObj?.episode_count ?? 0;
+        if (max > 0 && saved.lastEpisode >= 1 && saved.lastEpisode <= max) {
+          setSelectedSeason(saved.lastSeason);
+          setSelectedEpisode(saved.lastEpisode);
+        }
       }
       setWatchedEpisodes(new Set(saved.watched));
     } else {
@@ -528,24 +571,28 @@ export default function ShowTemplate({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
-    if (show?.name) {
-      const year = show.first_air_date?.slice(0, 4);
-      const released = show.seasons?.filter((s) => s.season_number >= 1) ?? [];
-      const multiSeason = released.length > 1;
-      const cum =
-        (multiSeason ? episodeOffsetBeforeSeason(show.seasons, selectedSeason) : 0) +
-        selectedEpisode;
-      const playerAni = Boolean(show.is_anime) && catalogAnilistId(show) != null;
-      const seasonEpisode =
-        multiSeason && playerAni
-          ? `S${selectedSeason} · E${selectedEpisode} (#${cum})`
-          : multiSeason
-            ? `S${selectedSeason} · Ep ${cum}`
-            : `S${selectedSeason}E${selectedEpisode}`;
-      document.title = year
-        ? `${show.name} (${year}) ${seasonEpisode} - Teavie`
-        : `${show.name} ${seasonEpisode} - Teavie`;
-    }
+    const displayName = showDisplayTitle(show);
+    if (!show || !displayName) return;
+    const year = show.first_air_date?.slice(0, 4);
+    const released = show.seasons?.filter((s) => s.season_number >= 1) ?? [];
+    const multiSeason = released.length > 1;
+    const cum =
+      (multiSeason ? episodeOffsetBeforeSeason(show.seasons, selectedSeason) : 0) +
+      selectedEpisode;
+    const playerAni = Boolean(show.is_anime) && catalogAnilistId(show) != null;
+    const aniMovieTitle =
+      show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC";
+    const aniListOnlyTitle = playerAni && !aniMovieTitle;
+    const seasonEpisode = aniListOnlyTitle
+      ? `Ep ${selectedEpisode}`
+      : multiSeason && playerAni
+        ? `S${selectedSeason} · E${selectedEpisode} (#${cum})`
+        : multiSeason
+          ? `S${selectedSeason} · Ep ${cum}`
+          : `S${selectedSeason}E${selectedEpisode}`;
+    document.title = year
+      ? `${displayName} (${year}) ${seasonEpisode} - Teavie`
+      : `${displayName} ${seasonEpisode} - Teavie`;
   }, [show, selectedSeason, selectedEpisode]);
 
   useEffect(() => {
@@ -629,7 +676,6 @@ export default function ShowTemplate({ id }: { id: string }) {
   const currentSeason = show?.seasons?.find((s) => s.season_number === selectedSeason);
   const rawEpisodeCount = currentSeason?.episode_count ?? 0;
   const releasedSeasonsForUi = show?.seasons?.filter((s) => s.season_number >= 1) ?? [];
-  const useFlatAllEpisodesPicker = releasedSeasonsForUi.length > 1;
   const totalEpisodesAcrossSeasons = tmdbSeasonsWithEpisodes(show?.seasons).reduce(
     (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
     0
@@ -646,6 +692,19 @@ export default function ShowTemplate({ id }: { id: string }) {
   const playerUsesAnilist = Boolean(show?.is_anime) && aniId != null;
   const playerUsesTmdb = !playerUsesAnilist && resolvedIsNumeric;
   const aniListEpCap = anilistEpisodeCap(show);
+  const animeMovieEmbed =
+    playerUsesAnilist &&
+    (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
+  /** TV series on AniList: flat 1…N picker only (no TMDB season / cumulative map). */
+  const useAnilistOnlyEpisodePicker = playerUsesAnilist && !animeMovieEmbed;
+  const useFlatAllEpisodesPicker =
+    !useAnilistOnlyEpisodePicker && releasedSeasonsForUi.length > 1;
+  const anilistPickerTotal =
+    aniListEpCap ??
+    (typeof show?.number_of_episodes === "number" && show.number_of_episodes > 0
+      ? show.number_of_episodes
+      : null) ??
+    (totalEpisodesAcrossSeasons > 0 ? totalEpisodesAcrossSeasons : null);
   const flatEpisodesMax =
     playerUsesAnilist && useFlatAllEpisodesPicker && aniListEpCap != null
       ? Math.min(totalEpisodesAcrossSeasons, aniListEpCap)
@@ -654,11 +713,15 @@ export default function ShowTemplate({ id }: { id: string }) {
   const useTmdbSeasonAiringCap = Boolean(show && playerUsesTmdb);
   /** Per-season aired cap only when the grid is per-season (not the all-episodes flat list). */
   const useTmdbSeasonAiringCapForPlayer =
-    useTmdbSeasonAiringCap && !useFlatAllEpisodesPicker;
+    useTmdbSeasonAiringCap && !useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker;
 
   let displayEpisodeCount = rawEpisodeCount;
   let episodeGridStatus: "normal" | "loading" | "none" = "normal";
-  if (useFlatAllEpisodesPicker) {
+  if (useAnilistOnlyEpisodePicker) {
+    const n = anilistPickerTotal;
+    displayEpisodeCount = typeof n === "number" && n > 0 ? n : 0;
+    episodeGridStatus = displayEpisodeCount > 0 ? "normal" : "none";
+  } else if (useFlatAllEpisodesPicker) {
     displayEpisodeCount = flatEpisodesMax;
     episodeGridStatus = flatEpisodesMax > 0 ? "normal" : "none";
   } else if (useTmdbSeasonAiringCap) {
@@ -679,33 +742,37 @@ export default function ShowTemplate({ id }: { id: string }) {
     String(show.first_air_date).trim().length < 10 ||
     String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
   const canPlay = playerUsesAnilist || (playerUsesTmdb && tmdbShowPremiered);
-  const animeMovieEmbed =
-    playerUsesAnilist &&
-    (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
-  const absoluteRaw =
-    playerUsesAnilist && show
-      ? cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode)
-      : 1;
-  const absoluteEpisodeForPlayer =
-    playerUsesAnilist && aniListEpCap != null
-      ? Math.min(Math.max(1, absoluteRaw), aniListEpCap)
-      : absoluteRaw;
+  const absoluteEpisodeForPlayer = (() => {
+    if (useAnilistOnlyEpisodePicker) {
+      const e = Math.max(1, Math.floor(Number(selectedEpisode)) || 1);
+      const max =
+        aniListEpCap ??
+        (typeof anilistPickerTotal === "number" && anilistPickerTotal > 0
+          ? anilistPickerTotal
+          : null);
+      if (max != null && max > 0) return Math.min(e, max);
+      return e;
+    }
+    if (playerUsesAnilist && show) {
+      const raw = cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode);
+      return aniListEpCap != null ? Math.min(Math.max(1, raw), aniListEpCap) : raw;
+    }
+    return 1;
+  })();
   const imageUrl = show?.poster_path
     ? /^https?:\/\//i.test(show.poster_path)
       ? show.poster_path
       : `${baseUrl}${size}${show.poster_path}`
     : "";
-  const title = show?.name ?? "";
+  const title = show ? showDisplayTitle(show) : "";
   const year = show?.first_air_date?.slice(0, 4) ?? "TBA";
-  const aniListUrl =
-    show?.anilist?.siteUrl ||
-    (aniId != null ? `https://anilist.co/anime/${aniId}` : null);
   const displayVote = Number(show?.vote_average);
   const voteLabel = Number.isFinite(displayVote) ? displayVote.toFixed(1) : "—";
 
   const animeHideSeasonRow =
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
-  const useContinuousEpisodeLabels = releasedSeasonsForUi.length > 1;
+  const useContinuousEpisodeLabels =
+    !useAnilistOnlyEpisodePicker && releasedSeasonsForUi.length > 1;
   const episodeDisplayOffset =
     useContinuousEpisodeLabels && show
       ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
@@ -713,7 +780,7 @@ export default function ShowTemplate({ id }: { id: string }) {
   const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
 
   useEffect(() => {
-    if (!show?.seasons?.length || !useFlatAllEpisodesPicker || !playerUsesAnilist) return;
+    if (useAnilistOnlyEpisodePicker || !show?.seasons?.length || !useFlatAllEpisodesPicker || !playerUsesAnilist) return;
     if (aniListEpCap == null || flatEpisodesMax <= 0) return;
     const cur = cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode);
     if (cur <= flatEpisodesMax) return;
@@ -722,6 +789,7 @@ export default function ShowTemplate({ id }: { id: string }) {
     setSelectedEpisode(coords.episode);
   }, [
     show,
+    useAnilistOnlyEpisodePicker,
     useFlatAllEpisodesPicker,
     playerUsesAnilist,
     aniListEpCap,
@@ -729,6 +797,18 @@ export default function ShowTemplate({ id }: { id: string }) {
     selectedSeason,
     selectedEpisode,
   ]);
+
+  useEffect(() => {
+    if (!useAnilistOnlyEpisodePicker) return;
+    if (selectedSeason !== 1) setSelectedSeason(1);
+  }, [useAnilistOnlyEpisodePicker, selectedSeason]);
+
+  useEffect(() => {
+    if (!useAnilistOnlyEpisodePicker) return;
+    if (displayEpisodeCount > 0 && selectedEpisode > displayEpisodeCount) {
+      setSelectedEpisode(displayEpisodeCount);
+    }
+  }, [useAnilistOnlyEpisodePicker, displayEpisodeCount, selectedEpisode]);
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -743,17 +823,22 @@ export default function ShowTemplate({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
-    if (useFlatAllEpisodesPicker) return;
+    if (useFlatAllEpisodesPicker || useAnilistOnlyEpisodePicker) return;
     setEpisodeRangeStart(0);
-  }, [selectedSeason, useFlatAllEpisodesPicker]);
+  }, [selectedSeason, useFlatAllEpisodesPicker, useAnilistOnlyEpisodePicker]);
 
   useEffect(() => {
-    if (!useFlatAllEpisodesPicker) return;
-    const c = cumulativeEpisodeSelected;
+    if (!useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker) return;
+    const c = useAnilistOnlyEpisodePicker ? selectedEpisode : cumulativeEpisodeSelected;
     const start =
       Math.floor(Math.max(0, c - 1) / EPISODE_RANGE_BLOCK) * EPISODE_RANGE_BLOCK;
     setEpisodeRangeStart(start);
-  }, [useFlatAllEpisodesPicker, cumulativeEpisodeSelected]);
+  }, [
+    useFlatAllEpisodesPicker,
+    useAnilistOnlyEpisodePicker,
+    cumulativeEpisodeSelected,
+    selectedEpisode,
+  ]);
 
   useEffect(() => {
     if (displayEpisodeCount <= 0) return;
@@ -775,7 +860,7 @@ export default function ShowTemplate({ id }: { id: string }) {
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               {playerUsesTmdb && show && !tmdbShowPremiered
                 ? `This series has not premiered yet (first episode ${String(show.first_air_date).slice(0, 10)}).`
-                : "No TMDB TV id and no AniList id available for playback. Try again later or check AniList / TMDB."}
+                : "No playback source available for this page yet. Try again later."}
             </div>
           ) : useTmdbSeasonAiringCapForPlayer && tmdbEpCapLoading ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
@@ -835,69 +920,62 @@ export default function ShowTemplate({ id }: { id: string }) {
                     <Chip size="md" variant="flat" className="font-medium capitalize">
                       {show.status}
                     </Chip>
-                    {show.is_anime && show.anilist_id ? (
-                      <a
-                        href={aniListUrl || undefined}
-                        target={aniListUrl ? "_blank" : undefined}
-                        rel={aniListUrl ? "noreferrer noopener" : undefined}
-                        className="inline-flex"
-                      >
-                        <Chip size="md" variant="flat" color="secondary" className="font-medium">
-                          AniList #{show.anilist_id}
-                        </Chip>
-                      </a>
-                    ) : null}
                   </div>
                 </section>
 
                 {/* ── Season & Episode Chooser ── */}
-                <div className="rounded-xl border border-default-200/60 bg-default-100/60 dark:bg-default-100/20 overflow-hidden">
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3.5 border-b border-default-200/60">
-                    <span className="text-sm font-medium text-foreground">
-                      {useFlatAllEpisodesPicker
-                        ? "All episodes"
-                        : show.is_anime
+                <div className="rounded-xl border border-default-200/70 bg-content1 overflow-hidden shadow-sm">
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-default-200/60">
+                    <span className="text-xs font-medium text-default-600">
+                      {useAnilistOnlyEpisodePicker
+                        ? "Episodes"
+                        : useFlatAllEpisodesPicker
                           ? "Episodes"
-                          : "Season & Episode"}
+                          : show.is_anime
+                            ? "Episodes"
+                            : "Season & episode"}
                     </span>
                     {show.is_anime ? (
-                      typeof show.number_of_episodes === "number" && show.number_of_episodes > 0 ? (
-                        <span className="text-xs text-default-500">
-                          {show.number_of_episodes} episode{show.number_of_episodes === 1 ? "" : "s"}
+                      useAnilistOnlyEpisodePicker &&
+                      typeof anilistPickerTotal === "number" &&
+                      anilistPickerTotal > 0 ? (
+                        <span className="text-xs tabular-nums text-default-400">
+                          {anilistPickerTotal}
+                        </span>
+                      ) : typeof show.number_of_episodes === "number" && show.number_of_episodes > 0 ? (
+                        <span className="text-xs tabular-nums text-default-400">
+                          {show.number_of_episodes}
                         </span>
                       ) : null
                     ) : (
                       show.number_of_seasons &&
                       show.number_of_episodes && (
-                        <span className="text-xs text-default-500">
-                          {show.number_of_seasons} seasons · {show.number_of_episodes} eps
+                        <span className="text-xs tabular-nums text-default-400">
+                          {show.number_of_seasons}×{show.number_of_episodes}
                         </span>
                       )
                     )}
                   </div>
 
-                  {/* Season pills — hidden for single-season anime, or when using one flat list for all eps */}
-                  {!animeHideSeasonRow && !useFlatAllEpisodesPicker && (
-                    <div className="px-4 pt-4 pb-3">
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
-                        Season
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
+                  {!animeHideSeasonRow && !useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker && (
+                    <div className="px-3 pt-3 pb-2">
+                      <div className="flex flex-wrap gap-1">
                         {show.seasons
                           ?.filter((s) => s.season_number >= 1)
                           .map((s) => (
                             <Button
                               key={s.season_number}
                               size="sm"
-                              variant={selectedSeason === s.season_number ? "solid" : "flat"}
+                              radius="md"
+                              variant={selectedSeason === s.season_number ? "solid" : "bordered"}
                               color={selectedSeason === s.season_number ? "success" : "default"}
+                              className="min-w-11 h-8 px-0 text-xs font-medium"
                               onPress={() => {
                                 setSelectedSeason(s.season_number);
                                 setSelectedEpisode(1);
                               }}
                             >
-                              Season {s.season_number}
+                              S{s.season_number}
                             </Button>
                           ))}
                       </div>
@@ -907,118 +985,64 @@ export default function ShowTemplate({ id }: { id: string }) {
                   {/* Episode grid */}
                   {episodeGridStatus === "loading" && (
                     <div
-                      className={`px-4 pb-4 text-sm text-default-500${animeHideSeasonRow || useFlatAllEpisodesPicker ? " pt-4" : ""}`}
+                      className={`px-3 pb-3 text-xs text-default-500${animeHideSeasonRow || useFlatAllEpisodesPicker || useAnilistOnlyEpisodePicker ? " pt-3" : ""}`}
                     >
-                      Loading aired episodes…
+                      Loading…
                     </div>
                   )}
                   {episodeGridStatus === "none" && (
                     <div
-                      className={`px-4 pb-4 text-sm text-default-500${animeHideSeasonRow || useFlatAllEpisodesPicker ? " pt-4" : ""}`}
+                      className={`px-3 pb-3 text-xs text-default-500${animeHideSeasonRow || useFlatAllEpisodesPicker || useAnilistOnlyEpisodePicker ? " pt-3" : ""}`}
                     >
-                      No episodes have aired in this season yet.
+                      {useAnilistOnlyEpisodePicker
+                        ? "Episode list not ready yet."
+                        : "Nothing to show for this season yet."}
                     </div>
                   )}
                   {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
-                    <div className={`px-4 pb-4${animeHideSeasonRow || useFlatAllEpisodesPicker ? " pt-4" : ""}`}>
+                    <div
+                      className={`px-3 pb-3${animeHideSeasonRow || useFlatAllEpisodesPicker || useAnilistOnlyEpisodePicker ? " pt-3" : ""}`}
+                    >
                       {showEpisodeRangeTabs && (
-                        <div className="mb-3">
-                          <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2">
-                            Range
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {Array.from(
-                              { length: Math.ceil(displayEpisodeCount / EPISODE_RANGE_BLOCK) },
-                              (_, b) => {
-                                const start = b * EPISODE_RANGE_BLOCK;
-                                const labelHi = Math.min(
-                                  start + EPISODE_RANGE_BLOCK - 1,
-                                  displayEpisodeCount - 1
-                                );
-                                const withinLo = start + 1;
-                                const withinHi = Math.min(
-                                  start + EPISODE_RANGE_BLOCK,
-                                  displayEpisodeCount
-                                );
-                                const rangeLabel =
-                                  useFlatAllEpisodesPicker && playerUsesAnilist && show.seasons
-                                    ? (() => {
-                                        const lo = tmdbSeasonEpisodeFromAbsolute(
-                                          show.seasons,
-                                          withinLo
-                                        );
-                                        const hi = tmdbSeasonEpisodeFromAbsolute(
-                                          show.seasons,
-                                          withinHi
-                                        );
-                                        return `S${lo.season}E${lo.episode}–S${hi.season}E${hi.episode}`;
-                                      })()
-                                    : useFlatAllEpisodesPicker
-                                      ? `${withinLo}–${withinHi}`
-                                      : useContinuousEpisodeLabels
-                                        ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
-                                        : `${start}–${labelHi}`;
-                                return (
-                                  <Button
-                                    key={start}
-                                    size="sm"
-                                    variant={episodeRangeStart === start ? "solid" : "flat"}
-                                    color={episodeRangeStart === start ? "success" : "default"}
-                                    className="min-w-0 px-2.5 text-xs font-medium"
-                                    onPress={() => setEpisodeRangeStart(start)}
-                                  >
-                                    {rangeLabel}
-                                  </Button>
-                                );
-                              }
-                            )}
-                          </div>
+                        <div className="mb-2 flex flex-wrap gap-1">
+                          {Array.from(
+                            { length: Math.ceil(displayEpisodeCount / EPISODE_RANGE_BLOCK) },
+                            (_, b) => {
+                              const start = b * EPISODE_RANGE_BLOCK;
+                              const labelHi = Math.min(
+                                start + EPISODE_RANGE_BLOCK - 1,
+                                displayEpisodeCount - 1
+                              );
+                              const withinLo = start + 1;
+                              const withinHi = Math.min(
+                                start + EPISODE_RANGE_BLOCK,
+                                displayEpisodeCount
+                              );
+                              const rangeLabel = useFlatAllEpisodesPicker
+                                ? `${withinLo}–${withinHi}`
+                                : useContinuousEpisodeLabels
+                                  ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
+                                  : `${start}–${labelHi}`;
+                              return (
+                                <Button
+                                  key={start}
+                                  size="sm"
+                                  radius="md"
+                                  variant={episodeRangeStart === start ? "solid" : "bordered"}
+                                  color={episodeRangeStart === start ? "success" : "default"}
+                                  className="h-7 min-w-0 px-2.5 text-xs font-normal"
+                                  onPress={() => setEpisodeRangeStart(start)}
+                                >
+                                  {rangeLabel}
+                                </Button>
+                              );
+                            }
+                          )}
                         </div>
                       )}
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-default-500 mb-2.5">
-                        Episode
-                        {selectedEpisode
-                          ? ` — ${
-                              playerUsesAnilist && useFlatAllEpisodesPicker
-                                ? `S${selectedSeason} · E${selectedEpisode} (#${cumulativeEpisodeSelected})`
-                                : useFlatAllEpisodesPicker || useContinuousEpisodeLabels
-                                  ? cumulativeEpisodeSelected
-                                  : selectedEpisode
-                            }`
-                          : ""}
-                        {showEpisodeRangeTabs ? (
-                          <span className="font-normal text-default-400 normal-case">
-                            {" "}
-                            (
-                            {useFlatAllEpisodesPicker && playerUsesAnilist && show.seasons
-                              ? (() => {
-                                  const lo = tmdbSeasonEpisodeFromAbsolute(
-                                    show.seasons,
-                                    episodeBlockLo
-                                  );
-                                  const hi = tmdbSeasonEpisodeFromAbsolute(
-                                    show.seasons,
-                                    episodeBlockHi
-                                  );
-                                  return `S${lo.season}E${lo.episode}–S${hi.season}E${hi.episode} · #${episodeBlockLo}–#${episodeBlockHi}`;
-                                })()
-                              : useFlatAllEpisodesPicker
-                                ? `${episodeBlockLo}–${episodeBlockHi}`
-                                : useContinuousEpisodeLabels
-                                  ? `${episodeBlockLo + episodeDisplayOffset}–${episodeBlockHi + episodeDisplayOffset}`
-                                  : `${episodeBlockLo}–${episodeBlockHi}`}
-                            )
-                          </span>
-                        ) : null}
-                      </p>
-                      {progressHydrated ? (
-                        <p className="mb-2 text-[10px] text-default-400">
-                          Resume position and watched marks are saved in this browser.
-                        </p>
-                      ) : null}
                       <div
-                        className="grid gap-1.5"
-                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))" }}
+                        className="grid gap-2"
+                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(2.5rem, 1fr))" }}
                       >
                         {Array.from(
                           { length: Math.max(0, episodeBlockHi - episodeBlockLo + 1) },
@@ -1028,32 +1052,32 @@ export default function ShowTemplate({ id }: { id: string }) {
                             useFlatAllEpisodesPicker && show?.seasons
                               ? tmdbSeasonEpisodeFromAbsolute(show.seasons, ep)
                               : null;
-                          const watchKey = coordsFlat
-                            ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
-                            : formatWatchEpKey(selectedSeason, ep);
+                          const watchKey = useAnilistOnlyEpisodePicker
+                            ? formatWatchEpKey(1, ep)
+                            : coordsFlat
+                              ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
+                              : formatWatchEpKey(selectedSeason, ep);
                           const watchedThis = watchedEpisodes.has(watchKey);
-                          const epLabel =
-                            useFlatAllEpisodesPicker && playerUsesAnilist && coordsFlat
-                              ? `${coordsFlat.season}·${coordsFlat.episode}`
-                              : useFlatAllEpisodesPicker
-                                ? ep
-                                : useContinuousEpisodeLabels
-                                  ? ep + episodeDisplayOffset
-                                  : ep;
+                          const epLabel = useAnilistOnlyEpisodePicker
+                            ? ep
+                            : useFlatAllEpisodesPicker
+                              ? ep
+                              : useContinuousEpisodeLabels
+                                ? ep + episodeDisplayOffset
+                                : ep;
                           const isCurrent = useFlatAllEpisodesPicker
                             ? cumulativeEpisodeSelected === ep
                             : selectedEpisode === ep;
-                          const ariaEp =
-                            useFlatAllEpisodesPicker && coordsFlat
-                              ? `Season ${coordsFlat.season} episode ${coordsFlat.episode}`
-                              : `Episode ${epLabel}`;
+                          const ariaEp = `Episode ${epLabel}`;
                           return (
                             <div key={ep} className="relative">
                               <Button
                                 size="sm"
                                 isIconOnly
-                                variant={isCurrent ? "solid" : "flat"}
+                                radius="md"
+                                variant={isCurrent ? "solid" : "bordered"}
                                 color={isCurrent ? "success" : "default"}
+                                className="h-10 w-full min-w-10 max-w-11 text-xs font-medium"
                                 aria-label={
                                   watchedThis ? `${ariaEp}, watched` : ariaEp
                                 }
@@ -1071,6 +1095,14 @@ export default function ShowTemplate({ id }: { id: string }) {
                                       );
                                       return next;
                                     });
+                                  } else if (useAnilistOnlyEpisodePicker) {
+                                    setSelectedSeason(1);
+                                    setSelectedEpisode(ep);
+                                    setWatchedEpisodes((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(formatWatchEpKey(1, ep));
+                                      return next;
+                                    });
                                   } else {
                                     setSelectedEpisode(ep);
                                     setWatchedEpisodes((prev) => {
@@ -1080,17 +1112,14 @@ export default function ShowTemplate({ id }: { id: string }) {
                                     });
                                   }
                                 }}
-                                className="aspect-square text-xs font-medium"
                               >
                                 {epLabel}
                               </Button>
                               {watchedThis ? (
                                 <span
-                                  className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-success text-[10px] leading-none text-white shadow-sm ring-1 ring-black/20"
+                                  className="pointer-events-none absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-success shadow-sm ring-1 ring-background"
                                   aria-hidden
-                                >
-                                  {"\u2713"}
-                                </span>
+                                />
                               ) : null}
                             </div>
                           );
@@ -1098,42 +1127,6 @@ export default function ShowTemplate({ id }: { id: string }) {
                       </div>
                     </div>
                   )}
-
-                  {/* Selection summary bar */}
-                  <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-default-50/50 dark:bg-default-100/10">
-                    <Chip size="md" variant="flat" color="success" className="font-mono">
-                      S{selectedSeason}
-                    </Chip>
-                    <span className="text-default-400 text-xs">›</span>
-                    {playerUsesAnilist && useFlatAllEpisodesPicker ? (
-                      <>
-                        <Chip size="md" variant="flat" color="success" className="font-mono">
-                          E{selectedEpisode}
-                        </Chip>
-                        <Chip
-                          size="sm"
-                          variant="bordered"
-                          color="default"
-                          className="font-mono text-default-600"
-                        >
-                          #{cumulativeEpisodeSelected}
-                        </Chip>
-                      </>
-                    ) : (
-                      <Chip size="md" variant="flat" color="success" className="font-mono">
-                        {`E${
-                          useFlatAllEpisodesPicker || useContinuousEpisodeLabels
-                            ? cumulativeEpisodeSelected
-                            : selectedEpisode
-                        }`}
-                      </Chip>
-                    )}
-                    {watchedEpisodes.size > 0 ? (
-                      <Chip size="sm" variant="flat" className="ml-auto font-medium text-default-600">
-                        {watchedEpisodes.size} marked watched
-                      </Chip>
-                    ) : null}
-                  </div>
                 </div>
 
                 <section className="w-full  p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
