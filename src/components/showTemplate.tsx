@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ShowPlayer from "./showPlayer";
 import YouMightLike from "./youMightLike";
+import AnimeRelatedSection from "./animeRelatedSection";
 import {
   cumulativeTvEpisode,
   tmdbSeasonEpisodeFromAbsolute,
@@ -12,6 +13,11 @@ import {
   useStreamingSource,
   type StreamServerId,
 } from "@/contexts/streamingSourceContext";
+import {
+  formatWatchEpKey,
+  loadWatchProgress,
+  saveWatchProgress,
+} from "@/lib/watchProgress";
 
 interface Season {
   season_number: number;
@@ -274,6 +280,56 @@ export default function ShowTemplate({ id }: { id: string }) {
   /** null = no cap (anime / error); number = last episode number aired by TMDB calendar */
   const [tmdbAiredEpCap, setTmdbAiredEpCap] = useState<number | null>(null);
   const [tmdbEpCapLoading, setTmdbEpCapLoading] = useState(false);
+  const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [progressHydrated, setProgressHydrated] = useState(false);
+  const progressAppliedForIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    progressAppliedForIdRef.current = null;
+    setProgressHydrated(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!show || loading) return;
+    if (progressAppliedForIdRef.current === id) return;
+
+    const saved = loadWatchProgress(String(id));
+    if (saved) {
+      const list = tmdbSeasonsWithEpisodes(show.seasons);
+      const seasonObj = list.find((s) => s.season_number === saved.lastSeason);
+      const max = seasonObj?.episode_count ?? 0;
+      if (max > 0 && saved.lastEpisode >= 1 && saved.lastEpisode <= max) {
+        setSelectedSeason(saved.lastSeason);
+        setSelectedEpisode(saved.lastEpisode);
+      }
+      setWatchedEpisodes(new Set(saved.watched));
+    } else {
+      setWatchedEpisodes(new Set());
+    }
+    progressAppliedForIdRef.current = id;
+    setProgressHydrated(true);
+  }, [id, show, loading]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!show || loading || !progressHydrated) return;
+    saveWatchProgress(String(id), {
+      lastSeason: selectedSeason,
+      lastEpisode: selectedEpisode,
+      watched: Array.from(watchedEpisodes),
+    });
+  }, [
+    id,
+    show,
+    loading,
+    progressHydrated,
+    selectedSeason,
+    selectedEpisode,
+    watchedEpisodes,
+  ]);
 
   useEffect(() => {
     const fetchShowDetails = async () => {
@@ -572,6 +628,12 @@ export default function ShowTemplate({ id }: { id: string }) {
       ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
       : 0;
   const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
+  const showAnimeRelated =
+    !loading &&
+    show != null &&
+    Boolean(show.is_anime) &&
+    typeof show.anilist_id === "number" &&
+    show.anilist_id > 0;
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -641,6 +703,10 @@ export default function ShowTemplate({ id }: { id: string }) {
             />
           )}
         </div>
+
+        {showAnimeRelated && show.anilist_id ? (
+          <AnimeRelatedSection anilistId={show.anilist_id} />
+        ) : null}
 
         {/* ── Show Details ── */}
         <div className="w-full flex flex-col gap-4">
@@ -826,6 +892,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                           </span>
                         ) : null}
                       </p>
+                      {progressHydrated ? (
+                        <p className="mb-2 text-[10px] text-default-400">
+                          Resume position and watched marks are saved in this browser.
+                        </p>
+                      ) : null}
                       <div
                         className="grid gap-1.5"
                         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))" }}
@@ -833,56 +904,79 @@ export default function ShowTemplate({ id }: { id: string }) {
                         {Array.from(
                           { length: Math.max(0, episodeBlockHi - episodeBlockLo + 1) },
                           (_, i) => episodeBlockLo + i
-                        ).map((ep) => (
-                          <Button
-                            key={ep}
-                            size="sm"
-                            isIconOnly
-                            variant={
-                              useFlatAllEpisodesPicker
-                                ? cumulativeEpisodeSelected === ep
-                                  ? "solid"
-                                  : "flat"
-                                : selectedEpisode === ep
-                                  ? "solid"
-                                  : "flat"
-                            }
-                            color={
-                              useFlatAllEpisodesPicker
-                                ? cumulativeEpisodeSelected === ep
-                                  ? "success"
-                                  : "default"
-                                : selectedEpisode === ep
-                                  ? "success"
-                                  : "default"
-                            }
-                            onPress={() => {
-                              if (useFlatAllEpisodesPicker && show?.seasons) {
-                                const coords = tmdbSeasonEpisodeFromAbsolute(
-                                  show.seasons,
-                                  ep
-                                );
-                                setSelectedSeason(coords.season);
-                                setSelectedEpisode(coords.episode);
-                              } else {
-                                setSelectedEpisode(ep);
-                              }
-                            }}
-                            className="text-xs font-medium aspect-square"
-                          >
-                            {useFlatAllEpisodesPicker
-                              ? ep
-                              : useContinuousEpisodeLabels
-                                ? ep + episodeDisplayOffset
-                                : ep}
-                          </Button>
-                        ))}
+                        ).map((ep) => {
+                          const coordsFlat =
+                            useFlatAllEpisodesPicker && show?.seasons
+                              ? tmdbSeasonEpisodeFromAbsolute(show.seasons, ep)
+                              : null;
+                          const watchKey = coordsFlat
+                            ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
+                            : formatWatchEpKey(selectedSeason, ep);
+                          const watchedThis = watchedEpisodes.has(watchKey);
+                          const epLabel = useFlatAllEpisodesPicker
+                            ? ep
+                            : useContinuousEpisodeLabels
+                              ? ep + episodeDisplayOffset
+                              : ep;
+                          const isCurrent = useFlatAllEpisodesPicker
+                            ? cumulativeEpisodeSelected === ep
+                            : selectedEpisode === ep;
+                          return (
+                            <div key={ep} className="relative">
+                              <Button
+                                size="sm"
+                                isIconOnly
+                                variant={isCurrent ? "solid" : "flat"}
+                                color={isCurrent ? "success" : "default"}
+                                aria-label={
+                                  watchedThis
+                                    ? `Episode ${epLabel}, watched`
+                                    : `Episode ${epLabel}`
+                                }
+                                onPress={() => {
+                                  if (coordsFlat) {
+                                    setSelectedSeason(coordsFlat.season);
+                                    setSelectedEpisode(coordsFlat.episode);
+                                    setWatchedEpisodes((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(
+                                        formatWatchEpKey(
+                                          coordsFlat.season,
+                                          coordsFlat.episode
+                                        )
+                                      );
+                                      return next;
+                                    });
+                                  } else {
+                                    setSelectedEpisode(ep);
+                                    setWatchedEpisodes((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(formatWatchEpKey(selectedSeason, ep));
+                                      return next;
+                                    });
+                                  }
+                                }}
+                                className="aspect-square text-xs font-medium"
+                              >
+                                {epLabel}
+                              </Button>
+                              {watchedThis ? (
+                                <span
+                                  className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-success text-[10px] leading-none text-white shadow-sm ring-1 ring-black/20"
+                                  aria-hidden
+                                >
+                                  {"\u2713"}
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
                   {/* Selection summary bar */}
-                  <div className="flex items-center gap-2 px-4 py-3 border-t border-default-200/60 bg-default-50/50 dark:bg-default-100/10">
+                  <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-t border-default-200/60 bg-default-50/50 dark:bg-default-100/10">
                     <Chip size="md" variant="flat" color="success" className="font-mono">
                       S{selectedSeason}
                     </Chip>
@@ -894,6 +988,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                           : selectedEpisode
                       }`}
                     </Chip>
+                    {watchedEpisodes.size > 0 ? (
+                      <Chip size="sm" variant="flat" className="ml-auto font-medium text-default-600">
+                        {watchedEpisodes.size} marked watched
+                      </Chip>
+                    ) : null}
                   </div>
                 </div>
 
@@ -941,7 +1040,7 @@ export default function ShowTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        {!loading && /^\d+$/.test(resolvedPlayerId) ? (
+        {!loading && !showAnimeRelated && /^\d+$/.test(resolvedPlayerId) ? (
           <YouMightLike mediaType="tv" id={resolvedPlayerId} />
         ) : null}
       </div>

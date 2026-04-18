@@ -11,6 +11,8 @@ export type HorizontalCatalogCardProps = {
   type: 'movie' | 'tv' | string;
   posterPath?: string;
   backdropPath?: string;
+  /** Small label above title (e.g. Sequel, Prequel) */
+  topNote?: string;
 };
 
 const BASE = 'https://image.tmdb.org/t/p/';
@@ -30,6 +32,7 @@ export default function HorizontalCatalogCard({
   type,
   posterPath = '',
   backdropPath = '',
+  topNote,
 }: HorizontalCatalogCardProps) {
   const typeLower = String(type ?? '').toLowerCase();
   const isTv = typeLower === 'tv';
@@ -82,6 +85,11 @@ export default function HorizontalCatalogCard({
               <span className={pill}>{year}</span>
             </div>
             <div className="absolute bottom-2 left-2 right-3 max-w-[85%] sm:bottom-2.5 sm:left-2.5 sm:right-4">
+              {topNote ? (
+                <p className="mb-0.5 text-left text-[10px] font-semibold uppercase tracking-wide text-success drop-shadow-md line-clamp-1">
+                  {topNote}
+                </p>
+              ) : null}
               <p className="text-left text-xs font-semibold leading-snug text-white drop-shadow-md line-clamp-2 sm:text-sm">
                 {title}
               </p>
