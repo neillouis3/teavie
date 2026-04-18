@@ -923,9 +923,9 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </div>
                 </section>
 
-                {/* ── Season & Episode Chooser ── */}
-                <div className="rounded-xl border border-default-200/70 bg-content1 overflow-hidden shadow-sm">
-                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-default-200/60">
+                {/* ── Season & Episode Chooser (surface matches poster / overview card) ── */}
+                <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 dark:bg-default-100/20 overflow-hidden p-4 sm:p-5 flex flex-col gap-4">
+                  <div className="flex items-center justify-between gap-3">
                     <span className="text-xs font-medium text-default-600">
                       {useAnilistOnlyEpisodePicker
                         ? "Episodes"
@@ -958,7 +958,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </div>
 
                   {!animeHideSeasonRow && !useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker && (
-                    <div className="px-3 pt-3 pb-2">
+                    <div>
                       <div className="flex flex-wrap gap-1">
                         {show.seasons
                           ?.filter((s) => s.season_number >= 1)
@@ -967,9 +967,13 @@ export default function ShowTemplate({ id }: { id: string }) {
                               key={s.season_number}
                               size="sm"
                               radius="md"
-                              variant={selectedSeason === s.season_number ? "solid" : "bordered"}
-                              color={selectedSeason === s.season_number ? "success" : "default"}
-                              className="min-w-11 h-8 px-0 text-xs font-medium"
+                              variant="flat"
+                              color="default"
+                              className={`min-w-11 h-8 px-0 text-xs font-medium ${
+                                selectedSeason === s.season_number
+                                  ? "bg-default-200/90 dark:bg-default-200/40"
+                                  : ""
+                              }`}
                               onPress={() => {
                                 setSelectedSeason(s.season_number);
                                 setSelectedEpisode(1);
@@ -984,25 +988,19 @@ export default function ShowTemplate({ id }: { id: string }) {
 
                   {/* Episode grid */}
                   {episodeGridStatus === "loading" && (
-                    <div
-                      className={`px-3 pb-3 text-xs text-default-500${animeHideSeasonRow || useFlatAllEpisodesPicker || useAnilistOnlyEpisodePicker ? " pt-3" : ""}`}
-                    >
+                    <div className="text-xs text-default-500">
                       Loading…
                     </div>
                   )}
                   {episodeGridStatus === "none" && (
-                    <div
-                      className={`px-3 pb-3 text-xs text-default-500${animeHideSeasonRow || useFlatAllEpisodesPicker || useAnilistOnlyEpisodePicker ? " pt-3" : ""}`}
-                    >
+                    <div className="text-xs text-default-500">
                       {useAnilistOnlyEpisodePicker
                         ? "Episode list not ready yet."
                         : "Nothing to show for this season yet."}
                     </div>
                   )}
                   {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
-                    <div
-                      className={`px-3 pb-3${animeHideSeasonRow || useFlatAllEpisodesPicker || useAnilistOnlyEpisodePicker ? " pt-3" : ""}`}
-                    >
+                    <div>
                       {showEpisodeRangeTabs && (
                         <div className="mb-2 flex flex-wrap gap-1">
                           {Array.from(
@@ -1028,9 +1026,13 @@ export default function ShowTemplate({ id }: { id: string }) {
                                   key={start}
                                   size="sm"
                                   radius="md"
-                                  variant={episodeRangeStart === start ? "solid" : "bordered"}
-                                  color={episodeRangeStart === start ? "success" : "default"}
-                                  className="h-7 min-w-0 px-2.5 text-xs font-normal"
+                                  variant="flat"
+                                  color="default"
+                                  className={`h-7 min-w-0 px-2.5 text-xs font-normal ${
+                                    episodeRangeStart === start
+                                      ? "bg-default-200/90 dark:bg-default-200/40"
+                                      : ""
+                                  }`}
                                   onPress={() => setEpisodeRangeStart(start)}
                                 >
                                   {rangeLabel}
@@ -1075,9 +1077,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                                 size="sm"
                                 isIconOnly
                                 radius="md"
-                                variant={isCurrent ? "solid" : "bordered"}
-                                color={isCurrent ? "success" : "default"}
-                                className="h-10 w-full min-w-10 max-w-11 text-xs font-medium"
+                                variant="flat"
+                                color="default"
+                                className={`h-10 w-full min-w-10 max-w-11 text-xs font-medium ${
+                                  isCurrent ? "bg-default-200/90 dark:bg-default-200/40" : ""
+                                }`}
                                 aria-label={
                                   watchedThis ? `${ariaEp}, watched` : ariaEp
                                 }
@@ -1117,7 +1121,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                               </Button>
                               {watchedThis ? (
                                 <span
-                                  className="pointer-events-none absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-success shadow-sm ring-1 ring-background"
+                                  className="pointer-events-none absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-foreground/45 shadow-sm ring-1 ring-background"
                                   aria-hidden
                                 />
                               ) : null}
@@ -1204,11 +1208,11 @@ function LoadingSkeleton() {
         </div>
       </section>
 
-      <div className="rounded-xl border border-default-200/60 bg-default-100/60 dark:bg-default-100/20 overflow-hidden">
-        <div className="px-4 py-3.5 border-b border-default-200/60">
+      <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 dark:bg-default-100/20 overflow-hidden p-4 sm:p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
           <div className="h-4 w-36 bg-default-200 rounded animate-pulse" />
         </div>
-        <div className="px-4 pt-4 pb-3">
+        <div>
           <div className="h-2.5 w-14 bg-default-200 rounded animate-pulse mb-2.5" />
           <div className="flex gap-1.5">
             {[1, 2, 3, 4].map((i) => (
@@ -1216,7 +1220,7 @@ function LoadingSkeleton() {
             ))}
           </div>
         </div>
-        <div className="px-4 pb-4">
+        <div>
           <div className="h-2.5 w-16 bg-default-200 rounded animate-pulse mb-2.5" />
           <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))" }}>
             {Array.from({ length: 13 }).map((_, i) => (
@@ -1226,10 +1230,10 @@ function LoadingSkeleton() {
         </div>
       </div>
 
-      <section className="w-full rounded-xl border border-default-200/60 overflow-hidden">
-        <div className="flex flex-row gap-4">
+      <section className="w-full rounded-xl border border-default-200/50 bg-default-100/50 dark:bg-default-100/20 overflow-hidden">
+        <div className="flex flex-row gap-4 p-4 sm:p-5">
           <div className="aspect-[2/3] w-28 shrink-0 animate-pulse bg-default-200 sm:w-36 md:w-40 lg:w-48" />
-          <div className="flex-1 p-4 sm:p-5 space-y-4">
+          <div className="flex-1 space-y-4">
             <div className="space-y-2">
               {[90, 75, 55].map((w, i) => (
                 <div key={i} className="h-3 bg-default-200 rounded animate-pulse" style={{ width: `${w}%` }} />
