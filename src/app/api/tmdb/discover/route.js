@@ -7,7 +7,11 @@ import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
 
-const LIMIT = 12;
+/**
+ * Pull enough TMDB-ordered rows so UI can render 14 in vertical mode
+ * after catalog matching / dedupe.
+ */
+const LIMIT = 20;
 
 function uniquePositiveIds(rows) {
   const ids = (rows || [])
