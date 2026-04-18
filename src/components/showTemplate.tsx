@@ -76,6 +76,29 @@ function catalogAnilistId(
   return null;
 }
 
+/**
+ * Catalog anime pages use `/shows/anime_{malId}` (see `import-anime-to-tv.js`) — that number is MAL id,
+ * not AniList id. Use it when `anilist_id` is missing on the merged show.
+ */
+function malIdFromAnimeCatalogRouteId(routeId: string): number | null {
+  const m = /^anime_(\d+)$/i.exec(String(routeId ?? "").trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function catalogMalIdForAnilistApi(
+  doc: Pick<Show, "mal_id" | "external_ids"> | null | undefined,
+  routeId: string
+): number | null {
+  const fromRoute = malIdFromAnimeCatalogRouteId(routeId);
+  if (fromRoute != null) return fromRoute;
+  if (typeof doc?.mal_id === "number" && doc.mal_id > 0) return doc.mal_id;
+  const ext = doc?.external_ids?.mal_id;
+  if (typeof ext === "number" && ext > 0) return ext;
+  return null;
+}
+
 type AnilistMediaPayload = {
   id: number;
   idMal?: number | null;
@@ -595,6 +618,13 @@ export default function ShowTemplate({ id }: { id: string }) {
   );
   const resolvedIsNumeric = /^\d+$/.test(String(resolvedPlayerId));
   const aniId = catalogAnilistId(show);
+  /** MAL id from `/shows/anime_{malId}` or doc — drives AniList APIs when `anilist_id` is missing. */
+  const idMalForAnilistRails = catalogMalIdForAnilistApi(show, id);
+  const showAnimeRelated =
+    !loading &&
+    show != null &&
+    Boolean(show.is_anime) &&
+    idMalForAnilistRails != null;
   const playerUsesAnilist = Boolean(show?.is_anime) && aniId != null;
   const playerUsesTmdb = !playerUsesAnilist && resolvedIsNumeric;
   /** TMDB /season/{n} air dates for capping the episode grid (season index matches TMDB for all TMDB playback). */
@@ -654,9 +684,6 @@ export default function ShowTemplate({ id }: { id: string }) {
       ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
       : 0;
   const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
-
-  const showAnimeRelated =
-    !loading && show != null && Boolean(show.is_anime) && aniId != null;
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -727,14 +754,6 @@ export default function ShowTemplate({ id }: { id: string }) {
             />
           )}
         </div>
-
-        {showAnimeRelated ? (
-          <AnimeRelatedSection
-            anilistId={aniId!}
-            seedTitle={show?.name}
-            excludeCatalogId={String(id)}
-          />
-        ) : null}
 
         {/* ── Show Details ── */}
         <div className="w-full flex flex-col gap-4">
@@ -1004,7 +1023,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                   )}
 
                   {/* Selection summary bar */}
-                  <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-t border-default-200/60 bg-default-50/50 dark:bg-default-100/10">
+                  <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-default-50/50 dark:bg-default-100/10">
                     <Chip size="md" variant="flat" color="success" className="font-mono">
                       S{selectedSeason}
                     </Chip>
@@ -1068,14 +1087,18 @@ export default function ShowTemplate({ id }: { id: string }) {
           )}
         </div>
 
+        {!loading && showAnimeRelated ? (
+          <AnimeRelatedSection idMal={idMalForAnilistRails ?? undefined} />
+        ) : null}
+
         {!loading &&
-        ((Boolean(show?.is_anime) && aniId != null) ||
+        ((Boolean(show?.is_anime) && idMalForAnilistRails != null) ||
           (!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)))) ? (
           <YouMightLike
             mediaType="tv"
             id={resolvedPlayerId}
             isAnime={Boolean(show?.is_anime)}
-            anilistId={aniId ?? undefined}
+            idMal={idMalForAnilistRails ?? undefined}
           />
         ) : null}
       </div>

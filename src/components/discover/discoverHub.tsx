@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import Header from "@/components/ui/header";
 import CatalogRail from "@/components/explore/catalogRail";
 import SmallCardLoading from "@/components/ui/smallCardLoading";
-import { Chip } from "@heroui/react";
 import type { ContentItem } from "@/types/content";
 
 export type TmdbDiscoverPayload = {
@@ -40,8 +39,6 @@ function TmdbRailsSkeleton() {
 
 export default function DiscoverHub() {
   const [data, setData] = useState<TmdbDiscoverPayload | null>(null);
-  const [newMovies, setNewMovies] = useState<ContentItem[]>([]);
-  const [upcomingMovies, setUpcomingMovies] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,12 +48,9 @@ export default function DiscoverHub() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([
-      fetch("/api/tmdb/discover").then((res) => res.json()),
-      fetch("/api/new?limit=12&type=movie").then((res) => res.json()),
-      fetch("/api/upcoming?limit=12&type=movie").then((res) => res.json()),
-    ])
-      .then(([discoverJson, newJson, upcomingJson]) => {
+    fetch("/api/tmdb/discover")
+      .then((res) => res.json())
+      .then((discoverJson) => {
         if (cancelled) return;
         setData({
           trendingMovies: discoverJson.trendingMovies ?? [],
@@ -64,15 +58,9 @@ export default function DiscoverHub() {
           popularMovies: discoverJson.popularMovies ?? [],
           popularTv: discoverJson.popularTv ?? [],
         });
-        setNewMovies(newJson.results ?? []);
-        setUpcomingMovies(upcomingJson.results ?? []);
       })
       .catch(() => {
-        if (!cancelled) {
-          setData(EMPTY);
-          setNewMovies([]);
-          setUpcomingMovies([]);
-        }
+        if (!cancelled) setData(EMPTY);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -89,8 +77,7 @@ export default function DiscoverHub() {
       data.popularMovies.length > 0 ||
       data.popularTv.length > 0);
 
-  const hasCatalogRails = newMovies.length > 0 || upcomingMovies.length > 0;
-  const showDiscoverBody = loading || hasCatalogRails || hasAny;
+  const showDiscoverBody = loading || hasAny;
 
   return (
     <div className="bg-background flex w-full flex-col">
@@ -101,62 +88,35 @@ export default function DiscoverHub() {
           {loading ? (
             <TmdbRailsSkeleton />
           ) : (
-            <>
-              {hasCatalogRails ? (
-                <div className="flex flex-col gap-10">
-                  <div className="mb-1">
-                    <Chip color="success" size="md" radius="sm">
-                      New & upcoming movies
-                    </Chip>
-                    <p className="mt-1 text-xs text-default-500">
-                      From your catalog (last 30 days new, next month upcoming). Run the daily TMDB sync
-                      so titles stay fresh.
-                    </p>
-                  </div>
-                  <CatalogRail
-                    title="New in theaters & streaming"
-                    items={newMovies}
-                    moreHref="/explore"
-                    moreLabel="Explore"
-                  />
-                  <CatalogRail
-                    title="Coming soon (movies)"
-                    items={upcomingMovies}
-                    moreHref="/explore"
-                    moreLabel="Explore"
-                  />
-                </div>
-              ) : null}
-
-              {data && hasAny ? (
-                <div className="flex flex-col gap-10">
-                  <CatalogRail
-                    title="Trending movies this week"
-                    items={data.trendingMovies}
-                    moreHref="/search"
-                    moreLabel="Search & more"
-                  />
-                  <CatalogRail
-                    title="Trending TV this week"
-                    items={data.trendingTv}
-                    moreHref="/search"
-                    moreLabel="Search & more"
-                  />
-                  <CatalogRail
-                    title="Popular movies"
-                    items={data.popularMovies}
-                    moreHref="/search"
-                    moreLabel="Search & more"
-                  />
-                  <CatalogRail
-                    title="Popular TV shows"
-                    items={data.popularTv}
-                    moreHref="/search"
-                    moreLabel="Search & more"
-                  />
-                </div>
-              ) : null}
-            </>
+            data &&
+            hasAny && (
+              <div className="flex flex-col gap-10">
+                <CatalogRail
+                  title="Trending movies this week"
+                  items={data.trendingMovies}
+                  moreHref="/search"
+                  moreLabel="Search & more"
+                />
+                <CatalogRail
+                  title="Trending TV this week"
+                  items={data.trendingTv}
+                  moreHref="/search"
+                  moreLabel="Search & more"
+                />
+                <CatalogRail
+                  title="Popular movies"
+                  items={data.popularMovies}
+                  moreHref="/search"
+                  moreLabel="Search & more"
+                />
+                <CatalogRail
+                  title="Popular TV shows"
+                  items={data.popularTv}
+                  moreHref="/search"
+                  moreLabel="Search & more"
+                />
+              </div>
+            )
           )}
         </div>
       )}

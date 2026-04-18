@@ -1,4 +1,4 @@
-const ANILIST_GRAPHQL = "https://graphql.anilist.co";
+import { anilistPost } from "@/lib/anilistFetch";
 
 const MEDIA_SELECTION = `
           id
@@ -60,14 +60,7 @@ export async function GET(req) {
     const query = useAnilistId ? QUERY_BY_ANILIST_ID : QUERY_BY_MAL;
     const variables = useAnilistId ? { id: anilistId } : { idMal };
 
-    const res = await fetch(ANILIST_GRAPHQL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ query, variables }),
-    });
+    const res = await anilistPost({ query, variables });
 
     if (!res.ok) {
       const t = await res.text();

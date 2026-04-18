@@ -20,13 +20,13 @@ export default function YouMightLike({
   mediaType,
   id,
   isAnime,
-  anilistId,
+  idMal,
 }: {
   mediaType: 'movie' | 'tv';
   id: string;
   isAnime?: boolean;
-  /** Required for anime TV: AniList recommendations → `/shows/anime_*` in catalog. */
-  anilistId?: number | null;
+  /** MAL id from `/shows/anime_{malId}` or doc — required for anime recommendations (Jikan). */
+  idMal?: number | null;
 }) {
   const [items, setItems] = useState<RecItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,35 +37,50 @@ export default function YouMightLike({
     const runAnime = async () => {
       setLoading(true);
       try {
-        const res = await fetch(
-          `/api/anilist/you-might-like?anilistId=${anilistId}`,
-          { signal: controller.signal }
-        );
+        const qs = new URLSearchParams();
+        if (typeof idMal === 'number' && Number.isFinite(idMal) && idMal > 0) {
+          qs.set('idMal', String(idMal));
+        }
+        const res = await fetch(`/api/anilist/you-might-like?${qs.toString()}`, {
+          signal: controller.signal,
+        });
         const data = res.ok ? await res.json() : { items: [] };
         const rows = Array.isArray(data.items) ? data.items : [];
         setItems(
           rows.map(
             (r: {
               catalogId: string | null;
-              anilistId: number;
+              anilistId: number | null;
+              malId?: number;
               title: string;
               year: string;
               posterPath?: string;
               externalUrl?: string | null;
-            }) => ({
-              keyId: r.anilistId,
-              linkId: r.catalogId ?? `al-${r.anilistId}`,
-              title: r.title ?? 'Untitled',
-              poster_path: r.posterPath ?? null,
-              backdrop_path: null,
-              year: r.year ?? '—',
-              href:
-                r.catalogId != null && r.catalogId !== ''
+            }) => {
+              const al =
+                typeof r.anilistId === 'number' && Number.isFinite(r.anilistId) && r.anilistId > 0
+                  ? r.anilistId
+                  : null;
+              const mal =
+                typeof r.malId === 'number' && Number.isFinite(r.malId) && r.malId > 0 ? r.malId : 0;
+              const keyId = al ?? mal;
+              const inCatalog = r.catalogId != null && r.catalogId !== '';
+              return {
+                keyId,
+                linkId: inCatalog ? r.catalogId! : al != null ? `al-${al}` : `mal-${mal}`,
+                title: r.title ?? 'Untitled',
+                poster_path: r.posterPath ?? null,
+                backdrop_path: null,
+                year: r.year ?? '—',
+                href: inCatalog
                   ? undefined
                   : typeof r.externalUrl === 'string' && r.externalUrl.length > 0
                     ? r.externalUrl
-                    : `https://anilist.co/anime/${r.anilistId}`,
-            })
+                    : al != null
+                      ? `https://anilist.co/anime/${al}`
+                      : undefined,
+              };
+            }
           )
         );
       } catch {
@@ -128,11 +143,8 @@ export default function YouMightLike({
     };
 
     if (mediaType === 'tv' && isAnime) {
-      if (
-        typeof anilistId !== 'number' ||
-        !Number.isFinite(anilistId) ||
-        anilistId <= 0
-      ) {
+      const hasMal = typeof idMal === 'number' && Number.isFinite(idMal) && idMal > 0;
+      if (!hasMal) {
         setItems([]);
         setLoading(false);
         return () => controller.abort();
@@ -143,7 +155,7 @@ export default function YouMightLike({
     }
 
     return () => controller.abort();
-  }, [mediaType, id, isAnime, anilistId]);
+  }, [mediaType, id, isAnime, idMal]);
 
   const gridMovie =
     'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4';
@@ -153,7 +165,7 @@ export default function YouMightLike({
 
   if (loading) {
     return (
-      <section className="mt-10 w-full border-t border-default-200/60 pt-8">
+      <section className="mt-10 w-full pt-8">
         <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
         <div className={gridClass}>
           {Array.from({ length: mediaType === 'tv' ? 8 : 6 }).map((_, i) => (
@@ -173,11 +185,11 @@ export default function YouMightLike({
     mediaType === 'movie'
       ? 'Movies'
       : isAnime
-        ? 'AniList'
+        ? 'Jikan'
         : 'TV';
 
   return (
-    <section className="mt-10 w-full border-t border-default-200/60 pt-8">
+    <section className="mt-10 w-full pt-8">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-semibold text-foreground">You might like</h2>
         <Chip size="sm" variant="flat" color="success" className="font-normal">

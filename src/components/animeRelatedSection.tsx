@@ -16,36 +16,34 @@ type RelatedItem = {
 };
 
 export default function AnimeRelatedSection({
-  anilistId,
-  seedTitle,
-  excludeCatalogId,
+  idMal,
 }: {
-  anilistId: number;
-  /** Helps name-based catalog fallback when AniList has few edges. */
-  seedTitle?: string | null;
-  /** Current page catalog id (e.g. `anime_123`) — excluded from suggestions. */
-  excludeCatalogId?: string;
+  /** MAL id from `/shows/anime_{malId}` or doc — required for Jikan (no AniList idMal lookup). */
+  idMal?: number | null;
 }) {
   const [items, setItems] = useState<RelatedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!Number.isFinite(anilistId) || anilistId <= 0) {
+    const malOk = typeof idMal === "number" && Number.isFinite(idMal) && idMal > 0;
+    if (!malOk) {
       setLoading(false);
       setItems([]);
       return;
     }
     const controller = new AbortController();
     setLoading(true);
-    const qs = new URLSearchParams({ anilistId: String(anilistId) });
-    const seed = typeof seedTitle === "string" ? seedTitle.trim() : "";
-    if (seed) qs.set("seedTitle", seed);
-    const ex = typeof excludeCatalogId === "string" ? excludeCatalogId.trim() : "";
-    if (ex) qs.set("excludeCatalogId", ex);
-
+    const qs = new URLSearchParams();
+    qs.set("idMal", String(idMal));
     fetch(`/api/anilist/related?${qs.toString()}`, { signal: controller.signal })
       .then(async (res) => {
-        const data = res.ok ? await res.json() : { items: [] };
+        const data = await res.json().catch(() => ({}));
+        if (
+          process.env.NODE_ENV === "development" &&
+          (!res.ok || (typeof data.error === "string" && data.error))
+        ) {
+          console.warn("[AnimeRelatedSection API]", res.status, data);
+        }
         return data;
       })
       .then((data) => setItems(Array.isArray(data.items) ? data.items : []))
@@ -53,14 +51,14 @@ export default function AnimeRelatedSection({
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [anilistId, seedTitle, excludeCatalogId]);
+  }, [idMal]);
 
   const gridClass =
     "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4";
 
   if (loading) {
     return (
-      <section className="w-full border-t border-default-200/60 pt-6">
+      <section className="w-full pt-6">
         <h2 className="mb-3 text-lg font-semibold text-foreground">
           Related in franchise
         </h2>
@@ -79,18 +77,18 @@ export default function AnimeRelatedSection({
   if (items.length === 0) return null;
 
   return (
-    <section className="w-full border-t border-default-200/60 pt-6">
+    <section className="w-full pt-6">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-semibold text-foreground">
           Related in franchise
         </h2>
         <Chip size="sm" variant="flat" color="success" className="font-normal">
-          AniList
+          Jikan
         </Chip>
       </div>
       <p className="mb-4 text-xs text-default-500">
-        Sequels and recommendations from AniList, matched to Teavie catalog; extra rows use similar
-        titles when catalog links are thin.
+        Relations and recommendations from Jikan (MAL); Teavie catalog matches play here, others open
+        on AniList when we can resolve the id from MAL.
       </p>
       <ul className={gridClass}>
         {items.map((item) => {
