@@ -4,7 +4,13 @@ import React, { useEffect, useState } from "react";
 import Header from "@/components/ui/header";
 import CatalogRail from "@/components/explore/catalogRail";
 import SmallCardLoading from "@/components/ui/smallCardLoading";
+import HorizontalCatalogCardLoading from "@/components/ui/horizontalCatalogCardLoading";
 import type { ContentItem } from "@/types/content";
+import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
+import {
+  CATALOG_GRID_HORIZONTAL_SEARCH,
+  CATALOG_GRID_VERTICAL_SEARCH,
+} from "@/lib/catalogGrid";
 
 export type TmdbDiscoverPayload = {
   trendingMovies: ContentItem[];
@@ -20,16 +26,24 @@ const EMPTY: TmdbDiscoverPayload = {
   popularTv: [],
 };
 
-function TmdbRailsSkeleton() {
+function TmdbRailsSkeleton({ horizontal }: { horizontal: boolean }) {
+  const gridClass = horizontal
+    ? CATALOG_GRID_HORIZONTAL_SEARCH
+    : CATALOG_GRID_VERTICAL_SEARCH;
+  const tileCount = horizontal ? 8 : 14;
   return (
     <div className="flex w-full flex-col gap-8">
       {Array.from({ length: 2 }).map((_, section) => (
         <div key={section} className="flex flex-col gap-3">
           <div className="h-7 w-40 animate-pulse rounded-lg bg-default-200" />
-          <div className="grid w-full grid-cols-3 gap-2 sm:gap-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6">
-            {Array.from({ length: 6 }).map((__, i) => (
-              <SmallCardLoading key={i} />
-            ))}
+          <div className={`${gridClass} items-start`}>
+            {Array.from({ length: tileCount }).map((__, i) =>
+              horizontal ? (
+                <HorizontalCatalogCardLoading key={i} />
+              ) : (
+                <SmallCardLoading key={i} />
+              )
+            )}
           </div>
         </div>
       ))}
@@ -40,6 +54,8 @@ function TmdbRailsSkeleton() {
 export default function DiscoverHub() {
   const [data, setData] = useState<TmdbDiscoverPayload | null>(null);
   const [loading, setLoading] = useState(true);
+  const { mode: cardLayout } = useCatalogCardStyle();
+  const horizontal = cardLayout === "horizontal";
 
   useEffect(() => {
     document.title = "Discover - Teavie";
@@ -86,7 +102,7 @@ export default function DiscoverHub() {
       {showDiscoverBody && (
         <div className="mt-6 flex w-full flex-col gap-12 px-3 pb-8 sm:px-4">
           {loading ? (
-            <TmdbRailsSkeleton />
+            <TmdbRailsSkeleton horizontal={horizontal} />
           ) : (
             data &&
             hasAny && (
@@ -94,24 +110,28 @@ export default function DiscoverHub() {
                 <CatalogRail
                   title="Trending movies this week"
                   items={data.trendingMovies}
+                  maxItems={14}
                   moreHref="/search"
                   moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Trending TV this week"
                   items={data.trendingTv}
+                  maxItems={14}
                   moreHref="/search"
                   moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Popular movies"
                   items={data.popularMovies}
+                  maxItems={14}
                   moreHref="/search"
                   moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Popular TV shows"
                   items={data.popularTv}
+                  maxItems={14}
                   moreHref="/search"
                   moreLabel="Search & more"
                 />

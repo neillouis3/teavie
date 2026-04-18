@@ -7,6 +7,10 @@ import SmallCard from "@/components/ui/smallCard";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
+import {
+  CATALOG_GRID_HORIZONTAL_SEARCH,
+  CATALOG_GRID_VERTICAL_SEARCH,
+} from "@/lib/catalogGrid";
 
 type CatalogRailProps = {
   title: string;
@@ -30,9 +34,10 @@ export default function CatalogRail({
   const slice = (items ?? []).slice(0, maxItems);
   if (slice.length === 0) return null;
 
-  /** `items-start`: avoid stretch-tall rows (one long title was adding empty space under every card). */
-  const railClass =
-    "grid w-full grid-flow-col grid-rows-2 auto-rows-min items-start content-start gap-x-3 gap-y-2 overflow-x-auto pb-2 pr-2 [scrollbar-width:thin]";
+  /** Wrapping grid: vertical = 7 across at `lg` (see `catalogGrid.ts`), horizontal = 4 at `lg`. */
+  const gridClass = horizontal
+    ? CATALOG_GRID_HORIZONTAL_SEARCH
+    : CATALOG_GRID_VERTICAL_SEARCH;
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -49,7 +54,7 @@ export default function CatalogRail({
           </Link>
         ) : null}
       </div>
-      <div className={railClass}>
+      <div className={`${gridClass} items-start`}>
         {slice.map((item) => {
           const titleText = item.title || item.name || "Untitled";
           const year =
@@ -57,11 +62,8 @@ export default function CatalogRail({
             item.first_air_date?.split("-")[0] ||
             "N/A";
           const key = `${item.type ?? "x"}-${item.id}`;
-          const wrapClass = horizontal
-            ? "w-[240px] sm:w-[280px] md:w-[320px] lg:w-[340px]"
-            : "w-[120px] sm:w-[145px] md:w-[160px] lg:w-[175px]";
           return (
-            <div key={key} className={wrapClass}>
+            <div key={key} className="min-w-0">
               {horizontal ? (
                 <HorizontalCatalogCard
                   id={item.id}
