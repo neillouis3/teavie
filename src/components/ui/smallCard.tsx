@@ -90,15 +90,16 @@ export default function SmallCard({
           </p>
         </div>
         <h1
-          className="text-md truncate transition-colors duration-300 group-hover:text-success"
+          className="min-h-[2.5rem] text-sm font-medium leading-snug text-foreground line-clamp-2 transition-colors duration-300 group-hover:text-success sm:text-[15px]"
           title={title}
         >
-          {title.length > 25
-            ? `${title.slice(0, title.length / 1.5)}...`
-            : title}
+          {title}
         </h1>
         {releaseNote ? (
-          <p className="line-clamp-2 text-[11px] leading-snug text-default-500" title={releaseNote}>
+          <p
+            className="mt-0.5 min-h-[2.5rem] line-clamp-2 text-[11px] leading-snug text-default-500"
+            title={releaseNote}
+          >
             {releaseNote}
           </p>
         ) : null}

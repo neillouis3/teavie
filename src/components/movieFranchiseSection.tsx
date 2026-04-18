@@ -135,7 +135,7 @@ export default function MovieFranchiseSection({ id }: { id: string }) {
   }, [id]);
 
   const railClass =
-    'grid w-full grid-flow-col grid-rows-2 gap-3 overflow-x-auto pb-2 pr-2 [scrollbar-width:thin]';
+    'grid w-full grid-flow-col grid-rows-2 auto-rows-min items-start content-start gap-x-3 gap-y-2 overflow-x-auto pb-2 pr-2 [scrollbar-width:thin]';
   const wrapClass = 'w-[240px] sm:w-[280px] md:w-[320px] lg:w-[340px]';
 
   const show = useMemo(() => items.filter((x) => x.id !== Number(id)), [items, id]);
