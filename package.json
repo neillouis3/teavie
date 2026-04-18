@@ -10,7 +10,8 @@
     "round-icon": "node scripts/round-app-icon.mjs",
     "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs",
     "seed:popular": "node scripts/seed-popular-catalog.mjs",
-    "purge:adult-movies": "node scripts/purge-adult-catalog-movies.mjs"
+    "purge:adult-movies": "node scripts/purge-adult-catalog-movies.mjs",
+    "catalog:delete": "node scripts/delete-catalog-content.mjs"
   },
   "dependencies": {
     "@heroui/react": "^2.8.4",
