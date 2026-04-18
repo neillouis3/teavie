@@ -1,10 +1,11 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import {
   Home01Icon,
-  Film01Icon,
+  FilmRoll02Icon,
   Tv01Icon,
-  Award01Icon,
-  Rocket01Icon,
+  OlympicTorchIcon,
+  PopcornIcon,
+  OrangeIcon,
 } from '@hugeicons/core-free-icons';
 
 export type NavIcon = IconSvgElement;
@@ -29,8 +30,8 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     title: null,
     items: [
       { key: "explore", label: "Explore", href: "/explore", icon: Home01Icon },
-      { key: "discover", label: "Discover", href: "/discover", icon: Rocket01Icon },
-      { key: "movies", label: "Movies", href: "/movies/all", icon: Film01Icon },
+      { key: "discover", label: "Discover", href: "/discover", icon: PopcornIcon },
+      { key: "movies", label: "Movies", href: "/movies/all", icon: FilmRoll02Icon },
       { key: "shows", label: "TV Shows", href: "/shows/all", icon: Tv01Icon },
     ],
   },
@@ -38,8 +39,8 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     id: "categories",
     title: "Categories",
     items: [
-      { key: "anime", label: "Anime", href: "/anime/all", icon: Tv01Icon },
-      { key: "sports", label: "Sports", href: "/sports", icon: Award01Icon },
+      { key: "anime", label: "Anime", href: "/anime/all", icon: OrangeIcon },
+      { key: "sports", label: "Sports", href: "/sports", icon: OlympicTorchIcon },
     ],
   },
 ];
