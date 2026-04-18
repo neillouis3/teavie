@@ -14,7 +14,10 @@ interface Movie {
   runtime?: number;
   runtimeSeconds?: number;
   overview: string;
+  /** ISO 3166-1 alpha-2 codes (often co-productions); prefer {@link production_countries} for display. */
   origin_country?: string[];
+  /** TMDB production countries — best match for “country of origin” copy. */
+  production_countries?: { iso_3166_1?: string; name?: string }[];
   genres: { id: number; name: string }[];
   poster_path: string;
   vote_average: number;
@@ -30,16 +33,19 @@ function isReleasedByDate(releaseDate: string | undefined | null): boolean {
   return ymd <= new Date().toISOString().slice(0, 10);
 }
 
-/** TMDB sometimes lists stray co-prod codes; hide from the Country row. */
-const HIDDEN_ORIGIN_COUNTRY_CODES = new Set(["FR", "CL"]);
-
-function formatOriginCountriesForDisplay(
-  countries: string[] | undefined
-): string {
-  const list = (countries ?? []).filter(
-    (c) => !HIDDEN_ORIGIN_COUNTRY_CODES.has(String(c).toUpperCase())
-  );
-  return list.length > 0 ? list.join(", ") : "N/A";
+function formatCountryOfOrigin(movie: Movie): string {
+  const prod = movie.production_countries;
+  if (Array.isArray(prod) && prod.length > 0) {
+    const names = prod
+      .map((p) => String(p?.name ?? "").trim())
+      .filter(Boolean);
+    if (names.length > 0) return [...new Set(names)].join(", ");
+  }
+  const codes = movie.origin_country;
+  if (Array.isArray(codes) && codes.length > 0) {
+    return codes.map((c) => String(c).toUpperCase()).join(", ");
+  }
+  return "N/A";
 }
 
 export default function MovieTemplate({ id }: { id: string }) {
@@ -209,9 +215,11 @@ export default function MovieTemplate({ id }: { id: string }) {
                       )}
                       <dl className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                         <div>
-                          <dt className="text-default-500 font-medium">Country</dt>
+                          <dt className="text-default-500 font-medium">
+                            Country of origin
+                          </dt>
                           <dd className="text-foreground mt-0.5">
-                            {formatOriginCountriesForDisplay(movie.origin_country)}
+                            {formatCountryOfOrigin(movie)}
                           </dd>
                         </div>
                         <div>
