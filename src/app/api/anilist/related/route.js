@@ -1,5 +1,5 @@
 import clientPromise from "@/lib/mongo";
-import { jikanTransitiveSequelChainOrdered } from "@/lib/jikanFetch";
+import { jikanFranchiseRailOrderedSteps } from "@/lib/jikanFetch";
 
 function docAnilistKey(d) {
   const a = d?.anilist_id;
@@ -24,8 +24,11 @@ function yearFromDoc(d) {
 }
 
 /**
- * **Transitive sequels** from Jikan (MAL): walks outgoing “Sequel” edges so S1 can surface S2, S3, S4…
- * in order. **Only** titles present in Mongo (`content`) are returned (no out-of-catalog tiles).
+ * Franchise rail from Jikan (MAL), **catalog-only**:
+ * - Transitive **prequels** (oldest → newer toward the current show)
+ * - Transitive **sequels** (forward chain)
+ * - **Side stories** on the root (TV + movie)
+ * - Other **movies** on the root (summary, sequel/prequel movie, alt version, parent story)
  *
  * GET `?idMal=` (MAL id of the current show). Optional `?debug=1` for `meta`.
  */
@@ -45,17 +48,17 @@ export async function GET(req) {
     }
 
     const rootMal = idMal;
-    const chain = await jikanTransitiveSequelChainOrdered(rootMal, {
+    const chain = await jikanFranchiseRailOrderedSteps(rootMal, {
       staggerMs: 400,
       maxHops: 24,
-      maxSequels: 40,
+      maxNodes: 36,
     });
 
-    /** @type {{ source: string; rootMal: number; chainLength: number; catalogMatches: number }} */
+    /** @type {{ source: string; rootMal: number; stepCount: number; catalogMatches: number }} */
     const meta = {
-      source: "jikan-sequel-chain",
+      source: "jikan-franchise-rail",
       rootMal,
-      chainLength: chain.length,
+      stepCount: chain.length,
       catalogMatches: 0,
     };
 
@@ -119,7 +122,7 @@ export async function GET(req) {
         title: d.title ?? d.name ?? "Untitled",
         year: yearFromDoc(d),
         posterPath: typeof d.poster_path === "string" ? d.poster_path : "",
-        topNote: "Sequel",
+        topNote: step.topNote,
         externalUrl: null,
       });
     }
