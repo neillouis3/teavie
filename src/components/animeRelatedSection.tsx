@@ -17,28 +17,32 @@ type RelatedItem = {
 
 export default function AnimeRelatedSection({
   anilistId,
-  tmdbTvId,
+  seedTitle,
+  excludeCatalogId,
 }: {
-  anilistId?: number | null;
-  tmdbTvId?: number | null;
+  anilistId: number;
+  /** Helps name-based catalog fallback when AniList has few edges. */
+  seedTitle?: string | null;
+  /** Current page catalog id (e.g. `anime_123`) — excluded from suggestions. */
+  excludeCatalogId?: string;
 }) {
   const [items, setItems] = useState<RelatedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const hasAl = typeof anilistId === "number" && Number.isFinite(anilistId) && anilistId > 0;
-    const hasTmdb =
-      tmdbTvId != null && typeof tmdbTvId === "number" && Number.isFinite(tmdbTvId) && tmdbTvId > 0;
-    if (!hasAl && !hasTmdb) {
+    if (!Number.isFinite(anilistId) || anilistId <= 0) {
       setLoading(false);
       setItems([]);
       return;
     }
     const controller = new AbortController();
     setLoading(true);
-    const qs = new URLSearchParams();
-    if (hasAl) qs.set("anilistId", String(anilistId));
-    if (hasTmdb) qs.set("tmdbTvId", String(tmdbTvId));
+    const qs = new URLSearchParams({ anilistId: String(anilistId) });
+    const seed = typeof seedTitle === "string" ? seedTitle.trim() : "";
+    if (seed) qs.set("seedTitle", seed);
+    const ex = typeof excludeCatalogId === "string" ? excludeCatalogId.trim() : "";
+    if (ex) qs.set("excludeCatalogId", ex);
+
     fetch(`/api/anilist/related?${qs.toString()}`, { signal: controller.signal })
       .then(async (res) => {
         const data = res.ok ? await res.json() : { items: [] };
@@ -49,7 +53,7 @@ export default function AnimeRelatedSection({
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [anilistId, tmdbTvId]);
+  }, [anilistId, seedTitle, excludeCatalogId]);
 
   const gridClass =
     "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4";
@@ -81,12 +85,12 @@ export default function AnimeRelatedSection({
           Related in franchise
         </h2>
         <Chip size="sm" variant="flat" color="success" className="font-normal">
-          AniList + catalog
+          AniList
         </Chip>
       </div>
       <p className="mb-4 text-xs text-default-500">
-        Franchise links from AniList matched to movies and TV in Teavie; similar titles from TMDB fill in
-        when needed. External tiles open on AniList until imported.
+        Sequels and recommendations from AniList, matched to Teavie catalog; extra rows use similar
+        titles when catalog links are thin.
       </p>
       <ul className={gridClass}>
         {items.map((item) => {
@@ -102,7 +106,7 @@ export default function AnimeRelatedSection({
                   ? `https://anilist.co/anime/${item.anilistId}`
                   : undefined;
           return (
-            <li key={`${key}-${item.anilistId ?? "na"}`} className="min-w-0">
+            <li key={`${key}-${item.anilistId ?? "na"}-${item.topNote}`} className="min-w-0">
               <HorizontalCatalogCard
                 id={item.catalogId ?? `al-${item.anilistId ?? "x"}`}
                 title={item.title}

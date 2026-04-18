@@ -50,7 +50,6 @@ interface Show {
   } | null;
   /** TMDB season layout: when set on anime, picker uses these counts and embed uses same S/E as the UI. */
   tmdb_playback_seasons?: Season[];
-  /** Catalog or merged TMDB id for TV; used for TMDB recommendations on anime pages. */
   tmdb_id?: number | string | null;
   anilist?: {
     id?: number | null;
@@ -74,27 +73,6 @@ function catalogAnilistId(
   if (!doc) return null;
   if (typeof doc.anilist_id === "number" && doc.anilist_id > 0) return doc.anilist_id;
   if (typeof doc.anilist?.id === "number" && doc.anilist.id > 0) return doc.anilist.id;
-  return null;
-}
-
-function catalogTmdbTvId(show: Show | null | undefined): number | null {
-  if (!show) return null;
-  const raw =
-    show.tmdb_id ??
-    (typeof show.external_ids?.tmdb_id === "number"
-      ? show.external_ids.tmdb_id
-      : typeof show.external_ids?.tmdb_id === "string"
-        ? parseInt(show.external_ids.tmdb_id, 10)
-        : null);
-  const t =
-    typeof raw === "number" ? raw : typeof raw === "string" ? parseInt(raw, 10) : NaN;
-  if (Number.isFinite(t) && t > 0) return t;
-  /** TMDB detail payloads use numeric `id` as the TV id; catalog anime uses `anime_*`. */
-  const idStr = String(show.id ?? "");
-  if (!idStr.startsWith("anime_") && /^\d+$/.test(idStr)) {
-    const n = parseInt(idStr, 10);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
   return null;
 }
 
@@ -677,21 +655,8 @@ export default function ShowTemplate({ id }: { id: string }) {
       : 0;
   const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
 
-  const tmdbTvIdForRelated = (() => {
-    const fromDoc = catalogTmdbTvId(show);
-    if (fromDoc != null) return fromDoc;
-    if (resolvedIsNumeric) {
-      const n = parseInt(String(resolvedPlayerId), 10);
-      return Number.isFinite(n) && n > 0 ? n : null;
-    }
-    return null;
-  })();
-
   const showAnimeRelated =
-    !loading &&
-    show != null &&
-    Boolean(show.is_anime) &&
-    (aniId != null || tmdbTvIdForRelated != null);
+    !loading && show != null && Boolean(show.is_anime) && aniId != null;
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -765,8 +730,9 @@ export default function ShowTemplate({ id }: { id: string }) {
 
         {showAnimeRelated ? (
           <AnimeRelatedSection
-            anilistId={aniId ?? undefined}
-            tmdbTvId={tmdbTvIdForRelated}
+            anilistId={aniId!}
+            seedTitle={show?.name}
+            excludeCatalogId={String(id)}
           />
         ) : null}
 
@@ -1102,11 +1068,14 @@ export default function ShowTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        {!loading && /^\d+$/.test(resolvedPlayerId) ? (
+        {!loading &&
+        ((Boolean(show?.is_anime) && aniId != null) ||
+          (!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)))) ? (
           <YouMightLike
             mediaType="tv"
             id={resolvedPlayerId}
             isAnime={Boolean(show?.is_anime)}
+            anilistId={aniId ?? undefined}
           />
         ) : null}
       </div>

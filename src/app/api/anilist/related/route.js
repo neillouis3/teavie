@@ -1,13 +1,17 @@
 import clientPromise from "@/lib/mongo";
-import { tmdbBearerToken } from "@/lib/tmdbAuth";
+import {
+  catalogTodayIsoUtc,
+  escapeRegex,
+  releasedAnimeFirstAirClause,
+} from "@/lib/catalogQuery";
 
 const ANILIST_GRAPHQL = "https://graphql.anilist.co";
 
-/** No `type: ANIME` filter: some catalog ids resolve as plain `Media(id)`; relations still populate. */
 const QUERY = `
 query ($id: Int) {
   Media(id: $id) {
     id
+    title { romaji english native }
     relations {
       edges {
         relationType
@@ -23,7 +27,7 @@ query ($id: Int) {
         }
       }
     }
-    recommendations(perPage: 24, sort: RATING_DESC) {
+    recommendations(perPage: 30, sort: RATING_DESC) {
       nodes {
         id
         idMal
@@ -38,6 +42,35 @@ query ($id: Int) {
   }
 }
 `;
+
+const STOPWORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "of",
+  "to",
+  "in",
+  "on",
+  "for",
+  "with",
+  "no",
+  "wo",
+  "ni",
+  "de",
+  "ga",
+  "wa",
+  "ii",
+  "tv",
+  "ova",
+  "ona",
+  "sp",
+  "part",
+  "season",
+  "movie",
+  "special",
+]);
 
 function formatRelationLabel(relationType) {
   if (!relationType || typeof relationType !== "string") return "";
@@ -64,7 +97,6 @@ function pickMal(node) {
   return Number.isFinite(m) && m > 0 ? m : null;
 }
 
-/** Related `Media` nodes only (skip empty / invalid ids). */
 function isRelatedMediaNode(node) {
   if (!node || typeof node !== "object") return false;
   const nid = Number(node.id);
@@ -101,108 +133,128 @@ function yearFromDoc(d) {
   return raw.slice(0, 4);
 }
 
-/**
- * @param {import("mongodb").Collection} col
- * @param {string} token
- * @param {number} tmdbTvId
- * @param {Set<string>} excludeCatalogIds
- * @param {number} cap
- */
-async function tmdbTvRelatedCatalog(col, token, tmdbTvId, excludeCatalogIds, cap) {
-  const headers = {
-    accept: "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-  const urls = [
-    `https://api.themoviedb.org/3/tv/${tmdbTvId}/recommendations?language=en-US&page=1`,
-    `https://api.themoviedb.org/3/tv/${tmdbTvId}/similar?language=en-US&page=1`,
-  ];
-  const tmdbIds = [];
-  const seenT = new Set();
-  for (const url of urls) {
-    const res = await fetch(url, { headers });
-    if (!res.ok) continue;
-    const j = await res.json();
-    for (const r of j.results ?? []) {
-      const id = Number(r.id);
-      if (!Number.isFinite(id) || id <= 0 || seenT.has(id)) continue;
-      seenT.add(id);
-      tmdbIds.push(id);
-      if (tmdbIds.length >= 28) break;
+/** Titles from AniList root + optional UI seed (show name). */
+function collectSeedStrings(media, seedTitleParam) {
+  /** @type {string[]} */
+  const out = [];
+  const t = media?.title;
+  if (t && typeof t === "object") {
+    for (const k of ["english", "romaji", "native"]) {
+      const s = t[k];
+      if (typeof s === "string" && s.trim().length > 0) out.push(s.trim());
     }
-    if (tmdbIds.length >= 28) break;
   }
-  if (tmdbIds.length === 0) return [];
+  if (typeof seedTitleParam === "string" && seedTitleParam.trim().length > 0) {
+    out.push(seedTitleParam.trim());
+  }
+  return [...new Set(out)];
+}
 
-  const variants = [...tmdbIds, ...tmdbIds.map(String)];
+function tokenizeForSearch(strings) {
+  const tokens = new Set();
+  for (const s of strings) {
+    const parts = String(s)
+      .replace(/[''`]/g, "")
+      .split(/[^\p{L}\p{N}]+/u);
+    for (const p of parts) {
+      const x = p.toLowerCase();
+      if (x.length < 3 || STOPWORDS.has(x)) continue;
+      tokens.add(x);
+    }
+  }
+  return [...tokens].slice(0, 8);
+}
+
+/**
+ * Catalog anime (`anime_*`) whose title/name/aliases overlap tokens or a long title phrase.
+ * @param {import("mongodb").Collection} col
+ */
+async function catalogNameFallback(col, { seedStrings, excludeCatalogIds, excludeAnilistIds, cap }) {
+  if (cap <= 0) return [];
+
+  const tokens = tokenizeForSearch(seedStrings);
+  /** @type {Record<string, unknown>[]} */
+  const branches = [];
+  for (const tok of tokens) {
+    const rx = escapeRegex(tok);
+    branches.push({
+      $or: [
+        { title: { $regex: rx, $options: "i" } },
+        { name: { $regex: rx, $options: "i" } },
+        { title_aliases: { $regex: rx, $options: "i" } },
+        { "anilist.title.romaji": { $regex: rx, $options: "i" } },
+        { "anilist.title.english": { $regex: rx, $options: "i" } },
+        { "anilist.title.native": { $regex: rx, $options: "i" } },
+      ],
+    });
+  }
+
+  const longest = [...seedStrings].sort((a, b) => b.length - a.length)[0] || "";
+  if (longest.length >= 4) {
+    const phrase = escapeRegex(longest.slice(0, 48).trim());
+    branches.push({
+      $or: [
+        { title: { $regex: phrase, $options: "i" } },
+        { name: { $regex: phrase, $options: "i" } },
+        { title_aliases: { $regex: phrase, $options: "i" } },
+        { "anilist.title.romaji": { $regex: phrase, $options: "i" } },
+        { "anilist.title.english": { $regex: phrase, $options: "i" } },
+      ],
+    });
+  }
+
+  if (branches.length === 0) return [];
+
+  const todayIso = catalogTodayIsoUtc();
+  const nin = [...excludeCatalogIds];
+  /** @type {Record<string, unknown>[]} */
+  const and = [
+    { type: "tv" },
+    { id: { $regex: "^anime_" } },
+    releasedAnimeFirstAirClause(todayIso),
+    { $or: branches },
+  ];
+  if (nin.length) and.push({ id: { $nin: nin } });
+
   const docs = await col
-    .find(
-      {
-        $or: [
-          {
-            type: "tv",
-            $or: [
-              { id: { $in: variants } },
-              { tmdb_id: { $in: tmdbIds } },
-              { "external_ids.tmdb_id": { $in: tmdbIds } },
-            ],
-          },
-          {
-            type: "movie",
-            $or: [{ id: { $in: variants } }, { tmdb_id: { $in: tmdbIds } }],
-          },
-        ],
+    .find({ $and: and }, {
+      projection: {
+        id: 1,
+        type: 1,
+        anilist_id: 1,
+        anilist: 1,
+        title: 1,
+        name: 1,
+        poster_path: 1,
+        first_air_date: 1,
+        release_date: 1,
+        popularity: 1,
       },
-      {
-        projection: {
-          id: 1,
-          type: 1,
-          title: 1,
-          name: 1,
-          poster_path: 1,
-          release_date: 1,
-          first_air_date: 1,
-          tmdb_id: 1,
-        },
-      }
-    )
-    .limit(40)
+    })
+    .sort({ popularity: -1, _id: -1 })
+    .limit(cap + 8)
     .toArray();
 
-  /** @type {Map<number, (typeof docs)[0]>} */
-  const byTmdb = new Map();
-  for (const d of docs) {
-    const keys = new Set();
-    const tid =
-      typeof d.tmdb_id === "number"
-        ? d.tmdb_id
-        : typeof d.tmdb_id === "string"
-          ? parseInt(d.tmdb_id, 10)
-          : NaN;
-    if (Number.isFinite(tid) && tid > 0) keys.add(tid);
-    const idn = Number(d.id);
-    if (Number.isFinite(idn) && idn > 0 && !String(d.id).startsWith("anime_")) keys.add(idn);
-    for (const k of keys) {
-      if (!byTmdb.has(k)) byTmdb.set(k, d);
-    }
-  }
-
+  /** @type {Array<{ catalogId: string; catalogType: string; anilistId: number | null; title: string; year: string; posterPath: string; topNote: string; externalUrl: string | null }>} */
   const out = [];
-  for (const tid of tmdbIds) {
+  for (const d of docs) {
     if (out.length >= cap) break;
-    const d = byTmdb.get(tid);
-    if (!d?.id) continue;
     const cid = String(d.id);
+    if (!cid.startsWith("anime_")) continue;
     if (excludeCatalogIds.has(cid)) continue;
+    const aid = docAnilistKey(d);
+    if (aid != null && excludeAnilistIds.has(aid)) continue;
     excludeCatalogIds.add(cid);
+    if (aid != null) excludeAnilistIds.add(aid);
     out.push({
       catalogId: cid,
-      catalogType: d.type === "movie" ? "movie" : "tv",
-      anilistId: null,
+      catalogType: "tv",
+      anilistId: aid,
       title: d.title ?? d.name ?? "Untitled",
       year: yearFromDoc(d),
       posterPath: d.poster_path || "",
-      topNote: "Similar (TMDB)",
+      topNote: "Similar title",
+      externalUrl: null,
     });
   }
   return out;
@@ -213,43 +265,37 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const raw = searchParams.get("anilistId");
     const anilistId = raw ? parseInt(raw, 10) : NaN;
-    const anilistOk = Number.isFinite(anilistId) && anilistId > 0;
-
-    const tmdbRaw = searchParams.get("tmdbTvId");
-    const tmdbTvId = tmdbRaw ? parseInt(tmdbRaw, 10) : NaN;
-    const tmdbTvOk = Number.isFinite(tmdbTvId) && tmdbTvId > 0;
-
-    if (!anilistOk && !tmdbTvOk) {
-      return Response.json({ error: "Provide anilistId and/or tmdbTvId" }, { status: 400 });
+    if (!Number.isFinite(anilistId) || anilistId <= 0) {
+      return Response.json({ error: "Provide anilistId" }, { status: 400 });
     }
+
+    const seedTitle = (searchParams.get("seedTitle") || "").trim();
+    const excludeCatalogId = (searchParams.get("excludeCatalogId") || "").trim();
 
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
-    const token = tmdbBearerToken();
 
     /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; title: string; year: string; posterPath: string; topNote: string; externalUrl?: string | null }>} */
     const items = [];
 
-    let media = null;
-    if (anilistOk) {
-      const res = await fetch(ANILIST_GRAPHQL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ query: QUERY, variables: { id: anilistId } }),
-      });
+    const res = await fetch(ANILIST_GRAPHQL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ query: QUERY, variables: { id: anilistId } }),
+    });
 
-      if (res.ok) {
-        const payload = await res.json();
-        if (!payload.errors?.length && payload?.data?.Media) {
-          media = payload.data.Media;
-        }
+    let media = null;
+    if (res.ok) {
+      const payload = await res.json();
+      if (!payload.errors?.length && payload?.data?.Media) {
+        media = payload.data.Media;
       }
     }
 
-    const seen = new Set(anilistOk ? [anilistId] : []);
+    const seen = new Set([anilistId]);
     const candidates = [];
 
     if (media) {
@@ -267,7 +313,7 @@ export async function GET(req) {
             title: pickTitle(node),
             year: yearFromStart(node.startDate),
             posterPath: node.coverImage?.large || "",
-            topNote: formatRelationLabel(edge.relationType),
+            topNote: formatRelationLabel(edge.relationType) || "Related",
             externalUrl: anilistExternalUrl(node, nid),
           });
         }
@@ -379,13 +425,27 @@ export async function GET(req) {
       }
     }
 
-    const seenCatalog = new Set(items.map((i) => i.catalogId).filter(Boolean));
-    if (tmdbTvOk && token) {
-      const room = Math.max(0, 18 - items.length);
-      if (room > 0) {
-        const extra = await tmdbTvRelatedCatalog(col, token, tmdbTvId, seenCatalog, room);
-        items.push(...extra);
+    const excludeCatalogIds = new Set(
+      [excludeCatalogId, ...items.map((i) => i.catalogId).filter(Boolean)]
+    );
+    const excludeAnilistIds = new Set([anilistId]);
+    for (const it of items) {
+      if (typeof it.anilistId === "number" && it.anilistId > 0) {
+        excludeAnilistIds.add(it.anilistId);
       }
+    }
+
+    const inCatalog = items.filter((i) => i.catalogId).length;
+    const room = Math.max(0, 18 - items.length);
+    if (room > 0 && (items.length === 0 || inCatalog < 4)) {
+      const seedStrings = collectSeedStrings(media, seedTitle);
+      const extra = await catalogNameFallback(col, {
+        seedStrings,
+        excludeCatalogIds,
+        excludeAnilistIds,
+        cap: room,
+      });
+      items.push(...extra);
     }
 
     return Response.json({ items });
