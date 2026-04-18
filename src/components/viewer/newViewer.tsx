@@ -11,7 +11,7 @@ export default function NewViewer({ newContent }: NewViewerProps) {
   return (
     <div className="grid w-full grid-cols-3 gap-2 sm:gap-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
       {newContent &&
-        newContent.slice(0, 8).map((item, index) => {
+        newContent.slice(0, 8).map((item) => {
           const title = item.title || item.name || "Untitled";
           const year =
             item.release_date?.split("-")[0] ||
@@ -20,7 +20,7 @@ export default function NewViewer({ newContent }: NewViewerProps) {
 
           return (
             <SmallCard
-              key={index}
+              key={`${item.type ?? "x"}-${item.id}`}
               id={item.id}
               title={title}
               year={year}

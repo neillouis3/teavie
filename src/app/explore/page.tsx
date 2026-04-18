@@ -1,13 +1,22 @@
 'use client';
 import React, { useState, useEffect } from "react";
-import Explore from "@/components/explore";
+import Explore, { type TmdbDiscoverPayload } from "@/components/explore";
 import { ContentItem } from "@/types/content";
+
+const EMPTY_DISCOVER: TmdbDiscoverPayload = {
+  trendingMovies: [],
+  trendingTv: [],
+  popularMovies: [],
+  popularTv: [],
+};
 
 export default function ExplorePage() {
   const [newContent, setNewContent] = useState<ContentItem[]>([]);
   const [updatedContent, setUpdatedContent] = useState<ContentItem[]>([]);
   const [upcomingContent, setUpcomingContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tmdbDiscover, setTmdbDiscover] = useState<TmdbDiscoverPayload | null>(null);
+  const [tmdbDiscoverLoading, setTmdbDiscoverLoading] = useState(true);
 
   useEffect(() => {
     document.title = "Explore - Teavie";
@@ -48,6 +57,33 @@ export default function ExplorePage() {
     fetchExploreData();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setTmdbDiscoverLoading(true);
+
+    fetch("/api/tmdb/discover")
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        setTmdbDiscover({
+          trendingMovies: data.trendingMovies ?? [],
+          trendingTv: data.trendingTv ?? [],
+          popularMovies: data.popularMovies ?? [],
+          popularTv: data.popularTv ?? [],
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setTmdbDiscover(EMPTY_DISCOVER);
+      })
+      .finally(() => {
+        if (!cancelled) setTmdbDiscoverLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="w-full h-fit">
       <Explore
@@ -55,6 +91,8 @@ export default function ExplorePage() {
         updatedContentData={updatedContent}
         upcomingContentData={upcomingContent}
         loading={loading}
+        tmdbDiscover={tmdbDiscover}
+        tmdbDiscoverLoading={tmdbDiscoverLoading}
       />
     </div>
   );
