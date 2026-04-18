@@ -1,9 +1,5 @@
 import clientPromise from "@/lib/mongo";
-import {
-  jikanFetchRelationsAndRecommendations,
-  pickFranchiseRelationCandidates,
-} from "@/lib/jikanFetch";
-import { mapMalIdsToAnilistIds } from "@/lib/malToAnilistId";
+import { jikanTransitiveSequelChainOrdered } from "@/lib/jikanFetch";
 
 function docAnilistKey(d) {
   const a = d?.anilist_id;
@@ -27,21 +23,11 @@ function yearFromDoc(d) {
   return raw.slice(0, 4);
 }
 
-function anilistUrlForAnime(anilistId) {
-  return `https://anilist.co/anime/${anilistId}`;
-}
-
-function malUrlForAnime(malId) {
-  return `https://myanimelist.net/anime/${malId}`;
-}
-
 /**
- * Related in franchise: **Jikan** MAL relations — sequel, prequel, parent story, alternative version,
- * side story (no recommendations). Includes **anime** and **movie** entries. Out-of-catalog: AniList
- * when resolved, else MAL.
+ * **Transitive sequels** from Jikan (MAL): walks outgoing “Sequel” edges so S1 can surface S2, S3, S4…
+ * in order. **Only** titles present in Mongo (`content`) are returned (no out-of-catalog tiles).
  *
- * GET `?idMal=` (MAL id) required for Jikan. `anilistId` is ignored for the Jikan root (no AniList idMal lookup).
- * Optional `?debug=1` for `meta`.
+ * GET `?idMal=` (MAL id of the current show). Optional `?debug=1` for `meta`.
  */
 export async function GET(req) {
   try {
@@ -59,31 +45,27 @@ export async function GET(req) {
     }
 
     const rootMal = idMal;
-    /** @type {{ source: string; rootMal: number; jikanRelationsStatus: number; jikanRecsStatus: number; candidateCount: number }} */
+    const chain = await jikanTransitiveSequelChainOrdered(rootMal, {
+      staggerMs: 400,
+      maxHops: 24,
+      maxSequels: 40,
+    });
+
+    /** @type {{ source: string; rootMal: number; chainLength: number; catalogMatches: number }} */
     const meta = {
-      source: "jikan",
+      source: "jikan-sequel-chain",
       rootMal,
-      jikanRelationsStatus: 0,
-      jikanRecsStatus: 0,
-      candidateCount: 0,
+      chainLength: chain.length,
+      catalogMatches: 0,
     };
 
-    const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
-      includeRecommendations: false,
-    });
-    meta.jikanRelationsStatus = jk.relationsStatus;
-    meta.jikanRecsStatus = jk.recsStatus;
-
-    const candidates = pickFranchiseRelationCandidates(rootMal, jk.relationsJson);
-    meta.candidateCount = candidates.length;
-
-    if (candidates.length === 0) {
+    if (chain.length === 0) {
       const body = { items: [] };
       if (debug) body.meta = meta;
       return Response.json(body);
     }
 
-    const malIds = candidates.map((c) => c.malId);
+    const malIds = chain.map((s) => s.malId);
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
 
@@ -111,72 +93,38 @@ export async function GET(req) {
       .limit(120)
       .toArray();
 
-    /** @type {Map<number, number>} */
-    const malToAlFromMongo = new Map();
-    /** @type {Map<number, { catalogId: string; catalogType: string }>} */
-    const byMal = new Map();
-
+    /** @type {Map<number, (typeof docs)[number]>} */
+    const docByMal = new Map();
     for (const d of docs) {
       const m = typeof d.mal_id === "number" ? d.mal_id : null;
       if (m == null || !malIds.includes(m)) continue;
-      const ak = docAnilistKey(d);
-      if (ak != null && !malToAlFromMongo.has(m)) malToAlFromMongo.set(m, ak);
-      if (!byMal.has(m)) {
-        byMal.set(m, {
-          catalogId: String(d.id),
-          catalogType: d.type === "movie" ? "movie" : "tv",
-        });
-      }
+      if (!docByMal.has(m)) docByMal.set(m, d);
     }
-
-    const malToAl = await mapMalIdsToAnilistIds(malIds, malToAlFromMongo, {
-      concurrency: 6,
-      pauseMs: 100,
-    });
 
     /** @type {Array<{ catalogId: string | null; catalogType: string | null; anilistId: number | null; malId: number; malKind: "anime" | "movie"; title: string; year: string; posterPath: string; topNote: string; externalUrl?: string | null }>} */
     const items = [];
 
-    for (const c of candidates) {
-      const row = byMal.get(c.malId) ?? null;
-      const resolvedAl = malToAl.get(c.malId);
-      const anilistNumeric =
-        typeof resolvedAl === "number" && Number.isFinite(resolvedAl) && resolvedAl > 0
-          ? resolvedAl
-          : null;
-
-      let title = c.title;
-      let year = c.year;
-      let posterPath = c.posterPath;
-      if (row) {
-        const doc = docs.find((x) => String(x.id) === row.catalogId);
-        if (doc) {
-          title = doc.title ?? doc.name ?? title;
-          year = yearFromDoc(doc);
-          posterPath = doc.poster_path || posterPath;
-        }
-      }
-
-      let externalUrl = null;
-      if (row == null) {
-        externalUrl =
-          anilistNumeric != null ? anilistUrlForAnime(anilistNumeric) : malUrlForAnime(c.malId);
-      }
-
-      const malKind = c.malKind === "movie" ? "movie" : "anime";
+    for (const step of chain) {
+      const d = docByMal.get(step.malId);
+      if (!d) continue;
+      const catalogId = String(d.id);
+      const catalogType = d.type === "movie" ? "movie" : "tv";
+      const al = docAnilistKey(d);
       items.push({
-        catalogId: row?.catalogId ?? null,
-        catalogType: row?.catalogType ?? null,
-        anilistId: anilistNumeric,
-        malId: c.malId,
-        malKind,
-        title,
-        year,
-        posterPath,
-        topNote: c.topNote,
-        externalUrl,
+        catalogId,
+        catalogType,
+        anilistId: al,
+        malId: step.malId,
+        malKind: step.malKind,
+        title: d.title ?? d.name ?? "Untitled",
+        year: yearFromDoc(d),
+        posterPath: typeof d.poster_path === "string" ? d.poster_path : "",
+        topNote: "Sequel",
+        externalUrl: null,
       });
     }
+
+    meta.catalogMatches = items.length;
 
     const body = { items };
     if (debug) body.meta = meta;

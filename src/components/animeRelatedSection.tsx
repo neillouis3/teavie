@@ -62,9 +62,7 @@ export default function AnimeRelatedSection({
   if (loading) {
     return (
       <section className="w-full pt-6">
-        <h2 className="mb-3 text-lg font-semibold text-foreground">
-          Related in franchise
-        </h2>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">Sequels</h2>
         <div className={gridClass}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div
@@ -82,16 +80,14 @@ export default function AnimeRelatedSection({
   return (
     <section className="w-full pt-6">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold text-foreground">
-          Related in franchise
-        </h2>
+        <h2 className="text-lg font-semibold text-foreground">Sequels</h2>
         <Chip size="sm" variant="flat" color="success" className="font-normal">
           Jikan
         </Chip>
       </div>
       <p className="mb-4 text-xs text-default-500">
-        Franchise links from Jikan (MAL): sequel, prequel, parent story, alternative version, and
-        side story — TV and movie entries. Out of catalog opens AniList or MAL.
+        Every later season linked by MAL “Sequel” from here (not only the next one). Only shows
+        titles already in Teavie.
       </p>
       <ul className={gridClass}>
         {items.map((item) => {

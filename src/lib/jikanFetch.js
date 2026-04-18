@@ -128,6 +128,80 @@ export function pickFranchiseRelationCandidates(rootMal, relationsJson) {
 }
 
 /**
+ * Outgoing **Sequel** entries from one Jikan `GET /anime/{id}/relations` payload.
+ * @param {unknown} json
+ * @returns {Array<{ malId: number; malKind: "anime" | "movie" }>}
+ */
+function sequelEntriesFromRelationsJson(json) {
+  /** @type {Array<{ malId: number; malKind: "anime" | "movie" }>} */
+  const out = [];
+  const data =
+    json && typeof json === "object" && "data" in json
+      ? /** @type {{ data?: unknown[] }} */ (json).data
+      : null;
+  if (!Array.isArray(data)) return out;
+  for (const block of data) {
+    if (normRelationLabel(block?.relation) !== "sequel") continue;
+    const entries = Array.isArray(block?.entry) ? block.entry : [];
+    for (const entry of entries) {
+      if (!isJikanAnimeOrMovieEntry(entry)) continue;
+      const malId = Number(entry?.mal_id);
+      if (!Number.isFinite(malId) || malId <= 0) continue;
+      const malKind =
+        String(entry?.type || "").toLowerCase() === "movie" ? "movie" : "anime";
+      out.push({ malId, malKind });
+    }
+  }
+  return out;
+}
+
+/**
+ * BFS on MAL **Sequel** links via Jikan so season 1 yields 2 → 3 → 4 in order (not only the direct sequel).
+ * @param {number} rootMal
+ * @param {{ staggerMs?: number; maxHops?: number; maxSequels?: number }} [opts]
+ * @returns {Promise<Array<{ malId: number; malKind: "anime" | "movie" }>>}
+ */
+export async function jikanTransitiveSequelChainOrdered(rootMal, opts = {}) {
+  const staggerMs = typeof opts.staggerMs === "number" ? opts.staggerMs : 400;
+  const maxHops = typeof opts.maxHops === "number" ? opts.maxHops : 24;
+  const maxSequels = typeof opts.maxSequels === "number" ? opts.maxSequels : 40;
+  const root = Number(rootMal);
+  if (!Number.isFinite(root) || root <= 0) return [];
+
+  /** @type {Array<{ malId: number; malKind: "anime" | "movie" }>} */
+  const ordered = [];
+  const seen = new Set([root]);
+  /** @type {number[]} */
+  let frontier = [root];
+  let hops = 0;
+  let requestIdx = 0;
+
+  while (frontier.length && hops < maxHops && ordered.length < maxSequels) {
+    hops++;
+    /** @type {number[]} */
+    const nextFrontier = [];
+    for (const mal of frontier) {
+      if (requestIdx > 0) await sleep(staggerMs);
+      requestIdx++;
+      const res = await jikanGet(`anime/${mal}/relations`);
+      if (!res.ok) continue;
+      const json = await res.json().catch(() => null);
+      const pairs = sequelEntriesFromRelationsJson(json);
+      for (const { malId, malKind } of pairs) {
+        if (!Number.isFinite(malId) || malId <= 0 || seen.has(malId)) continue;
+        if (ordered.length >= maxSequels) break;
+        seen.add(malId);
+        ordered.push({ malId, malKind });
+        nextFrontier.push(malId);
+      }
+      if (ordered.length >= maxSequels) break;
+    }
+    frontier = nextFrontier;
+  }
+  return ordered;
+}
+
+/**
  * Jikan relations (+ optional recommendations) → unique anime rows (MAL id, note, title, poster).
  * @param {number} rootMal
  * @param {unknown} relationsPayload
