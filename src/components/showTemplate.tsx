@@ -63,6 +63,8 @@ interface Show {
     season?: string | null;
     seasonYear?: number | null;
     format?: string | null;
+    /** AniList total episode count (finished/airing cap); drives picker cap with TMDB season map. */
+    episodes?: number | null;
   } | null;
 }
 
@@ -99,10 +101,18 @@ function catalogMalIdForAnilistApi(
   return null;
 }
 
+/** AniList-reported total episodes (null while unknown / airing). Used to cap flat TMDB-mapped grids vs embeds. */
+function anilistEpisodeCap(show: Show | null | undefined): number | null {
+  const e = show?.anilist?.episodes;
+  if (typeof e !== "number" || !Number.isFinite(e) || e <= 0) return null;
+  return e;
+}
+
 type AnilistMediaPayload = {
   id: number;
   idMal?: number | null;
   siteUrl?: string | null;
+  /** Total episodes on AniList (may be null while airing). */
   episodes?: number | null;
   overview?: string;
   genres?: string[];
@@ -221,6 +231,10 @@ function mergeAnilistIntoShow(
     },
     format: ani.format ?? next.anilist?.format ?? null,
     averageScore: ani.averageScore ?? next.anilist?.averageScore ?? null,
+    episodes:
+      typeof ani.episodes === "number" && ani.episodes > 0
+        ? ani.episodes
+        : next.anilist?.episodes ?? null,
   };
 
   // Live-action TV: keep TMDB season/episode structure. Anime without TMDB playback snapshot: AniList (or flat counts) only.
@@ -516,14 +530,18 @@ export default function ShowTemplate({ id }: { id: string }) {
   useEffect(() => {
     if (show?.name) {
       const year = show.first_air_date?.slice(0, 4);
-      const multiSeason =
-        (show.seasons?.filter((s) => s.season_number >= 1).length ?? 0) > 1;
+      const released = show.seasons?.filter((s) => s.season_number >= 1) ?? [];
+      const multiSeason = released.length > 1;
       const cum =
         (multiSeason ? episodeOffsetBeforeSeason(show.seasons, selectedSeason) : 0) +
         selectedEpisode;
-      const seasonEpisode = multiSeason
-        ? `S${selectedSeason} · Ep ${cum}`
-        : `S${selectedSeason}E${selectedEpisode}`;
+      const playerAni = Boolean(show.is_anime) && catalogAnilistId(show) != null;
+      const seasonEpisode =
+        multiSeason && playerAni
+          ? `S${selectedSeason} · E${selectedEpisode} (#${cum})`
+          : multiSeason
+            ? `S${selectedSeason} · Ep ${cum}`
+            : `S${selectedSeason}E${selectedEpisode}`;
       document.title = year
         ? `${show.name} (${year}) ${seasonEpisode} - Teavie`
         : `${show.name} ${seasonEpisode} - Teavie`;
@@ -627,6 +645,11 @@ export default function ShowTemplate({ id }: { id: string }) {
     idMalForAnilistRails != null;
   const playerUsesAnilist = Boolean(show?.is_anime) && aniId != null;
   const playerUsesTmdb = !playerUsesAnilist && resolvedIsNumeric;
+  const aniListEpCap = anilistEpisodeCap(show);
+  const flatEpisodesMax =
+    playerUsesAnilist && useFlatAllEpisodesPicker && aniListEpCap != null
+      ? Math.min(totalEpisodesAcrossSeasons, aniListEpCap)
+      : totalEpisodesAcrossSeasons;
   /** TMDB /season/{n} air dates for capping the episode grid (season index matches TMDB for all TMDB playback). */
   const useTmdbSeasonAiringCap = Boolean(show && playerUsesTmdb);
   /** Per-season aired cap only when the grid is per-season (not the all-episodes flat list). */
@@ -636,8 +659,8 @@ export default function ShowTemplate({ id }: { id: string }) {
   let displayEpisodeCount = rawEpisodeCount;
   let episodeGridStatus: "normal" | "loading" | "none" = "normal";
   if (useFlatAllEpisodesPicker) {
-    displayEpisodeCount = totalEpisodesAcrossSeasons;
-    episodeGridStatus = totalEpisodesAcrossSeasons > 0 ? "normal" : "none";
+    displayEpisodeCount = flatEpisodesMax;
+    episodeGridStatus = flatEpisodesMax > 0 ? "normal" : "none";
   } else if (useTmdbSeasonAiringCap) {
     if (tmdbEpCapLoading) {
       episodeGridStatus = "loading";
@@ -659,10 +682,14 @@ export default function ShowTemplate({ id }: { id: string }) {
   const animeMovieEmbed =
     playerUsesAnilist &&
     (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
-  const absoluteEpisodeForPlayer =
+  const absoluteRaw =
     playerUsesAnilist && show
       ? cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode)
       : 1;
+  const absoluteEpisodeForPlayer =
+    playerUsesAnilist && aniListEpCap != null
+      ? Math.min(Math.max(1, absoluteRaw), aniListEpCap)
+      : absoluteRaw;
   const imageUrl = show?.poster_path
     ? /^https?:\/\//i.test(show.poster_path)
       ? show.poster_path
@@ -684,6 +711,24 @@ export default function ShowTemplate({ id }: { id: string }) {
       ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
       : 0;
   const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
+
+  useEffect(() => {
+    if (!show?.seasons?.length || !useFlatAllEpisodesPicker || !playerUsesAnilist) return;
+    if (aniListEpCap == null || flatEpisodesMax <= 0) return;
+    const cur = cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode);
+    if (cur <= flatEpisodesMax) return;
+    const coords = tmdbSeasonEpisodeFromAbsolute(show.seasons, flatEpisodesMax);
+    setSelectedSeason(coords.season);
+    setSelectedEpisode(coords.episode);
+  }, [
+    show,
+    useFlatAllEpisodesPicker,
+    playerUsesAnilist,
+    aniListEpCap,
+    flatEpisodesMax,
+    selectedSeason,
+    selectedEpisode,
+  ]);
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -895,11 +940,24 @@ export default function ShowTemplate({ id }: { id: string }) {
                                   start + EPISODE_RANGE_BLOCK,
                                   displayEpisodeCount
                                 );
-                                const rangeLabel = useFlatAllEpisodesPicker
-                                  ? `${withinLo}–${withinHi}`
-                                  : useContinuousEpisodeLabels
-                                    ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
-                                    : `${start}–${labelHi}`;
+                                const rangeLabel =
+                                  useFlatAllEpisodesPicker && playerUsesAnilist && show.seasons
+                                    ? (() => {
+                                        const lo = tmdbSeasonEpisodeFromAbsolute(
+                                          show.seasons,
+                                          withinLo
+                                        );
+                                        const hi = tmdbSeasonEpisodeFromAbsolute(
+                                          show.seasons,
+                                          withinHi
+                                        );
+                                        return `S${lo.season}E${lo.episode}–S${hi.season}E${hi.episode}`;
+                                      })()
+                                    : useFlatAllEpisodesPicker
+                                      ? `${withinLo}–${withinHi}`
+                                      : useContinuousEpisodeLabels
+                                        ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
+                                        : `${start}–${labelHi}`;
                                 return (
                                   <Button
                                     key={start}
@@ -921,20 +979,34 @@ export default function ShowTemplate({ id }: { id: string }) {
                         Episode
                         {selectedEpisode
                           ? ` — ${
-                              useFlatAllEpisodesPicker || useContinuousEpisodeLabels
-                                ? cumulativeEpisodeSelected
-                                : selectedEpisode
+                              playerUsesAnilist && useFlatAllEpisodesPicker
+                                ? `S${selectedSeason} · E${selectedEpisode} (#${cumulativeEpisodeSelected})`
+                                : useFlatAllEpisodesPicker || useContinuousEpisodeLabels
+                                  ? cumulativeEpisodeSelected
+                                  : selectedEpisode
                             }`
                           : ""}
                         {showEpisodeRangeTabs ? (
                           <span className="font-normal text-default-400 normal-case">
                             {" "}
                             (
-                            {useFlatAllEpisodesPicker
-                              ? `${episodeBlockLo}–${episodeBlockHi}`
-                              : useContinuousEpisodeLabels
-                                ? `${episodeBlockLo + episodeDisplayOffset}–${episodeBlockHi + episodeDisplayOffset}`
-                                : `${episodeBlockLo}–${episodeBlockHi}`}
+                            {useFlatAllEpisodesPicker && playerUsesAnilist && show.seasons
+                              ? (() => {
+                                  const lo = tmdbSeasonEpisodeFromAbsolute(
+                                    show.seasons,
+                                    episodeBlockLo
+                                  );
+                                  const hi = tmdbSeasonEpisodeFromAbsolute(
+                                    show.seasons,
+                                    episodeBlockHi
+                                  );
+                                  return `S${lo.season}E${lo.episode}–S${hi.season}E${hi.episode} · #${episodeBlockLo}–#${episodeBlockHi}`;
+                                })()
+                              : useFlatAllEpisodesPicker
+                                ? `${episodeBlockLo}–${episodeBlockHi}`
+                                : useContinuousEpisodeLabels
+                                  ? `${episodeBlockLo + episodeDisplayOffset}–${episodeBlockHi + episodeDisplayOffset}`
+                                  : `${episodeBlockLo}–${episodeBlockHi}`}
                             )
                           </span>
                         ) : null}
@@ -960,14 +1032,21 @@ export default function ShowTemplate({ id }: { id: string }) {
                             ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
                             : formatWatchEpKey(selectedSeason, ep);
                           const watchedThis = watchedEpisodes.has(watchKey);
-                          const epLabel = useFlatAllEpisodesPicker
-                            ? ep
-                            : useContinuousEpisodeLabels
-                              ? ep + episodeDisplayOffset
-                              : ep;
+                          const epLabel =
+                            useFlatAllEpisodesPicker && playerUsesAnilist && coordsFlat
+                              ? `${coordsFlat.season}·${coordsFlat.episode}`
+                              : useFlatAllEpisodesPicker
+                                ? ep
+                                : useContinuousEpisodeLabels
+                                  ? ep + episodeDisplayOffset
+                                  : ep;
                           const isCurrent = useFlatAllEpisodesPicker
                             ? cumulativeEpisodeSelected === ep
                             : selectedEpisode === ep;
+                          const ariaEp =
+                            useFlatAllEpisodesPicker && coordsFlat
+                              ? `Season ${coordsFlat.season} episode ${coordsFlat.episode}`
+                              : `Episode ${epLabel}`;
                           return (
                             <div key={ep} className="relative">
                               <Button
@@ -976,9 +1055,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                                 variant={isCurrent ? "solid" : "flat"}
                                 color={isCurrent ? "success" : "default"}
                                 aria-label={
-                                  watchedThis
-                                    ? `Episode ${epLabel}, watched`
-                                    : `Episode ${epLabel}`
+                                  watchedThis ? `${ariaEp}, watched` : ariaEp
                                 }
                                 onPress={() => {
                                   if (coordsFlat) {
@@ -1028,13 +1105,29 @@ export default function ShowTemplate({ id }: { id: string }) {
                       S{selectedSeason}
                     </Chip>
                     <span className="text-default-400 text-xs">›</span>
-                    <Chip size="md" variant="flat" color="success" className="font-mono">
-                      {`E${
-                        useFlatAllEpisodesPicker || useContinuousEpisodeLabels
-                          ? cumulativeEpisodeSelected
-                          : selectedEpisode
-                      }`}
-                    </Chip>
+                    {playerUsesAnilist && useFlatAllEpisodesPicker ? (
+                      <>
+                        <Chip size="md" variant="flat" color="success" className="font-mono">
+                          E{selectedEpisode}
+                        </Chip>
+                        <Chip
+                          size="sm"
+                          variant="bordered"
+                          color="default"
+                          className="font-mono text-default-600"
+                        >
+                          #{cumulativeEpisodeSelected}
+                        </Chip>
+                      </>
+                    ) : (
+                      <Chip size="md" variant="flat" color="success" className="font-mono">
+                        {`E${
+                          useFlatAllEpisodesPicker || useContinuousEpisodeLabels
+                            ? cumulativeEpisodeSelected
+                            : selectedEpisode
+                        }`}
+                      </Chip>
+                    )}
                     {watchedEpisodes.size > 0 ? (
                       <Chip size="sm" variant="flat" className="ml-auto font-medium text-default-600">
                         {watchedEpisodes.size} marked watched
