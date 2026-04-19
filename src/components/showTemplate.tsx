@@ -25,6 +25,14 @@ interface Season {
   air_date?: string | null;
 }
 
+/** TMDB `GET /tv/{id}/season/{n}` episode row (subset). */
+interface TmdbSeasonEpisodeRow {
+  episode_number?: number;
+  name?: string;
+  air_date?: string | null;
+  overview?: string;
+}
+
 interface Show {
   id: number | string;
   name: string;
@@ -355,6 +363,10 @@ export default function ShowTemplate({ id }: { id: string }) {
   /** null = no cap (anime / error); number = last episode number aired by TMDB calendar */
   const [tmdbAiredEpCap, setTmdbAiredEpCap] = useState<number | null>(null);
   const [tmdbEpCapLoading, setTmdbEpCapLoading] = useState(false);
+  /** Non-anime TMDB: episode titles/air dates for the selected season (same fetch as aired cap). */
+  const [tmdbSeasonEpisodes, setTmdbSeasonEpisodes] = useState<TmdbSeasonEpisodeRow[] | null>(
+    null
+  );
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(
     () => new Set()
   );
@@ -587,6 +599,8 @@ export default function ShowTemplate({ id }: { id: string }) {
       ? `Ep ${selectedEpisode}`
       : multiSeason && playerAni
         ? `S${selectedSeason} · E${selectedEpisode} (#${cum})`
+        : multiSeason && !playerAni
+          ? `S${selectedSeason}E${selectedEpisode}`
         : multiSeason
           ? `S${selectedSeason} · Ep ${cum}`
           : `S${selectedSeason}E${selectedEpisode}`;
@@ -599,24 +613,36 @@ export default function ShowTemplate({ id }: { id: string }) {
     if (!show || !/^\d+$/.test(String(resolvedPlayerId))) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
+      setTmdbSeasonEpisodes(null);
       return;
     }
     if (show.is_anime && catalogAnilistId(show) != null) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
+      setTmdbSeasonEpisodes(null);
       return;
     }
-    const multiSeasonPicker =
-      (show.seasons?.filter((s) => s.season_number >= 1).length ?? 0) > 1;
-    if (multiSeasonPicker) {
+    const releasedSeasonCount =
+      show.seasons?.filter((s) => s.season_number >= 1).length ?? 0;
+    const aniMovieSkip =
+      show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC";
+    const useAnilistOnlyEpSkip =
+      Boolean(show.is_anime) && catalogAnilistId(show) != null && !aniMovieSkip;
+    const skipSeasonFetchForFlatAnimePicker =
+      releasedSeasonCount > 1 &&
+      !useAnilistOnlyEpSkip &&
+      Boolean(show.is_anime);
+    if (skipSeasonFetchForFlatAnimePicker) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
+      setTmdbSeasonEpisodes(null);
       return;
     }
 
     let cancelled = false;
     setTmdbEpCapLoading(true);
     setTmdbAiredEpCap(null);
+    if (!show.is_anime) setTmdbSeasonEpisodes(null);
 
     const run = async () => {
       const token = process.env.NEXT_PUBLIC_TMDB_BEARER;
@@ -624,6 +650,7 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (!cancelled) {
           setTmdbAiredEpCap(null);
           setTmdbEpCapLoading(false);
+          setTmdbSeasonEpisodes(null);
         }
         return;
       }
@@ -635,11 +662,30 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (!res.ok) throw new Error("season fetch failed");
         const json = (await res.json()) as {
           air_date?: string | null;
-          episodes?: { air_date?: string | null; episode_number?: number }[];
+          episodes?: {
+            air_date?: string | null;
+            episode_number?: number;
+            name?: string;
+            overview?: string;
+          }[];
         };
         const today = catalogTodayYmdUtc();
         let max = 0;
         const eps = json.episodes ?? [];
+        if (!cancelled) {
+          if (!show.is_anime) {
+            setTmdbSeasonEpisodes(
+              eps.map((e) => ({
+                episode_number: e.episode_number,
+                name: e.name,
+                air_date: e.air_date,
+                overview: e.overview,
+              }))
+            );
+          } else {
+            setTmdbSeasonEpisodes(null);
+          }
+        }
         for (const ep of eps) {
           const ad = String(ep.air_date ?? "").trim();
           if (!ad || ad.length < 10) continue;
@@ -653,7 +699,10 @@ export default function ShowTemplate({ id }: { id: string }) {
         }
         if (!cancelled) setTmdbAiredEpCap(max);
       } catch {
-        if (!cancelled) setTmdbAiredEpCap(null);
+        if (!cancelled) {
+          setTmdbAiredEpCap(null);
+          setTmdbSeasonEpisodes(null);
+        }
       } finally {
         if (!cancelled) setTmdbEpCapLoading(false);
       }
@@ -697,8 +746,14 @@ export default function ShowTemplate({ id }: { id: string }) {
     (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
   /** TV series on AniList: flat 1…N picker only (no TMDB season / cumulative map). */
   const useAnilistOnlyEpisodePicker = playerUsesAnilist && !animeMovieEmbed;
+  /**
+   * Multi-season **anime** without AniList-only picker: one flat cumulative episode grid (TMDB layout).
+   * Live-action TMDB TV uses per-season tabs + per-season episode indices.
+   */
   const useFlatAllEpisodesPicker =
-    !useAnilistOnlyEpisodePicker && releasedSeasonsForUi.length > 1;
+    !useAnilistOnlyEpisodePicker &&
+    releasedSeasonsForUi.length > 1 &&
+    Boolean(show?.is_anime);
   const anilistPickerTotal =
     aniListEpCap ??
     (typeof show?.number_of_episodes === "number" && show.number_of_episodes > 0
@@ -772,7 +827,9 @@ export default function ShowTemplate({ id }: { id: string }) {
   const animeHideSeasonRow =
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
   const useContinuousEpisodeLabels =
-    !useAnilistOnlyEpisodePicker && releasedSeasonsForUi.length > 1;
+    !useAnilistOnlyEpisodePicker &&
+    releasedSeasonsForUi.length > 1 &&
+    useFlatAllEpisodesPicker;
   const episodeDisplayOffset =
     useContinuousEpisodeLabels && show
       ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
@@ -880,7 +937,7 @@ export default function ShowTemplate({ id }: { id: string }) {
               absoluteEpisode={absoluteEpisodeForPlayer}
               animeMovie={animeMovieEmbed}
               season={selectedSeason}
-              episode={playerUsesTmdb ? cumulativeEpisodeSelected : selectedEpisode}
+              episode={selectedEpisode}
             />
           )}
         </div>
@@ -1131,6 +1188,59 @@ export default function ShowTemplate({ id }: { id: string }) {
                       </div>
                     </div>
                   )}
+
+                  {playerUsesTmdb && !show.is_anime && selectedSeason >= 1 ? (
+                    <div className="border-t border-default-200/40 pt-3 mt-1">
+                      <span className="text-xs font-medium text-default-600">
+                        Season {selectedSeason} episodes (TMDB)
+                      </span>
+                      {tmdbEpCapLoading && !tmdbSeasonEpisodes?.length ? (
+                        <p className="text-xs text-default-500 mt-2">Loading episode details…</p>
+                      ) : null}
+                      {!tmdbEpCapLoading &&
+                      tmdbSeasonEpisodes &&
+                      tmdbSeasonEpisodes.length > 0 ? (
+                        <ul className="mt-2 max-h-64 overflow-y-auto space-y-0.5 pr-0.5">
+                          {tmdbSeasonEpisodes.map((row, idx) => {
+                            const n = Number(row.episode_number);
+                            if (!Number.isFinite(n) || n < 1) return null;
+                            const epTitle = String(row.name ?? "").trim() || `Episode ${n}`;
+                            const ad = String(row.air_date ?? "").trim();
+                            const isSel = n === selectedEpisode;
+                            return (
+                              <li key={`${n}-${idx}`}>
+                                <Button
+                                  variant="light"
+                                  size="sm"
+                                  radius="sm"
+                                  className={`w-full min-h-11 h-auto justify-start gap-2 px-2 py-1.5 ${
+                                    isSel ? "bg-default-200/80 dark:bg-default-200/35" : ""
+                                  }`}
+                                  onPress={() => setSelectedEpisode(n)}
+                                >
+                                  <span className="shrink-0 tabular-nums text-xs font-semibold text-default-500 w-8 text-right">
+                                    {n}
+                                  </span>
+                                  <span className="min-w-0 flex-1 text-left text-xs leading-snug">
+                                    <span className="text-foreground block">{epTitle}</span>
+                                    {ad.length >= 10 ? (
+                                      <span className="text-default-400 tabular-nums block mt-0.5">
+                                        {ad}
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                </Button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : !tmdbEpCapLoading ? (
+                        <p className="text-xs text-default-500 mt-2">
+                          Episode titles are not available for this season.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
                 <section className="w-full  p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
