@@ -46,6 +46,7 @@ export async function GET(req) {
       Number.isFinite(parsedLimit) && parsedLimit > 0
         ? Math.min(parsedLimit, YOU_MIGHT_LIKE_MAX_CAP)
         : YOU_MIGHT_LIKE_MAX_DEFAULT;
+    /** Off by default — clients should only show tiles with a Teavie `catalogId`. */
     const includeExternal = searchParams.get("includeExternal") === "1";
 
     if (!useMal) {

@@ -58,7 +58,15 @@ export default function AnimeRelatedSection({
         }
         return data;
       })
-      .then((data) => setItems(Array.isArray(data.items) ? data.items : []))
+      .then((data) => {
+        const raw = Array.isArray(data.items) ? data.items : [];
+        setItems(
+          raw.filter(
+            (it: RelatedItem) =>
+              typeof it.catalogId === "string" && it.catalogId.trim().length > 0
+          )
+        );
+      })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
 
@@ -93,11 +101,7 @@ export default function AnimeRelatedSection({
       <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
       <ul className={`${gridClass} items-start`}>
         {items.map((item) => {
-          const key =
-            item.catalogId ??
-            (typeof item.malId === "number" && Number.isFinite(item.malId)
-              ? `mal-${item.malId}`
-              : `al-${item.anilistId ?? "ext"}`);
+          const key = item.catalogId ?? `al-${item.anilistId ?? "ext"}`;
           const catalogKind =
             item.catalogType === "movie" ? "movie" : item.catalogType === "tv" ? "tv" : "tv";
           const outHref =
@@ -113,12 +117,7 @@ export default function AnimeRelatedSection({
             >
               {horizontal ? (
                 <HorizontalCatalogCard
-                  id={
-                    item.catalogId ??
-                    (typeof item.malId === "number" && Number.isFinite(item.malId)
-                      ? `mal-${item.malId}`
-                      : "")
-                  }
+                  id={item.catalogId ?? ""}
                   title={item.title}
                   year={item.year}
                   type={catalogKind}
@@ -129,12 +128,7 @@ export default function AnimeRelatedSection({
                 />
               ) : (
                 <SmallCard
-                  id={
-                    item.catalogId ??
-                    (typeof item.malId === "number" && Number.isFinite(item.malId)
-                      ? `mal-${item.malId}`
-                      : `al-${item.anilistId ?? 0}`)
-                  }
+                  id={item.catalogId ?? `al-${item.anilistId ?? 0}`}
                   title={item.title}
                   year={item.year}
                   type={catalogKind}

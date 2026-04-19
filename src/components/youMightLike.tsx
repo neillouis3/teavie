@@ -65,22 +65,24 @@ export default function YouMightLike({
           qs.set('idMal', String(idMal));
         }
         qs.set('limit', String(maxItems));
-        qs.set('includeExternal', '1');
         const res = await fetch(`/api/anilist/you-might-like?${qs.toString()}`, {
           signal: controller.signal,
         });
         const data = res.ok ? await res.json() : { items: [] };
         const rows = Array.isArray(data.items) ? data.items : [];
+        const catalogRows = rows.filter(
+          (r: { catalogId?: string | null }) =>
+            typeof r.catalogId === 'string' && r.catalogId.trim().length > 0
+        );
         setItems(
-          rows.slice(0, maxItems).map(
+          catalogRows.slice(0, maxItems).map(
             (r: {
-              catalogId: string | null;
+              catalogId: string;
               anilistId: number | null;
               malId?: number;
               title: string;
               year: string;
               posterPath?: string;
-              externalUrl?: string | null;
             }) => {
               const al =
                 typeof r.anilistId === 'number' && Number.isFinite(r.anilistId) && r.anilistId > 0
@@ -89,21 +91,13 @@ export default function YouMightLike({
               const mal =
                 typeof r.malId === 'number' && Number.isFinite(r.malId) && r.malId > 0 ? r.malId : 0;
               const keyId = al ?? mal;
-              const inCatalog = r.catalogId != null && r.catalogId !== '';
               return {
                 keyId,
-                linkId: inCatalog ? r.catalogId! : al != null ? `al-${al}` : `mal-${mal}`,
+                linkId: r.catalogId,
                 title: r.title ?? 'Untitled',
                 poster_path: r.posterPath ?? null,
                 backdrop_path: null,
                 year: r.year ?? '—',
-                href: inCatalog
-                  ? undefined
-                  : typeof r.externalUrl === 'string' && r.externalUrl.length > 0
-                    ? r.externalUrl
-                    : al != null
-                      ? `https://anilist.co/anime/${al}`
-                      : undefined,
               };
             }
           )
