@@ -127,39 +127,21 @@ export default function MovieTemplate({ id }: { id: string }) {
                   <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
                 </div>
               </section>
-              <section className="w-full mt-6 p-4 sm:p-5 rounded-xl border border-default-200/40 bg-default-100/35 dark:bg-default-100/10">
-                <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
-                  <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
-                    <div className="aspect-[2/3] w-full animate-pulse rounded-lg bg-default-200" />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-4">
-                    <div className="space-y-2">
-                      <div className="h-3 w-full max-w-2xl bg-default-200 rounded animate-pulse" />
-                      <div className="h-3 w-full max-w-xl bg-default-200 rounded animate-pulse" />
-                      <div className="h-3 w-2/3 max-w-lg bg-default-200 rounded animate-pulse" />
+              <section className="mt-6 w-full overflow-hidden rounded-xl border border-default-200/25 dark:border-default-100/15">
+                <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
+                  <div className="flex flex-row gap-3 sm:gap-5">
+                    <div className="w-24 shrink-0 sm:w-32 md:w-36">
+                      <div className="aspect-[2/3] w-full animate-pulse rounded-md bg-default-200" />
                     </div>
-                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
-                      <div className="space-y-1">
-                        <div className="h-3 w-14 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-20 bg-default-200 rounded animate-pulse" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="h-3 w-12 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-24 bg-default-200 rounded animate-pulse" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="h-3 w-10 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-12 bg-default-200 rounded animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="mt-6 pt-6 border-t border-default-200">
-                      <div className="h-4 w-32 bg-default-200 rounded animate-pulse mb-3" />
-                      <div className="flex gap-2">
-                        <div className="h-8 w-20 bg-default-200 rounded animate-pulse" />
-                        <div className="h-8 w-20 bg-default-200 rounded animate-pulse" />
-                      </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-3 w-full max-w-2xl rounded bg-default-200 animate-pulse" />
+                      <div className="h-3 w-full max-w-xl rounded bg-default-200 animate-pulse" />
+                      <div className="h-3 w-2/3 max-w-lg rounded bg-default-200 animate-pulse" />
                     </div>
                   </div>
+                </div>
+                <div className="border-t border-default-200/30 bg-default-100/55 px-4 py-2.5 dark:border-default-100/15 dark:bg-default-100/25 sm:px-5 sm:py-3">
+                  <div className="h-3 w-3/4 max-w-md rounded bg-default-200/90 animate-pulse dark:bg-default-200/40" />
                 </div>
               </section>
             </>
@@ -195,47 +177,34 @@ export default function MovieTemplate({ id }: { id: string }) {
                   </div>
                 </section>
 
-                <section className="w-full mt-6 p-4 sm:p-5 rounded-xl border border-default-200/40 bg-default-100/35 dark:bg-default-100/10">
-                  <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
-                    <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
-                      <Image
-                        src={imageUrl}
-                        alt={movie.title}
-                        className="aspect-[2/3] w-full rounded-lg object-cover shadow-md"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm sm:text-base text-foreground/80 leading-relaxed">
-                        {movie.overview}
-                      </p>
-                      {movie.tagline && (
-                        <p className="mt-3 text-sm text-foreground/60 italic">
-                          {movie.tagline}
+                <section className="mt-6 w-full overflow-hidden rounded-xl border border-default-200/25 dark:border-default-100/15">
+                  <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
+                    <div className="flex flex-row gap-3 sm:gap-5">
+                      <div className="w-24 shrink-0 sm:w-32 md:w-36 lg:w-40">
+                        <Image
+                          src={imageUrl}
+                          alt={movie.title}
+                          className="aspect-[2/3] w-full rounded-md object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
+                          {movie.overview}
                         </p>
-                      )}
-                      <dl className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                        <div>
-                          <dt className="text-default-500 font-medium">
-                            Country of origin
-                          </dt>
-                          <dd className="text-foreground mt-0.5">
-                            {formatCountryOfOrigin(movie)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-default-500 font-medium">Genre</dt>
-                          <dd className="text-foreground mt-0.5">
-                            {movie.genres.map((g) => g.name).join(", ")}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-default-500 font-medium">Year</dt>
-                          <dd className="text-foreground mt-0.5">
-                            {movie.release_date?.slice(0, 4)}
-                          </dd>
-                        </div>
-                      </dl>
+                        {movie.tagline ? (
+                          <p className="mt-2 text-xs text-default-500">&ldquo;{movie.tagline}&rdquo;</p>
+                        ) : null}
+                      </div>
                     </div>
+                  </div>
+                  <div className="border-t border-default-200/30 bg-default-100/55 px-4 py-2.5 dark:border-default-100/15 dark:bg-default-100/25 sm:px-5 sm:py-3">
+                    <p className="text-xs leading-snug text-default-600 dark:text-default-400">
+                      {formatCountryOfOrigin(movie)}
+                      <span className="mx-2 text-default-300 dark:text-default-600">·</span>
+                      {movie.genres.map((g) => g.name).join(", ")}
+                      <span className="mx-2 text-default-300 dark:text-default-600">·</span>
+                      {movie.release_date?.slice(0, 4) ?? "—"}
+                    </p>
                   </div>
                 </section>
               </>
