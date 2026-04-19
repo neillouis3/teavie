@@ -24,8 +24,12 @@ function yearFromDoc(d) {
 }
 
 /**
- * Related anime: **direct** MAL↔MAL links on the current title (sequel, prequel, parent, alt, side story).
- * **Teavie catalog only** — one Jikan `relations` request, then Mongo by `mal_id`.
+ * Related anime: **direct** MAL↔MAL links on the current title (sequel, prequel, parent, alternates,
+ * side story, spin-off, summary, character, full story, adaptation, other, … — see
+ * `FRANCHISE_RELATION_LABELS_LOOSE` in `jikanFetch.js`).
+ *
+ * One Jikan `relations` request; Teavie catalog rows when `mal_id` matches, otherwise MAL link +
+ * Jikan title/poster from the same payload.
  *
  * GET `?idMal=` (MAL id of the current show). Optional `?debug=1` for `meta`.
  */
@@ -49,12 +53,13 @@ export async function GET(req) {
     const relationsJson = relRes.ok ? await relRes.json().catch(() => null) : null;
     const candidates = pickFranchiseRelationCandidates(rootMal, relationsJson);
 
-    /** @type {{ source: string; rootMal: number; directLinkCount: number; catalogMatches: number }} */
+    /** @type {{ source: string; rootMal: number; directLinkCount: number; catalogMatches: number; returned: number }} */
     const meta = {
       source: "jikan-relations-direct-catalog",
       rootMal,
       directLinkCount: candidates.length,
       catalogMatches: 0,
+      returned: 0,
     };
 
     if (candidates.length === 0) {
@@ -104,25 +109,44 @@ export async function GET(req) {
 
     for (const step of candidates) {
       const d = docByMal.get(step.malId);
-      if (!d) continue;
-      const catalogId = String(d.id);
-      const catalogType = d.type === "movie" ? "movie" : "tv";
-      const al = docAnilistKey(d);
-      items.push({
-        catalogId,
-        catalogType,
-        anilistId: al,
-        malId: step.malId,
-        malKind: step.malKind,
-        title: d.title ?? d.name ?? "Untitled",
-        year: yearFromDoc(d),
-        posterPath: typeof d.poster_path === "string" ? d.poster_path : "",
-        topNote: step.topNote,
-        externalUrl: null,
-      });
+      const malUrl = `https://myanimelist.net/anime/${step.malId}`;
+      if (d) {
+        const catalogId = String(d.id);
+        const catalogType = d.type === "movie" ? "movie" : "tv";
+        const al = docAnilistKey(d);
+        items.push({
+          catalogId,
+          catalogType,
+          anilistId: al,
+          malId: step.malId,
+          malKind: step.malKind,
+          title: d.title ?? d.name ?? "Untitled",
+          year: yearFromDoc(d),
+          posterPath: typeof d.poster_path === "string" ? d.poster_path : "",
+          topNote: step.topNote,
+          externalUrl: null,
+        });
+      } else {
+        items.push({
+          catalogId: null,
+          catalogType: step.malKind === "movie" ? "movie" : "tv",
+          anilistId: null,
+          malId: step.malId,
+          malKind: step.malKind,
+          title:
+            typeof step.title === "string" && step.title.trim()
+              ? step.title.trim()
+              : `MAL ${step.malId}`,
+          year: typeof step.year === "string" && step.year.trim() ? step.year : "—",
+          posterPath: typeof step.posterPath === "string" ? step.posterPath : "",
+          topNote: step.topNote,
+          externalUrl: malUrl,
+        });
+      }
     }
 
-    meta.catalogMatches = items.length;
+    meta.returned = items.length;
+    meta.catalogMatches = items.filter((x) => x.catalogId != null).length;
 
     const body = { items };
     if (debug) body.meta = meta;
