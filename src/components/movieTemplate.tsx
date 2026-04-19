@@ -18,7 +18,6 @@ interface Movie {
   overview: string;
   /** ISO 639-1 (e.g. `ja`, `en`). */
   original_language?: string;
-  spoken_languages?: { iso_639_1?: string; english_name?: string; name?: string }[];
   /** ISO 3166-1 alpha-2 codes (often co-productions); prefer {@link production_countries} for display. */
   origin_country?: string[];
   /** TMDB production countries — best match for “country of origin” copy. */
@@ -27,10 +26,7 @@ interface Movie {
   genres: { id: number; name: string }[];
   poster_path: string;
   vote_average: number;
-  vote_count?: number;
   tagline: string;
-  budget?: number;
-  revenue?: number;
   homepage?: string | null;
   imdb_id?: string | null;
 }
@@ -82,27 +78,6 @@ function formatFullReleaseDate(ymd: string | undefined | null): string {
   });
 }
 
-function formatUsdCompact(n: number | undefined | null): string {
-  if (n == null || typeof n !== "number" || n <= 0) return "—";
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-function formatSpokenLanguages(movie: Movie): string {
-  const list = movie.spoken_languages;
-  if (!Array.isArray(list) || list.length === 0) return "—";
-  const names = list
-    .map((l) => String(l?.english_name ?? l?.name ?? "").trim())
-    .filter(Boolean);
-  if (names.length > 0) return [...new Set(names)].join(", ");
-  const codes = list.map((l) => String(l?.iso_639_1 ?? "").trim().toLowerCase()).filter(Boolean);
-  if (codes.length === 0) return "—";
-  return [...new Set(codes.map((c) => languageDisplayName(c)))].join(", ");
-}
-
 function formatProductionCompanies(movie: Movie): string {
   const list = movie.production_companies;
   if (!Array.isArray(list) || list.length === 0) return "—";
@@ -110,16 +85,6 @@ function formatProductionCompanies(movie: Movie): string {
     .map((c) => String(c?.name ?? "").trim())
     .filter(Boolean);
   return names.length > 0 ? names.join(", ") : "—";
-}
-
-function formatVoteLine(movie: Movie): string {
-  const va = movie.vote_average;
-  const avg =
-    typeof va === "number" && Number.isFinite(va) ? va.toFixed(1) : "—";
-  const n = movie.vote_count;
-  if (typeof n !== "number" || n < 1) return `${avg} / 10`;
-  const votes = new Intl.NumberFormat(undefined).format(n);
-  return `${avg} / 10 (${votes} votes)`;
 }
 
 export default function MovieTemplate({ id }: { id: string }) {
@@ -214,7 +179,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                         <div className="h-3 w-2/3 max-w-lg rounded bg-default-200 animate-pulse" />
                       </div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {Array.from({ length: 9 }).map((_, i) => (
+                        {Array.from({ length: 6 }).map((_, i) => (
                           <div key={i} className="space-y-1.5">
                             <div className="h-2.5 w-24 rounded bg-default-200 animate-pulse" />
                             <div className="h-4 w-full max-w-[14rem] rounded bg-default-200 animate-pulse" />
@@ -289,12 +254,6 @@ export default function MovieTemplate({ id }: { id: string }) {
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-default-500">Year</dt>
-                            <dd className="mt-0.5 text-foreground">
-                              {movie.release_date?.slice(0, 4) ?? "—"}
-                            </dd>
-                          </div>
-                          <div>
                             <dt className="text-default-500">Release date</dt>
                             <dd className="mt-0.5 text-foreground">
                               {formatFullReleaseDate(movie.release_date)}
@@ -313,25 +272,9 @@ export default function MovieTemplate({ id }: { id: string }) {
                               {languageDisplayName(movie.original_language)}
                             </dd>
                           </div>
-                          <div>
-                            <dt className="text-default-500">Spoken languages</dt>
-                            <dd className="mt-0.5 text-foreground">{formatSpokenLanguages(movie)}</dd>
-                          </div>
-                          <div className="sm:col-span-2 lg:col-span-2">
+                          <div className="sm:col-span-2 lg:col-span-3">
                             <dt className="text-default-500">Studios</dt>
                             <dd className="mt-0.5 text-foreground">{formatProductionCompanies(movie)}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-default-500">Budget</dt>
-                            <dd className="mt-0.5 text-foreground">{formatUsdCompact(movie.budget)}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-default-500">Box office</dt>
-                            <dd className="mt-0.5 text-foreground">{formatUsdCompact(movie.revenue)}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-default-500">User score</dt>
-                            <dd className="mt-0.5 text-foreground">{formatVoteLine(movie)}</dd>
                           </div>
                           {movie.homepage || (movie.imdb_id && /^tt\d+/i.test(movie.imdb_id)) ? (
                             <div className="sm:col-span-2 lg:col-span-3">
