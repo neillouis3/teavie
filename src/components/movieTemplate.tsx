@@ -133,15 +133,22 @@ export default function MovieTemplate({ id }: { id: string }) {
                     <div className="w-24 shrink-0 sm:w-32 md:w-36">
                       <div className="aspect-[2/3] w-full animate-pulse rounded-md bg-default-200" />
                     </div>
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="h-3 w-full max-w-2xl rounded bg-default-200 animate-pulse" />
-                      <div className="h-3 w-full max-w-xl rounded bg-default-200 animate-pulse" />
-                      <div className="h-3 w-2/3 max-w-lg rounded bg-default-200 animate-pulse" />
+                    <div className="min-w-0 flex-1 space-y-4">
+                      <div className="space-y-2">
+                        <div className="h-3 w-full max-w-2xl rounded bg-default-200 animate-pulse" />
+                        <div className="h-3 w-full max-w-xl rounded bg-default-200 animate-pulse" />
+                        <div className="h-3 w-2/3 max-w-lg rounded bg-default-200 animate-pulse" />
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="space-y-1.5">
+                            <div className="h-2.5 w-14 rounded bg-default-200 animate-pulse" />
+                            <div className="h-4 w-20 rounded bg-default-200 animate-pulse" />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="border-t border-default-200/30 bg-default-100/55 px-4 py-2.5 dark:border-default-100/15 dark:bg-default-100/25 sm:px-5 sm:py-3">
-                  <div className="h-3 w-3/4 max-w-md rounded bg-default-200/90 animate-pulse dark:bg-default-200/40" />
                 </div>
               </section>
             </>
@@ -194,17 +201,26 @@ export default function MovieTemplate({ id }: { id: string }) {
                         {movie.tagline ? (
                           <p className="mt-2 text-xs text-default-500">&ldquo;{movie.tagline}&rdquo;</p>
                         ) : null}
+                        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+                          <div>
+                            <dt className="font-medium text-default-500">Country of origin</dt>
+                            <dd className="mt-0.5 text-foreground">{formatCountryOfOrigin(movie)}</dd>
+                          </div>
+                          <div>
+                            <dt className="font-medium text-default-500">Genre</dt>
+                            <dd className="mt-0.5 text-foreground">
+                              {movie.genres.map((g) => g.name).join(", ")}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="font-medium text-default-500">Year</dt>
+                            <dd className="mt-0.5 text-foreground">
+                              {movie.release_date?.slice(0, 4) ?? "—"}
+                            </dd>
+                          </div>
+                        </dl>
                       </div>
                     </div>
-                  </div>
-                  <div className="border-t border-default-200/30 bg-default-100/55 px-4 py-2.5 dark:border-default-100/15 dark:bg-default-100/25 sm:px-5 sm:py-3">
-                    <p className="text-xs leading-snug text-default-600 dark:text-default-400">
-                      {formatCountryOfOrigin(movie)}
-                      <span className="mx-2 text-default-300 dark:text-default-600">·</span>
-                      {movie.genres.map((g) => g.name).join(", ")}
-                      <span className="mx-2 text-default-300 dark:text-default-600">·</span>
-                      {movie.release_date?.slice(0, 4) ?? "—"}
-                    </p>
                   </div>
                 </section>
               </>

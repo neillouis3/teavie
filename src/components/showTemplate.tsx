@@ -1190,17 +1190,26 @@ export default function ShowTemplate({ id }: { id: string }) {
                         {show.tagline ? (
                           <p className="mt-2 text-xs text-default-500">&ldquo;{show.tagline}&rdquo;</p>
                         ) : null}
+                        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+                          <div>
+                            <dt className="font-medium text-default-500">Country</dt>
+                            <dd className="mt-0.5 text-foreground">
+                              {show.origin_country?.join(", ") || "N/A"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="font-medium text-default-500">Genre</dt>
+                            <dd className="mt-0.5 text-foreground">
+                              {show.genres?.map((g) => g.name).join(", ") ?? "N/A"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="font-medium text-default-500">Year</dt>
+                            <dd className="mt-0.5 text-foreground">{year}</dd>
+                          </div>
+                        </dl>
                       </div>
                     </div>
-                  </div>
-                  <div className="border-t border-default-200/30 bg-default-100/55 px-4 py-2.5 dark:border-default-100/15 dark:bg-default-100/25 sm:px-5 sm:py-3">
-                    <p className="text-xs leading-snug text-default-600 dark:text-default-400">
-                      {show.origin_country?.join(", ") || "N/A"}
-                      <span className="mx-2 text-default-300 dark:text-default-600">·</span>
-                      {show.genres?.map((g) => g.name).join(", ") ?? "N/A"}
-                      <span className="mx-2 text-default-300 dark:text-default-600">·</span>
-                      {year}
-                    </p>
                   </div>
                 </section>
               </>
@@ -1266,15 +1275,22 @@ function LoadingSkeleton() {
         <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
           <div className="flex flex-row gap-3 sm:gap-5">
             <div className="aspect-[2/3] w-24 shrink-0 animate-pulse rounded-md bg-default-200 sm:w-32 md:w-36" />
-            <div className="min-w-0 flex-1 space-y-2">
-              {[90, 75, 55].map((w, i) => (
-                <div key={i} className="h-3 rounded bg-default-200 animate-pulse" style={{ width: `${w}%` }} />
-              ))}
+            <div className="min-w-0 flex-1 space-y-4">
+              <div className="space-y-2">
+                {[90, 75, 55].map((w, i) => (
+                  <div key={i} className="h-3 rounded bg-default-200 animate-pulse" style={{ width: `${w}%` }} />
+                ))}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="h-2.5 w-12 rounded bg-default-200 animate-pulse" />
+                    <div className="h-4 w-20 rounded bg-default-200 animate-pulse" />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="border-t border-default-200/30 bg-default-100/55 px-4 py-2.5 dark:border-default-100/15 dark:bg-default-100/25 sm:px-5 sm:py-3">
-          <div className="h-3 w-3/4 max-w-md rounded bg-default-200/90 animate-pulse dark:bg-default-200/40" />
         </div>
       </section>
     </>
