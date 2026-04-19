@@ -65,15 +65,15 @@ export default function HorizontalCatalogCard({
         : {})}
     >
       <Card
-        shadow="sm"
+        shadow="none"
         radius="lg"
         classNames={{
           base:
-            'border border-default-200/80 bg-content1 transition-all duration-300 group-hover:border-success/55 group-hover:shadow-md group-hover:shadow-success/15 dark:border-default-100/25',
+            'border border-default-200/45 bg-default-50/90 transition-colors duration-200 group-hover:border-success/50 dark:border-default-100/15 dark:bg-default-50/10',
         }}
       >
         <CardBody className="relative aspect-[16/10] w-full overflow-hidden p-0">
-          <div className="absolute inset-0 bg-default-200" aria-hidden />
+          <div className="absolute inset-0 bg-default-100 dark:bg-default-100/20" aria-hidden />
           {src ? (
             <Image
               src={src}
@@ -81,7 +81,7 @@ export default function HorizontalCatalogCard({
               aria-hidden
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-              className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
             />
           ) : (
             <div className="relative z-[1] flex h-full flex-col items-center justify-center gap-1.5 p-4 text-center">
@@ -93,8 +93,9 @@ export default function HorizontalCatalogCard({
           )}
           {src && (
             <>
+              {/* Dark wash only on lower portion so most of the art stays bright */}
               <div
-                className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/25 to-black/10"
+                className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] bg-gradient-to-t from-black/82 via-black/35 to-transparent"
                 aria-hidden
               />
               <div className="absolute left-2 top-2 z-[2] flex flex-wrap items-center gap-1.5 sm:left-3 sm:top-3">
@@ -103,8 +104,9 @@ export default function HorizontalCatalogCard({
                   variant="flat"
                   color="success"
                   classNames={{
-                    base: 'backdrop-blur-md bg-success/90 border border-success-400/30 shadow-sm',
-                    content: 'font-semibold uppercase tracking-wide text-[10px] text-success-foreground',
+                    base: 'bg-success/92',
+                    content:
+                      'font-semibold uppercase tracking-wide text-[10px] text-success-foreground',
                   }}
                 >
                   {label}
@@ -113,10 +115,10 @@ export default function HorizontalCatalogCard({
               <div className="absolute right-2 top-2 z-[2] sm:right-3 sm:top-3">
                 <Chip
                   size="sm"
-                  variant="bordered"
+                  variant="flat"
                   color="success"
                   classNames={{
-                    base: 'border-success-400/60 bg-black/35 backdrop-blur-md shadow-sm',
+                    base: 'bg-black/25 dark:bg-black/40',
                     content: 'text-[10px] font-semibold tabular-nums text-white',
                   }}
                 >
@@ -128,19 +130,19 @@ export default function HorizontalCatalogCard({
                   <div className="mb-1.5">
                     <Chip
                       size="sm"
-                      variant="solid"
+                      variant="flat"
                       color="success"
                       classNames={{
-                        base: 'h-6 max-w-full shadow-md',
+                        base: 'h-6 max-w-full bg-success',
                         content:
-                          'truncate text-[10px] font-bold uppercase tracking-wide text-success-foreground',
+                          'truncate text-[10px] font-semibold uppercase tracking-wide text-success-foreground',
                       }}
                     >
                       {topNote}
                     </Chip>
                   </div>
                 ) : null}
-                <p className="text-left text-sm font-semibold leading-snug tracking-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] line-clamp-2 sm:text-[15px]">
+                <p className="text-left text-sm font-semibold leading-snug tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[15px]">
                   {title}
                 </p>
               </div>
