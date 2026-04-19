@@ -1173,7 +1173,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </div>
                 </div>
 
-                <section className="w-full overflow-hidden rounded-xl border border-default-200/25 dark:border-default-100/15">
+                <section className="w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
                   <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
                     <div className="flex flex-row gap-3 sm:gap-5">
                       <div className="w-24 shrink-0 sm:w-32 md:w-36 lg:w-40">
@@ -1271,7 +1271,7 @@ function LoadingSkeleton() {
         </div>
       </div>
 
-      <section className="w-full overflow-hidden rounded-xl border border-default-200/25 dark:border-default-100/15">
+      <section className="w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
         <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
           <div className="flex flex-row gap-3 sm:gap-5">
             <div className="aspect-[2/3] w-24 shrink-0 animate-pulse rounded-md bg-default-200 sm:w-32 md:w-36" />

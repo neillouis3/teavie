@@ -1,14 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardBody, Chip } from '@heroui/react';
-
-const metaCornerLeft =
-  'pointer-events-none absolute left-2 top-2 z-[3] sm:left-3 sm:top-3';
-const metaCornerRight =
-  'pointer-events-none absolute right-2 top-2 z-[3] sm:right-3 sm:top-3';
 
 export type HorizontalCatalogCardProps = {
   id: number | string;
@@ -28,8 +23,7 @@ const BACKDROP_SIZE = 'w1280';
 const POSTER_SIZE = 'w500';
 
 /**
- * Wide tile: bare corner dots (no glass wrapper); on card hover they swap instantly
- * to type chip (left) and year pill (right). Coarse pointers always show chips.
+ * Wide tile: backdrop/poster and title on bottom overlay (no corner meta pills).
  */
 export default function HorizontalCatalogCard({
   id,
@@ -38,7 +32,6 @@ export default function HorizontalCatalogCard({
   type,
   posterPath = '',
   backdropPath = '',
-  topNote,
   href: hrefProp,
 }: HorizontalCatalogCardProps) {
   const typeLower = String(type ?? '').toLowerCase();
@@ -48,29 +41,6 @@ export default function HorizontalCatalogCard({
     (isTv ? `/shows/${id}` : `/movies/${id}`);
   const isExternal = /^https?:\/\//i.test(href);
   const label = isExternal ? 'WEB' : isTv ? 'TV' : 'MOVIE';
-
-  const [metaOpen, setMetaOpen] = useState(false);
-  const [fineHover, setFineHover] = useState(true);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
-    const sync = () => setFineHover(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
-
-  const handleCardEnter = () => {
-    if (!fineHover) return;
-    setMetaOpen(true);
-  };
-
-  const handleCardLeave = () => {
-    if (!fineHover) return;
-    setMetaOpen(false);
-  };
-
-  const showMeta = fineHover ? metaOpen : true;
 
   const backdrop = backdropPath?.trim();
   const poster = posterPath?.trim();
@@ -101,11 +71,7 @@ export default function HorizontalCatalogCard({
             'border border-default-200/45 bg-default-50/90 transition-colors duration-200 group-hover:border-success/50 dark:border-default-100/15 dark:bg-default-50/10',
         }}
       >
-        <CardBody
-          className="relative aspect-[16/10] w-full overflow-visible p-0"
-          onMouseEnter={src ? handleCardEnter : undefined}
-          onMouseLeave={src ? handleCardLeave : undefined}
-        >
+        <CardBody className="relative aspect-[16/10] w-full overflow-hidden p-0">
           <div className="absolute inset-0 overflow-hidden rounded-lg">
             <div className="absolute inset-0 bg-default-100 dark:bg-default-100/20" aria-hidden />
             {src ? (
@@ -133,60 +99,8 @@ export default function HorizontalCatalogCard({
             )}
           </div>
 
-          {src &&
-            (showMeta ? (
-              <>
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  color="success"
-                  classNames={{
-                    base: `${metaCornerLeft} h-6 min-h-6 bg-success/92 shadow-[0_1px_4px_rgba(0,0,0,0.5)]`,
-                    content:
-                      'font-normal uppercase tracking-wide text-[10px] text-success-foreground',
-                  }}
-                  aria-hidden
-                >
-                  {label}
-                </Chip>
-                <span
-                  className={`${metaCornerRight} rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-normal tabular-nums text-white shadow-[0_1px_4px_rgba(0,0,0,0.5)] ring-1 ring-white/25 dark:bg-black/60`}
-                  aria-hidden
-                >
-                  {year}
-                </span>
-              </>
-            ) : (
-              <>
-                <span
-                  className={`${metaCornerLeft} h-2 w-2 rounded-full bg-success shadow-[0_1px_3px_rgba(0,0,0,0.85)] ring-1 ring-white/50`}
-                  aria-hidden
-                />
-                <span
-                  className={`${metaCornerRight} h-2 w-2 rounded-full bg-white/95 shadow-[0_1px_3px_rgba(0,0,0,0.85)] ring-1 ring-black/25`}
-                  aria-hidden
-                />
-              </>
-            ))}
-
           {src && (
             <div className="absolute bottom-2 left-2 right-2 z-[2] max-w-[92%] sm:bottom-3 sm:left-3 sm:right-4">
-              {topNote ? (
-                <div className="mb-1.5">
-                  <Chip
-                    size="sm"
-                    variant="flat"
-                    color="success"
-                    classNames={{
-                      base: 'h-6 max-w-full bg-success',
-                      content:
-                        'truncate text-[10px] font-normal uppercase tracking-wide text-success-foreground',
-                    }}
-                  >
-                    {topNote}
-                  </Chip>
-                </div>
-              ) : null}
               <p className="text-left text-sm font-normal leading-snug tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[15px]">
                 {title}
               </p>

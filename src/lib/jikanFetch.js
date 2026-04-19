@@ -295,18 +295,21 @@ async function jikanTransitiveEdgeChainOrdered(rootMal, edgeNorm, opts = {}) {
  * Prequels (oldest → newer), sequels (forward), root **side stories** (anime + movie), then other
  * root-linked **movies**. Dedupes by `mal_id`.
  * @param {number} rootMal
- * @param {{ staggerMs?: number; maxHops?: number; maxNodes?: number }} [opts]
+ * @param {{ staggerMs?: number; maxHops?: number; maxNodes?: number; rootRelationsJson?: unknown }} [opts]
+ * @param opts.rootRelationsJson When set, skips the initial `anime/{id}/relations` request (reuse payload).
  * @returns {Promise<Array<{ malId: number; malKind: "anime" | "movie"; topNote: string }>>}
  */
 export async function jikanFranchiseRailOrderedSteps(rootMal, opts = {}) {
   const root = Number(rootMal);
   if (!Number.isFinite(root) || root <= 0) return [];
 
-  const staggerMs = typeof opts.staggerMs === "number" ? opts.staggerMs : 400;
   const hadNetwork = { v: false };
 
+  /** @type {unknown | null} */
   let rootJson = null;
-  {
+  if (opts.rootRelationsJson != null) {
+    rootJson = opts.rootRelationsJson;
+  } else {
     const res = await jikanGet(`anime/${root}/relations`);
     if (res.ok) rootJson = await res.json().catch(() => null);
     hadNetwork.v = true;

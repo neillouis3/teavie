@@ -166,7 +166,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                   <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
                 </div>
               </section>
-              <section className="mt-6 w-full overflow-hidden rounded-xl border border-default-200/25 dark:border-default-100/15">
+              <section className="mt-6 w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
                 <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
                   <div className="flex flex-row gap-3 sm:gap-5">
                     <div className="w-24 shrink-0 sm:w-32 md:w-36">
@@ -223,7 +223,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                   </div>
                 </section>
 
-                <section className="mt-6 w-full overflow-hidden rounded-xl border border-default-200/25 dark:border-default-100/15">
+                <section className="mt-6 w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
                   <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
                     <div className="flex flex-row gap-3 sm:gap-5">
                       <div className="w-24 shrink-0 sm:w-32 md:w-36 lg:w-40">

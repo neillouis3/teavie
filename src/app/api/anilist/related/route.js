@@ -1,5 +1,9 @@
 import clientPromise from "@/lib/mongo";
-import { jikanGet, pickFranchiseRelationCandidates } from "@/lib/jikanFetch";
+import {
+  jikanGet,
+  jikanFranchiseRailOrderedSteps,
+  pickFranchiseRelationCandidates,
+} from "@/lib/jikanFetch";
 
 function docAnilistKey(d) {
   const a = d?.anilist_id;
@@ -24,8 +28,8 @@ function yearFromDoc(d) {
 }
 
 /**
- * Related anime: **direct** MAL↔MAL links on the current title (sequel, prequel, parent, alt, side story).
- * **Teavie catalog only** — one Jikan `relations` request, then Mongo by `mal_id`.
+ * Related anime: franchise rail (transitive sequel / prequel chains, side stories, linked movies)
+ * plus **direct** root relations (parent, alternative, etc.). **Teavie catalog only** — Mongo by `mal_id`.
  *
  * GET `?idMal=` (MAL id of the current show). Optional `?debug=1` for `meta`.
  */
@@ -47,13 +51,35 @@ export async function GET(req) {
     const rootMal = idMal;
     const relRes = await jikanGet(`anime/${rootMal}/relations`);
     const relationsJson = relRes.ok ? await relRes.json().catch(() => null) : null;
-    const candidates = pickFranchiseRelationCandidates(rootMal, relationsJson);
 
-    /** @type {{ source: string; rootMal: number; directLinkCount: number; catalogMatches: number }} */
+    const direct = pickFranchiseRelationCandidates(rootMal, relationsJson);
+    const chain = await jikanFranchiseRailOrderedSteps(rootMal, {
+      rootRelationsJson: relationsJson,
+      staggerMs: 350,
+      maxNodes: 56,
+    });
+
+    const seenMal = new Set([rootMal]);
+    /** @type {Array<{ malId: number; malKind: "anime" | "movie"; topNote: string }>} */
+    const candidates = [];
+    for (const s of chain) {
+      if (!Number.isFinite(s.malId) || s.malId <= 0 || seenMal.has(s.malId)) continue;
+      seenMal.add(s.malId);
+      candidates.push(s);
+    }
+    for (const s of direct) {
+      if (!Number.isFinite(s.malId) || s.malId <= 0 || seenMal.has(s.malId)) continue;
+      seenMal.add(s.malId);
+      candidates.push(s);
+    }
+
+    /** @type {{ source: string; rootMal: number; chainCount: number; directCount: number; mergedCount: number; catalogMatches: number }} */
     const meta = {
-      source: "jikan-relations-direct-catalog",
+      source: "jikan-franchise-rail+direct-catalog",
       rootMal,
-      directLinkCount: candidates.length,
+      chainCount: chain.length,
+      directCount: direct.length,
+      mergedCount: candidates.length,
       catalogMatches: 0,
     };
 
@@ -64,6 +90,7 @@ export async function GET(req) {
     }
 
     const malIds = candidates.map((s) => s.malId);
+    const malIdsQuery = [...new Set([...malIds, ...malIds.map((n) => String(n))])];
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
 
@@ -71,7 +98,7 @@ export async function GET(req) {
       .find(
         {
           type: { $in: ["tv", "movie"] },
-          mal_id: { $in: malIds },
+          mal_id: { $in: malIdsQuery },
         },
         {
           projection: {
@@ -88,14 +115,14 @@ export async function GET(req) {
           },
         }
       )
-      .limit(120)
+      .limit(200)
       .toArray();
 
     /** @type {Map<number, (typeof docs)[number]>} */
     const docByMal = new Map();
     for (const d of docs) {
-      const m = typeof d.mal_id === "number" ? d.mal_id : null;
-      if (m == null || !malIds.includes(m)) continue;
+      const m = Number(d.mal_id);
+      if (!Number.isFinite(m) || m <= 0 || !malIds.includes(m)) continue;
       if (!docByMal.has(m)) docByMal.set(m, d);
     }
 
