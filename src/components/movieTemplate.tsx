@@ -127,7 +127,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                   <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
                 </div>
               </section>
-              <section className="w-full mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+              <section className="w-full mt-6 p-4 sm:p-5 rounded-xl border border-default-200/40 bg-default-100/35 dark:bg-default-100/10">
                 <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
                   <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
                     <div className="aspect-[2/3] w-full animate-pulse rounded-lg bg-default-200" />
@@ -195,7 +195,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                   </div>
                 </section>
 
-                <section className="w-full mt-6 p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+                <section className="w-full mt-6 p-4 sm:p-5 rounded-xl border border-default-200/40 bg-default-100/35 dark:bg-default-100/10">
                   <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
                     <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
                       <Image

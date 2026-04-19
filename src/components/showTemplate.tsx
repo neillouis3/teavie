@@ -964,7 +964,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                 </section>
 
                 {/* ── Season & episode picker (shared layout; TV uses season + episode sections) ── */}
-                <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/20">
+                <div className="w-full rounded-xl border border-default-200/40 bg-default-100/35 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/10">
                   {showPickerTopRow ? (
                     <div
                       className={`flex flex-wrap items-center gap-2 ${
@@ -1173,7 +1173,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </div>
                 </div>
 
-                <section className="w-full  p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
+                <section className="w-full  p-4 sm:p-5 rounded-xl border border-default-200/40 bg-default-100/35 dark:bg-default-100/10">
                   <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
                     <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
                       <Image
@@ -1249,7 +1249,7 @@ function LoadingSkeleton() {
         </div>
       </section>
 
-      <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/20">
+      <div className="w-full rounded-xl border border-default-200/40 bg-default-100/35 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/10">
         <div className="flex justify-end">
           <div className="h-4 w-36 bg-default-200 rounded-md animate-pulse" />
         </div>
@@ -1271,7 +1271,7 @@ function LoadingSkeleton() {
         </div>
       </div>
 
-      <section className="w-full rounded-xl border border-default-200/50 bg-default-100/50 dark:bg-default-100/20 overflow-hidden">
+      <section className="w-full overflow-hidden rounded-xl border border-default-200/40 bg-default-100/35 dark:bg-default-100/10">
         <div className="flex flex-row gap-4 p-4 sm:p-5">
           <div className="aspect-[2/3] w-28 shrink-0 animate-pulse bg-default-200 sm:w-36 md:w-40 lg:w-48" />
           <div className="flex-1 space-y-4">
