@@ -25,7 +25,7 @@ export default function Explore({
   loading,
 }: ExploreProps) {
   return (
-    <div className="w-full flex flex-col bg-background/92 dark:bg-background/88">
+    <div className="flex w-full flex-col bg-background/92 dark:bg-background/88">
       <Header pageName="Explore" />
 
       {/* New & Upcoming Section */}

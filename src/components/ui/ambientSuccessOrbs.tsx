@@ -18,24 +18,43 @@ function rand(min: number, max: number) {
 }
 
 /**
- * Soft success-colored blobs (radial gradient + blur), positioned once on mount
- * so SSR markup stays stable and layout is not hydration-sensitive.
+ * Two very large soft success blobs (radial gradient + blur), sized from the
+ * viewport so each can approach ~half the screen or more.
  */
 export default function AmbientSuccessOrbs() {
   const [orbs, setOrbs] = useState<Orb[] | null>(null);
 
   useEffect(() => {
-    const n = 16;
-    const next: Orb[] = Array.from({ length: n }, (_, i) => ({
-      id: i,
-      x: rand(2, 98),
-      y: rand(1, 99),
-      size: rand(36, 104),
-      blur: rand(18, 44),
-      opacity: rand(0.14, 0.36),
-      gx: rand(22, 78),
-      gy: rand(22, 78),
-    }));
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const maxDim = Math.max(vw, vh);
+    const minDim = Math.min(vw, vh);
+    // Diameter roughly 55%–85% of the larger viewport side — reads as “huge” / half-screen+
+    const baseSize = maxDim * rand(0.55, 0.85);
+    const secondSize = Math.max(baseSize * rand(0.85, 1.08), minDim * rand(0.75, 1.05));
+
+    const next: Orb[] = [
+      {
+        id: 0,
+        x: rand(8, 42),
+        y: rand(8, 38),
+        size: baseSize,
+        blur: rand(70, 130),
+        opacity: rand(0.07, 0.18),
+        gx: rand(25, 55),
+        gy: rand(25, 55),
+      },
+      {
+        id: 1,
+        x: rand(58, 94),
+        y: rand(55, 92),
+        size: secondSize,
+        blur: rand(80, 150),
+        opacity: rand(0.06, 0.16),
+        gx: rand(40, 75),
+        gy: rand(35, 70),
+      },
+    ];
     setOrbs(next);
   }, []);
 
@@ -46,7 +65,7 @@ export default function AmbientSuccessOrbs() {
       className="ambient-success-orbs pointer-events-none fixed inset-0 z-0 overflow-hidden"
       aria-hidden
     >
-      <div className="absolute inset-0 opacity-100 dark:opacity-[0.55]">
+      <div className="absolute inset-0 opacity-100 dark:opacity-[0.48]">
         {orbs.map((o) => (
           <div
             key={o.id}
@@ -59,7 +78,7 @@ export default function AmbientSuccessOrbs() {
               transform: "translate(-50%, -50%)",
               opacity: o.opacity,
               filter: `blur(${o.blur}px)`,
-              background: `radial-gradient(circle at ${o.gx}% ${o.gy}%, rgb(34 197 94 / 0.52) 0%, rgb(34 197 94 / 0.2) 36%, rgb(74 222 128 / 0.08) 52%, transparent 68%)`,
+              background: `radial-gradient(circle at ${o.gx}% ${o.gy}%, rgb(34 197 94 / 0.42) 0%, rgb(34 197 94 / 0.14) 42%, rgb(74 222 128 / 0.05) 58%, transparent 78%)`,
             }}
           />
         ))}
