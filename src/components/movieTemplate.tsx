@@ -93,6 +93,21 @@ export default function MovieTemplate({ id }: { id: string }) {
 
   const imageUrl = movie?.poster_path ? `${baseUrl}${size}${movie.poster_path}` : '';
   const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
+  const movieRuntimeMin =
+    movie?.runtimeSeconds != null
+      ? Math.round(movie.runtimeSeconds / 60)
+      : movie?.runtime ?? null;
+  const movieMetaLine =
+    movie != null
+      ? [
+          movie.vote_average.toFixed(1),
+          movie.release_date?.trim().slice(0, 4) || null,
+          movieRuntimeMin != null ? `${movieRuntimeMin} min` : null,
+          movie.status,
+        ]
+          .filter((x) => x != null && String(x).length > 0)
+          .join(" · ")
+      : "";
 
   return (
     <div className="bg-background h-full w-full flex flex-col  px-0 py-4 pb-32">
@@ -118,16 +133,13 @@ export default function MovieTemplate({ id }: { id: string }) {
           {loading ? (
             <>
               <section className="w-full">
-                <div className="h-8 sm:h-9 w-3/4 max-w-xl bg-default-200 rounded-lg animate-pulse" />
-                <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
+                <div className="h-8 sm:h-9 w-3/4 max-w-xl rounded-lg bg-default-200 animate-pulse" />
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <div className="h-7 w-16 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-4 w-52 max-w-[75%] rounded bg-default-200 animate-pulse" />
                 </div>
               </section>
-              <section className="w-full mt-6 p-4 sm:p-5 rounded-xl border border-default-200/40 bg-default-100/35 dark:bg-default-100/10">
+              <section className="mt-6 w-full rounded-xl bg-default-100/30 p-4 sm:p-5 dark:bg-default-50/5">
                 <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
                   <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
                     <div className="aspect-[2/3] w-full animate-pulse rounded-lg bg-default-200" />
@@ -138,25 +150,18 @@ export default function MovieTemplate({ id }: { id: string }) {
                       <div className="h-3 w-full max-w-xl bg-default-200 rounded animate-pulse" />
                       <div className="h-3 w-2/3 max-w-lg bg-default-200 rounded animate-pulse" />
                     </div>
-                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
+                    <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-3">
                       <div className="space-y-1">
-                        <div className="h-3 w-14 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-20 bg-default-200 rounded animate-pulse" />
+                        <div className="h-3 w-14 rounded bg-default-200 animate-pulse" />
+                        <div className="h-4 w-20 rounded bg-default-200 animate-pulse" />
                       </div>
                       <div className="space-y-1">
-                        <div className="h-3 w-12 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-24 bg-default-200 rounded animate-pulse" />
+                        <div className="h-3 w-12 rounded bg-default-200 animate-pulse" />
+                        <div className="h-4 w-24 rounded bg-default-200 animate-pulse" />
                       </div>
                       <div className="space-y-1">
-                        <div className="h-3 w-10 bg-default-200 rounded animate-pulse" />
-                        <div className="h-4 w-12 bg-default-200 rounded animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="mt-6 pt-6 border-t border-default-200">
-                      <div className="h-4 w-32 bg-default-200 rounded animate-pulse mb-3" />
-                      <div className="flex gap-2">
-                        <div className="h-8 w-20 bg-default-200 rounded animate-pulse" />
-                        <div className="h-8 w-20 bg-default-200 rounded animate-pulse" />
+                        <div className="h-3 w-10 rounded bg-default-200 animate-pulse" />
+                        <div className="h-4 w-12 rounded bg-default-200 animate-pulse" />
                       </div>
                     </div>
                   </div>
@@ -167,41 +172,24 @@ export default function MovieTemplate({ id }: { id: string }) {
             movie && (
               <>
                 <section>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                     {movie.title}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <Chip color="success" size="md" variant="flat" className="font-medium">
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-default-600">
+                    <Chip color="success" size="sm" variant="flat" className="font-medium">
                       Movie
                     </Chip>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-xs font-medium">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5">
-                        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
-                      </svg>
-                      {movie.vote_average.toFixed(1)}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs font-medium">
-                      {movie.release_date?.slice(0, 4)}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs">
-                      {(() => {
-                        const m = movie.runtimeSeconds != null ? Math.round(movie.runtimeSeconds / 60) : movie.runtime;
-                        return m != null ? `${m} min` : "—";
-                      })()}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs capitalize">
-                      {movie.status}
-                    </span>
+                    <span className="text-default-500">{movieMetaLine}</span>
                   </div>
                 </section>
 
-                <section className="w-full mt-6 p-4 sm:p-5 rounded-xl border border-default-200/40 bg-default-100/35 dark:bg-default-100/10">
+                <section className="mt-6 w-full rounded-xl bg-default-100/30 p-4 sm:p-5 dark:bg-default-50/5">
                   <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
                     <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
                       <Image
                         src={imageUrl}
                         alt={movie.title}
-                        className="aspect-[2/3] w-full rounded-lg object-cover shadow-md"
+                        className="aspect-[2/3] w-full rounded-lg object-cover"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -213,23 +201,21 @@ export default function MovieTemplate({ id }: { id: string }) {
                           {movie.tagline}
                         </p>
                       )}
-                      <dl className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                      <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
                         <div>
-                          <dt className="text-default-500 font-medium">
-                            Country of origin
-                          </dt>
+                          <dt className="text-xs text-default-400">Country of origin</dt>
                           <dd className="text-foreground mt-0.5">
                             {formatCountryOfOrigin(movie)}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-default-500 font-medium">Genre</dt>
+                          <dt className="text-xs text-default-400">Genre</dt>
                           <dd className="text-foreground mt-0.5">
                             {movie.genres.map((g) => g.name).join(", ")}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-default-500 font-medium">Year</dt>
+                          <dt className="text-xs text-default-400">Year</dt>
                           <dd className="text-foreground mt-0.5">
                             {movie.release_date?.slice(0, 4)}
                           </dd>
