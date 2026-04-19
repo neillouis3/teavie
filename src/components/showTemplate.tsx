@@ -789,8 +789,7 @@ export default function ShowTemplate({ id }: { id: string }) {
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
   const showSeasonPickerStrip =
     !animeHideSeasonRow && !useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker;
-  const pickerSectionLabelClass =
-    "text-[11px] font-semibold uppercase tracking-wider text-default-400";
+  const pickerSectionLabelClass = "text-xs font-medium text-default-500";
   const useContinuousEpisodeLabels =
     !useAnilistOnlyEpisodePicker &&
     releasedSeasonsForUi.length > 1 &&
@@ -948,10 +947,10 @@ export default function ShowTemplate({ id }: { id: string }) {
                 {/* ── Season & episode picker (shared layout; TV uses season + episode sections) ── */}
                 <div className="w-full rounded-2xl border border-default-200/70 bg-content1 shadow-sm dark:border-default-100/15 dark:bg-content1/40 p-5 sm:p-6 flex flex-col gap-5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-base font-semibold tracking-tight text-foreground">
+                    <h2 className="text-base font-medium tracking-tight text-foreground">
                       {useAnilistOnlyEpisodePicker || useFlatAllEpisodesPicker || show.is_anime
                         ? "Episodes"
-                        : "Seasons & episodes"}
+                        : "Seasons & Episodes"}
                     </h2>
                     {show.is_anime ? (
                       useAnilistOnlyEpisodePicker &&
@@ -987,7 +986,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                                 radius="lg"
                                 variant={sel ? "flat" : "light"}
                                 color={sel ? "primary" : "default"}
-                                className="h-9 min-w-11 px-3 text-xs font-semibold tabular-nums"
+                                className="h-9 min-w-11 px-3 text-xs font-medium tabular-nums"
                                 onPress={() => {
                                   setSelectedSeason(s.season_number);
                                   setSelectedEpisode(1);
@@ -1100,7 +1099,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                                   radius="lg"
                                   variant={isCurrent ? "flat" : "light"}
                                   color={isCurrent ? "primary" : "default"}
-                                  className="h-9 w-full min-w-9 max-w-[2.75rem] px-0 text-xs font-semibold tabular-nums"
+                                  className="h-9 w-full min-w-9 max-w-[2.75rem] px-0 text-xs font-medium tabular-nums"
                                   aria-label={
                                     watchedThis ? `${ariaEp}, watched` : ariaEp
                                   }
