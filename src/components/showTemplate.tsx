@@ -869,6 +869,25 @@ export default function ShowTemplate({ id }: { id: string }) {
     setEpisodeRangeStart((s) => Math.min(s, maxStart));
   }, [displayEpisodeCount]);
 
+  const showPickerHeading =
+    Boolean(show) &&
+    (useAnilistOnlyEpisodePicker ||
+      useFlatAllEpisodesPicker ||
+      Boolean(show?.is_anime));
+  const pickerMetaAnimeFirst =
+    Boolean(show?.is_anime) &&
+    useAnilistOnlyEpisodePicker &&
+    typeof anilistPickerTotal === "number" &&
+    anilistPickerTotal > 0;
+  const pickerMetaAnimeSecond =
+    Boolean(show?.is_anime) &&
+    typeof show?.number_of_episodes === "number" &&
+    show.number_of_episodes > 0;
+  const showPickerMetaAnime = pickerMetaAnimeFirst || pickerMetaAnimeSecond;
+  const showPickerMetaTv =
+    Boolean(show && !show.is_anime && show.number_of_seasons && show.number_of_episodes);
+  const showPickerTopRow = showPickerHeading || showPickerMetaAnime || showPickerMetaTv;
+
   return (
     <div className="bg-background min-h-full w-full flex flex-col px-0 py-4 pb-32">
       <div className="w-full flex flex-col gap-6">
@@ -946,30 +965,32 @@ export default function ShowTemplate({ id }: { id: string }) {
 
                 {/* ── Season & episode picker (shared layout; TV uses season + episode sections) ── */}
                 <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/20">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-base font-medium tracking-tight text-foreground">
-                      {useAnilistOnlyEpisodePicker || useFlatAllEpisodesPicker || show.is_anime
-                        ? "Episodes"
-                        : "Seasons & Episodes"}
-                    </h2>
-                    {show.is_anime ? (
-                      useAnilistOnlyEpisodePicker &&
-                      typeof anilistPickerTotal === "number" &&
-                      anilistPickerTotal > 0 ? (
+                  {showPickerTopRow ? (
+                    <div
+                      className={`flex flex-wrap items-center gap-2 ${
+                        showPickerHeading ? "justify-between" : "justify-end"
+                      }`}
+                    >
+                      {showPickerHeading ? (
+                        <h2 className="text-base font-medium tracking-tight text-foreground">
+                          Episodes
+                        </h2>
+                      ) : null}
+                      {pickerMetaAnimeFirst ? (
                         <span className="text-xs font-medium tabular-nums text-default-400">
                           {anilistPickerTotal}
                         </span>
-                      ) : typeof show.number_of_episodes === "number" && show.number_of_episodes > 0 ? (
+                      ) : pickerMetaAnimeSecond ? (
                         <span className="text-xs font-medium tabular-nums text-default-400">
                           {show.number_of_episodes}
                         </span>
-                      ) : null
-                    ) : show.number_of_seasons && show.number_of_episodes ? (
-                      <span className="text-xs font-medium tabular-nums text-default-400">
-                        {show.number_of_seasons} seasons · {show.number_of_episodes} episodes
-                      </span>
-                    ) : null}
-                  </div>
+                      ) : showPickerMetaTv ? (
+                        <span className="text-xs font-medium tabular-nums text-default-400">
+                          {show.number_of_seasons} seasons · {show.number_of_episodes} episodes
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   {showSeasonPickerStrip ? (
                     <div className="flex flex-col gap-1.5">
@@ -1229,9 +1250,8 @@ function LoadingSkeleton() {
       </section>
 
       <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/20">
-        <div className="flex items-center justify-between gap-2">
-          <div className="h-5 w-44 max-w-[55%] bg-default-200 rounded-lg animate-pulse" />
-          <div className="h-4 w-28 bg-default-200 rounded-md animate-pulse" />
+        <div className="flex justify-end">
+          <div className="h-4 w-36 bg-default-200 rounded-md animate-pulse" />
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="h-2.5 w-12 bg-default-200 rounded animate-pulse" />
