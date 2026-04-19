@@ -25,14 +25,6 @@ interface Season {
   air_date?: string | null;
 }
 
-/** TMDB `GET /tv/{id}/season/{n}` episode row (subset). */
-interface TmdbSeasonEpisodeRow {
-  episode_number?: number;
-  name?: string;
-  air_date?: string | null;
-  overview?: string;
-}
-
 interface Show {
   id: number | string;
   name: string;
@@ -363,10 +355,6 @@ export default function ShowTemplate({ id }: { id: string }) {
   /** null = no cap (anime / error); number = last episode number aired by TMDB calendar */
   const [tmdbAiredEpCap, setTmdbAiredEpCap] = useState<number | null>(null);
   const [tmdbEpCapLoading, setTmdbEpCapLoading] = useState(false);
-  /** Non-anime TMDB: episode titles/air dates for the selected season (same fetch as aired cap). */
-  const [tmdbSeasonEpisodes, setTmdbSeasonEpisodes] = useState<TmdbSeasonEpisodeRow[] | null>(
-    null
-  );
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(
     () => new Set()
   );
@@ -613,13 +601,11 @@ export default function ShowTemplate({ id }: { id: string }) {
     if (!show || !/^\d+$/.test(String(resolvedPlayerId))) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
-      setTmdbSeasonEpisodes(null);
       return;
     }
     if (show.is_anime && catalogAnilistId(show) != null) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
-      setTmdbSeasonEpisodes(null);
       return;
     }
     const releasedSeasonCount =
@@ -635,14 +621,12 @@ export default function ShowTemplate({ id }: { id: string }) {
     if (skipSeasonFetchForFlatAnimePicker) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
-      setTmdbSeasonEpisodes(null);
       return;
     }
 
     let cancelled = false;
     setTmdbEpCapLoading(true);
     setTmdbAiredEpCap(null);
-    if (!show.is_anime) setTmdbSeasonEpisodes(null);
 
     const run = async () => {
       const token = process.env.NEXT_PUBLIC_TMDB_BEARER;
@@ -650,7 +634,6 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (!cancelled) {
           setTmdbAiredEpCap(null);
           setTmdbEpCapLoading(false);
-          setTmdbSeasonEpisodes(null);
         }
         return;
       }
@@ -662,30 +645,11 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (!res.ok) throw new Error("season fetch failed");
         const json = (await res.json()) as {
           air_date?: string | null;
-          episodes?: {
-            air_date?: string | null;
-            episode_number?: number;
-            name?: string;
-            overview?: string;
-          }[];
+          episodes?: { air_date?: string | null; episode_number?: number }[];
         };
         const today = catalogTodayYmdUtc();
         let max = 0;
         const eps = json.episodes ?? [];
-        if (!cancelled) {
-          if (!show.is_anime) {
-            setTmdbSeasonEpisodes(
-              eps.map((e) => ({
-                episode_number: e.episode_number,
-                name: e.name,
-                air_date: e.air_date,
-                overview: e.overview,
-              }))
-            );
-          } else {
-            setTmdbSeasonEpisodes(null);
-          }
-        }
         for (const ep of eps) {
           const ad = String(ep.air_date ?? "").trim();
           if (!ad || ad.length < 10) continue;
@@ -699,10 +663,7 @@ export default function ShowTemplate({ id }: { id: string }) {
         }
         if (!cancelled) setTmdbAiredEpCap(max);
       } catch {
-        if (!cancelled) {
-          setTmdbAiredEpCap(null);
-          setTmdbSeasonEpisodes(null);
-        }
+        if (!cancelled) setTmdbAiredEpCap(null);
       } finally {
         if (!cancelled) setTmdbEpCapLoading(false);
       }
@@ -826,6 +787,10 @@ export default function ShowTemplate({ id }: { id: string }) {
 
   const animeHideSeasonRow =
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
+  const showSeasonPickerStrip =
+    !animeHideSeasonRow && !useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker;
+  const pickerSectionLabelClass =
+    "text-[11px] font-semibold uppercase tracking-wider text-default-400";
   const useContinuousEpisodeLabels =
     !useAnilistOnlyEpisodePicker &&
     releasedSeasonsForUi.length > 1 &&
@@ -980,267 +945,212 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </div>
                 </section>
 
-                {/* ── Season & Episode Chooser (surface matches poster / overview card) ── */}
-                <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 dark:bg-default-100/20 overflow-hidden p-4 sm:p-5 flex flex-col gap-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-medium text-default-600">
-                      {useAnilistOnlyEpisodePicker
+                {/* ── Season & episode picker (shared layout; TV uses season + episode sections) ── */}
+                <div className="w-full rounded-2xl border border-default-200/70 bg-content1 shadow-sm dark:border-default-100/15 dark:bg-content1/40 p-5 sm:p-6 flex flex-col gap-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-base font-semibold tracking-tight text-foreground">
+                      {useAnilistOnlyEpisodePicker || useFlatAllEpisodesPicker || show.is_anime
                         ? "Episodes"
-                        : useFlatAllEpisodesPicker
-                          ? "Episodes"
-                          : show.is_anime
-                            ? "Episodes"
-                            : "Season & episode"}
-                    </span>
+                        : "Seasons & episodes"}
+                    </h2>
                     {show.is_anime ? (
                       useAnilistOnlyEpisodePicker &&
                       typeof anilistPickerTotal === "number" &&
                       anilistPickerTotal > 0 ? (
-                        <span className="text-xs tabular-nums text-default-400">
+                        <span className="text-xs font-medium tabular-nums text-default-400">
                           {anilistPickerTotal}
                         </span>
                       ) : typeof show.number_of_episodes === "number" && show.number_of_episodes > 0 ? (
-                        <span className="text-xs tabular-nums text-default-400">
+                        <span className="text-xs font-medium tabular-nums text-default-400">
                           {show.number_of_episodes}
                         </span>
                       ) : null
-                    ) : (
-                      show.number_of_seasons &&
-                      show.number_of_episodes && (
-                        <span className="text-xs tabular-nums text-default-400">
-                          {show.number_of_seasons}×{show.number_of_episodes}
-                        </span>
-                      )
-                    )}
+                    ) : show.number_of_seasons && show.number_of_episodes ? (
+                      <span className="text-xs font-medium tabular-nums text-default-400">
+                        {show.number_of_seasons} seasons · {show.number_of_episodes} episodes
+                      </span>
+                    ) : null}
                   </div>
 
-                  {!animeHideSeasonRow && !useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker && (
-                    <div>
-                      <div className="flex flex-wrap gap-1">
+                  {showSeasonPickerStrip ? (
+                    <div className="flex flex-col gap-2">
+                      <p className={pickerSectionLabelClass}>Season</p>
+                      <div className="flex flex-wrap gap-1.5">
                         {show.seasons
                           ?.filter((s) => s.season_number >= 1)
-                          .map((s) => (
-                            <Button
-                              key={s.season_number}
-                              size="sm"
-                              radius="md"
-                              variant="flat"
-                              color="default"
-                              className={`min-w-11 h-8 px-0 text-xs font-medium ${
-                                selectedSeason === s.season_number
-                                  ? "bg-default-200/90 dark:bg-default-200/40"
-                                  : ""
-                              }`}
-                              onPress={() => {
-                                setSelectedSeason(s.season_number);
-                                setSelectedEpisode(1);
-                              }}
-                            >
-                              S{s.season_number}
-                            </Button>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Episode grid */}
-                  {episodeGridStatus === "loading" && (
-                    <div className="text-xs text-default-500">
-                      Loading…
-                    </div>
-                  )}
-                  {episodeGridStatus === "none" && (
-                    <div className="text-xs text-default-500">
-                      {useAnilistOnlyEpisodePicker
-                        ? "Episode list not ready yet."
-                        : "Nothing to show for this season yet."}
-                    </div>
-                  )}
-                  {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
-                    <div>
-                      {showEpisodeRangeTabs && (
-                        <div className="mb-2 flex flex-wrap gap-1">
-                          {Array.from(
-                            { length: Math.ceil(displayEpisodeCount / EPISODE_RANGE_BLOCK) },
-                            (_, b) => {
-                              const start = b * EPISODE_RANGE_BLOCK;
-                              const labelHi = Math.min(
-                                start + EPISODE_RANGE_BLOCK - 1,
-                                displayEpisodeCount - 1
-                              );
-                              const withinLo = start + 1;
-                              const withinHi = Math.min(
-                                start + EPISODE_RANGE_BLOCK,
-                                displayEpisodeCount
-                              );
-                              const rangeLabel = useFlatAllEpisodesPicker
-                                ? `${withinLo}–${withinHi}`
-                                : useContinuousEpisodeLabels
-                                  ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
-                                  : `${start}–${labelHi}`;
-                              return (
-                                <Button
-                                  key={start}
-                                  size="sm"
-                                  radius="md"
-                                  variant="flat"
-                                  color="default"
-                                  className={`h-7 min-w-0 px-2.5 text-xs font-normal ${
-                                    episodeRangeStart === start
-                                      ? "bg-default-200/90 dark:bg-default-200/40"
-                                      : ""
-                                  }`}
-                                  onPress={() => setEpisodeRangeStart(start)}
-                                >
-                                  {rangeLabel}
-                                </Button>
-                              );
-                            }
-                          )}
-                        </div>
-                      )}
-                      <div
-                        className="grid gap-2"
-                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(2.5rem, 1fr))" }}
-                      >
-                        {Array.from(
-                          { length: Math.max(0, episodeBlockHi - episodeBlockLo + 1) },
-                          (_, i) => episodeBlockLo + i
-                        ).map((ep) => {
-                          const coordsFlat =
-                            useFlatAllEpisodesPicker && show?.seasons
-                              ? tmdbSeasonEpisodeFromAbsolute(show.seasons, ep)
-                              : null;
-                          const watchKey = useAnilistOnlyEpisodePicker
-                            ? formatWatchEpKey(1, ep)
-                            : coordsFlat
-                              ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
-                              : formatWatchEpKey(selectedSeason, ep);
-                          const watchedThis = watchedEpisodes.has(watchKey);
-                          const epLabel = useAnilistOnlyEpisodePicker
-                            ? ep
-                            : useFlatAllEpisodesPicker
-                              ? ep
-                              : useContinuousEpisodeLabels
-                                ? ep + episodeDisplayOffset
-                                : ep;
-                          const isCurrent = useFlatAllEpisodesPicker
-                            ? cumulativeEpisodeSelected === ep
-                            : selectedEpisode === ep;
-                          const ariaEp = `Episode ${epLabel}`;
-                          return (
-                            <div key={ep} className="relative">
+                          .map((s) => {
+                            const sel = selectedSeason === s.season_number;
+                            return (
                               <Button
+                                key={s.season_number}
                                 size="sm"
-                                isIconOnly
-                                radius="md"
-                                variant="flat"
-                                color="default"
-                                className={`h-10 w-full min-w-10 max-w-11 text-xs font-medium ${
-                                  isCurrent ? "bg-default-200/90 dark:bg-default-200/40" : ""
-                                }`}
-                                aria-label={
-                                  watchedThis ? `${ariaEp}, watched` : ariaEp
-                                }
+                                radius="lg"
+                                variant={sel ? "flat" : "light"}
+                                color={sel ? "primary" : "default"}
+                                className="h-9 min-w-11 px-3 text-xs font-semibold tabular-nums"
                                 onPress={() => {
-                                  if (coordsFlat) {
-                                    setSelectedSeason(coordsFlat.season);
-                                    setSelectedEpisode(coordsFlat.episode);
-                                    setWatchedEpisodes((prev) => {
-                                      const next = new Set(prev);
-                                      next.add(
-                                        formatWatchEpKey(
-                                          coordsFlat.season,
-                                          coordsFlat.episode
-                                        )
-                                      );
-                                      return next;
-                                    });
-                                  } else if (useAnilistOnlyEpisodePicker) {
-                                    setSelectedSeason(1);
-                                    setSelectedEpisode(ep);
-                                    setWatchedEpisodes((prev) => {
-                                      const next = new Set(prev);
-                                      next.add(formatWatchEpKey(1, ep));
-                                      return next;
-                                    });
-                                  } else {
-                                    setSelectedEpisode(ep);
-                                    setWatchedEpisodes((prev) => {
-                                      const next = new Set(prev);
-                                      next.add(formatWatchEpKey(selectedSeason, ep));
-                                      return next;
-                                    });
-                                  }
+                                  setSelectedSeason(s.season_number);
+                                  setSelectedEpisode(1);
                                 }}
                               >
-                                {epLabel}
+                                S{s.season_number}
                               </Button>
-                              {watchedThis ? (
-                                <span
-                                  className="pointer-events-none absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-foreground/45 shadow-sm ring-1 ring-background"
-                                  aria-hidden
-                                />
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {playerUsesTmdb && !show.is_anime && selectedSeason >= 1 ? (
-                    <div className="border-t border-default-200/40 pt-3 mt-1">
-                      <span className="text-xs font-medium text-default-600">
-                        Season {selectedSeason} episodes (TMDB)
-                      </span>
-                      {tmdbEpCapLoading && !tmdbSeasonEpisodes?.length ? (
-                        <p className="text-xs text-default-500 mt-2">Loading episode details…</p>
-                      ) : null}
-                      {!tmdbEpCapLoading &&
-                      tmdbSeasonEpisodes &&
-                      tmdbSeasonEpisodes.length > 0 ? (
-                        <ul className="mt-2 max-h-64 overflow-y-auto space-y-0.5 pr-0.5">
-                          {tmdbSeasonEpisodes.map((row, idx) => {
-                            const n = Number(row.episode_number);
-                            if (!Number.isFinite(n) || n < 1) return null;
-                            const epTitle = String(row.name ?? "").trim() || `Episode ${n}`;
-                            const ad = String(row.air_date ?? "").trim();
-                            const isSel = n === selectedEpisode;
-                            return (
-                              <li key={`${n}-${idx}`}>
-                                <Button
-                                  variant="light"
-                                  size="sm"
-                                  radius="sm"
-                                  className={`w-full min-h-11 h-auto justify-start gap-2 px-2 py-1.5 ${
-                                    isSel ? "bg-default-200/80 dark:bg-default-200/35" : ""
-                                  }`}
-                                  onPress={() => setSelectedEpisode(n)}
-                                >
-                                  <span className="shrink-0 tabular-nums text-xs font-semibold text-default-500 w-8 text-right">
-                                    {n}
-                                  </span>
-                                  <span className="min-w-0 flex-1 text-left text-xs leading-snug">
-                                    <span className="text-foreground block">{epTitle}</span>
-                                    {ad.length >= 10 ? (
-                                      <span className="text-default-400 tabular-nums block mt-0.5">
-                                        {ad}
-                                      </span>
-                                    ) : null}
-                                  </span>
-                                </Button>
-                              </li>
                             );
                           })}
-                        </ul>
-                      ) : !tmdbEpCapLoading ? (
-                        <p className="text-xs text-default-500 mt-2">
-                          Episode titles are not available for this season.
-                        </p>
-                      ) : null}
+                      </div>
                     </div>
                   ) : null}
+
+                  <div
+                    className={
+                      showSeasonPickerStrip
+                        ? "flex flex-col gap-3 border-t border-default-200/60 pt-4 dark:border-default-100/20"
+                        : "flex flex-col gap-3"
+                    }
+                  >
+                    <p className={pickerSectionLabelClass}>Episodes</p>
+
+                    {episodeGridStatus === "loading" && (
+                      <div className="rounded-lg bg-default-100/80 dark:bg-default-50/10 px-3 py-6 text-center text-xs text-default-500">
+                        Loading episodes…
+                      </div>
+                    )}
+                    {episodeGridStatus === "none" && (
+                      <div className="rounded-lg bg-default-100/80 dark:bg-default-50/10 px-3 py-6 text-center text-xs text-default-500">
+                        {useAnilistOnlyEpisodePicker
+                          ? "Episode list not ready yet."
+                          : "Nothing to show for this season yet."}
+                      </div>
+                    )}
+                    {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
+                      <div className="flex flex-col gap-3">
+                        {showEpisodeRangeTabs && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {Array.from(
+                              { length: Math.ceil(displayEpisodeCount / EPISODE_RANGE_BLOCK) },
+                              (_, b) => {
+                                const start = b * EPISODE_RANGE_BLOCK;
+                                const labelHi = Math.min(
+                                  start + EPISODE_RANGE_BLOCK - 1,
+                                  displayEpisodeCount - 1
+                                );
+                                const withinLo = start + 1;
+                                const withinHi = Math.min(
+                                  start + EPISODE_RANGE_BLOCK,
+                                  displayEpisodeCount
+                                );
+                                const rangeLabel = useFlatAllEpisodesPicker
+                                  ? `${withinLo}–${withinHi}`
+                                  : useContinuousEpisodeLabels
+                                    ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
+                                    : `${start}–${labelHi}`;
+                                const rangeSel = episodeRangeStart === start;
+                                return (
+                                  <Button
+                                    key={start}
+                                    size="sm"
+                                    radius="lg"
+                                    variant={rangeSel ? "flat" : "light"}
+                                    color={rangeSel ? "primary" : "default"}
+                                    className="h-8 min-w-0 px-3 text-xs font-medium tabular-nums"
+                                    onPress={() => setEpisodeRangeStart(start)}
+                                  >
+                                    {rangeLabel}
+                                  </Button>
+                                );
+                              }
+                            )}
+                          </div>
+                        )}
+                        <div
+                          className="grid gap-1.5"
+                          style={{
+                            gridTemplateColumns: "repeat(auto-fill, minmax(2.75rem, 1fr))",
+                          }}
+                        >
+                          {Array.from(
+                            { length: Math.max(0, episodeBlockHi - episodeBlockLo + 1) },
+                            (_, i) => episodeBlockLo + i
+                          ).map((ep) => {
+                            const coordsFlat =
+                              useFlatAllEpisodesPicker && show?.seasons
+                                ? tmdbSeasonEpisodeFromAbsolute(show.seasons, ep)
+                                : null;
+                            const watchKey = useAnilistOnlyEpisodePicker
+                              ? formatWatchEpKey(1, ep)
+                              : coordsFlat
+                                ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
+                                : formatWatchEpKey(selectedSeason, ep);
+                            const watchedThis = watchedEpisodes.has(watchKey);
+                            const epLabel = useAnilistOnlyEpisodePicker
+                              ? ep
+                              : useFlatAllEpisodesPicker
+                                ? ep
+                                : useContinuousEpisodeLabels
+                                  ? ep + episodeDisplayOffset
+                                  : ep;
+                            const isCurrent = useFlatAllEpisodesPicker
+                              ? cumulativeEpisodeSelected === ep
+                              : selectedEpisode === ep;
+                            const ariaEp = `Episode ${epLabel}`;
+                            return (
+                              <div key={ep} className="relative">
+                                <Button
+                                  size="sm"
+                                  radius="lg"
+                                  variant={isCurrent ? "flat" : "light"}
+                                  color={isCurrent ? "primary" : "default"}
+                                  className="h-9 w-full min-w-9 max-w-[2.75rem] px-0 text-xs font-semibold tabular-nums"
+                                  aria-label={
+                                    watchedThis ? `${ariaEp}, watched` : ariaEp
+                                  }
+                                  onPress={() => {
+                                    if (coordsFlat) {
+                                      setSelectedSeason(coordsFlat.season);
+                                      setSelectedEpisode(coordsFlat.episode);
+                                      setWatchedEpisodes((prev) => {
+                                        const next = new Set(prev);
+                                        next.add(
+                                          formatWatchEpKey(
+                                            coordsFlat.season,
+                                            coordsFlat.episode
+                                          )
+                                        );
+                                        return next;
+                                      });
+                                    } else if (useAnilistOnlyEpisodePicker) {
+                                      setSelectedSeason(1);
+                                      setSelectedEpisode(ep);
+                                      setWatchedEpisodes((prev) => {
+                                        const next = new Set(prev);
+                                        next.add(formatWatchEpKey(1, ep));
+                                        return next;
+                                      });
+                                    } else {
+                                      setSelectedEpisode(ep);
+                                      setWatchedEpisodes((prev) => {
+                                        const next = new Set(prev);
+                                        next.add(formatWatchEpKey(selectedSeason, ep));
+                                        return next;
+                                      });
+                                    }
+                                  }}
+                                >
+                                  {epLabel}
+                                </Button>
+                                {watchedThis ? (
+                                  <span
+                                    className="pointer-events-none absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-success shadow-sm ring-2 ring-background"
+                                    aria-hidden
+                                  />
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <section className="w-full  p-4 sm:p-5 rounded-xl bg-default-100/50 dark:bg-default-100/20 border border-default-200/50">
@@ -1319,23 +1229,24 @@ function LoadingSkeleton() {
         </div>
       </section>
 
-      <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 dark:bg-default-100/20 overflow-hidden p-4 sm:p-5 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="h-4 w-36 bg-default-200 rounded animate-pulse" />
+      <div className="w-full rounded-2xl border border-default-200/70 bg-content1 p-5 sm:p-6 flex flex-col gap-5 dark:border-default-100/15 dark:bg-content1/40">
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-5 w-44 max-w-[55%] bg-default-200 rounded-lg animate-pulse" />
+          <div className="h-4 w-28 bg-default-200 rounded-md animate-pulse" />
         </div>
-        <div>
-          <div className="h-2.5 w-14 bg-default-200 rounded animate-pulse mb-2.5" />
-          <div className="flex gap-1.5">
+        <div className="flex flex-col gap-2">
+          <div className="h-2.5 w-12 bg-default-200 rounded animate-pulse" />
+          <div className="flex flex-wrap gap-1.5">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-8 w-20 bg-default-200 rounded-lg animate-pulse" />
+              <div key={i} className="h-9 w-14 bg-default-200 rounded-lg animate-pulse" />
             ))}
           </div>
         </div>
-        <div>
-          <div className="h-2.5 w-16 bg-default-200 rounded animate-pulse mb-2.5" />
-          <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))" }}>
+        <div className="flex flex-col gap-3 border-t border-default-200/60 pt-4 dark:border-default-100/20">
+          <div className="h-2.5 w-16 bg-default-200 rounded animate-pulse" />
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(2.75rem, 1fr))" }}>
             {Array.from({ length: 13 }).map((_, i) => (
-              <div key={i} className="aspect-square rounded-lg bg-default-200 animate-pulse" />
+              <div key={i} className="h-9 rounded-lg bg-default-200 animate-pulse" />
             ))}
           </div>
         </div>
