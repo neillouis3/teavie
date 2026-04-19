@@ -93,21 +93,6 @@ export default function MovieTemplate({ id }: { id: string }) {
 
   const imageUrl = movie?.poster_path ? `${baseUrl}${size}${movie.poster_path}` : '';
   const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
-  const movieRuntimeMin =
-    movie?.runtimeSeconds != null
-      ? Math.round(movie.runtimeSeconds / 60)
-      : movie?.runtime ?? null;
-  const movieMetaLine =
-    movie != null
-      ? [
-          movie.vote_average.toFixed(1),
-          movie.release_date?.trim().slice(0, 4) || null,
-          movieRuntimeMin != null ? `${movieRuntimeMin} min` : null,
-          movie.status,
-        ]
-          .filter((x) => x != null && String(x).length > 0)
-          .join(" · ")
-      : "";
 
   return (
     <div className="bg-background h-full w-full flex flex-col  px-0 py-4 pb-32">
@@ -133,37 +118,27 @@ export default function MovieTemplate({ id }: { id: string }) {
           {loading ? (
             <>
               <section className="w-full">
-                <div className="h-8 sm:h-9 w-3/4 max-w-xl rounded-lg bg-default-200 animate-pulse" />
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <div className="h-7 w-16 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-4 w-52 max-w-[75%] rounded bg-default-200 animate-pulse" />
+                <div className="h-8 sm:h-9 w-3/4 max-w-xl bg-default-200 rounded-lg animate-pulse" />
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
+                  <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
                 </div>
               </section>
-              <section className="mt-6 w-full rounded-xl bg-default-100/30 p-4 sm:p-5 dark:bg-default-50/5">
-                <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
-                  <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
+              <section className="mt-6 w-full rounded-xl border border-default-200/30 bg-default-50/40 p-3 sm:p-4 dark:border-default-100/15 dark:bg-default-50/5">
+                <div className="flex flex-row gap-3 sm:gap-4">
+                  <div className="w-24 shrink-0 sm:w-32 md:w-36">
                     <div className="aspect-[2/3] w-full animate-pulse rounded-lg bg-default-200" />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-4">
+                  <div className="min-w-0 flex-1 space-y-3">
                     <div className="space-y-2">
-                      <div className="h-3 w-full max-w-2xl bg-default-200 rounded animate-pulse" />
-                      <div className="h-3 w-full max-w-xl bg-default-200 rounded animate-pulse" />
-                      <div className="h-3 w-2/3 max-w-lg bg-default-200 rounded animate-pulse" />
+                      <div className="h-3 w-full max-w-2xl rounded bg-default-200 animate-pulse" />
+                      <div className="h-3 w-full max-w-xl rounded bg-default-200 animate-pulse" />
+                      <div className="h-3 w-2/3 max-w-lg rounded bg-default-200 animate-pulse" />
                     </div>
-                    <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-3">
-                      <div className="space-y-1">
-                        <div className="h-3 w-14 rounded bg-default-200 animate-pulse" />
-                        <div className="h-4 w-20 rounded bg-default-200 animate-pulse" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="h-3 w-12 rounded bg-default-200 animate-pulse" />
-                        <div className="h-4 w-24 rounded bg-default-200 animate-pulse" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="h-3 w-10 rounded bg-default-200 animate-pulse" />
-                        <div className="h-4 w-12 rounded bg-default-200 animate-pulse" />
-                      </div>
-                    </div>
+                    <div className="h-3 w-4/5 max-w-md rounded bg-default-200 animate-pulse" />
                   </div>
                 </div>
               </section>
@@ -172,55 +147,62 @@ export default function MovieTemplate({ id }: { id: string }) {
             movie && (
               <>
                 <section>
-                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
                     {movie.title}
                   </h1>
                   <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-default-600">
-                    <Chip color="success" size="sm" variant="flat" className="font-medium">
+                    <Chip color="success" size="md" variant="flat" className="font-medium">
                       Movie
                     </Chip>
-                    <span className="text-default-500">{movieMetaLine}</span>
+                    <span className="inline-flex items-center gap-1 tabular-nums">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5 text-default-400" aria-hidden>
+                        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
+                      </svg>
+                      {movie.vote_average.toFixed(1)}
+                    </span>
+                    <span className="text-default-300" aria-hidden>
+                      ·
+                    </span>
+                    <span className="tabular-nums">{movie.release_date?.slice(0, 4)}</span>
+                    <span className="text-default-300" aria-hidden>
+                      ·
+                    </span>
+                    <span className="tabular-nums">
+                      {(() => {
+                        const m = movie.runtimeSeconds != null ? Math.round(movie.runtimeSeconds / 60) : movie.runtime;
+                        return m != null ? `${m} min` : "—";
+                      })()}
+                    </span>
+                    <span className="text-default-300" aria-hidden>
+                      ·
+                    </span>
+                    <span className="capitalize">{movie.status}</span>
                   </div>
                 </section>
 
-                <section className="mt-6 w-full rounded-xl bg-default-100/30 p-4 sm:p-5 dark:bg-default-50/5">
-                  <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
-                    <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
+                <section className="mt-6 w-full rounded-xl border border-default-200/30 bg-default-50/40 p-3 sm:p-4 dark:border-default-100/15 dark:bg-default-50/5">
+                  <div className="flex flex-row gap-3 sm:gap-4">
+                    <div className="w-24 shrink-0 sm:w-32 md:w-36">
                       <Image
                         src={imageUrl}
                         alt={movie.title}
-                        className="aspect-[2/3] w-full rounded-lg object-cover"
+                        className="aspect-[2/3] w-full rounded-lg object-cover ring-1 ring-default-200/50 dark:ring-default-100/20"
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm sm:text-base text-foreground/80 leading-relaxed">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm leading-relaxed text-foreground/80">
                         {movie.overview}
                       </p>
-                      {movie.tagline && (
-                        <p className="mt-3 text-sm text-foreground/60 italic">
-                          {movie.tagline}
-                        </p>
-                      )}
-                      <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-                        <div>
-                          <dt className="text-xs text-default-400">Country of origin</dt>
-                          <dd className="text-foreground mt-0.5">
-                            {formatCountryOfOrigin(movie)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-default-400">Genre</dt>
-                          <dd className="text-foreground mt-0.5">
-                            {movie.genres.map((g) => g.name).join(", ")}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-default-400">Year</dt>
-                          <dd className="text-foreground mt-0.5">
-                            {movie.release_date?.slice(0, 4)}
-                          </dd>
-                        </div>
-                      </dl>
+                      {movie.tagline ? (
+                        <p className="mt-2 text-xs text-default-500">&ldquo;{movie.tagline}&rdquo;</p>
+                      ) : null}
+                      <p className="mt-3 text-xs leading-snug text-default-500">
+                        {formatCountryOfOrigin(movie)}
+                        <span className="text-default-400"> · </span>
+                        {movie.genres.map((g) => g.name).join(", ")}
+                        <span className="text-default-400"> · </span>
+                        {movie.release_date?.slice(0, 4) ?? "—"}
+                      </p>
                     </div>
                   </div>
                 </section>

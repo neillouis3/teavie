@@ -934,27 +934,32 @@ export default function ShowTemplate({ id }: { id: string }) {
               <>
                 {/* ── Title + Meta ── */}
                 <section>
-                  <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight leading-tight">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight leading-tight">
                     {title}
                   </h1>
                   <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-default-600">
-                    <Chip color="success" size="sm" variant="flat" className="font-medium">
+                    <Chip color="success" size="md" variant="flat" className="font-medium">
                       {show.is_anime ? "Anime" : "TV"}
                     </Chip>
-                    <span className="text-default-500">
-                      {[
-                        voteLabel !== "—" ? voteLabel : null,
-                        year !== "TBA" ? year : null,
-                        show.status,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
+                    <span className="inline-flex items-center gap-1 tabular-nums">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5 text-default-400" aria-hidden>
+                        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
+                      </svg>
+                      {voteLabel}
                     </span>
+                    <span className="text-default-300" aria-hidden>
+                      ·
+                    </span>
+                    <span className="tabular-nums">{year}</span>
+                    <span className="text-default-300" aria-hidden>
+                      ·
+                    </span>
+                    <span className="capitalize">{show.status}</span>
                   </div>
                 </section>
 
                 {/* ── Season & episode picker (shared layout; TV uses season + episode sections) ── */}
-                <div className="flex w-full flex-col gap-3 rounded-xl bg-default-100/30 p-3 sm:p-4 dark:bg-default-50/5">
+                <div className="w-full rounded-xl border border-default-200/40 bg-default-100/35 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/10">
                   {showPickerTopRow ? (
                     <div
                       className={`flex flex-wrap items-center gap-2 ${
@@ -996,7 +1001,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                                 size="sm"
                                 radius="lg"
                                 variant={sel ? "flat" : "light"}
-                                color={sel ? "success" : "default"}
+                                color={sel ? "primary" : "default"}
                                 className="h-9 min-w-11 px-3 text-xs font-medium tabular-nums"
                                 onPress={() => {
                                   setSelectedSeason(s.season_number);
@@ -1014,21 +1019,23 @@ export default function ShowTemplate({ id }: { id: string }) {
                   <div
                     className={
                       showSeasonPickerStrip
-                        ? "flex flex-col gap-2 border-t border-default-200/40 pt-3 dark:border-default-100/10"
+                        ? "flex flex-col gap-2 border-t border-default-200/60 pt-3 dark:border-default-100/20"
                         : "flex flex-col gap-2"
                     }
                   >
                     <p className={pickerSectionLabelClass}>Episodes</p>
 
                     {episodeGridStatus === "loading" && (
-                      <p className="py-2 text-center text-xs text-default-500">Loading episodes…</p>
+                      <div className="rounded-lg bg-default-100/80 dark:bg-default-50/10 px-2 py-4 text-center text-xs text-default-500">
+                        Loading episodes…
+                      </div>
                     )}
                     {episodeGridStatus === "none" && (
-                      <p className="py-2 text-center text-xs text-default-500">
+                      <div className="rounded-lg bg-default-100/80 dark:bg-default-50/10 px-2 py-4 text-center text-xs text-default-500">
                         {useAnilistOnlyEpisodePicker
                           ? "Episode list not ready yet."
                           : "Nothing to show for this season yet."}
-                      </p>
+                      </div>
                     )}
                     {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
                       <div className="flex flex-col gap-2">
@@ -1059,7 +1066,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                                     size="sm"
                                     radius="lg"
                                     variant={rangeSel ? "flat" : "light"}
-                                    color={rangeSel ? "success" : "default"}
+                                    color={rangeSel ? "primary" : "default"}
                                     className="h-8 min-w-0 px-3 text-xs font-medium tabular-nums"
                                     onPress={() => setEpisodeRangeStart(start)}
                                   >
@@ -1107,7 +1114,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                                   size="sm"
                                   radius="lg"
                                   variant={isCurrent ? "flat" : "light"}
-                                  color={isCurrent ? "success" : "default"}
+                                  color={isCurrent ? "primary" : "default"}
                                   className="h-9 w-full min-w-9 max-w-[2.75rem] px-0 text-xs font-medium tabular-nums"
                                   aria-label={
                                     watchedThis ? `${ariaEp}, watched` : ariaEp
@@ -1161,42 +1168,29 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </div>
                 </div>
 
-                <section className="w-full rounded-xl bg-default-100/30 p-4 sm:p-5 dark:bg-default-50/5">
-                  <div className="flex flex-row gap-4 sm:gap-6 lg:gap-8">
-                    <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-48">
+                <section className="w-full rounded-xl border border-default-200/30 bg-default-50/40 p-3 sm:p-4 dark:border-default-100/15 dark:bg-default-50/5">
+                  <div className="flex flex-row gap-3 sm:gap-4">
+                    <div className="w-24 shrink-0 sm:w-32 md:w-36">
                       <Image
                         src={imageUrl}
                         alt={title}
-                        className="aspect-[2/3] w-full rounded-lg object-cover"
+                        className="aspect-[2/3] w-full rounded-lg object-cover ring-1 ring-default-200/50 dark:ring-default-100/20"
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm sm:text-base text-foreground/80 leading-relaxed">
+                      <p className="text-sm leading-relaxed text-foreground/80">
                         {show.overview}
                       </p>
-                      {show.tagline && (
-                        <p className="mt-3 text-sm text-foreground/60 italic">
-                          {show.tagline}
-                        </p>
-                      )}
-                      <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-                        <div>
-                          <dt className="text-xs text-default-400">Country</dt>
-                          <dd className="text-foreground mt-0.5">
-                            {show.origin_country?.join(", ") || "N/A"}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-default-400">Genre</dt>
-                          <dd className="text-foreground mt-0.5">
-                            {show.genres?.map((g) => g.name).join(", ") ?? "N/A"}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-default-400">Year</dt>
-                          <dd className="text-foreground mt-0.5">{year}</dd>
-                        </div>
-                      </dl>
+                      {show.tagline ? (
+                        <p className="mt-2 text-xs text-default-500">&ldquo;{show.tagline}&rdquo;</p>
+                      ) : null}
+                      <p className="mt-3 text-xs leading-snug text-default-500">
+                        {show.origin_country?.join(", ") || "N/A"}
+                        <span className="text-default-400"> · </span>
+                        {show.genres?.map((g) => g.name).join(", ") ?? "N/A"}
+                        <span className="text-default-400"> · </span>
+                        {year}
+                      </p>
                     </div>
                   </div>
                 </section>
@@ -1229,14 +1223,15 @@ function LoadingSkeleton() {
   return (
     <>
       <section className="w-full">
-        <div className="h-8 sm:h-9 w-3/4 max-w-xl rounded-lg bg-default-200 animate-pulse" />
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <div className="h-7 w-14 rounded-full bg-default-200 animate-pulse" />
-          <div className="h-4 w-48 max-w-[70%] rounded bg-default-200 animate-pulse" />
+        <div className="h-8 sm:h-9 w-3/4 max-w-xl bg-default-200 rounded-lg animate-pulse" />
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
+          ))}
         </div>
       </section>
 
-      <div className="flex w-full flex-col gap-3 rounded-xl bg-default-100/30 p-3 sm:p-4 dark:bg-default-50/5">
+      <div className="w-full rounded-xl border border-default-200/40 bg-default-100/35 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/10">
         <div className="flex justify-end">
           <div className="h-4 w-36 bg-default-200 rounded-md animate-pulse" />
         </div>
@@ -1248,7 +1243,7 @@ function LoadingSkeleton() {
             ))}
           </div>
         </div>
-        <div className="flex flex-col gap-2 border-t border-default-200/40 pt-3 dark:border-default-100/10">
+        <div className="flex flex-col gap-2 border-t border-default-200/60 pt-3 dark:border-default-100/20">
           <div className="h-2.5 w-16 bg-default-200 rounded animate-pulse" />
           <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(2.75rem, 1fr))" }}>
             {Array.from({ length: 13 }).map((_, i) => (
@@ -1258,27 +1253,16 @@ function LoadingSkeleton() {
         </div>
       </div>
 
-      <section className="w-full rounded-xl bg-default-100/30 p-4 sm:p-5 dark:bg-default-50/5">
-        <div className="flex flex-row gap-4 sm:gap-6">
-          <div className="aspect-[2/3] w-28 shrink-0 animate-pulse rounded-lg bg-default-200 sm:w-36 md:w-40 lg:w-48" />
-          <div className="min-w-0 flex-1 space-y-4">
+      <section className="w-full rounded-xl border border-default-200/30 bg-default-50/40 p-3 sm:p-4 dark:border-default-100/15 dark:bg-default-50/5">
+        <div className="flex flex-row gap-3 sm:gap-4">
+          <div className="aspect-[2/3] w-24 shrink-0 animate-pulse rounded-lg bg-default-200 sm:w-32 md:w-36" />
+          <div className="min-w-0 flex-1 space-y-3">
             <div className="space-y-2">
               {[90, 75, 55].map((w, i) => (
-                <div
-                  key={i}
-                  className="h-3 rounded bg-default-200 animate-pulse"
-                  style={{ width: `${w}%` }}
-                />
+                <div key={i} className="h-3 rounded bg-default-200 animate-pulse" style={{ width: `${w}%` }} />
               ))}
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="h-2.5 w-12 rounded bg-default-200 animate-pulse" />
-                  <div className="h-4 w-16 rounded bg-default-200 animate-pulse" />
-                </div>
-              ))}
-            </div>
+            <div className="h-3 w-4/5 max-w-md rounded bg-default-200 animate-pulse" />
           </div>
         </div>
       </section>
