@@ -85,7 +85,7 @@ export default function HorizontalCatalogCard({
             />
           ) : (
             <div className="relative z-[1] flex h-full flex-col items-center justify-center gap-1.5 p-4 text-center">
-              <p className="line-clamp-2 text-sm font-medium text-foreground">{title}</p>
+              <p className="line-clamp-2 text-sm font-normal text-foreground">{title}</p>
               <Chip size="sm" variant="flat" color="success">
                 No image
               </Chip>
@@ -106,7 +106,7 @@ export default function HorizontalCatalogCard({
                   classNames={{
                     base: 'bg-success/92',
                     content:
-                      'font-semibold uppercase tracking-wide text-[10px] text-success-foreground',
+                      'font-normal uppercase tracking-wide text-[10px] text-success-foreground',
                   }}
                 >
                   {label}
@@ -119,7 +119,7 @@ export default function HorizontalCatalogCard({
                   color="success"
                   classNames={{
                     base: 'bg-black/25 dark:bg-black/40',
-                    content: 'text-[10px] font-semibold tabular-nums text-white',
+                    content: 'text-[10px] font-normal tabular-nums text-white',
                   }}
                 >
                   {year}
@@ -135,14 +135,14 @@ export default function HorizontalCatalogCard({
                       classNames={{
                         base: 'h-6 max-w-full bg-success',
                         content:
-                          'truncate text-[10px] font-semibold uppercase tracking-wide text-success-foreground',
+                          'truncate text-[10px] font-normal uppercase tracking-wide text-success-foreground',
                       }}
                     >
                       {topNote}
                     </Chip>
                   </div>
                 ) : null}
-                <p className="text-left text-sm font-semibold leading-snug tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[15px]">
+                <p className="text-left text-sm font-normal leading-snug tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[15px]">
                   {title}
                 </p>
               </div>

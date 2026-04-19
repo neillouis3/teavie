@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
 import { Image, Chip } from '@heroui/react';
@@ -9,19 +9,30 @@ import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSou
 interface Movie {
   id: number;
   title: string;
+  /** TMDB original title (often non-English). */
+  original_title?: string;
   release_date: string;
   status: string;
   runtime?: number;
   runtimeSeconds?: number;
   overview: string;
+  /** ISO 639-1 (e.g. `ja`, `en`). */
+  original_language?: string;
+  spoken_languages?: { iso_639_1?: string; english_name?: string; name?: string }[];
   /** ISO 3166-1 alpha-2 codes (often co-productions); prefer {@link production_countries} for display. */
   origin_country?: string[];
   /** TMDB production countries — best match for “country of origin” copy. */
   production_countries?: { iso_3166_1?: string; name?: string }[];
+  production_companies?: { id?: number; name?: string }[];
   genres: { id: number; name: string }[];
   poster_path: string;
   vote_average: number;
+  vote_count?: number;
   tagline: string;
+  budget?: number;
+  revenue?: number;
+  homepage?: string | null;
+  imdb_id?: string | null;
 }
 
 export type MovieServerKey = StreamServerId;
@@ -46,6 +57,150 @@ function formatCountryOfOrigin(movie: Movie): string {
     return codes.map((c) => String(c).toUpperCase()).join(", ");
   }
   return "N/A";
+}
+
+function languageDisplayName(code: string | undefined | null): string {
+  const c = String(code ?? "").trim().toLowerCase();
+  if (!c) return "—";
+  try {
+    return new Intl.DisplayNames(["en"], { type: "language" }).of(c) ?? c.toUpperCase();
+  } catch {
+    return c.toUpperCase();
+  }
+}
+
+function formatFullReleaseDate(ymd: string | undefined | null): string {
+  const d = String(ymd ?? "").trim();
+  if (d.length < 10) return "—";
+  const iso = d.slice(0, 10);
+  const parsed = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function formatUsdCompact(n: number | undefined | null): string {
+  if (n == null || typeof n !== "number" || n <= 0) return "—";
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function formatSpokenLanguages(movie: Movie): string {
+  const list = movie.spoken_languages;
+  if (!Array.isArray(list) || list.length === 0) return "—";
+  const names = list
+    .map((l) => String(l?.english_name ?? l?.name ?? "").trim())
+    .filter(Boolean);
+  if (names.length > 0) return [...new Set(names)].join(", ");
+  const codes = list.map((l) => String(l?.iso_639_1 ?? "").trim().toLowerCase()).filter(Boolean);
+  if (codes.length === 0) return "—";
+  return [...new Set(codes.map((c) => languageDisplayName(c)))].join(", ");
+}
+
+function formatProductionCompanies(movie: Movie): string {
+  const list = movie.production_companies;
+  if (!Array.isArray(list) || list.length === 0) return "—";
+  const names = list
+    .map((c) => String(c?.name ?? "").trim())
+    .filter(Boolean);
+  return names.length > 0 ? names.join(", ") : "—";
+}
+
+function formatVoteLine(movie: Movie): string {
+  const va = movie.vote_average;
+  const avg =
+    typeof va === "number" && Number.isFinite(va) ? va.toFixed(1) : "—";
+  const n = movie.vote_count;
+  if (typeof n !== "number" || n < 1) return `${avg} / 10`;
+  const votes = new Intl.NumberFormat(undefined).format(n);
+  return `${avg} / 10 (${votes} votes)`;
+}
+
+const MOVIE_META_HOVER_MS = 520;
+
+/**
+ * Collapsed: two dots (success + neutral). After hovering ~520ms, expands to
+ * the Movie chip + year pill with a short width/opacity transition.
+ */
+function MovieTypeYearHoverReveal({ yearLabel }: { yearLabel: string }) {
+  const [open, setOpen] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    []
+  );
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const onEnter = () => {
+    clearTimer();
+    timerRef.current = setTimeout(() => setOpen(true), MOVIE_META_HOVER_MS);
+  };
+
+  const onLeave = () => {
+    clearTimer();
+    setOpen(false);
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "touch") {
+      setOpen((o) => !o);
+    }
+  };
+
+  return (
+    <div
+      className={`relative h-8 shrink-0 overflow-hidden transition-[width] duration-300 ease-out ${
+        open ? "w-[172px] sm:w-[184px]" : "w-11"
+      }`}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      onPointerDown={onPointerDown}
+      role="group"
+      aria-label={
+        open
+          ? `Movie, release year ${yearLabel}`
+          : "Movie type and release year (collapsed)"
+      }
+      title="Hover to reveal type and year (tap on touch)"
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ${
+          open ? "opacity-0" : "opacity-100"
+        }`}
+        aria-hidden={open}
+      >
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success shadow-sm ring-1 ring-success/25" />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-default-400 dark:bg-default-500" />
+      </div>
+      <div
+        className={`flex h-full items-center gap-2 whitespace-nowrap pl-0.5 transition-opacity duration-200 ${
+          open ? "opacity-100 delay-75" : "opacity-0"
+        }`}
+      >
+        <Chip color="success" size="sm" variant="flat" className="shrink-0 font-normal">
+          Movie
+        </Chip>
+        <span className="shrink-0 rounded-full bg-default-200/80 px-2.5 py-1 text-xs font-normal text-foreground/90 dark:bg-default-100/50">
+          {yearLabel}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function MovieTemplate({ id }: { id: string }) {
@@ -139,11 +294,11 @@ export default function MovieTemplate({ id }: { id: string }) {
                         <div className="h-3 w-full max-w-xl rounded bg-default-200 animate-pulse" />
                         <div className="h-3 w-2/3 max-w-lg rounded bg-default-200 animate-pulse" />
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        {[1, 2, 3].map((i) => (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {Array.from({ length: 9 }).map((_, i) => (
                           <div key={i} className="space-y-1.5">
-                            <div className="h-2.5 w-14 rounded bg-default-200 animate-pulse" />
-                            <div className="h-4 w-20 rounded bg-default-200 animate-pulse" />
+                            <div className="h-2.5 w-24 rounded bg-default-200 animate-pulse" />
+                            <div className="h-4 w-full max-w-[14rem] rounded bg-default-200 animate-pulse" />
                           </div>
                         ))}
                       </div>
@@ -160,19 +315,16 @@ export default function MovieTemplate({ id }: { id: string }) {
                     {movie.title}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <Chip color="success" size="md" variant="flat" className="font-medium">
-                      Movie
-                    </Chip>
+                    <MovieTypeYearHoverReveal
+                      yearLabel={movie.release_date?.slice(0, 4) ?? "—"}
+                    />
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-xs font-medium">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5">
                         <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
                       </svg>
                       {movie.vote_average.toFixed(1)}
                     </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs font-medium">
-                      {movie.release_date?.slice(0, 4)}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs">
+                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 text-foreground/90 text-xs font-medium dark:bg-default-100/50">
                       {(() => {
                         const m = movie.runtimeSeconds != null ? Math.round(movie.runtimeSeconds / 60) : movie.runtime;
                         return m != null ? `${m} min` : "—";
@@ -196,28 +348,96 @@ export default function MovieTemplate({ id }: { id: string }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
-                          {movie.overview}
+                          {movie.overview?.trim() ? movie.overview : "No overview available."}
                         </p>
                         {movie.tagline ? (
                           <p className="mt-2 text-xs text-default-500">&ldquo;{movie.tagline}&rdquo;</p>
                         ) : null}
-                        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+                        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
                           <div>
-                            <dt className="font-medium text-default-500">Country of origin</dt>
+                            <dt className="text-default-500">Country of origin</dt>
                             <dd className="mt-0.5 text-foreground">{formatCountryOfOrigin(movie)}</dd>
                           </div>
                           <div>
-                            <dt className="font-medium text-default-500">Genre</dt>
+                            <dt className="text-default-500">Genre</dt>
                             <dd className="mt-0.5 text-foreground">
-                              {movie.genres.map((g) => g.name).join(", ")}
+                              {movie.genres?.length
+                                ? movie.genres.map((g) => g.name).join(", ")
+                                : "—"}
                             </dd>
                           </div>
                           <div>
-                            <dt className="font-medium text-default-500">Year</dt>
+                            <dt className="text-default-500">Year</dt>
                             <dd className="mt-0.5 text-foreground">
                               {movie.release_date?.slice(0, 4) ?? "—"}
                             </dd>
                           </div>
+                          <div>
+                            <dt className="text-default-500">Release date</dt>
+                            <dd className="mt-0.5 text-foreground">
+                              {formatFullReleaseDate(movie.release_date)}
+                            </dd>
+                          </div>
+                          {movie.original_title &&
+                          String(movie.original_title).trim() !== String(movie.title).trim() ? (
+                            <div>
+                              <dt className="text-default-500">Original title</dt>
+                              <dd className="mt-0.5 text-foreground">{movie.original_title}</dd>
+                            </div>
+                          ) : null}
+                          <div>
+                            <dt className="text-default-500">Original language</dt>
+                            <dd className="mt-0.5 text-foreground">
+                              {languageDisplayName(movie.original_language)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-default-500">Spoken languages</dt>
+                            <dd className="mt-0.5 text-foreground">{formatSpokenLanguages(movie)}</dd>
+                          </div>
+                          <div className="sm:col-span-2 lg:col-span-2">
+                            <dt className="text-default-500">Studios</dt>
+                            <dd className="mt-0.5 text-foreground">{formatProductionCompanies(movie)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-default-500">Budget</dt>
+                            <dd className="mt-0.5 text-foreground">{formatUsdCompact(movie.budget)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-default-500">Box office</dt>
+                            <dd className="mt-0.5 text-foreground">{formatUsdCompact(movie.revenue)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-default-500">User score</dt>
+                            <dd className="mt-0.5 text-foreground">{formatVoteLine(movie)}</dd>
+                          </div>
+                          {movie.homepage || (movie.imdb_id && /^tt\d+/i.test(movie.imdb_id)) ? (
+                            <div className="sm:col-span-2 lg:col-span-3">
+                              <dt className="text-default-500">Links</dt>
+                              <dd className="mt-0.5 flex flex-wrap gap-x-4 gap-y-1">
+                                {movie.imdb_id && /^tt\d+/i.test(movie.imdb_id) ? (
+                                  <a
+                                    href={`https://www.imdb.com/title/${movie.imdb_id}/`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary underline-offset-2 hover:underline"
+                                  >
+                                    IMDb
+                                  </a>
+                                ) : null}
+                                {movie.homepage ? (
+                                  <a
+                                    href={movie.homepage}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary underline-offset-2 hover:underline"
+                                  >
+                                    Official site
+                                  </a>
+                                ) : null}
+                              </dd>
+                            </div>
+                          ) : null}
                         </dl>
                       </div>
                     </div>
