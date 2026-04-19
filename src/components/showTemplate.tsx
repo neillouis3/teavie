@@ -945,8 +945,8 @@ export default function ShowTemplate({ id }: { id: string }) {
                 </section>
 
                 {/* ── Season & episode picker (shared layout; TV uses season + episode sections) ── */}
-                <div className="w-full rounded-2xl border border-default-200/70 bg-content1 shadow-sm dark:border-default-100/15 dark:bg-content1/40 p-5 sm:p-6 flex flex-col gap-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="w-full rounded-2xl border border-default-200/70 bg-content1 shadow-sm dark:border-default-100/15 dark:bg-content1/40 p-3 sm:p-4 flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="text-base font-medium tracking-tight text-foreground">
                       {useAnilistOnlyEpisodePicker || useFlatAllEpisodesPicker || show.is_anime
                         ? "Episodes"
@@ -972,7 +972,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                   </div>
 
                   {showSeasonPickerStrip ? (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
                       <p className={pickerSectionLabelClass}>Season</p>
                       <div className="flex flex-wrap gap-1.5">
                         {show.seasons
@@ -1003,26 +1003,26 @@ export default function ShowTemplate({ id }: { id: string }) {
                   <div
                     className={
                       showSeasonPickerStrip
-                        ? "flex flex-col gap-3 border-t border-default-200/60 pt-4 dark:border-default-100/20"
-                        : "flex flex-col gap-3"
+                        ? "flex flex-col gap-2 border-t border-default-200/60 pt-3 dark:border-default-100/20"
+                        : "flex flex-col gap-2"
                     }
                   >
                     <p className={pickerSectionLabelClass}>Episodes</p>
 
                     {episodeGridStatus === "loading" && (
-                      <div className="rounded-lg bg-default-100/80 dark:bg-default-50/10 px-3 py-6 text-center text-xs text-default-500">
+                      <div className="rounded-lg bg-default-100/80 dark:bg-default-50/10 px-2 py-4 text-center text-xs text-default-500">
                         Loading episodes…
                       </div>
                     )}
                     {episodeGridStatus === "none" && (
-                      <div className="rounded-lg bg-default-100/80 dark:bg-default-50/10 px-3 py-6 text-center text-xs text-default-500">
+                      <div className="rounded-lg bg-default-100/80 dark:bg-default-50/10 px-2 py-4 text-center text-xs text-default-500">
                         {useAnilistOnlyEpisodePicker
                           ? "Episode list not ready yet."
                           : "Nothing to show for this season yet."}
                       </div>
                     )}
                     {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
-                      <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-2">
                         {showEpisodeRangeTabs && (
                           <div className="flex flex-wrap gap-1.5">
                             {Array.from(
@@ -1228,12 +1228,12 @@ function LoadingSkeleton() {
         </div>
       </section>
 
-      <div className="w-full rounded-2xl border border-default-200/70 bg-content1 p-5 sm:p-6 flex flex-col gap-5 dark:border-default-100/15 dark:bg-content1/40">
-        <div className="flex items-center justify-between gap-3">
+      <div className="w-full rounded-2xl border border-default-200/70 bg-content1 p-3 sm:p-4 flex flex-col gap-3 dark:border-default-100/15 dark:bg-content1/40">
+        <div className="flex items-center justify-between gap-2">
           <div className="h-5 w-44 max-w-[55%] bg-default-200 rounded-lg animate-pulse" />
           <div className="h-4 w-28 bg-default-200 rounded-md animate-pulse" />
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <div className="h-2.5 w-12 bg-default-200 rounded animate-pulse" />
           <div className="flex flex-wrap gap-1.5">
             {[1, 2, 3, 4].map((i) => (
@@ -1241,7 +1241,7 @@ function LoadingSkeleton() {
             ))}
           </div>
         </div>
-        <div className="flex flex-col gap-3 border-t border-default-200/60 pt-4 dark:border-default-100/20">
+        <div className="flex flex-col gap-2 border-t border-default-200/60 pt-3 dark:border-default-100/20">
           <div className="h-2.5 w-16 bg-default-200 rounded animate-pulse" />
           <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(2.75rem, 1fr))" }}>
             {Array.from({ length: 13 }).map((_, i) => (
