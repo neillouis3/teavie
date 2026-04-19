@@ -945,7 +945,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                 </section>
 
                 {/* ── Season & episode picker (shared layout; TV uses season + episode sections) ── */}
-                <div className="w-full rounded-2xl border border-default-200/70 bg-content1 shadow-sm dark:border-default-100/15 dark:bg-content1/40 p-3 sm:p-4 flex flex-col gap-3">
+                <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/20">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="text-base font-medium tracking-tight text-foreground">
                       {useAnilistOnlyEpisodePicker || useFlatAllEpisodesPicker || show.is_anime
@@ -1228,7 +1228,7 @@ function LoadingSkeleton() {
         </div>
       </section>
 
-      <div className="w-full rounded-2xl border border-default-200/70 bg-content1 p-3 sm:p-4 flex flex-col gap-3 dark:border-default-100/15 dark:bg-content1/40">
+      <div className="w-full rounded-xl border border-default-200/50 bg-default-100/50 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/20">
         <div className="flex items-center justify-between gap-2">
           <div className="h-5 w-44 max-w-[55%] bg-default-200 rounded-lg animate-pulse" />
           <div className="h-4 w-28 bg-default-200 rounded-md animate-pulse" />
