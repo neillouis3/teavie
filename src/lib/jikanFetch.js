@@ -81,23 +81,11 @@ export const FRANCHISE_RELATION_LABELS = new Set([
   "parent",
 ]);
 
-/**
- * Franchise / timeline relations we surface in “related” rails (Jikan `relation` strings are
- * lowercased for lookup). Includes alternates, side stories, spin-offs, summaries, etc.
- */
+/** Franchise rail: chain links + same-work variants (always used together, not strict-then-loose). */
 export const FRANCHISE_RELATION_LABELS_LOOSE = new Set([
   ...FRANCHISE_RELATION_LABELS,
   "alternative version",
-  "alternative setting",
   "side story",
-  "spin-off",
-  "spin off",
-  "character",
-  "full story",
-  "summary",
-  "summaries",
-  "adaptation",
-  "other",
 ]);
 
 /**
@@ -124,8 +112,8 @@ function isJikanAnimeOrMovieEntry(entry) {
 }
 
 /**
- * Franchise relation rows (no Jikan recommendations): sequel, prequel, parent, alternates,
- * side stories, spin-offs, summaries, character specials, etc. — TV and **movie** entries from MAL.
+ * Franchise relation rows (no Jikan recommendations): sequel, prequel, parent, alternative version,
+ * side story — plus TV and **movie** entries from MAL.
  * @param {number} rootMal
  * @param {unknown} relationsJson
  */
@@ -134,14 +122,9 @@ export function pickFranchiseRelationCandidates(rootMal, relationsJson) {
     franchiseOnly: false,
     includeRecommendations: false,
   });
-  return all.filter((c) => {
-    const r = normRelationLabel(c.topNote);
-    if (FRANCHISE_RELATION_LABELS_LOOSE.has(r)) return true;
-    /** Jikan sometimes uses punctuation variants, e.g. `Spin-Off`. */
-    const collapsed = r.replace(/[-\s._]/g, "");
-    if (collapsed === "spinoff") return true;
-    return false;
-  });
+  return all.filter((c) =>
+    FRANCHISE_RELATION_LABELS_LOOSE.has(normRelationLabel(c.topNote))
+  );
 }
 
 /**
