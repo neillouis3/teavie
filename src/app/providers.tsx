@@ -11,6 +11,7 @@ import MainWithSidebarOffset from "@/components/layout/mainWithSidebarOffset";
 import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
 import { StreamingSourceProvider } from "@/contexts/streamingSourceContext";
 import { Suspense } from "react";
+import AmbientSuccessOrbs from "@/components/ui/ambientSuccessOrbs";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ export function Providers({ children }: ProvidersProps) {
         <SidebarProvider>
           <CatalogCardStyleProvider>
             <StreamingSourceProvider>
+              <AmbientSuccessOrbs />
               <Suspense
                 fallback={
                   <>

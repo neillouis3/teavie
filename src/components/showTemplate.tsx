@@ -889,7 +889,7 @@ export default function ShowTemplate({ id }: { id: string }) {
   const showPickerTopRow = showPickerHeading || showPickerMetaAnime || showPickerMetaTv;
 
   return (
-    <div className="bg-background min-h-full w-full flex flex-col px-0 py-4 pb-32">
+    <div className="flex min-h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
       <div className="w-full flex flex-col gap-6">
 
         {/* ── Video Player (horizontal inset matches root py-4 / px-4) ── */}

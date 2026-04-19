@@ -1,9 +1,106 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardBody, Chip } from '@heroui/react';
+
+const CATALOG_TYPE_YEAR_HOVER_MS = 520;
+
+/**
+ * Collapsed: two dots on a glassy pill. After hover ~520ms (or tap on touch),
+ * expands to type chip + year — used on catalog tiles (not under the title).
+ */
+function CatalogTypeYearHoverReveal({
+  label,
+  yearLabel,
+}: {
+  label: string;
+  yearLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    []
+  );
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const onEnter = () => {
+    clearTimer();
+    timerRef.current = setTimeout(() => setOpen(true), CATALOG_TYPE_YEAR_HOVER_MS);
+  };
+
+  const onLeave = () => {
+    clearTimer();
+    setOpen(false);
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      setOpen((o) => !o);
+    }
+  };
+
+  return (
+    <div
+      className={`pointer-events-auto relative flex h-7 shrink-0 overflow-hidden rounded-full bg-black/35 shadow-[0_1px_4px_rgba(0,0,0,0.65)] ring-1 ring-white/20 backdrop-blur-sm transition-[width] duration-300 ease-out dark:bg-black/45 dark:ring-white/10 ${
+        open ? 'w-[172px] sm:w-[184px]' : 'w-10'
+      }`}
+      onClick={(e) => e.stopPropagation()}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      onPointerDown={onPointerDown}
+      role="group"
+      aria-label={
+        open
+          ? `${label}, ${yearLabel}`
+          : 'Media type and year (collapsed)'
+      }
+      title="Hover to reveal type and year (tap on touch)"
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ${
+          open ? 'opacity-0' : 'opacity-100'
+        }`}
+        aria-hidden={open}
+      >
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success shadow-sm ring-1 ring-white/35" />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-white/85 shadow-sm ring-1 ring-black/15" />
+      </div>
+      <div
+        className={`flex h-full items-center gap-1.5 whitespace-nowrap px-1 transition-opacity duration-200 ${
+          open ? 'opacity-100 delay-75' : 'opacity-0'
+        }`}
+      >
+        <Chip
+          size="sm"
+          variant="flat"
+          color="success"
+          classNames={{
+            base: 'h-6 min-h-6 bg-success/92',
+            content:
+              'font-normal uppercase tracking-wide text-[10px] text-success-foreground',
+          }}
+        >
+          {label}
+        </Chip>
+        <span className="shrink-0 rounded-full bg-black/35 px-2 py-0.5 text-[10px] font-normal tabular-nums text-white ring-1 ring-white/15 dark:bg-black/50">
+          {yearLabel}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export type HorizontalCatalogCardProps = {
   id: number | string;
@@ -98,32 +195,8 @@ export default function HorizontalCatalogCard({
                 className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] bg-gradient-to-t from-black/82 via-black/35 to-transparent"
                 aria-hidden
               />
-              <div className="absolute left-2 top-2 z-[2] flex flex-wrap items-center gap-1.5 sm:left-3 sm:top-3">
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  color="success"
-                  classNames={{
-                    base: 'bg-success/92',
-                    content:
-                      'font-normal uppercase tracking-wide text-[10px] text-success-foreground',
-                  }}
-                >
-                  {label}
-                </Chip>
-              </div>
-              <div className="absolute right-2 top-2 z-[2] sm:right-3 sm:top-3">
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  color="success"
-                  classNames={{
-                    base: 'bg-black/25 dark:bg-black/40',
-                    content: 'text-[10px] font-normal tabular-nums text-white',
-                  }}
-                >
-                  {year}
-                </Chip>
+              <div className="absolute left-2 top-2 z-[3] sm:left-3 sm:top-3">
+                <CatalogTypeYearHoverReveal label={label} yearLabel={year} />
               </div>
               <div className="absolute bottom-2 left-2 right-2 z-[2] max-w-[92%] sm:bottom-3 sm:left-3 sm:right-4">
                 {topNote ? (

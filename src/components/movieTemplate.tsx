@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
 import { Image, Chip } from '@heroui/react';
@@ -122,87 +122,6 @@ function formatVoteLine(movie: Movie): string {
   return `${avg} / 10 (${votes} votes)`;
 }
 
-const MOVIE_META_HOVER_MS = 520;
-
-/**
- * Collapsed: two dots (success + neutral). After hovering ~520ms, expands to
- * the Movie chip + year pill with a short width/opacity transition.
- */
-function MovieTypeYearHoverReveal({ yearLabel }: { yearLabel: string }) {
-  const [open, setOpen] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    []
-  );
-
-  const clearTimer = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
-  const onEnter = () => {
-    clearTimer();
-    timerRef.current = setTimeout(() => setOpen(true), MOVIE_META_HOVER_MS);
-  };
-
-  const onLeave = () => {
-    clearTimer();
-    setOpen(false);
-  };
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === "touch") {
-      setOpen((o) => !o);
-    }
-  };
-
-  return (
-    <div
-      className={`relative h-8 shrink-0 overflow-hidden transition-[width] duration-300 ease-out ${
-        open ? "w-[172px] sm:w-[184px]" : "w-11"
-      }`}
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
-      onPointerDown={onPointerDown}
-      role="group"
-      aria-label={
-        open
-          ? `Movie, release year ${yearLabel}`
-          : "Movie type and release year (collapsed)"
-      }
-      title="Hover to reveal type and year (tap on touch)"
-    >
-      <div
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200 ${
-          open ? "opacity-0" : "opacity-100"
-        }`}
-        aria-hidden={open}
-      >
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success shadow-sm ring-1 ring-success/25" />
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-default-400 dark:bg-default-500" />
-      </div>
-      <div
-        className={`flex h-full items-center gap-2 whitespace-nowrap pl-0.5 transition-opacity duration-200 ${
-          open ? "opacity-100 delay-75" : "opacity-0"
-        }`}
-      >
-        <Chip color="success" size="sm" variant="flat" className="shrink-0 font-normal">
-          Movie
-        </Chip>
-        <span className="shrink-0 rounded-full bg-default-200/80 px-2.5 py-1 text-xs font-normal text-foreground/90 dark:bg-default-100/50">
-          {yearLabel}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export default function MovieTemplate({ id }: { id: string }) {
   const baseUrl = 'https://image.tmdb.org/t/p/';
   const size = 'w500';
@@ -250,7 +169,7 @@ export default function MovieTemplate({ id }: { id: string }) {
   const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
 
   return (
-    <div className="bg-background h-full w-full flex flex-col  px-0 py-4 pb-32">
+    <div className="flex h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
       <div className="w-full  flex flex-col gap-6">
         {/* Video Player (horizontal inset matches root py-4 / px-4) */}
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
@@ -315,9 +234,12 @@ export default function MovieTemplate({ id }: { id: string }) {
                     {movie.title}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <MovieTypeYearHoverReveal
-                      yearLabel={movie.release_date?.slice(0, 4) ?? "—"}
-                    />
+                    <Chip color="success" size="sm" variant="flat" className="font-normal">
+                      Movie
+                    </Chip>
+                    <span className="rounded-full bg-default-200/80 px-2.5 py-1 text-xs font-normal text-foreground/90 dark:bg-default-100/50">
+                      {movie.release_date?.slice(0, 4) ?? "—"}
+                    </span>
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-xs font-medium">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5">
                         <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
