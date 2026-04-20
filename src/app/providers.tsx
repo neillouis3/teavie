@@ -12,6 +12,7 @@ import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
 import { StreamingSourceProvider } from "@/contexts/streamingSourceContext";
 import { Suspense } from "react";
 import AmbientSuccessOrbs from "@/components/ui/ambientSuccessOrbs";
+import MaintenanceAnnouncementModal from "@/components/ui/maintenanceAnnouncementModal";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -27,6 +28,7 @@ export function Providers({ children }: ProvidersProps) {
           <CatalogCardStyleProvider>
             <StreamingSourceProvider>
               <AmbientSuccessOrbs />
+              <MaintenanceAnnouncementModal />
               <Suspense
                 fallback={
                   <>
