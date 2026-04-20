@@ -57,7 +57,7 @@ export default function HorizontalCatalogCard({
   return (
     <Link
       href={href}
-      className="group block min-w-0 w-full outline-none"
+      className="block min-w-0 w-full outline-none"
       aria-label={`${title}, ${label}, ${year}`}
       {...(isExternal
         ? { target: "_blank", rel: "noopener noreferrer" }
@@ -68,7 +68,7 @@ export default function HorizontalCatalogCard({
         radius="lg"
         classNames={{
           base:
-            'border border-default-200/45 bg-default-50/90 transition-colors duration-200 group-hover:border-success/50 dark:border-default-100/15 dark:bg-default-50/10',
+            'border border-default-200/45 bg-default-50/90 dark:border-default-100/15 dark:bg-default-50/10',
         }}
       >
         <CardBody className="relative aspect-[16/10] w-full overflow-hidden p-0">
