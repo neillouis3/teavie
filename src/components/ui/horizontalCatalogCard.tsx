@@ -82,7 +82,7 @@ export default function HorizontalCatalogCard({
                 fill
                 unoptimized
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                className="object-cover"
               />
             ) : (
               <div className="relative z-[1] flex h-full flex-col items-center justify-center gap-1.5 p-4 text-center">
