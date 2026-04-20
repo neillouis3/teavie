@@ -52,6 +52,7 @@ export default function SmallCard({
           src={imageUrl}
           alt={title}
           fill
+          unoptimized
           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 20vw, 140px"
           className="object-cover transition-opacity duration-300 group-hover:opacity-50"
         />
