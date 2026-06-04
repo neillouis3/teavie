@@ -223,7 +223,7 @@ export default function SideBar() {
           )}
 
           {!isCollapsed ? (
-            <div className="px-0 pt-3">
+            <div className="flex flex-col gap-4 px-0 pt-3">
               <Alert
                 color="success"
                 variant="flat"
@@ -231,9 +231,23 @@ export default function SideBar() {
                 hideIcon
                 description="Use an ad blocker—third-party players show ads we don’t control."
               />
+              <Link
+                href="/settings"
+                className={`
+                  flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all
+                  ${
+                    settingsActive
+                      ? "bg-success text-success-foreground shadow-sm"
+                      : "text-foreground hover:bg-default-100"
+                  }
+                `}
+              >
+                <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
+                <span className="text-sm font-medium">Settings</span>
+              </Link>
             </div>
           ) : (
-            <div className="flex justify-center px-1 pt-3">
+            <div className="flex flex-col items-center gap-4 px-1 pt-3">
               <Tooltip
                 placement="right"
                 content="Use an ad blocker—third-party players show ads we don’t control."
@@ -243,44 +257,37 @@ export default function SideBar() {
                   Adblock
                 </span>
               </Tooltip>
+              <Tooltip placement="right" content="Settings">
+                <Link
+                  href="/settings"
+                  className={`
+                    flex items-center justify-center rounded-lg p-2.5 transition-all
+                    ${
+                      settingsActive
+                        ? "bg-success text-success-foreground shadow-sm"
+                        : "text-foreground hover:bg-default-100"
+                    }
+                  `}
+                  aria-label="Settings"
+                >
+                  <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
+                </Link>
+              </Tooltip>
             </div>
           )}
         </nav>
 
-        <div className={`mt-auto shrink-0 px-1 pb-0 ${isCollapsed ? "flex justify-center" : ""}`}>
-          {isCollapsed ? (
-            <Tooltip placement="right" content="Settings">
-              <Link
-                href="/settings"
-                className={`
-                  flex items-center justify-center rounded-lg p-2.5 transition-all
-                  ${
-                    settingsActive
-                      ? "bg-success text-success-foreground shadow-sm"
-                      : "text-foreground hover:bg-default-100"
-                  }
-                `}
-                aria-label="Settings"
-              >
-                <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
-              </Link>
-            </Tooltip>
-          ) : (
-            <Link
-              href="/settings"
-              className={`
-                flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all
-                ${
-                  settingsActive
-                    ? "bg-success text-success-foreground shadow-sm"
-                    : "text-foreground hover:bg-default-100"
-                }
-              `}
-            >
-              <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
-              <span className="text-sm font-medium">Settings</span>
-            </Link>
-          )}
+        <div className="mt-auto shrink-0 px-1 pb-0">
+          <div className={`flex ${isCollapsed ? "justify-end pr-0.5" : "justify-end pr-1"}`}>
+            <img
+              src="/nami.png"
+              alt=""
+              aria-hidden
+              className={`pointer-events-none object-contain object-bottom ${
+                isCollapsed ? "h-11 w-11" : "h-[72px] w-auto max-w-[88px]"
+              }`}
+            />
+          </div>
         </div>
       </div>
     </div>
