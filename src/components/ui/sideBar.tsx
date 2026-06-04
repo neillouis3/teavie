@@ -116,7 +116,7 @@ export default function SideBar() {
           {APP_NAV_SECTIONS.map((section, sectionIndex) => (
             <div
               key={section.id}
-              className={`flex flex-col gap-1 ${sectionIndex > 0 ? "mt-2" : ""}`}
+              className={`flex flex-col gap-1 ${sectionIndex > 0 ? "mt-4" : ""}`}
             >
               {!isCollapsed && section.title ? (
                 <p className="px-3 pb-1 text-sm text-foreground">{section.title}</p>
