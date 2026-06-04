@@ -114,20 +114,12 @@ export default function SideBar() {
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
           {APP_NAV_SECTIONS.map((section, sectionIndex) => (
-            <div key={section.id} className="flex flex-col gap-1">
-              {sectionIndex > 0 && isCollapsed ? (
-                <div
-                  className="mx-2 my-2 border-t border-divider"
-                  aria-hidden
-                />
-              ) : null}
-              {sectionIndex > 0 && !isCollapsed ? (
-                <div className="mt-3 border-t border-divider pt-3" />
-              ) : null}
+            <div
+              key={section.id}
+              className={`flex flex-col gap-1 ${sectionIndex > 0 ? "mt-2" : ""}`}
+            >
               {!isCollapsed && section.title ? (
-                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-default-500">
-                  {section.title}
-                </p>
+                <p className="px-3 pb-1 text-sm text-foreground">{section.title}</p>
               ) : null}
               {section.items.map((item) => {
                 const isActive = selectedKey === item.key;
