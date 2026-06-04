@@ -277,15 +277,13 @@ export default function SideBar() {
           )}
         </nav>
 
-        <div className="mt-auto shrink-0 px-1 pb-0">
-          <div className={`flex ${isCollapsed ? "justify-end pr-0.5" : "justify-end pr-1"}`}>
+        <div className="mt-auto w-full shrink-0 px-1 pb-0">
+          <div className={`flex w-full ${isCollapsed ? "justify-end pr-0.5" : "justify-end pr-1"}`}>
             <img
               src="/nami.png"
               alt=""
               aria-hidden
-              className={`pointer-events-none object-contain object-bottom ${
-                isCollapsed ? "h-11 w-11" : "h-[72px] w-auto max-w-[88px]"
-              }`}
+              className="pointer-events-none h-auto w-3/4 object-contain object-bottom object-right"
             />
           </div>
         </div>
