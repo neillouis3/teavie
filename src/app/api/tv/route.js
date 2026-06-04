@@ -4,7 +4,7 @@ import {
   catalogSort,
   catalogTodayIsoUtc,
   catalogTmdbTvGenreMatchClause,
-  catalogTvBrowseAudienceClause,
+  catalogTvBrowseNonAnimeClause,
   catalogTvBrowseReleasedClause,
 } from "@/lib/catalogQuery";
 import {
@@ -77,7 +77,7 @@ export async function GET(req) {
     /** @type {Record<string, unknown>[]} */
     const clauses = [
       core,
-      catalogTvBrowseAudienceClause(),
+      catalogTvBrowseNonAnimeClause(),
       ...(genreNum != null ? [catalogTmdbTvGenreMatchClause(genreNum)] : []),
       ...(includeUnreleased ? [] : [catalogTvBrowseReleasedClause("first_air_date", todayIso)]),
     ];

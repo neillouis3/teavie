@@ -112,6 +112,20 @@ export function catalogTvBrowseAudienceClause() {
 }
 
 /**
+ * All Shows browse: non-anime TV only. Anime lives on the dedicated anime page
+ * (`/api/anime`), so exclude canonical `anime_*` rows plus anything flagged
+ * `is_anime` / tagged `"anime"`.
+ */
+export function catalogTvBrowseNonAnimeClause() {
+  return {
+    $and: [
+      catalogNotAnimeCatalogIdMongoExpr(),
+      { $nor: [{ is_anime: true }, { tags: "anime" }] },
+    ],
+  };
+}
+
+/**
  * Released rule for combined TV + catalog anime: anime uses lenient first-air
  * (same as /api/anime); everything else uses strict TMDB-style date.
  * @param {string} dateField
