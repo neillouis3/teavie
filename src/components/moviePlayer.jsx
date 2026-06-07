@@ -19,7 +19,7 @@ export const MOVIE_SERVERS = {
     path: (id) => `/embed/movie/${id}`,
     suffix: () => VIDKING_QUERY,
   },
-  '111movies': { base: 'https://111movies.com', path: (id) => `/movie/${id}` },
+  '111movies': { base: 'https://111movies.net', path: (id) => `/movie/${id}` },
   moviesapi: { base: 'https://moviesapi.club', path: (id) => `/movie/${id}` },
 };
 
