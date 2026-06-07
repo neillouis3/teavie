@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import path from "path";
 import { fileURLToPath } from "url";
+import { EMBED_PERMISSIONS_POLICY } from "./src/lib/embedPlayerIframe.js";
 
 /** This app’s folder (not a parent like `~` when another `package-lock.json` exists). */
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -77,8 +78,8 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Permissions-Policy",
-            // Lets cross-origin iframe players use the Fullscreen API (some browsers enforce top-level policy)
-            value: "fullscreen=*",
+            // Cross-origin players (Videasy, etc.) need fullscreen delegated to their origin.
+            value: EMBED_PERMISSIONS_POLICY,
           },
         ],
       },
