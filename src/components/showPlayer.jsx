@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { EMBED_IFRAME_ALLOW } from '@/lib/embedPlayerIframe';
+import VideoEmbedFrame from '@/components/videoEmbedFrame';
 
 const VIDEASY_TV_QUERY =
   '?color=22c55e&nextEpisode=true&episodeSelector=true&overlay=true';
@@ -11,7 +11,7 @@ const VIDEASY_ANIME_QUERY =
 
 export const SHOW_SERVERS = {
   videasy: {
-    base: 'https://player.videasy.net',
+    base: 'https://player.videasy.to',
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
     suffix: () => VIDEASY_TV_QUERY,
     animePath: (anilistId, absoluteEpisode) =>
@@ -158,13 +158,10 @@ export default function ShowPlayer({
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
       {url ? (
-        <iframe
+        <VideoEmbedFrame
           key={url}
           title="Episode player"
           src={url}
-          allow={EMBED_IFRAME_ALLOW}
-          allowFullScreen
-          referrerPolicy="no-referrer-when-downgrade"
           className="absolute inset-0 h-full w-full border-0"
         />
       ) : (
