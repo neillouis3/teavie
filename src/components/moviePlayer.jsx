@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { EMBED_IFRAME_ALLOW } from '@/lib/embedPlayerIframe';
+import VideoEmbedFrame from '@/components/videoEmbedFrame';
 
 /** Videasy — https://www.videasy.net/docs — overlay = Netflix-style pause overlay */
 const VIDEASY_QUERY = '?color=22c55e&overlay=true';
@@ -10,7 +10,7 @@ const VIDKING_QUERY = '?color=22c55e';
 
 export const MOVIE_SERVERS = {
   videasy: {
-    base: 'https://player.videasy.net',
+    base: 'https://player.videasy.to',
     path: (id) => `/movie/${id}`,
     suffix: () => VIDEASY_QUERY,
   },
@@ -36,12 +36,9 @@ const MoviePlayer = ({ videoId, server = 'videasy' }) => {
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
       {playerUrl ? (
-        <iframe
+        <VideoEmbedFrame
           title="Movie player"
           src={playerUrl}
-          allow={EMBED_IFRAME_ALLOW}
-          allowFullScreen
-          referrerPolicy="no-referrer-when-downgrade"
           className="absolute inset-0 h-full w-full border-0"
         />
       ) : (

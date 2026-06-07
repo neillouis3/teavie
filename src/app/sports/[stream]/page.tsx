@@ -4,7 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Chip } from '@heroui/react';
 import Header from '@/components/ui/header';
-import { EMBED_IFRAME_ALLOW } from '@/lib/embedPlayerIframe';
+import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { getSportsStreamBySlug } from '@/lib/sportsStreams';
 
 export default function SportsStreamPlayerPage() {
@@ -34,12 +34,9 @@ export default function SportsStreamPlayerPage() {
 
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           <div className="relative h-full min-h-0 w-full overflow-hidden bg-black">
-            <iframe
+            <VideoEmbedFrame
               title={`${stream.title} live stream`}
               src={stream.src}
-              allow={EMBED_IFRAME_ALLOW}
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
               className="absolute inset-0 h-full w-full border-0"
             />
           </div>

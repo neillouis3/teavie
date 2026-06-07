@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
 import { fileURLToPath } from "url";
-import { EMBED_PERMISSIONS_POLICY } from "./src/lib/embedPlayerIframe.js";
 
 /** This app’s folder (not a parent like `~` when another `package-lock.json` exists). */
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -70,20 +69,6 @@ const nextConfig: NextConfig = {
         hostname: 'ia.media-imdb.com',
       },
     ],
-  },
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: [
-          {
-            key: "Permissions-Policy",
-            // Cross-origin players (Videasy, etc.) need fullscreen delegated to their origin.
-            value: EMBED_PERMISSIONS_POLICY,
-          },
-        ],
-      },
-    ];
   },
 };
 
