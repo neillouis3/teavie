@@ -25,7 +25,7 @@ export const SHOW_SERVERS = {
     suffix: () => VIDKING_QUERY,
   },
   '111movies': {
-    base: 'https://111movies.com',
+    base: 'https://111movies.net',
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
   },
   moviesapi: {
