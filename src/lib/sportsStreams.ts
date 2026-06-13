@@ -29,6 +29,13 @@ export const SPORTS_STREAMS: SportsStream[] = [
     imageUrl: '/sports/cricket.jpg',
     src: 'https://streamfree.app/embed/cricket/cricketsky?server=origin&quality=1080p&category=cricket',
   },
+  {
+    slug: 'world-cup',
+    title: 'World Cup',
+    description: 'Morocco vs Brazil live stream.',
+    imageUrl: '/sports/world-cup.jpg',
+    src: 'https://streamfree.app/embed/soccer/morocco-vs-brazil?quality=1080p&category=soccer',
+  },
 ];
 
 export function getSportsStreamBySlug(slug: string): SportsStream | undefined {
