@@ -3,6 +3,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Chip } from "@heroui/react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 
 type GenreRow = {
   id: number;
@@ -20,22 +25,51 @@ type Mode = "movie" | "tv";
 
 const EMPTY: PopularGenresPayload = { movies: [], tv: [] };
 
-/**
- * Fixed gradient palette cycled by rank so the top genres get distinct,
- * recognizable colors. Full class strings so Tailwind keeps them.
- */
-const GRADIENTS = [
-  "from-rose-500 to-orange-500",
-  "from-violet-500 to-fuchsia-500",
-  "from-sky-500 to-indigo-600",
-  "from-emerald-500 to-teal-600",
-  "from-amber-500 to-pink-600",
-  "from-cyan-500 to-blue-600",
-  "from-fuchsia-500 to-purple-600",
-  "from-lime-500 to-emerald-600",
-  "from-red-500 to-rose-600",
-  "from-indigo-500 to-violet-600",
+/** Color-code each genre. Full class strings so Tailwind keeps them. */
+const GENRE_COLORS: Record<string, string> = {
+  Action: "bg-red-600",
+  "Action & Adventure": "bg-red-600",
+  Adventure: "bg-orange-500",
+  Animation: "bg-sky-500",
+  Comedy: "bg-amber-500",
+  Crime: "bg-zinc-700",
+  Documentary: "bg-teal-600",
+  Drama: "bg-indigo-600",
+  Family: "bg-green-600",
+  Fantasy: "bg-violet-600",
+  History: "bg-amber-700",
+  Horror: "bg-neutral-800",
+  Music: "bg-pink-500",
+  Mystery: "bg-purple-700",
+  Romance: "bg-rose-500",
+  "Science Fiction": "bg-cyan-600",
+  "Sci-Fi & Fantasy": "bg-cyan-600",
+  "TV Movie": "bg-blue-600",
+  Thriller: "bg-red-800",
+  War: "bg-stone-600",
+  "War & Politics": "bg-stone-600",
+  Western: "bg-orange-800",
+  Kids: "bg-lime-600",
+  News: "bg-blue-700",
+  Reality: "bg-fuchsia-600",
+  Soap: "bg-rose-600",
+  Talk: "bg-emerald-600",
+};
+
+const FALLBACK_COLORS = [
+  "bg-rose-600",
+  "bg-violet-600",
+  "bg-sky-600",
+  "bg-emerald-600",
+  "bg-amber-600",
+  "bg-fuchsia-600",
+  "bg-cyan-600",
+  "bg-indigo-600",
 ] as const;
+
+function colorFor(name: string, index: number) {
+  return GENRE_COLORS[name] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+}
 
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 
@@ -46,11 +80,11 @@ function posterUrl(path: string) {
 function GenreTile({
   genre,
   mode,
-  gradient,
+  colorClass,
 }: {
   genre: GenreRow;
   mode: Mode;
-  gradient: string;
+  colorClass: string;
 }) {
   const href =
     mode === "movie"
@@ -62,8 +96,17 @@ function GenreTile({
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
-      className={`group relative flex aspect-square w-36 shrink-0 items-end overflow-hidden rounded-xl bg-gradient-to-br ${gradient} shadow-sm transition-transform duration-200 hover:scale-[1.03] sm:w-40`}
+      className={`group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl ${colorClass} p-3 shadow-sm transition-transform duration-200 hover:scale-[1.02]`}
     >
+      <div className="relative z-20 flex flex-col">
+        <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
+          {genre.name}
+        </span>
+        <span className="mt-0.5 text-[11px] font-medium text-white/80">
+          {genre.count.toLocaleString()} titles
+        </span>
+      </div>
+
       {poster && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -71,20 +114,11 @@ function GenreTile({
           alt=""
           aria-hidden
           loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="pointer-events-none absolute -bottom-4 -right-3 z-10 h-[64%] w-auto rotate-12 rounded-md object-cover shadow-xl ring-1 ring-black/10 transition-transform duration-200 group-hover:-translate-y-1 group-hover:rotate-6"
         />
       )}
 
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-
-      <div className="relative z-10 w-full p-3">
-        <span className="block text-sm font-semibold leading-tight text-white drop-shadow sm:text-base">
-          {genre.name}
-        </span>
-        <span className="mt-0.5 block text-[11px] font-medium text-white/75">
-          {genre.count.toLocaleString()} titles
-        </span>
-      </div>
+      <span className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-white/10 to-black/25" />
     </Link>
   );
 }
@@ -95,7 +129,7 @@ function GenreTilesSkeleton() {
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="aspect-square w-36 shrink-0 animate-pulse rounded-xl bg-default-200 sm:w-40"
+          className="aspect-[4/3] w-[42%] shrink-0 animate-pulse rounded-xl bg-default-200 sm:w-[30%] md:w-1/4 lg:w-1/5 xl:w-1/6"
         />
       ))}
     </div>
@@ -168,17 +202,22 @@ export default function GenreDiscover() {
           No genres to show yet.
         </p>
       ) : (
-        <div className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-3 pb-2 [scrollbar-width:none] sm:-mx-4 sm:px-4 [&::-webkit-scrollbar]:hidden">
-          {rows.map((genre, i) => (
-            <div key={`${mode}-${genre.id}`} className="snap-start">
-              <GenreTile
-                genre={genre}
-                mode={mode}
-                gradient={GRADIENTS[i % GRADIENTS.length]}
-              />
-            </div>
-          ))}
-        </div>
+        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+          <CarouselContent className="-ml-3">
+            {rows.map((genre, i) => (
+              <CarouselItem
+                key={`${mode}-${genre.id}`}
+                className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
+              >
+                <GenreTile
+                  genre={genre}
+                  mode={mode}
+                  colorClass={colorFor(genre.name, i)}
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
       )}
     </section>
   );
