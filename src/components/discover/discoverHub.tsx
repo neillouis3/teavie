@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Header from "@/components/ui/header";
 import CatalogRail from "@/components/explore/catalogRail";
+import GenreDiscover from "@/components/discover/genreDiscover";
 import SmallCardLoading from "@/components/ui/smallCardLoading";
 import HorizontalCatalogCardLoading from "@/components/ui/horizontalCatalogCardLoading";
 import type { ContentItem } from "@/types/content";
@@ -99,6 +100,10 @@ export default function DiscoverHub() {
   return (
     <div className="bg-background flex w-full flex-col">
       <Header pageName="Discover" />
+
+      <div className="mt-6 w-full px-3 sm:px-4">
+        <GenreDiscover />
+      </div>
 
       {showDiscoverBody && (
         <div className="mt-6 flex w-full flex-col gap-12 px-3 pb-8 sm:px-4">
