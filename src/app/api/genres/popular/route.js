@@ -1,0 +1,107 @@
+/**
+ * Popular-genre "algo": ranks the existing TMDB genres by how much popular content
+ * the catalog actually holds for each one. We do NOT invent or rename genres — we
+ * only reorder the fixed TMDB lists by a popularity score so Discover can surface
+ * the genres worth browsing first (Netflix-style "Browse by genre").
+ *
+ * Score per genre = sum of catalog `popularity` across titles tagged with it.
+ * `count` = number of titles in that genre. A few top posters are returned so the
+ * Discover tiles can show a small collage.
+ */
+
+import clientPromise from "@/lib/mongo";
+import {
+  catalogMovieHideAdultClause,
+  catalogTvBrowseNonAnimeClause,
+} from "@/lib/catalogQuery";
+import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from "@/lib/tmdbGenres";
+
+const TILE_POSTERS = 3; // sample posters returned per genre for the tile collage
+
+function genreNameMap(list) {
+  const map = new Map();
+  for (const g of list) map.set(g.id, g.name);
+  return map;
+}
+
+function buildPipeline({ matchStage, keys, withPosters }) {
+  const group = {
+    _id: "$genre_ids",
+    count: { $sum: 1 },
+    score: { $sum: "$_pop" },
+  };
+  if (withPosters) {
+    group.posters = {
+      $topN: { n: TILE_POSTERS, sortBy: { _pop: -1 }, output: "$poster_path" },
+    };
+  }
+  return [
+    { $match: matchStage },
+    {
+      $addFields: {
+        _pop: {
+          $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
+        },
+      },
+    },
+    { $unwind: "$genre_ids" },
+    { $match: { genre_ids: { $in: keys } } },
+    { $group: group },
+    { $sort: { score: -1, count: -1 } },
+  ];
+}
+
+async function rankGenres(col, matchStage, nameMap) {
+  const keys = [...nameMap.keys()];
+
+  let rows;
+  try {
+    // `$topN` needs MongoDB 5.2+. Fall back to no posters on older servers.
+    rows = await col
+      .aggregate(buildPipeline({ matchStage, keys, withPosters: true }))
+      .toArray();
+  } catch {
+    rows = await col
+      .aggregate(buildPipeline({ matchStage, keys, withPosters: false }))
+      .toArray();
+  }
+
+  return rows
+    .filter((r) => nameMap.has(r._id))
+    .map((r) => ({
+      id: r._id,
+      name: nameMap.get(r._id),
+      count: r.count,
+      posters: (r.posters || [])
+        .filter((p) => typeof p === "string" && p.trim().length > 0)
+        .slice(0, TILE_POSTERS),
+    }));
+}
+
+export async function GET() {
+  try {
+    const client = await clientPromise;
+    const col = client.db("teavie").collection("content");
+
+    const [movies, tv] = await Promise.all([
+      rankGenres(
+        col,
+        { type: "movie", ...catalogMovieHideAdultClause() },
+        genreNameMap(TMDB_MOVIE_GENRES)
+      ),
+      rankGenres(
+        col,
+        { $and: [{ type: "tv" }, catalogTvBrowseNonAnimeClause()] },
+        genreNameMap(TMDB_TV_GENRES)
+      ),
+    ]);
+
+    return Response.json({ movies, tv });
+  } catch (err) {
+    console.error(err);
+    return Response.json(
+      { movies: [], tv: [], error: "popular genres failed" },
+      { status: 500 }
+    );
+  }
+}
