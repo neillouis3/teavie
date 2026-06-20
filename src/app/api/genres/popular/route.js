@@ -24,9 +24,17 @@ function genreNameMap(list) {
   return map;
 }
 
-function buildPipeline({ matchStage, keys, withPosters }) {
+/**
+ * @param {object} cfg
+ * @param {Record<string, unknown>} cfg.matchStage
+ * @param {number[]} cfg.keys
+ * @param {string} cfg.unwindPath  Array field to unwind (e.g. "genre_ids" or "genres").
+ * @param {string} cfg.idFieldPath Path to the genre id after unwind (e.g. "genre_ids" or "genres.id").
+ * @param {boolean} cfg.withPosters
+ */
+function buildPipeline({ matchStage, keys, unwindPath, idFieldPath, withPosters }) {
   const group = {
-    _id: "$genre_ids",
+    _id: `$${idFieldPath}`,
     count: { $sum: 1 },
     score: { $sum: "$_pop" },
   };
@@ -44,25 +52,30 @@ function buildPipeline({ matchStage, keys, withPosters }) {
         },
       },
     },
-    { $unwind: "$genre_ids" },
-    { $match: { genre_ids: { $in: keys } } },
+    { $unwind: `$${unwindPath}` },
+    { $match: { [idFieldPath]: { $in: keys } } },
     { $group: group },
     { $sort: { score: -1, count: -1 } },
   ];
 }
 
-async function rankGenres(col, matchStage, nameMap) {
+async function rankGenres(col, matchStage, nameMap, genreFields) {
   const keys = [...nameMap.keys()];
+  const { unwindPath, idFieldPath } = genreFields;
 
   let rows;
   try {
     // `$topN` needs MongoDB 5.2+. Fall back to no posters on older servers.
     rows = await col
-      .aggregate(buildPipeline({ matchStage, keys, withPosters: true }))
+      .aggregate(
+        buildPipeline({ matchStage, keys, unwindPath, idFieldPath, withPosters: true })
+      )
       .toArray();
   } catch {
     rows = await col
-      .aggregate(buildPipeline({ matchStage, keys, withPosters: false }))
+      .aggregate(
+        buildPipeline({ matchStage, keys, unwindPath, idFieldPath, withPosters: false })
+      )
       .toArray();
   }
 
@@ -84,15 +97,19 @@ export async function GET() {
     const col = client.db("teavie").collection("content");
 
     const [movies, tv] = await Promise.all([
+      // Movies tag genres via the numeric `genre_ids` array.
       rankGenres(
         col,
         { type: "movie", ...catalogMovieHideAdultClause() },
-        genreNameMap(TMDB_MOVIE_GENRES)
+        genreNameMap(TMDB_MOVIE_GENRES),
+        { unwindPath: "genre_ids", idFieldPath: "genre_ids" }
       ),
+      // TV shows leave `genre_ids` empty; genres live in `genres: [{ id, name }]`.
       rankGenres(
         col,
         { $and: [{ type: "tv" }, catalogTvBrowseNonAnimeClause()] },
-        genreNameMap(TMDB_TV_GENRES)
+        genreNameMap(TMDB_TV_GENRES),
+        { unwindPath: "genres", idFieldPath: "genres.id" }
       ),
     ]);
 

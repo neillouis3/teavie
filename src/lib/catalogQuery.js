@@ -176,7 +176,12 @@ export function catalogTmdbTvGenreMatchClause(tmdbGenreId) {
     37: "^Western$",
   };
   const token = animeRegexByTmdb[tmdbGenreId];
-  const parts = [{ genre_ids: tmdbGenreId }];
+  // Non-anime TV docs store genres as objects in `genres` ({ id, name }); legacy /
+  // movie-style rows use the numeric `genre_ids` array. Match either.
+  const parts = [
+    { genre_ids: tmdbGenreId },
+    { genres: { $elemMatch: { id: tmdbGenreId } } },
+  ];
 
   if (token === "__ALL_ANIME__") {
     parts.push(catalogAnimeIdMongoExpr());
