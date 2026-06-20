@@ -56,43 +56,32 @@ function GenreTile({
     mode === "movie"
       ? `/movies/all?genre=${genre.id}`
       : `/shows/all?genre=${genre.id}`;
-  const posters = genre.posters.slice(0, 2);
+  const poster = genre.posters[0];
 
   return (
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
-      className={`group relative flex aspect-square w-36 shrink-0 flex-col justify-end overflow-hidden rounded-xl bg-gradient-to-br ${gradient} p-3 shadow-sm transition-transform duration-200 hover:scale-[1.03] sm:w-40`}
+      className={`group relative flex aspect-square w-36 shrink-0 items-end overflow-hidden rounded-xl bg-gradient-to-br ${gradient} shadow-sm transition-transform duration-200 hover:scale-[1.03] sm:w-40`}
     >
-      {posters.length > 0 && (
-        <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
-          {posters.map((p, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={`${genre.id}-${i}`}
-              src={posterUrl(p)}
-              alt=""
-              aria-hidden
-              loading="lazy"
-              className="absolute -right-4 top-[-10%] h-[120%] w-auto rounded-md object-cover shadow-lg ring-1 ring-black/10 transition-transform duration-200 group-hover:translate-y-[-3%]"
-              style={{
-                right: `${i * 26 - 16}px`,
-                transform: `rotate(${10 - i * 5}deg)`,
-                zIndex: 10 - i,
-                opacity: i === 0 ? 0.9 : 0.75,
-              }}
-            />
-          ))}
-        </div>
+      {poster && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={posterUrl(poster)}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
       )}
 
-      <span className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
 
-      <div className="relative z-30 flex flex-col">
-        <span className="text-sm font-semibold leading-tight text-white drop-shadow-sm sm:text-base">
+      <div className="relative z-10 w-full p-3">
+        <span className="block text-sm font-semibold leading-tight text-white drop-shadow sm:text-base">
           {genre.name}
         </span>
-        <span className="mt-0.5 text-[11px] font-medium text-white/80">
+        <span className="mt-0.5 block text-[11px] font-medium text-white/75">
           {genre.count.toLocaleString()} titles
         </span>
       </div>
