@@ -12,7 +12,7 @@ function episodeAired(airDate, todayYmd) {
 
 /**
  * GET /api/tv/season?tvId=1399&season=1
- * Returns aired episodes for a TMDB TV season (name, runtime, air_date).
+ * Returns aired episodes for a TMDB TV season (name, runtime, still_path, air_date).
  */
 export async function GET(req) {
   try {
@@ -65,6 +65,10 @@ export async function GET(req) {
         runtime:
           typeof ep.runtime === "number" && ep.runtime > 0 ? ep.runtime : null,
         air_date: ep.air_date ?? null,
+        still_path:
+          typeof ep.still_path === "string" && ep.still_path.trim()
+            ? ep.still_path.trim()
+            : null,
       }))
       .filter(
         (ep) =>

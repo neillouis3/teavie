@@ -437,7 +437,12 @@ export default function ShowTemplate({ id }: { id: string }) {
       }
       setWatchedEpisodes(new Set(saved.watched));
     } else {
-      setWatchedEpisodes(new Set());
+      const list = tmdbSeasonsWithEpisodes(show.seasons);
+      const firstSeason =
+        list.find((s) => s.season_number >= 1 && (s.episode_count ?? 0) > 0) ??
+        list[0];
+      const seasonNum = firstSeason?.season_number ?? 1;
+      setWatchedEpisodes(new Set([formatWatchEpKey(seasonNum, 1)]));
     }
     progressAppliedForIdRef.current = id;
     setProgressHydrated(true);
