@@ -118,91 +118,79 @@ export default function CatalogMediaPanel({
   const statusDisplay = formatStatusDisplay(status);
 
   return (
-    <section className="w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
-      <div className="bg-default-50 px-4 py-5 dark:bg-default-50/10 sm:px-6 sm:py-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
-          <div className="mx-auto w-28 shrink-0 sm:mx-0 sm:w-32 md:w-36 lg:w-40">
-            {posterUrl ? (
-              <Image
-                src={posterUrl}
-                alt={posterAlt}
-                className="aspect-[2/3] w-full rounded-lg object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
-              />
-            ) : (
-              <div className="aspect-[2/3] w-full rounded-lg bg-default-200/80 ring-1 ring-default-200/35 dark:bg-default-100/20 dark:ring-default-100/15" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              {title}
-            </h1>
-            <p className="mt-1.5 text-sm text-default-500">{subtitleLine}</p>
-            {(ratingLabel || certification || statusDisplay) && (
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                {ratingLabel ? (
-                  <span className="inline-flex items-center gap-1 text-foreground">
-                    <HugeiconsIcon
-                      icon={StarIcon}
-                      size={15}
-                      className="text-warning"
-                    />
-                    {ratingLabel}
-                  </span>
-                ) : null}
-                {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
-                {certification ? (
-                  <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-medium text-foreground/90">
-                    {certification}
-                  </span>
-                ) : null}
-                {certification && statusDisplay ? <MetaDot /> : null}
-                {statusDisplay ? (
-                  <span
-                    className={
-                      statusDisplay.active
-                        ? "font-medium text-success"
-                        : "capitalize text-foreground/80"
-                    }
-                  >
-                    {statusDisplay.label}
-                  </span>
-                ) : null}
-              </div>
-            )}
-            <p className="mt-4 text-sm leading-relaxed text-foreground/85 sm:mt-5 sm:text-[15px]">
-              {overview?.trim() ? overview : "No overview available."}
-            </p>
-            {tagline?.trim() ? (
-              <p className="mt-2 text-sm italic text-default-500">
-                &ldquo;{tagline.trim()}&rdquo;
-              </p>
-            ) : null}
-          </div>
+    <div className="w-full space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+        <div className="mx-auto w-28 shrink-0 sm:mx-0 sm:w-32 md:w-36 lg:w-40">
+          {posterUrl ? (
+            <Image
+              src={posterUrl}
+              alt={posterAlt}
+              className="aspect-[2/3] w-full rounded-lg object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
+            />
+          ) : (
+            <div className="aspect-[2/3] w-full rounded-lg bg-default-200/80 ring-1 ring-default-200/35 dark:bg-default-100/20 dark:ring-default-100/15" />
+          )}
         </div>
-
-        {seasonEpisodeSection ? (
-          <>
-            <div className="my-5 border-t border-default-200/60 dark:border-default-100/25" />
-            {seasonEpisodeSection}
-          </>
-        ) : null}
-
-        <div
-          className={`border-t border-default-200/60 dark:border-default-100/25 ${
-            seasonEpisodeSection ? "mt-5" : "mt-5"
-          }`}
-        />
-
-        <CatalogDetailColumns
-          className="mt-5"
-          mediaType={mediaType}
-          genres={genres}
-          infoLines={infoLines}
-          links={links}
-          genreBrowseBase={genreBrowseBase}
-        />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {title}
+          </h1>
+          <p className="mt-1.5 text-sm text-default-500">{subtitleLine}</p>
+          {(ratingLabel || certification || statusDisplay) && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              {ratingLabel ? (
+                <span className="inline-flex items-center gap-1 text-foreground">
+                  <HugeiconsIcon
+                    icon={StarIcon}
+                    size={15}
+                    className="text-warning"
+                  />
+                  {ratingLabel}
+                </span>
+              ) : null}
+              {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
+              {certification ? (
+                <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-medium text-foreground/90">
+                  {certification}
+                </span>
+              ) : null}
+              {certification && statusDisplay ? <MetaDot /> : null}
+              {statusDisplay ? (
+                <span
+                  className={
+                    statusDisplay.active
+                      ? "font-medium text-success"
+                      : "capitalize text-foreground/80"
+                  }
+                >
+                  {statusDisplay.label}
+                </span>
+              ) : null}
+            </div>
+          )}
+          <p className="mt-4 text-sm leading-relaxed text-foreground/85 sm:mt-5 sm:text-[15px]">
+            {overview?.trim() ? overview : "No overview available."}
+          </p>
+          {tagline?.trim() ? (
+            <p className="mt-2 text-sm italic text-default-500">
+              &ldquo;{tagline.trim()}&rdquo;
+            </p>
+          ) : null}
+        </div>
       </div>
-    </section>
+
+      {seasonEpisodeSection ? (
+        <div className="space-y-4">{seasonEpisodeSection}</div>
+      ) : null}
+
+      <CatalogDetailColumns
+        mediaType={mediaType}
+        genres={genres}
+        infoLines={infoLines}
+        links={links}
+        genreBrowseBase={genreBrowseBase}
+      />
+    </div>
   );
 }
 
@@ -212,65 +200,59 @@ export function CatalogMediaPanelSkeleton({
   withSeasonPicker?: boolean;
 }) {
   return (
-    <section className="w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
-      <div className="bg-default-50 px-4 py-5 dark:bg-default-50/10 sm:px-6 sm:py-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
-          <div className="mx-auto aspect-[2/3] w-28 shrink-0 animate-pulse rounded-lg bg-default-200 sm:mx-0 sm:w-32 md:w-36" />
-          <div className="min-w-0 flex-1 space-y-3">
-            <div className="h-8 w-3/4 max-w-xl animate-pulse rounded-lg bg-default-200 sm:h-9" />
-            <div className="h-4 w-48 animate-pulse rounded bg-default-200" />
-            <div className="h-4 w-56 animate-pulse rounded bg-default-200" />
-            <div className="space-y-2 pt-1">
-              {[90, 75, 55].map((w, i) => (
+    <div className="w-full space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+        <div className="mx-auto aspect-[2/3] w-28 shrink-0 animate-pulse rounded-lg bg-default-200 sm:mx-0 sm:w-32 md:w-36" />
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="h-8 w-3/4 max-w-xl animate-pulse rounded-lg bg-default-200 sm:h-9" />
+          <div className="h-4 w-48 animate-pulse rounded bg-default-200" />
+          <div className="h-4 w-56 animate-pulse rounded bg-default-200" />
+          <div className="space-y-2 pt-1">
+            {[90, 75, 55].map((w, i) => (
+              <div
+                key={i}
+                className="h-3 animate-pulse rounded bg-default-200"
+                style={{ width: `${w}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+      {withSeasonPicker ? (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="h-3 w-12 animate-pulse rounded bg-default-200" />
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-3 animate-pulse rounded bg-default-200"
-                  style={{ width: `${w}%` }}
+                  className="h-9 w-9 animate-pulse rounded-full bg-default-200"
+                />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="h-3 w-14 animate-pulse rounded bg-default-200" />
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-9 w-9 animate-pulse rounded-full bg-default-200"
                 />
               ))}
             </div>
           </div>
         </div>
-        {withSeasonPicker ? (
-          <>
-            <div className="my-5 border-t border-default-200/60 dark:border-default-100/25" />
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="h-3 w-12 animate-pulse rounded bg-default-200" />
-                <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="h-9 w-9 animate-pulse rounded-full bg-default-200"
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="h-3 w-14 animate-pulse rounded bg-default-200" />
-                <div className="flex flex-wrap gap-2">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-9 w-9 animate-pulse rounded-full bg-default-200"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </>
-        ) : null}
-        <div className="mt-5 border-t border-default-200/60 dark:border-default-100/25" />
-        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
-              <div className="h-6 w-24 animate-pulse rounded-full bg-default-200" />
-              <div className="h-6 w-28 animate-pulse rounded-full bg-default-200" />
-            </div>
-          ))}
-        </div>
+      ) : null}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-2">
+            <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
+            <div className="h-6 w-24 animate-pulse rounded-full bg-default-200" />
+            <div className="h-6 w-28 animate-pulse rounded-full bg-default-200" />
+          </div>
+        ))}
       </div>
-    </section>
+    </div>
   );
 }
