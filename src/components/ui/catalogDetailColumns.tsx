@@ -80,9 +80,9 @@ export default function CatalogDetailColumns({
 
   return (
     <div
-      className={`grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-4 ${className}`}
+      className={`flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4 ${className}`}
     >
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <ColumnHeading label="Genre" />
         <div className="mt-2.5 flex flex-wrap gap-2">
           {sortedGenres.length > 0 ? (
@@ -101,7 +101,7 @@ export default function CatalogDetailColumns({
         </div>
       </div>
 
-      <div className="min-w-0">
+      <div className="min-w-0 flex-[2]">
         <ColumnHeading label="Info" />
         <ul className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-foreground">
           {infoItems.length > 0 ? (
@@ -121,7 +121,7 @@ export default function CatalogDetailColumns({
         </ul>
       </div>
 
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <ColumnHeading label="Links" />
         <ul className="mt-2.5 flex flex-col gap-2">
           {linkItems.length > 0 ? (

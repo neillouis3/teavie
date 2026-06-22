@@ -256,14 +256,21 @@ export function CatalogMediaPanelSkeleton({
       ) : null}
       <section className={DETAIL_META_CARD}>
         <div className={DETAIL_META_CARD_INNER}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="space-y-2">
-                <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
-                <div className="h-6 w-24 animate-pulse rounded-full bg-default-200" />
-                <div className="h-6 w-28 animate-pulse rounded-full bg-default-200" />
-              </div>
-            ))}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
+              <div className="h-6 w-24 animate-pulse rounded-full bg-default-200" />
+              <div className="h-6 w-28 animate-pulse rounded-full bg-default-200" />
+            </div>
+            <div className="min-w-0 flex-[2] space-y-2">
+              <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
+              <div className="h-6 w-32 animate-pulse rounded bg-default-200" />
+              <div className="h-6 w-28 animate-pulse rounded bg-default-200" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
+              <div className="h-6 w-24 animate-pulse rounded-full bg-default-200" />
+            </div>
           </div>
         </div>
       </section>
