@@ -139,41 +139,28 @@ export function GenreSquareTile({
   colorClass: string;
 }) {
   const href = genrePageHref(genre.slug);
-  const poster = genre.posters.find(Boolean);
 
   return (
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
-      className="group relative flex aspect-square w-full overflow-hidden rounded-xl"
+      className="group relative flex aspect-square w-full overflow-hidden rounded-xl p-2.5 sm:p-3"
     >
-      {poster ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={posterUrl(poster)}
-          alt=""
-          aria-hidden
-          loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-      ) : null}
       <span
-        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${colorClass} ${
-          poster ? "opacity-80 mix-blend-multiply" : ""
-        }`}
+        className={`pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br ${colorClass} shadow-sm`}
         aria-hidden
       />
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
-      <div className="relative z-10 flex h-full flex-col justify-end p-3 sm:p-4">
-        <span className="text-sm font-bold leading-tight text-white drop-shadow-sm sm:text-base">
+      <div className="relative z-20 mt-auto flex flex-col">
+        <span className="text-xs font-bold leading-tight text-white drop-shadow-sm sm:text-sm">
           {genre.name}
         </span>
         {genre.count > 0 ? (
-          <span className="mt-0.5 text-[11px] font-medium text-white/80">
+          <span className="mt-0.5 text-[10px] font-medium text-white/80 sm:text-[11px]">
             {genre.count.toLocaleString()} titles
           </span>
         ) : null}
       </div>
+      <span className="pointer-events-none absolute inset-0 z-[1] rounded-xl bg-gradient-to-br from-white/15 to-black/20" />
     </Link>
   );
 }
