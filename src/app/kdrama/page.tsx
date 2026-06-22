@@ -1,5 +1,5 @@
-import KdramaHub from "@/components/kdrama/kdramaHub";
+import CategoryPageTemplate from "@/components/category/CategoryPageTemplate";
 
 export default function KdramaPage() {
-  return <KdramaHub />;
+  return <CategoryPageTemplate slug="kdrama" />;
 }

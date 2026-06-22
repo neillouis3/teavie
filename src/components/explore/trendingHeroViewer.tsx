@@ -39,12 +39,18 @@ interface TrendingHeroViewerProps {
   trendingMovies: ContentItem[];
   trendingTv: ContentItem[];
   maxItems?: number;
+  /** Rounded carousel viewport (category hubs). */
+  rounded?: boolean;
+  /** Pagination dots under the carousel. @default true */
+  showDots?: boolean;
 }
 
 export default function TrendingHeroViewer({
   trendingMovies,
   trendingTv,
   maxItems = 24,
+  rounded = false,
+  showDots = true,
 }: TrendingHeroViewerProps) {
   const items = React.useMemo(
     () => interleaveTrending(trendingMovies, trendingTv, maxItems),
@@ -56,23 +62,30 @@ export default function TrendingHeroViewer({
   const [count, setCount] = React.useState(0);
 
   React.useEffect(() => {
-    if (!api) return;
+    if (!api || !showDots) return;
     setCount(api.scrollSnapList().length);
     setCurrent(api.selectedScrollSnap() + 1);
     api.on("select", () => {
       setCurrent(api.selectedScrollSnap() + 1);
     });
-  }, [api]);
+  }, [api, showDots]);
 
   if (items.length === 0) return null;
 
   return (
-    <div className={`flex w-full flex-col items-center ${TRENDING_CAROUSEL_H}`}>
-      <Carousel
-        opts={{ align: "start", loop: true }}
-        className="h-full w-full [&>div]:h-full"
-        setApi={setApi}
+    <div
+      className={`flex w-full flex-col items-center ${TRENDING_CAROUSEL_H} ${
+        rounded ? "px-3 sm:px-4" : ""
+      }`}
+    >
+      <div
+        className={`h-full w-full ${rounded ? "overflow-hidden rounded-2xl" : ""}`}
       >
+        <Carousel
+          opts={{ align: "start", loop: true }}
+          className="h-full w-full [&>div]:h-full"
+          setApi={setApi}
+        >
         <CarouselContent className="ml-0 h-full [&>div]:h-full">
           {items.map((item) => {
             const title = item.title ?? item.name ?? "Untitled";
@@ -122,17 +135,20 @@ export default function TrendingHeroViewer({
           className={`${TRENDING_ARROW_CLASS} right-3 sm:right-4`}
         />
       </Carousel>
-
-      <div className="mt-4 flex items-center justify-center space-x-2">
-        {Array.from({ length: count }).map((_, index) => (
-          <div
-            key={index}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              index === current - 1 ? "w-2 bg-gray-400" : "w-2 bg-gray-500"
-            }`}
-          />
-        ))}
       </div>
+
+      {showDots && count > 0 ? (
+        <div className="mt-4 flex items-center justify-center space-x-2">
+          {Array.from({ length: count }).map((_, index) => (
+            <div
+              key={index}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                index === current - 1 ? "w-2 bg-gray-400" : "w-2 bg-gray-500"
+              }`}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -63,10 +63,14 @@ function posterUrl(path: string) {
 }
 
 function deckPosters(posters: string[]): string[] {
-  const raw = posters.filter(Boolean).slice(0, 3);
-  if (raw.length === 0) return [];
-  const out = [...raw];
-  while (out.length < 3) out.push(out[out.length - 1]);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const path of posters) {
+    if (!path || seen.has(path)) continue;
+    seen.add(path);
+    out.push(path);
+    if (out.length >= 3) break;
+  }
   return out;
 }
 
@@ -84,11 +88,13 @@ const DECK_CARD_HOVER = [
 export function GenreCatalogTile({
   genre,
   colorClass,
+  href: hrefOverride,
 }: {
   genre: CatalogGenreRow;
   colorClass: string;
+  href?: string;
 }) {
-  const href = genrePageHref(genre.slug);
+  const href = hrefOverride ?? genrePageHref(genre.slug);
   const posters = deckPosters(genre.posters);
 
   return (
