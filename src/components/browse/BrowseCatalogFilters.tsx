@@ -5,7 +5,12 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Input, Button, Select, SelectItem, Chip } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
-import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from '@/lib/tmdbGenres';
+import {
+  IMDB_GENRES,
+  imdbGenreSlugFromBrowseParam,
+} from '@/lib/imdbGenres.js';
+
+type ImdbGenre = { slug: string; label: string };
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title A-Z' },
@@ -54,7 +59,7 @@ function yearChoices() {
 }
 
 type BrowseCatalogFiltersProps = {
-  mode: 'movie' | 'tv';
+  mode: 'movie' | 'tv' | 'kdrama' | 'anime';
   total: number;
   loading: boolean;
 };
@@ -70,7 +75,8 @@ export default function BrowseCatalogFilters({
 
   const rawSort = searchParams.get('sort_by') || 'title';
   const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort) ? rawSort : 'title';
-  const genre = searchParams.get('genre') || '';
+  const rawGenre = searchParams.get('genre') || '';
+  const genre = imdbGenreSlugFromBrowseParam(rawGenre) ?? rawGenre;
   const yearMin = searchParams.get('year_min') || '';
   const yearMax = searchParams.get('year_max') || '';
   const qUrl = searchParams.get('q') || '';
@@ -87,10 +93,14 @@ export default function BrowseCatalogFilters({
     []
   );
 
-  const genreItems: SelectRow[] = useMemo(() => {
-    const list = mode === 'movie' ? TMDB_MOVIE_GENRES : TMDB_TV_GENRES;
-    return list.map((g) => ({ id: String(g.id), label: g.name }));
-  }, [mode]);
+  const genreItems: SelectRow[] = useMemo(
+    () =>
+      (IMDB_GENRES as ImdbGenre[]).map((g) => ({
+        id: g.slug,
+        label: g.label,
+      })),
+    []
+  );
 
   const yearItems: SelectRow[] = useMemo(
     () => years.map((y) => ({ id: y, label: y })),
@@ -108,6 +118,14 @@ export default function BrowseCatalogFilters({
     },
     [pathname, router, searchParams]
   );
+
+  useEffect(() => {
+    if (!rawGenre) return;
+    const normalized = imdbGenreSlugFromBrowseParam(rawGenre);
+    if (normalized && normalized !== rawGenre) {
+      mergeParams({ genre: normalized, page: '1' });
+    }
+  }, [rawGenre, mergeParams]);
 
   const hasActiveFilters =
     Boolean(genre) || Boolean(yearMin) || Boolean(yearMax) || Boolean(qUrl.trim());

@@ -25,6 +25,7 @@ export type CatalogMediaPanelProps = {
   genres: CatalogGenre[];
   infoLines: CatalogInfoLine[];
   links: CatalogDetailLink[];
+  genreBrowseBase?: string;
 };
 
 function formatStatusDisplay(
@@ -110,6 +111,7 @@ export default function CatalogMediaPanel({
   genres,
   infoLines,
   links,
+  genreBrowseBase,
 }: CatalogMediaPanelProps) {
   const ratingLabel =
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
@@ -197,6 +199,7 @@ export default function CatalogMediaPanel({
           genres={genres}
           infoLines={infoLines}
           links={links}
+          genreBrowseBase={genreBrowseBase}
         />
       </div>
     </section>

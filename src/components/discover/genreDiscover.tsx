@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/carousel";
 
 type GenreRow = {
-  id: number;
+  slug: string;
   name: string;
   count: number;
   posters: string[];
@@ -28,32 +28,31 @@ const EMPTY: PopularGenresPayload = { movies: [], tv: [] };
 /** Muted gradient per genre (full class strings for Tailwind). */
 const GENRE_COLORS: Record<string, string> = {
   Action: "from-red-400 to-rose-500",
-  "Action & Adventure": "from-red-400 to-orange-500",
   Adventure: "from-orange-300 to-amber-500",
   Animation: "from-sky-300 to-blue-500",
+  Biography: "from-amber-400 to-yellow-600",
   Comedy: "from-amber-300 to-orange-500",
   Crime: "from-zinc-500 to-slate-600",
   Documentary: "from-teal-400 to-emerald-500",
   Drama: "from-indigo-400 to-violet-500",
   Family: "from-green-400 to-emerald-500",
   Fantasy: "from-violet-400 to-purple-500",
+  "Film-Noir": "from-neutral-700 to-zinc-800",
+  "Game-Show": "from-fuchsia-400 to-purple-500",
   History: "from-amber-500 to-orange-600",
   Horror: "from-neutral-600 to-zinc-700",
   Music: "from-pink-300 to-fuchsia-500",
+  Musical: "from-rose-400 to-pink-500",
   Mystery: "from-purple-500 to-indigo-600",
+  News: "from-blue-500 to-sky-600",
+  "Reality-TV": "from-fuchsia-400 to-pink-500",
   Romance: "from-rose-300 to-pink-500",
-  "Science Fiction": "from-cyan-400 to-blue-500",
-  "Sci-Fi & Fantasy": "from-cyan-400 to-blue-500",
-  "TV Movie": "from-blue-400 to-indigo-500",
+  "Sci-Fi": "from-cyan-400 to-blue-500",
+  Sport: "from-lime-400 to-green-500",
+  "Talk-Show": "from-emerald-400 to-teal-500",
   Thriller: "from-red-500 to-rose-600",
   War: "from-stone-400 to-stone-600",
-  "War & Politics": "from-stone-400 to-stone-600",
   Western: "from-orange-500 to-amber-600",
-  Kids: "from-lime-400 to-green-500",
-  News: "from-blue-500 to-sky-600",
-  Reality: "from-fuchsia-400 to-pink-500",
-  Soap: "from-rose-400 to-red-500",
-  Talk: "from-emerald-400 to-teal-500",
 };
 
 const FALLBACK_COLORS = [
@@ -77,10 +76,10 @@ function posterUrl(path: string) {
   return /^https?:\/\//i.test(path) ? path : `${TMDB_IMG}${path}`;
 }
 
-function genreBrowseHref(mode: Mode, genreId: number) {
+function genreBrowseHref(mode: Mode, slug: string) {
   const base = mode === "movie" ? "/movies/all" : "/shows/all";
   const params = new URLSearchParams({
-    genre: String(genreId),
+    genre: slug,
     sort_by: "popularity",
   });
   return `${base}?${params.toString()}`;
@@ -114,7 +113,7 @@ function GenreTile({
   mode: Mode;
   colorClass: string;
 }) {
-  const href = genreBrowseHref(mode, genre.id);
+  const href = genreBrowseHref(mode, genre.slug);
   const posters = deckPosters(genre.posters);
 
   return (
@@ -240,7 +239,7 @@ export default function GenreDiscover() {
           <CarouselContent className="-ml-3">
             {rows.map((genre, i) => (
               <CarouselItem
-                key={`${mode}-${genre.id}`}
+                key={`${mode}-${genre.slug}`}
                 className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
               >
                 <GenreTile

@@ -159,7 +159,7 @@ async function fetchOmdb(apiKey, params) {
   return payload;
 }
 
-function buildSetPayload(doc, omdb) {
+function buildSetPayload(doc, omdb, imdbHelpers) {
   const set = {};
   const unset = {};
 
@@ -169,7 +169,6 @@ function buildSetPayload(doc, omdb) {
   const runtimeSeconds = parseRuntimeSeconds(omdb.Runtime);
   const voteAverage = parseNumber(omdb.imdbRating);
   const seasonAmount = parseNumber(omdb.totalSeasons);
-  const genreIds = mapOmdbGenresToTmdbIds(omdb.Genre, doc.type);
 
   if (title) {
     if (doc.type === "movie") set.title = title;
@@ -182,8 +181,6 @@ function buildSetPayload(doc, omdb) {
   if (runtimeSeconds != null) set.runtimeSeconds = runtimeSeconds;
   if (voteAverage != null) set.vote_average = voteAverage;
   if (doc.type === "tv" && seasonAmount != null) set.season_amount = seasonAmount;
-
-  if (genreIds.length > 0) set.genre_ids = genreIds;
 
   const overview = typeof omdb.Plot === "string" && omdb.Plot !== "N/A" ? omdb.Plot.trim() : "";
   if (overview) set.overview = overview;
@@ -210,6 +207,17 @@ function buildSetPayload(doc, omdb) {
   };
 
   set.omdb = details;
+
+  const merged = { ...doc, ...set };
+  const imdb_genres = imdbHelpers.imdbGenresForDoc(merged);
+  if (imdb_genres.length > 0) set.imdb_genres = imdb_genres;
+
+  if (imdbHelpers.isKdramaDoc(merged)) {
+    Object.assign(set, imdbHelpers.kdramaTagFields(merged));
+  }
+
+  unset.genre_ids = "";
+  unset.genres = "";
 
   if (!released) {
     if (doc.type === "movie") unset.release_date = "";
@@ -257,6 +265,8 @@ async function resolveOmdbForDoc(apiKey, doc) {
 
 async function run() {
   loadEnvLocal();
+
+  const imdbHelpers = await import("../src/lib/imdbGenres.js");
 
   const mongoUri = process.env.MONGODB_URI;
   const omdbApiKey = process.env.OMDB_API_KEY || process.env.NEXT_PUBLIC_OMDB_API_KEY;
@@ -347,7 +357,7 @@ async function run() {
         }
 
         matched++;
-        const { set, unset } = buildSetPayload(doc, resolved.data);
+        const { set, unset } = buildSetPayload(doc, resolved.data, imdbHelpers);
         const hasSetChanges = hasAnyChanges(doc, set);
         const hasUnset = Object.keys(unset).length > 0;
         const shouldWrite = hasSetChanges || hasUnset;

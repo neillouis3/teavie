@@ -13,7 +13,9 @@ import {
   Location01Icon,
 } from "@hugeicons/core-free-icons";
 
-export type CatalogGenre = { id: number; name: string };
+import { imdbGenreSlugFromLabel } from "@/lib/imdbGenres";
+
+export type CatalogGenre = { name: string; slug: string };
 
 export type CatalogInfoLine = {
   icon: IconSvgElement;
@@ -31,13 +33,21 @@ type CatalogDetailColumnsProps = {
   genres: CatalogGenre[];
   infoLines: CatalogInfoLine[];
   links: CatalogDetailLink[];
+  /** When set, genre chips link to this browse base (e.g. `/kdrama/all`). */
+  genreBrowseBase?: string;
   className?: string;
 };
 
-function genreBrowseHref(mediaType: "movie" | "tv", genreId: number) {
-  const base = mediaType === "movie" ? "/movies/all" : "/shows/all";
+function genreBrowseHref(
+  mediaType: "movie" | "tv",
+  slug: string,
+  genreBrowseBase?: string
+) {
+  const base =
+    genreBrowseBase ??
+    (mediaType === "movie" ? "/movies/all" : "/shows/all");
   const params = new URLSearchParams({
-    genre: String(genreId),
+    genre: slug,
     sort_by: "popularity",
   });
   return `${base}?${params.toString()}`;
@@ -56,10 +66,11 @@ export default function CatalogDetailColumns({
   genres,
   infoLines,
   links,
+  genreBrowseBase,
   className = "",
 }: CatalogDetailColumnsProps) {
   const sortedGenres = [...genres]
-    .filter((g) => g?.name && Number.isFinite(g.id))
+    .filter((g) => g?.name && g?.slug)
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 
   const infoItems = infoLines.filter((line) => String(line?.label ?? "").trim());
@@ -75,8 +86,8 @@ export default function CatalogDetailColumns({
           {sortedGenres.length > 0 ? (
             sortedGenres.map((genre) => (
               <Link
-                key={genre.id}
-                href={genreBrowseHref(mediaType, genre.id)}
+                key={genre.slug}
+                href={genreBrowseHref(mediaType, genre.slug, genreBrowseBase)}
                 className="inline-flex max-w-full"
               >
                 <Chip
@@ -269,4 +280,33 @@ export function buildShowInfoLines(show: {
   if (year) lines.push({ icon: Calendar03Icon, label: `Since ${year}` });
 
   return lines;
+}
+
+/** Map IMDb labels or legacy `{ name }` objects to browse chips. */
+export function catalogGenresForDisplay(
+  source: { name?: string }[] | string[] | null | undefined
+): CatalogGenre[] {
+  if (!Array.isArray(source) || source.length === 0) return [];
+
+  if (typeof source[0] === "string") {
+    return (source as string[])
+      .map((label) => String(label).trim())
+      .filter(Boolean)
+      .map((name) => ({
+        name,
+        slug:
+          imdbGenreSlugFromLabel(name) ??
+          name.toLowerCase().replace(/\s+/g, "-"),
+      }));
+  }
+
+  return (source as { name?: string }[])
+    .map((g) => String(g?.name ?? "").trim())
+    .filter(Boolean)
+    .map((name) => ({
+      name,
+      slug:
+        imdbGenreSlugFromLabel(name) ??
+        name.toLowerCase().replace(/\s+/g, "-"),
+    }));
 }

@@ -21,6 +21,7 @@ import {
 } from "@/lib/watchProgress";
 import {
   buildShowInfoLines,
+  catalogGenresForDisplay,
   type CatalogDetailLink,
 } from "@/components/ui/catalogDetailColumns";
 import CatalogMediaPanel, {
@@ -45,6 +46,7 @@ interface Show {
   vote_average: number;
   status: string;
   genres: { id: number; name: string }[];
+  imdb_genres?: string[];
   origin_country?: string[];
   production_countries?: { iso_3166_1?: string; name?: string }[];
   production_companies?: { id?: number; name?: string }[];
@@ -58,6 +60,8 @@ interface Show {
   number_of_episodes?: number;
   seasons?: Season[];
   is_anime?: boolean;
+  is_kdrama?: boolean;
+  catalog_categories?: string[];
   anilist_id?: number | null;
   mal_id?: number | null;
   external_ids?: {
@@ -86,7 +90,6 @@ interface Show {
   } | null;
 }
 
-/** AniList media id stored on catalog docs (root or nested). */
 function catalogAnilistId(
   doc: Pick<Show, "anilist_id" | "anilist"> | null | undefined
 ): number | null {
@@ -96,8 +99,18 @@ function catalogAnilistId(
   return null;
 }
 
+function isKdramaShow(show: Show | null | undefined): boolean {
+  if (!show || show.is_anime) return false;
+  if (show.is_kdrama === true) return true;
+  if (Array.isArray(show.catalog_categories) && show.catalog_categories.includes("kdrama")) {
+    return true;
+  }
+  const ko = show.original_language === "ko";
+  const kr = Array.isArray(show.origin_country) && show.origin_country.includes("KR");
+  return ko && kr;
+}
+
 /**
- * Catalog anime pages use `/shows/anime_{malId}` (see `import-anime-to-tv.js`) — that number is MAL id,
  * not AniList id. Use it when `anilist_id` is missing on the merged show.
  */
 function malIdFromAnimeCatalogRouteId(routeId: string): number | null {
@@ -569,6 +582,12 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (fallbackShow?.external_ids) {
           data.external_ids = { ...fallbackShow.external_ids, ...data.external_ids };
         }
+        if (
+          Array.isArray(fallbackShow?.imdb_genres) &&
+          fallbackShow.imdb_genres.length > 0
+        ) {
+          data.imdb_genres = fallbackShow.imdb_genres;
+        }
 
         const tmdbSeasonsPlayback =
           data.is_anime && Array.isArray(data.seasons)
@@ -1034,9 +1053,12 @@ export default function ShowTemplate({ id }: { id: string }) {
                 overview={show.overview}
                 tagline={show.tagline}
                 mediaType="tv"
-                genres={show.genres ?? []}
+                genres={catalogGenresForDisplay(
+                  show.imdb_genres ?? show.genres
+                )}
                 infoLines={buildShowInfoLines(show)}
                 links={showDetailLinks(show)}
+                genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
                 seasonEpisodeSection={
                   !isAnimeMovie ? (
                     <div className="flex flex-col gap-4">

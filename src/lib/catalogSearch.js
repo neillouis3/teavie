@@ -1,34 +1,39 @@
 /**
  * Search-algo helpers shared by /api/search.
  *
- * The catalog (`teavie.content`) only stores title/name, overview, tagline and
- * genres — there is no cast data. So:
- *  - genre + keyword matching happen directly against catalog fields, and
- *  - actor matching is resolved through TMDB (person search + credits) and then
- *    mapped back onto catalog documents by their TMDB id.
+ * Genre matching uses canonical `imdb_genres` on catalog docs (same labels for
+ * movies and TV). Actor matching still resolves through TMDB credits.
  */
 
-import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from "@/lib/tmdbGenres";
+import { IMDB_GENRES } from "@/lib/imdbGenres";
 
-const ALL_GENRES = [...TMDB_MOVIE_GENRES, ...TMDB_TV_GENRES];
+const KDrama_QUERY_ALIASES = [
+  "kdrama",
+  "k-drama",
+  "k drama",
+  "korean drama",
+  "korean dramas",
+  "k-dramas",
+  "kdramas",
+];
 
-/** Common spoken aliases -> TMDB genre ids (movie + tv). */
+/** Common spoken aliases -> IMDb genre labels. */
 const GENRE_ALIASES = {
-  "sci fi": [878, 10765],
-  scifi: [878, 10765],
-  "sci-fi": [878, 10765],
-  "science fiction": [878, 10765],
-  "rom com": [10749, 35],
-  romcom: [10749, 35],
-  "romantic comedy": [10749, 35],
-  cartoon: [16],
-  cartoons: [16],
-  anime: [16],
-  docs: [99],
-  documentaries: [99],
-  scary: [27],
-  superhero: [28, 878],
-  superheroes: [28, 878],
+  "sci fi": ["Sci-Fi"],
+  scifi: ["Sci-Fi"],
+  "sci-fi": ["Sci-Fi"],
+  "science fiction": ["Sci-Fi"],
+  "rom com": ["Romance", "Comedy"],
+  romcom: ["Romance", "Comedy"],
+  "romantic comedy": ["Romance", "Comedy"],
+  cartoon: ["Animation"],
+  cartoons: ["Animation"],
+  anime: ["Animation"],
+  docs: ["Documentary"],
+  documentaries: ["Documentary"],
+  scary: ["Horror"],
+  superhero: ["Action", "Sci-Fi"],
+  superheroes: ["Action", "Sci-Fi"],
 };
 
 /** TV credit genres that are mostly guest spots, not real roles (talk/news/reality). */
@@ -46,54 +51,59 @@ function isExcludedTvCredit(item) {
   return genreIds.some((g) => ACTOR_TV_EXCLUDE_GENRES.has(g));
 }
 
+function genreNameMatches(norm, tokens, name) {
+  const lowered = name.toLowerCase();
+  const nameTokens = tokenize(lowered);
+  if (norm === lowered) return true;
+  if (nameTokens.length > 1 && nameTokens.every((t) => tokens.includes(t)))
+    return true;
+  if (nameTokens.length === 1 && lowered.length >= 4 && tokens.includes(lowered))
+    return true;
+  if (
+    nameTokens.length > 1 &&
+    nameTokens[0].length >= 3 &&
+    tokens.includes(nameTokens[0])
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Detect whether a query names a genre (e.g. "comedy", "sci-fi", "best action").
- * Conservative on purpose so titles like "War of the Worlds" don't trigger a
- * whole-genre dump.
  * @param {string} q
- * @returns {{ ids: number[]; names: string[] }}
+ * @returns {{ imdbLabels: string[]; kdrama: boolean }}
  */
 export function detectGenres(q) {
   const norm = String(q || "").trim().toLowerCase();
-  if (!norm) return { ids: [], names: [] };
+  if (!norm) return { imdbLabels: [], kdrama: false };
 
   const tokens = tokenize(norm);
-  const ids = new Set();
-  const names = new Set();
+  const imdbLabels = new Set();
 
-  for (const [alias, gids] of Object.entries(GENRE_ALIASES)) {
+  for (const [alias, labels] of Object.entries(GENRE_ALIASES)) {
     const aliasTokens = alias.split(" ");
     const hit =
       norm === alias ||
       (aliasTokens.length === 1 && tokens.includes(alias)) ||
       (aliasTokens.length > 1 && aliasTokens.every((t) => tokens.includes(t)));
-    if (hit) for (const gid of gids) ids.add(gid);
+    if (hit) for (const label of labels) imdbLabels.add(label);
   }
 
-  for (const g of ALL_GENRES) {
-    const name = g.name.toLowerCase();
-    const nameTokens = tokenize(name);
-    let hit = false;
-    if (norm === name) hit = true;
-    else if (nameTokens.length > 1 && nameTokens.every((t) => tokens.includes(t)))
-      hit = true;
-    else if (nameTokens.length === 1 && name.length >= 4 && tokens.includes(name))
-      hit = true;
-    // Single-word query naming the lead word of a combined genre, e.g.
-    // "war" -> "War & Politics", "action" -> "Action & Adventure".
-    else if (
-      nameTokens.length > 1 &&
-      nameTokens[0].length >= 3 &&
-      tokens.includes(nameTokens[0])
-    )
-      hit = true;
-    if (hit) {
-      ids.add(g.id);
-      names.add(g.name);
+  for (const g of IMDB_GENRES) {
+    if (genreNameMatches(norm, tokens, g.label)) {
+      imdbLabels.add(g.label);
+    }
+    if (norm === g.slug || tokens.includes(g.slug)) {
+      imdbLabels.add(g.label);
     }
   }
 
-  return { ids: [...ids], names: [...names] };
+  const kdrama = KDrama_QUERY_ALIASES.some(
+    (alias) => norm === alias || (alias.includes(" ") && norm.includes(alias))
+  );
+
+  return { imdbLabels: [...imdbLabels], kdrama };
 }
 
 async function fetchWithTimeout(url, opts, ms) {
@@ -108,8 +118,6 @@ async function fetchWithTimeout(url, opts, ms) {
 
 /**
  * Resolve a query to TMDB ids of titles the matched actor(s) appear in.
- * Returns empty arrays when the query doesn't look like a person or TMDB is
- * unavailable, so callers can always merge the result safely.
  * @param {string} q
  * @param {string} token TMDB bearer token
  * @returns {Promise<{ movieIds: number[]; tvIds: number[]; people: {id:number;name:string}[] }>}
@@ -172,7 +180,6 @@ export async function fetchActorCreditIds(q, token, { timeoutMs = 2500 } = {}) {
     }
   }
 
-  // Fuller credit list for the strongest match.
   try {
     const top = candidates[0];
     const res = await fetchWithTimeout(

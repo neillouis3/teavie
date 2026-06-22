@@ -68,11 +68,13 @@ export default function SideBar() {
           ? "movies"
           : pathname.startsWith("/anime")
             ? "anime"
-            : pathname.startsWith("/shows")
-              ? "shows"
-              : pathname.startsWith("/sports")
-                ? "sports"
-                : null;
+            : pathname.startsWith("/kdrama")
+              ? "kdrama"
+              : pathname.startsWith("/shows")
+                ? "shows"
+                : pathname.startsWith("/sports")
+                  ? "sports"
+                  : null;
 
   const settingsActive = pathname.startsWith("/settings");
 

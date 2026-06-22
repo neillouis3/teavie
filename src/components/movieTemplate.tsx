@@ -5,6 +5,7 @@ import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
 import {
   buildMovieInfoLines,
+  catalogGenresForDisplay,
   type CatalogDetailLink,
 } from './ui/catalogDetailColumns';
 import CatalogMediaPanel, {
@@ -142,7 +143,10 @@ export default function MovieTemplate({ id }: { id: string }) {
                 overview={movie.overview}
                 tagline={movie.tagline}
                 mediaType="movie"
-                genres={movie.genres ?? []}
+                genres={catalogGenresForDisplay(
+                  (movie as { imdb_genres?: string[] }).imdb_genres ??
+                    movie.genres
+                )}
                 infoLines={buildMovieInfoLines(movie)}
                 links={movieDetailLinks(movie)}
               />

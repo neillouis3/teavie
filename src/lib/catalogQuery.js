@@ -3,6 +3,10 @@
  */
 
 import { BLOCKED_MOVIE_PRODUCTION_COMPANIES } from "./tmdbMovieContentPolicy.js";
+import {
+  imdbGenreLabelFromBrowseParam,
+  imdbGenreMatchConditions,
+} from "./imdbGenres.js";
 
 /** UTC calendar day YYYY-MM-DD for catalog filters. */
 export function catalogTodayIsoUtc() {
@@ -231,6 +235,47 @@ export function catalogTmdbTvGenreMatchClause(tmdbGenreId) {
 }
 
 /**
+ * K-Drama browse: Korean TV (non-anime), tagged or inferred from origin + language.
+ * @returns {Record<string, unknown>}
+ */
+export function catalogKdramaClause() {
+  return {
+    $or: [
+      { catalog_categories: "kdrama" },
+      { is_kdrama: true },
+      {
+        $and: [
+          { type: "tv" },
+          catalogNotAnimeCatalogIdMongoExpr(),
+          {
+            $or: [
+              { origin_country: "KR" },
+              { "omdb.country": { $regex: "Korea", $options: "i" } },
+            ],
+          },
+          {
+            $or: [
+              { original_language: "ko" },
+              { "omdb.language": { $regex: "Korean", $options: "i" } },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * @param {string | null | undefined} slug IMDb genre slug (e.g. `drama`, `romance`)
+ * @returns {Record<string, unknown> | null}
+ */
+export function catalogImdbGenreMatchClause(slug) {
+  const label = imdbGenreLabelFromBrowseParam(slug);
+  if (!label) return null;
+  return imdbGenreMatchConditions(label);
+}
+
+/**
  * @param {URLSearchParams} searchParams
  * @param {{ type: "movie" | "tv"; dateField: string; animeMultilingualTitleSearch?: boolean }} opts
  */
@@ -241,9 +286,13 @@ export function buildCatalogFilter(
   /** @type {Record<string, unknown>} */
   const filter = { type };
 
+  /** @type {Record<string, unknown>[]} */
+  const extra = [];
+
   const genre = searchParams.get("genre")?.trim();
-  if (genre && /^\d+$/.test(genre)) {
-    filter.genre_ids = parseInt(genre, 10);
+  if (genre) {
+    const imdbClause = catalogImdbGenreMatchClause(genre);
+    if (imdbClause) extra.push(imdbClause);
   }
 
   const yearMin = searchParams.get("year_min")?.trim();
@@ -268,10 +317,55 @@ export function buildCatalogFilter(
   }
 
   if (type === "movie") {
-    return { $and: [filter, catalogMoviePolicyClause()] };
+    extra.unshift(filter, catalogMoviePolicyClause());
+    return extra.length > 2 ? { $and: extra } : { $and: [filter, catalogMoviePolicyClause()] };
+  }
+
+  if (extra.length > 0) {
+    return { $and: [filter, ...extra] };
   }
 
   return filter;
+}
+
+/**
+ * K-Drama browse filters (IMDb genre slugs + year + title search).
+ * @param {URLSearchParams} searchParams
+ */
+export function buildKdramaCatalogFilter(searchParams) {
+  /** @type {Record<string, unknown>[]} */
+  const clauses = [catalogKdramaClause()];
+
+  const genre = searchParams.get("genre")?.trim();
+  if (genre) {
+    const imdbClause = catalogImdbGenreMatchClause(genre);
+    if (imdbClause) clauses.push(imdbClause);
+  }
+
+  const yearMin = searchParams.get("year_min")?.trim();
+  const yearMax = searchParams.get("year_max")?.trim();
+  const yMinOk = yearMin && /^\d{4}$/.test(yearMin);
+  const yMaxOk = yearMax && /^\d{4}$/.test(yearMax);
+  if (yMinOk || yMaxOk) {
+    /** @type {Record<string, unknown>} */
+    const dateRange = {};
+    if (yMinOk) dateRange.$gte = `${yearMin}-01-01`;
+    if (yMaxOk) dateRange.$lte = `${yearMax}-12-31`;
+    clauses.push({ first_air_date: dateRange });
+  }
+
+  const q = searchParams.get("q")?.trim();
+  if (q && q.length > 0) {
+    const safe = escapeRegex(q);
+    clauses.push({
+      $or: [
+        { title: { $regex: safe, $options: "i" } },
+        { name: { $regex: safe, $options: "i" } },
+      ],
+    });
+  }
+
+  return { $and: clauses };
 }
 
 /**

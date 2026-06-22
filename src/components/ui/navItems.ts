@@ -6,6 +6,7 @@ import {
   OlympicTorchIcon,
   PopcornIcon,
   OrangeIcon,
+  LoveKoreanFingerIcon,
 } from '@hugeicons/core-free-icons';
 
 export type NavIcon = IconSvgElement;
@@ -40,6 +41,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     title: "Categories",
     items: [
       { key: "anime", label: "Anime", href: "/anime/all", icon: OrangeIcon },
+      { key: "kdrama", label: "Korean Drama", href: "/kdrama", icon: LoveKoreanFingerIcon },
       { key: "sports", label: "Sports", href: "/sports", icon: OlympicTorchIcon },
     ],
   },
