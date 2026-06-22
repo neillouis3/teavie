@@ -19,6 +19,12 @@ import {
   loadWatchProgress,
   saveWatchProgress,
 } from "@/lib/watchProgress";
+import CatalogDetailColumns, {
+  countryNamesFromCodes,
+  languageDisplayName,
+  sortedCompanyNames,
+  Link01Icon,
+} from "@/components/ui/catalogDetailColumns";
 
 interface Season {
   season_number: number;
@@ -37,6 +43,12 @@ interface Show {
   status: string;
   genres: { id: number; name: string }[];
   origin_country?: string[];
+  production_countries?: { iso_3166_1?: string; name?: string }[];
+  production_companies?: { id?: number; name?: string }[];
+  networks?: { id?: number; name?: string }[];
+  studios?: { id?: number; name?: string }[];
+  original_language?: string;
+  homepage?: string | null;
   tagline?: string | null;
   number_of_seasons?: number;
   number_of_episodes?: number;
@@ -48,6 +60,7 @@ interface Show {
     mal_id?: number | null;
     anilist_id?: number | null;
     tmdb_id?: number | string | null;
+    imdb_id?: string | null;
   } | null;
   /** TMDB season layout: when set on anime, picker uses these counts and embed uses same S/E as the UI. */
   tmdb_playback_seasons?: Season[];
@@ -151,6 +164,60 @@ function episodeOffsetBeforeSeason(seasons: Season[] | undefined, seasonNum: num
   return list
     .filter((s) => s.season_number < seasonNum)
     .reduce((acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0), 0);
+}
+
+function showDetailLines(show: Show): string[] {
+  const lines: string[] = [];
+  const companies = sortedCompanyNames(show.production_companies);
+  if (companies.length > 0) {
+    lines.push(...companies);
+  } else {
+    const networks = (show.networks ?? [])
+      .map((n) => String(n?.name ?? "").trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    lines.push(...networks.slice(0, 3));
+    const studios = (show.studios ?? [])
+      .map((s) => String(s?.name ?? "").trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    if (studios.length > 0) lines.push(...studios.slice(0, 3));
+  }
+
+  const prodNames = (show.production_countries ?? [])
+    .map((p) => String(p?.name ?? "").trim())
+    .filter(Boolean);
+  if (prodNames.length > 0) {
+    lines.push([...new Set(prodNames)].join(", "));
+  } else {
+    const country = countryNamesFromCodes(show.origin_country);
+    if (country) lines.push(country);
+  }
+
+  const language = languageDisplayName(show.original_language);
+  if (language) lines.push(language);
+  return lines;
+}
+
+function showDetailLinks(show: Show) {
+  const links: { href: string; label: string; icon: typeof Link01Icon }[] = [];
+  const imdbId = show.external_ids?.imdb_id;
+  if (imdbId && /^tt\d+/i.test(String(imdbId))) {
+    links.push({
+      href: `https://www.imdb.com/title/${imdbId}/`,
+      label: "IMDb",
+      icon: Link01Icon,
+    });
+  }
+  const homepage = String(show.homepage ?? "").trim();
+  if (homepage) {
+    links.push({ href: homepage, label: "Official site", icon: Link01Icon });
+  }
+  const anilistUrl = String(show.anilist?.siteUrl ?? "").trim();
+  if (anilistUrl) {
+    links.push({ href: anilistUrl, label: "AniList", icon: Link01Icon });
+  }
+  return links;
 }
 
 function catalogTodayYmdUtc(): string {
@@ -1265,24 +1332,13 @@ export default function ShowTemplate({ id }: { id: string }) {
                         {show.tagline ? (
                           <p className="mt-2 text-xs text-default-500">&ldquo;{show.tagline}&rdquo;</p>
                         ) : null}
-                        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-                          <div>
-                            <dt className="font-medium text-default-500">Country</dt>
-                            <dd className="mt-0.5 text-foreground">
-                              {show.origin_country?.join(", ") || "N/A"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="font-medium text-default-500">Genre</dt>
-                            <dd className="mt-0.5 text-foreground">
-                              {show.genres?.map((g) => g.name).join(", ") ?? "N/A"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="font-medium text-default-500">Year</dt>
-                            <dd className="mt-0.5 text-foreground">{year}</dd>
-                          </div>
-                        </dl>
+                        <CatalogDetailColumns
+                          className="mt-4"
+                          mediaType="tv"
+                          genres={show.genres ?? []}
+                          details={showDetailLines(show)}
+                          links={showDetailLinks(show)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1358,9 +1414,10 @@ function LoadingSkeleton() {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="space-y-1.5">
-                    <div className="h-2.5 w-12 rounded bg-default-200 animate-pulse" />
-                    <div className="h-4 w-20 rounded bg-default-200 animate-pulse" />
+                  <div key={i} className="space-y-2">
+                    <div className="h-3 w-20 rounded bg-default-200 animate-pulse" />
+                    <div className="h-6 w-24 rounded-full bg-default-200 animate-pulse" />
+                    <div className="h-6 w-28 rounded-full bg-default-200 animate-pulse" />
                   </div>
                 ))}
               </div>
