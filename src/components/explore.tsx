@@ -26,7 +26,7 @@ export default function Explore({
 }: ExploreProps) {
   return (
     <div className="flex w-full flex-col bg-background/92 dark:bg-background/88">
-      <Header pageName="Explore" />
+      <Header pageName="Discover" />
 
       {/* New & Upcoming Section */}
       <div className="mt-6 mb-4 flex h-fit w-full flex-col">
