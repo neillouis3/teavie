@@ -256,7 +256,7 @@ export function CatalogMediaPanelSkeleton({
       ) : null}
       <section className={DETAIL_META_CARD}>
         <div className={DETAIL_META_CARD_INNER}>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="space-y-2">
                 <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
