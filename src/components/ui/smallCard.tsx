@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { tmdbImageUrl } from '@/lib/tmdbImage';
 
 interface SmallCardProps {
   id: number | string;
@@ -33,14 +34,8 @@ export default function SmallCard({
   const typeLower = (type ?? '').toLowerCase();
   const runtimeMin =
     runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
-  const baseUrl = 'https://image.tmdb.org/t/p/';
-  const size = 'w500';
   const hasPoster = Boolean(posterPath?.trim());
-  const imageUrl = hasPoster
-    ? /^https?:\/\//i.test(posterPath)
-      ? posterPath
-      : `${baseUrl}${size}${posterPath}`
-    : '';
+  const imageUrl = tmdbImageUrl(posterPath);
   const defaultHref = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
   const resolvedHref = String(linkHref ?? '').trim() || defaultHref;
   const external = /^https?:\/\//i.test(resolvedHref);

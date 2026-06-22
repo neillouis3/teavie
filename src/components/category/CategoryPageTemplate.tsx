@@ -47,7 +47,7 @@ const EMPTY: CategoryDiscoverPayload = {
 const FEATURED_CARD_HEIGHT =
   "h-[min(38.5vh,364px)] sm:h-[min(43.4vh,406px)]";
 
-const TRENDING_SECTION_MIN_H = "min-h-[80vh]";
+const TRENDING_SECTION_MIN_H = "min-h-[52vh] sm:min-h-[62vh] lg:min-h-[80vh]";
 
 function itemYear(item: ContentItem) {
   const raw = item.release_date || item.first_air_date || "";

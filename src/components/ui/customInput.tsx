@@ -22,7 +22,7 @@ const inputClassNames = {
     "group-data-[focus=true]:bg-default-200/50",
     "dark:group-data-[focus=true]:bg-default/60",
     "!cursor-text",
-    "w-96",
+    "w-full max-w-sm",
   ],
 };
 

@@ -29,7 +29,7 @@ type CatalogRailProps = {
 };
 
 const CAROUSEL_ITEM_VERTICAL =
-  "basis-[38%] pl-3 sm:basis-[28%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
+  "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
 const CAROUSEL_ITEM_HORIZONTAL =
   "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 

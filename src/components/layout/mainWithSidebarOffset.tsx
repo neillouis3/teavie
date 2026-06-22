@@ -16,7 +16,7 @@ export default function MainWithSidebarOffset({
 
   return (
     <div
-      className={`relative z-10 min-h-screen w-full min-w-0 pt-14 transition-[padding-left] duration-200 ease-in-out lg:pt-0 ${
+      className={`relative z-10 min-h-screen w-full min-w-0 overflow-x-hidden pt-14 transition-[padding-left] duration-200 ease-in-out lg:pt-0 ${
         collapsed ? 'lg:pl-16' : 'lg:pl-64'
       }`}
     >

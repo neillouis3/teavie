@@ -12,7 +12,8 @@ import {
 import LargeCard from "@/components/ui/largeCard";
 import type { ContentItem } from "@/types/content";
 
-const TRENDING_CAROUSEL_H = "h-[calc(80vh-2rem)]";
+const TRENDING_CAROUSEL_H =
+  "h-[min(52vh,400px)] sm:h-[min(62vh,480px)] lg:h-[calc(80vh-2rem)]";
 
 const TRENDING_ARROW_CLASS =
   "top-1/2 z-20 h-10 w-10 -translate-y-1/2 border-none bg-black/45 text-white backdrop-blur-sm hover:bg-black/60 disabled:opacity-40";
@@ -74,9 +75,7 @@ export default function TrendingHeroViewer({
 
   return (
     <div
-      className={`flex w-full flex-col items-center ${TRENDING_CAROUSEL_H} ${
-        rounded ? "px-3 sm:px-4" : ""
-      }`}
+      className={`flex w-full flex-col items-center px-3 sm:px-4 ${TRENDING_CAROUSEL_H}`}
     >
       <div
         className={`h-full w-full ${rounded ? "overflow-hidden rounded-2xl" : ""}`}

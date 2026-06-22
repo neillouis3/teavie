@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Image } from "@heroui/react";
+import { tmdbImageUrlOr } from "@/lib/tmdbImage";
 
 interface SimilarCardProps {
   title: string;
@@ -26,14 +27,8 @@ export default function SimilarCard({
   backDropPath,
 }: SimilarCardProps) {
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
-  const baseUrl = 'https://image.tmdb.org/t/p/';
-  const size = 'w500';
 
-  const imageUrl = backDropPath
-    ? /^https?:\/\//i.test(backDropPath)
-      ? backDropPath
-      : `${baseUrl}${size}${backDropPath}`
-    : "/fallback.jpg"; // add fallback
+  const imageUrl = tmdbImageUrlOr(backDropPath, "/fallback.jpg");
 
   return (
     <Link href={type === 'tv' ? `/shows/${id}` : `/movies/${id}`}>
@@ -46,9 +41,9 @@ export default function SimilarCard({
             className="h-20 object-cover rounded-l-lg"
           />
         </div>
-        <div className="w-full flex flex-col justify-between rounded-r-lg group-hover:bg-success transition-colors duration-300 px-4 py-2">
-          <div className="h-fit">
-            <h1 className="text-gray-500 group-hover:text-main text-xs">
+        <div className="flex min-w-0 w-full flex-col justify-between rounded-r-lg px-3 py-2 group-hover:bg-success transition-colors duration-300 sm:px-4">
+          <div className="h-fit min-w-0">
+            <h1 className="truncate text-xs text-gray-500 group-hover:text-main">
                 {type === 'tv'
                 ? (() => {
                     const eps =
@@ -67,11 +62,9 @@ export default function SimilarCard({
             </h1>
 
           </div>
-          <div className="h-full flex flex-col justify-center ">
-            <h1 className="text-md group-hover:text-main">{title}</h1>
+          <div className="flex h-full min-w-0 flex-col justify-center">
+            <h1 className="line-clamp-2 text-sm group-hover:text-main sm:text-base">{title}</h1>
           </div>
-          
-          
         </div>
       </div>
     </Link>

@@ -35,6 +35,7 @@ import CatalogMediaPanel, {
 } from "@/components/ui/catalogMediaPanel";
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
 import { imdbGenresFromAnimeSources } from "@/lib/imdbGenres";
+import { tmdbImageUrl } from "@/lib/tmdbImage";
 
 interface Season {
   season_number: number;
@@ -402,8 +403,6 @@ async function fetchAnilistAndMerge(
 export type ShowServerKey = StreamServerId;
 
 export default function ShowTemplate({ id }: { id: string }) {
-  const baseUrl = "https://image.tmdb.org/t/p/";
-  const size = "w500";
   const { server } = useStreamingSource();
   const [show, setShow] = useState<Show | null>(null);
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
@@ -709,11 +708,7 @@ export default function ShowTemplate({ id }: { id: string }) {
     String(show.first_air_date).trim().length < 10 ||
     String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
   const canPlay = playerUsesTmdb && tmdbShowPremiered;
-  const imageUrl = show?.poster_path
-    ? /^https?:\/\//i.test(show.poster_path)
-      ? show.poster_path
-      : `${baseUrl}${size}${show.poster_path}`
-    : "";
+  const imageUrl = tmdbImageUrl(show?.poster_path);
   const title = show ? showDisplayTitle(show) : "";
 
   const animeHideSeasonRow =

@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
+import { tmdbImageUrlOr } from "@/lib/tmdbImage";
 
 type LargeCardProps = {
   id: number | string;
@@ -211,19 +212,8 @@ export default function LargeCard({
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const showRichOverlay = hero || richOverlay;
-  const baseUrl = "https://image.tmdb.org/t/p/";
-  const backdropSize = "w1280";
-  const posterSize = "w500";
 
-  const imageUrl = backdropPath
-    ? /^https?:\/\//i.test(backdropPath)
-      ? backdropPath
-      : `${baseUrl}${backdropSize}${backdropPath}`
-    : posterPath
-      ? /^https?:\/\//i.test(posterPath)
-        ? posterPath
-        : `${baseUrl}${posterSize}${posterPath}`
-      : "/placeholder.jpg";
+  const imageUrl = tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, "/placeholder.jpg"));
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
   const when =

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardBody, Chip } from '@heroui/react';
+import { tmdbImageUrl } from '@/lib/tmdbImage';
 
 export type HorizontalCatalogCardProps = {
   id: number | string;
@@ -17,10 +18,6 @@ export type HorizontalCatalogCardProps = {
   /** When set (e.g. external AniList URL), used instead of `/shows/` or `/movies/` */
   href?: string;
 };
-
-const BASE = 'https://image.tmdb.org/t/p/';
-const BACKDROP_SIZE = 'w1280';
-const POSTER_SIZE = 'w500';
 
 /**
  * Wide tile: backdrop/poster and title on bottom overlay (no corner meta pills).
@@ -44,15 +41,7 @@ export default function HorizontalCatalogCard({
 
   const backdrop = backdropPath?.trim();
   const poster = posterPath?.trim();
-  const src = backdrop
-    ? /^https?:\/\//i.test(backdrop)
-      ? backdrop
-      : `${BASE}${BACKDROP_SIZE}${backdrop}`
-    : poster
-      ? /^https?:\/\//i.test(poster)
-        ? poster
-        : `${BASE}${POSTER_SIZE}${poster}`
-      : null;
+  const src = tmdbImageUrl(backdrop) || tmdbImageUrl(poster) || null;
 
   return (
     <Link
