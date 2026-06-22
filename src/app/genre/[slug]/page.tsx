@@ -37,7 +37,7 @@ export default function GenreSlugPage() {
           <div className="px-3 pb-2 pt-5 sm:px-4 sm:pt-6.5">
             <div className="h-7 w-40 animate-pulse rounded-lg bg-default-200" />
           </div>
-          <div className="mx-auto max-w-6xl space-y-4 px-3 pb-12 pt-2 sm:px-4">
+          <div className="w-full space-y-4 px-3 pb-12 pt-2 sm:px-4">
             <div className="h-7 w-28 animate-pulse rounded-lg bg-default-200" />
             <div className="h-16 max-w-2xl animate-pulse rounded-lg bg-default-200" />
             <GridSkeleton />
