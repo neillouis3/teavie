@@ -60,7 +60,7 @@ export default function DiscoverHub() {
   const sectionMaxItems = horizontal ? 8 : 14;
 
   useEffect(() => {
-    document.title = "Discover - Teavie";
+    document.title = "Explore - Teavie";
   }, []);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function DiscoverHub() {
 
   return (
     <div className="bg-background flex w-full flex-col">
-      <Header pageName="Discover" />
+      <Header pageName="Explore" />
 
       <div className="mt-6 w-full px-3 sm:px-4">
         <GenreDiscover />
