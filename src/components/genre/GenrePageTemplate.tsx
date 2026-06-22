@@ -3,23 +3,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Button, Chip, Pagination } from '@heroui/react';
+import { Button, Chip } from '@heroui/react';
 import Header from '@/components/ui/header';
 import LargeCard from '@/components/ui/largeCard';
+import CatalogRail from '@/components/explore/catalogRail';
 import type { ContentItem } from '@/types/content';
 import { genrePageDescription } from '@/lib/genrePageCopy';
-import SmallCard from '@/components/ui/smallCard';
-import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
-import SmallCardLoading from '@/components/ui/smallCardLoading';
-import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
-import {
-  useCatalogCardStyle,
-  type CatalogCardLayoutMode,
-} from '@/contexts/catalogCardStyleContext';
-import {
-  CATALOG_GRID_HORIZONTAL_SEARCH,
-  CATALOG_GRID_VERTICAL_SEARCH,
-} from '@/lib/catalogGrid';
 
 export type GenrePageType = 'all' | 'movie' | 'tv';
 export type GenrePageSort = 'popular' | 'top_rated' | 'new';
@@ -30,21 +19,17 @@ const TYPE_OPTIONS: { key: GenrePageType; label: string }[] = [
   { key: 'tv', label: 'TV Shows' },
 ];
 
-const SORT_OPTIONS: { key: GenrePageSort; label: string }[] = [
-  { key: 'popular', label: 'Popular' },
-  { key: 'top_rated', label: 'Top rated' },
-  { key: 'new', label: 'New' },
+const RAIL_SECTIONS: { sort: GenrePageSort; title: string }[] = [
+  { sort: 'popular', title: 'Popular' },
+  { sort: 'top_rated', title: 'Top rated' },
+  { sort: 'new', title: 'New' },
 ];
+
+const RAIL_LIMIT = 24;
 
 /** Match Explore trending hero overlay; tuned for two-up featured row. */
 const FEATURED_CARD_HEIGHT =
   'h-[min(310px,40vh)] sm:h-[min(365px,44vh)]';
-
-function gridClass(layoutMode: CatalogCardLayoutMode) {
-  return layoutMode === 'horizontal'
-    ? CATALOG_GRID_HORIZONTAL_SEARCH
-    : CATALOG_GRID_VERTICAL_SEARCH;
-}
 
 function itemYear(item: ContentItem) {
   const raw = item.release_date || item.first_air_date || '';
@@ -54,6 +39,16 @@ function itemYear(item: ContentItem) {
 function featuredReleaseIso(item: ContentItem) {
   const raw = item.release_date ?? item.first_air_date ?? '';
   return raw.length >= 10 ? raw.slice(0, 10) : null;
+}
+
+function itemKey(item: ContentItem) {
+  return `${item.type ?? 'movie'}-${item.id}`;
+}
+
+function dedupeFeatured(rail: ContentItem[], featured: ContentItem[]) {
+  if (featured.length === 0) return rail;
+  const featuredKeys = new Set(featured.map(itemKey));
+  return rail.filter((item) => !featuredKeys.has(itemKey(item)));
 }
 
 function FeaturedSkeleton() {
@@ -69,73 +64,13 @@ function FeaturedSkeleton() {
   );
 }
 
-function GenreCardGrid({
-  items,
-  layoutMode,
-}: {
-  items: ContentItem[];
-  layoutMode: CatalogCardLayoutMode;
-}) {
-  const horizontal = layoutMode === 'horizontal';
+type GenreRails = Record<GenrePageSort, ContentItem[]>;
 
-  return (
-    <div className={gridClass(layoutMode)}>
-      {items.map((item, index) => {
-        const title = item.title || item.name || 'Untitled';
-        const id = item.id;
-        const type = item.type || 'movie';
-        const poster = item.poster_path || '';
-
-        if (horizontal) {
-          return (
-            <HorizontalCatalogCard
-              key={`${type}-${item.id}-${index}`}
-              id={id}
-              title={title}
-              year={itemYear(item)}
-              type={type}
-              posterPath={poster}
-              backdropPath={item.backdrop_path || ''}
-            />
-          );
-        }
-
-        return (
-          <SmallCard
-            key={`${type}-${item.id}-${index}`}
-            id={id}
-            title={title}
-            year={itemYear(item)}
-            type={type}
-            runtimeSeconds={item.runtimeSeconds ?? undefined}
-            seasonAmount={item.season_amount ?? 0}
-            numberOfEpisodes={item.number_of_episodes ?? undefined}
-            posterPath={poster}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function GenreCardGridSkeleton({
-  count,
-  layoutMode,
-}: {
-  count: number;
-  layoutMode: CatalogCardLayoutMode;
-}) {
-  const horizontal = layoutMode === 'horizontal';
-  const S = horizontal ? HorizontalCatalogCardLoading : SmallCardLoading;
-
-  return (
-    <div className={gridClass(layoutMode)}>
-      {Array.from({ length: count }).map((_, i) => (
-        <S key={i} />
-      ))}
-    </div>
-  );
-}
+const EMPTY_RAILS: GenreRails = {
+  popular: [],
+  top_rated: [],
+  new: [],
+};
 
 type GenrePageTemplateProps = {
   slug: string;
@@ -146,21 +81,14 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { mode: cardLayout } = useCatalogCardStyle();
 
-  const rawPage = parseInt(searchParams.get('page') || '1', 10);
-  const pageParam = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   const rawType = searchParams.get('type') || 'all';
   const type: GenrePageType =
     rawType === 'movie' || rawType === 'tv' ? rawType : 'all';
-  const rawSort = searchParams.get('sort') || 'popular';
-  const sort: GenrePageSort =
-    rawSort === 'top_rated' || rawSort === 'new' ? rawSort : 'popular';
 
-  const [items, setItems] = useState<ContentItem[]>([]);
+  const [rails, setRails] = useState<GenreRails>(EMPTY_RAILS);
   const [featured, setFeatured] = useState<ContentItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
   const description = useMemo(() => genrePageDescription(genreLabel), [genreLabel]);
@@ -173,27 +101,41 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     const controller = new AbortController();
     setLoading(true);
 
-    const qs = new URLSearchParams();
-    qs.set('slug', slug);
-    qs.set('page', String(pageParam));
-    qs.set('limit', '28');
-    if (type !== 'all') qs.set('type', type);
-    if (sort !== 'popular') qs.set('sort', sort);
+    const buildQs = (sort: GenrePageSort) => {
+      const qs = new URLSearchParams();
+      qs.set('slug', slug);
+      qs.set('sort', sort);
+      qs.set('limit', String(RAIL_LIMIT));
+      qs.set('page', '1');
+      if (type !== 'all') qs.set('type', type);
+      return qs.toString();
+    };
 
-    fetch(`/api/genre?${qs.toString()}`, { signal: controller.signal })
-      .then((res) => res.json())
-      .then((data) => {
-        setItems(data.results ?? []);
-        setFeatured(Array.isArray(data.featured) ? data.featured : []);
-        setTotal(typeof data.total === 'number' ? data.total : 0);
-        setTotalPages(data.totalPages ?? 1);
+    Promise.all(
+      RAIL_SECTIONS.map(({ sort }) =>
+        fetch(`/api/genre?${buildQs(sort)}`, { signal: controller.signal }).then(
+          (res) => res.json()
+        )
+      )
+    )
+      .then(([popularJson, topRatedJson, newJson]) => {
+        const featuredItems = Array.isArray(popularJson.featured)
+          ? popularJson.featured
+          : [];
+
+        setFeatured(featuredItems);
+        setTotal(typeof popularJson.total === 'number' ? popularJson.total : 0);
+        setRails({
+          popular: dedupeFeatured(popularJson.results ?? [], featuredItems),
+          top_rated: topRatedJson.results ?? [],
+          new: newJson.results ?? [],
+        });
       })
       .catch(() => {
         if (!controller.signal.aborted) {
-          setItems([]);
+          setRails(EMPTY_RAILS);
           setFeatured([]);
           setTotal(0);
-          setTotalPages(1);
         }
       })
       .finally(() => {
@@ -201,26 +143,28 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
       });
 
     return () => controller.abort();
-  }, [slug, type, sort, pageParam]);
+  }, [slug, type]);
 
   const mergeParams = useCallback(
     (patch: Record<string, string | null | undefined>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [k, v] of Object.entries(patch)) {
-        if (!v || (k === 'type' && v === 'all') || (k === 'sort' && v === 'popular')) {
+        if (!v || (k === 'type' && v === 'all')) {
           params.delete(k);
         } else {
           params.set(k, String(v));
         }
       }
+      params.delete('sort');
+      params.delete('page');
       router.push(`${pathname}?${params.toString()}`);
     },
     [pathname, router, searchParams]
   );
 
   const countLabel = loading ? '…' : `${total.toLocaleString()} titles`;
-
-  const showFeatured = pageParam === 1 && sort === 'popular';
+  const hasAnyRail =
+    rails.popular.length > 0 || rails.top_rated.length > 0 || rails.new.length > 0;
 
   return (
     <div className="bg-main min-h-screen w-full">
@@ -237,7 +181,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
 
         <nav
           className="flex flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-1"
-          aria-label="Genre filters"
+          aria-label="Content type"
         >
           {TYPE_OPTIONS.map((opt) => {
             const active = type === opt.key;
@@ -249,23 +193,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
                 className="shrink-0"
                 variant={active ? 'solid' : 'bordered'}
                 color={active ? 'success' : 'default'}
-                onPress={() => mergeParams({ type: opt.key, page: '1' })}
-              >
-                {opt.label}
-              </Button>
-            );
-          })}
-          {SORT_OPTIONS.map((opt) => {
-            const active = sort === opt.key;
-            return (
-              <Button
-                key={`sort-${opt.key}`}
-                size="sm"
-                radius="full"
-                className="shrink-0"
-                variant={active ? 'solid' : 'bordered'}
-                color={active ? 'success' : 'default'}
-                onPress={() => mergeParams({ sort: opt.key, page: '1' })}
+                onPress={() => mergeParams({ type: opt.key })}
               >
                 {opt.label}
               </Button>
@@ -273,7 +201,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           })}
         </nav>
 
-        {(loading || featured.length > 0) && showFeatured ? (
+        {(loading || featured.length > 0) && (
           <section className="mt-6 space-y-3" aria-label="Featured">
             <Chip color="success" variant="flat" size="md" radius="sm">
               Featured
@@ -284,10 +212,10 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
               <div className="grid gap-3 sm:grid-cols-2">
                 {featured.map((item) => {
                   const title = item.title || item.name || 'Untitled';
-                  const type = item.type === 'tv' ? 'tv' : 'movie';
+                  const mediaType = item.type === 'tv' ? 'tv' : 'movie';
                   return (
                     <div
-                      key={`${type}-${item.id}`}
+                      key={itemKey(item)}
                       className={`${FEATURED_CARD_HEIGHT} overflow-hidden rounded-2xl`}
                     >
                       <LargeCard
@@ -299,7 +227,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
                         runtimeSeconds={item.runtimeSeconds ?? undefined}
                         seasonAmount={item.season_amount ?? 0}
                         numberOfEpisodes={item.number_of_episodes ?? undefined}
-                        type={type}
+                        type={mediaType}
                         posterPath={item.poster_path ?? ''}
                         backdropPath={item.backdrop_path ?? ''}
                         genres={item.genres ?? item.imdb_genres ?? []}
@@ -312,37 +240,25 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
               </div>
             )}
           </section>
-        ) : null}
+        )}
 
-        <section className="mt-6 space-y-3" aria-label="All titles">
-          <Chip color="success" variant="flat" size="md" radius="sm">
-            All titles
-          </Chip>
+        <div className="mt-6 flex flex-col gap-10">
+          {RAIL_SECTIONS.map(({ sort, title }) => (
+            <CatalogRail
+              key={sort}
+              title={title}
+              items={rails[sort]}
+              maxItems={RAIL_LIMIT}
+              loading={loading}
+            />
+          ))}
 
-          {loading ? (
-            <GenreCardGridSkeleton count={28} layoutMode={cardLayout} />
-          ) : items.length === 0 ? (
+          {!loading && !hasAnyRail && featured.length === 0 ? (
             <p className="py-16 text-left text-sm text-default-500">
               No titles found for {genreLabel}. Try another filter.
             </p>
-          ) : (
-            <GenreCardGrid items={items} layoutMode={cardLayout} />
-          )}
-
-          {totalPages > 1 && !loading && items.length > 0 && (
-            <div className="flex justify-start pt-8">
-              <Pagination
-                total={totalPages}
-                page={pageParam}
-                onChange={(p) => mergeParams({ page: p > 1 ? String(p) : null })}
-                showControls
-                size="sm"
-                color="default"
-                variant="light"
-              />
-            </div>
-          )}
-        </section>
+          ) : null}
+        </div>
 
         <p className="mt-10 text-left text-xs text-default-400">
           <Link href="/genres" className="hover:text-success hover:underline">
