@@ -105,6 +105,9 @@ export default function TrendingHeroViewer({
                   type={type}
                   posterPath={item.poster_path}
                   backdropPath={item.backdrop_path}
+                  genres={item.genres}
+                  voteAverage={item.vote_average}
+                  certification={item.certification}
                 />
               </CarouselItem>
             );

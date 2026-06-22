@@ -14,5 +14,7 @@ export interface ContentItem {
   /** Total episodes when known (TV / anime). */
   number_of_episodes?: number | null;
   vote_average?: number | null;
+  genres?: string[];
+  certification?: string | null;
 }
   
