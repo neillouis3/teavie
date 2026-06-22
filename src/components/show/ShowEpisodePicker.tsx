@@ -12,6 +12,7 @@ import Image from "next/image";
 import { Button, Input, Tab, Tabs } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
   PlayIcon,
@@ -42,6 +43,8 @@ export type EpisodeCardRow = {
 };
 
 const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/original";
+export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
+const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
 /** Visible episode cards in the horizontal scroller (4 full + ⅓ peek). */
 const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_ITEM_CLASS =
@@ -54,6 +57,14 @@ const EPISODE_CARD_DESCRIPTION_CLASS =
   "h-[3.5rem] shrink-0 overflow-hidden text-sm leading-snug text-default-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]";
 const EPISODE_CARD_BODY_CLASS =
   "flex min-h-0 flex-1 flex-col overflow-hidden bg-default-100/90 py-3 pr-6 pl-0 dark:bg-default-50/10";
+
+function scrollToPlayerBottom() {
+  const player = document.getElementById(SHOW_VIDEO_PLAYER_ID);
+  if (!player) return;
+  const top =
+    player.getBoundingClientRect().bottom + window.scrollY;
+  window.scrollTo({ top, behavior: "smooth" });
+}
 
 function episodeStillUrl(stillPath: string | null | undefined) {
   const path = String(stillPath ?? "").trim();
@@ -606,6 +617,22 @@ export function ShowEpisodePickerControls() {
           >
           Next
         </Button>
+      <span className="text-sm text-default-400" aria-hidden>
+        ·
+      </span>
+      <Button
+        size="sm"
+        variant="bordered"
+        radius="md"
+        className="h-8 min-h-8 text-xs"
+        onPress={scrollToPlayerBottom}
+        aria-label="Scroll to bottom of player"
+        endContent={
+          <HugeiconsIcon icon={ArrowDown01Icon} size={14} className="shrink-0" />
+        }
+      >
+        Episodes
+      </Button>
     </div>
   );
 }
@@ -686,7 +713,11 @@ export function ShowEpisodePickerList() {
   } = useEpisodePicker();
 
   return (
-    <section className="flex w-full flex-col gap-4" aria-label="Episodes">
+    <section
+      id={EPISODE_PICKER_LIST_ID}
+      className="flex w-full scroll-mt-6 flex-col gap-4"
+      aria-label="Episodes"
+    >
       <ShowEpisodePickerSeasonRow />
       {loading ? (
         <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
