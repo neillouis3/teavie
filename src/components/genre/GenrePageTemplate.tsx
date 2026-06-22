@@ -227,7 +227,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
       <Header pageName={genreLabel} />
       <div className="w-full space-y-4 px-3 pb-12 pt-2 sm:px-4">
         <div className="space-y-2">
-          <Chip color="success" variant="flat" size="sm" radius="sm">
+          <Chip color="success" variant="flat" size="md" radius="sm">
             {countLabel}
           </Chip>
           <p className="text-left text-sm leading-relaxed text-default-500 sm:text-[15px]">
@@ -282,7 +282,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
 
         {(loading || featured.length > 0) && showFeatured ? (
           <section className="mt-6 space-y-3" aria-label="Featured">
-            <Chip color="success" variant="flat" size="sm" radius="sm">
+            <Chip color="success" variant="flat" size="md" radius="sm">
               Featured
             </Chip>
             {loading ? (
@@ -322,7 +322,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
         ) : null}
 
         <section className="mt-6 space-y-3" aria-label="All titles">
-          <Chip color="success" variant="flat" size="sm" radius="sm">
+          <Chip color="success" variant="flat" size="md" radius="sm">
             All titles
           </Chip>
 
