@@ -64,6 +64,16 @@ async function main() {
       { $unset: { genres: "", genre_ids: "", mal_genre_names: "" } }
     );
     console.log(`stripped tmdb genre fields from ${strip.modifiedCount} docs`);
+    if (strip.modifiedCount === 0) {
+      const withTmdbFields = await col.countDocuments({
+        $or: [{ genres: { $exists: true } }, { genre_ids: { $exists: true } }],
+      });
+      if (withTmdbFields === 0 && !fetchOmdb) {
+        console.log("nothing to do — tmdb fields already stripped, --skip-omdb set");
+        await client.close();
+        return;
+      }
+    }
   }
 
   let cursor = col.find(

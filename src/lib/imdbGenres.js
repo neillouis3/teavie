@@ -80,6 +80,7 @@ const ANIME_GENRE_TO_IMDB = {
   shoujo: "Romance",
   josei: "Drama",
   ecchi: null,
+  hentai: null,
   harem: null,
   isekai: "Fantasy",
   demons: "Horror",

@@ -258,6 +258,12 @@ async function fetchAniListBySearch(anime, cache) {
   return null;
 }
 
+function hasHentaiGenre(anime, anilist) {
+  const mal = toGenres(anime).some((g) => /^hentai$/i.test(String(g?.name ?? "")));
+  const ani = pickArrayStrings(anilist?.genres).some((g) => /^hentai$/i.test(g));
+  return mal || ani;
+}
+
 function mapAnimeToTvDoc(anime, anilist) {
   const malId = anime.mal_id;
   const anilistPoster =
@@ -407,6 +413,7 @@ async function run() {
   );
   let scanned = 0;
   let skippedExisting = 0;
+  let skippedHentai = 0;
   let withAniList = 0;
   let withoutAniList = 0;
   let anilistFromSearch = 0;
@@ -458,6 +465,10 @@ async function run() {
       }
       if (anilist?.id != null) withAniList++;
       else if (includeAniList) withoutAniList++;
+      if (hasHentaiGenre(anime, anilist)) {
+        skippedHentai++;
+        continue;
+      }
       const doc = applyImdbGenresToCatalogDoc(mapAnimeToTvDoc(anime, anilist));
       pageBuffer.push(JSON.stringify(doc));
       existing.add(String(malId));
@@ -473,14 +484,14 @@ async function run() {
 
     const hasNext = Boolean(payload?.pagination?.has_next_page);
     console.log(
-      `page ${page}: fetched=${rows.length}, appended=${appendedThisPage}, total_appended=${scanned}, skipped_existing=${skippedExisting}, anilist_found=${withAniList}, anilist_search_hit=${anilistFromSearch}, anilist_missing=${withoutAniList}`
+      `page ${page}: fetched=${rows.length}, appended=${appendedThisPage}, total_appended=${scanned}, skipped_existing=${skippedExisting}, skipped_hentai=${skippedHentai}, anilist_found=${withAniList}, anilist_search_hit=${anilistFromSearch}, anilist_missing=${withoutAniList}`
     );
     if (!hasNext) break;
     if (pageDelayMs > 0) await sleep(pageDelayMs);
   }
 
   console.log(
-    `done: appended=${scanned}, skipped_existing=${skippedExisting}, anilist_found=${withAniList}, anilist_search_hit=${anilistFromSearch}, anilist_missing=${withoutAniList}, resume=${resumeMode}, order=start_date_desc, page_delay_ms=${pageDelayMs}, anilist_delay_ms=${anilistDelayMs}, output=${OUTPUT_FILE}`
+    `done: appended=${scanned}, skipped_existing=${skippedExisting}, skipped_hentai=${skippedHentai}, anilist_found=${withAniList}, anilist_search_hit=${anilistFromSearch}, anilist_missing=${withoutAniList}, resume=${resumeMode}, order=start_date_desc, page_delay_ms=${pageDelayMs}, anilist_delay_ms=${anilistDelayMs}, output=${OUTPUT_FILE}`
   );
 }
 

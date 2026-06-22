@@ -22,9 +22,92 @@ type RecItem = {
   poster_path: string | null;
   backdrop_path: string | null;
   year: string;
+  runtimeSeconds?: number | null;
+  seasonAmount?: number;
+  numberOfEpisodes?: number | null;
   /** Out-of-catalog AniList tiles */
   href?: string | null;
 };
+
+async function fetchCatalogCardMeta(
+  items: RecItem[],
+  mediaType: 'movie' | 'tv',
+  signal?: AbortSignal
+): Promise<RecItem[]> {
+  if (items.length === 0) return items;
+  const qs = new URLSearchParams({
+    type: mediaType,
+    ids: items.map((i) => i.linkId).join(','),
+  });
+  const res = await fetch(`/api/catalog/card-meta?${qs}`, { signal });
+  const data = res.ok ? await res.json() : { meta: {} };
+  const meta = (data.meta ?? {}) as Record<
+    string,
+    { runtimeSeconds?: number | null; seasonAmount?: number; numberOfEpisodes?: number | null }
+  >;
+  return items.map((item) => {
+    const row = meta[item.linkId];
+    if (!row) return item;
+    return {
+      ...item,
+      runtimeSeconds: row.runtimeSeconds ?? item.runtimeSeconds,
+      seasonAmount: row.seasonAmount ?? item.seasonAmount,
+      numberOfEpisodes: row.numberOfEpisodes ?? item.numberOfEpisodes,
+    };
+  });
+}
+
+async function fetchTmdbCardMeta(
+  items: RecItem[],
+  mediaType: 'movie' | 'tv',
+  token: string,
+  signal?: AbortSignal
+): Promise<RecItem[]> {
+  const headers = { accept: 'application/json', Authorization: `Bearer ${token}` } as const;
+  const out = await Promise.all(
+    items.map(async (item) => {
+      const needsMovieRuntime =
+        mediaType === 'movie' && (item.runtimeSeconds == null || item.runtimeSeconds <= 0);
+      const needsTvMeta =
+        mediaType === 'tv' &&
+        (item.seasonAmount == null || item.seasonAmount <= 0) &&
+        (item.numberOfEpisodes == null || item.numberOfEpisodes <= 0);
+      if (!needsMovieRuntime && !needsTvMeta) return item;
+      if (!/^\d+$/.test(item.linkId)) return item;
+
+      try {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/${mediaType}/${item.linkId}?language=en-US`,
+          { signal, headers }
+        );
+        if (!res.ok) return item;
+        const data = await res.json();
+        if (mediaType === 'movie') {
+          const mins = typeof data.runtime === 'number' ? data.runtime : null;
+          return mins != null && mins > 0
+            ? { ...item, runtimeSeconds: mins * 60 }
+            : item;
+        }
+        const seasons =
+          typeof data.number_of_seasons === 'number' && data.number_of_seasons > 0
+            ? data.number_of_seasons
+            : 0;
+        const episodes =
+          typeof data.number_of_episodes === 'number' && data.number_of_episodes > 0
+            ? data.number_of_episodes
+            : null;
+        return {
+          ...item,
+          seasonAmount: seasons,
+          numberOfEpisodes: episodes ?? item.numberOfEpisodes,
+        };
+      } catch {
+        return item;
+      }
+    })
+  );
+  return out;
+}
 
 type TmdbRecRow = {
   id: number;
@@ -75,7 +158,9 @@ export default function YouMightLike({
             typeof r.catalogId === 'string' && r.catalogId.trim().length > 0
         );
         setItems(
-          catalogRows.slice(0, maxItems).map(
+          (
+            await fetchCatalogCardMeta(
+              catalogRows.slice(0, maxItems).map(
             (r: {
               catalogId: string;
               anilistId: number | null;
@@ -83,6 +168,9 @@ export default function YouMightLike({
               title: string;
               year: string;
               posterPath?: string;
+              runtimeSeconds?: number | null;
+              seasonAmount?: number;
+              numberOfEpisodes?: number | null;
             }) => {
               const al =
                 typeof r.anilistId === 'number' && Number.isFinite(r.anilistId) && r.anilistId > 0
@@ -98,8 +186,15 @@ export default function YouMightLike({
                 poster_path: r.posterPath ?? null,
                 backdrop_path: null,
                 year: r.year ?? '—',
+                runtimeSeconds: r.runtimeSeconds ?? null,
+                seasonAmount: r.seasonAmount ?? 0,
+                numberOfEpisodes: r.numberOfEpisodes ?? null,
               };
             }
+          ),
+              'tv',
+              controller.signal
+            )
           )
         );
       } catch {
@@ -178,7 +273,9 @@ export default function YouMightLike({
           mergeRows(seen, out, takeRows(popJson.results));
         }
 
-        setItems(out.slice(0, maxItems));
+        let enriched = await fetchCatalogCardMeta(out.slice(0, maxItems), mediaType, controller.signal);
+        enriched = await fetchTmdbCardMeta(enriched, mediaType, token, controller.signal);
+        setItems(enriched);
       } catch {
         setItems([]);
       } finally {
@@ -246,7 +343,9 @@ export default function YouMightLike({
                 title={item.title}
                 year={item.year}
                 type={mediaType}
-                seasonAmount={0}
+                runtimeSeconds={item.runtimeSeconds ?? undefined}
+                seasonAmount={item.seasonAmount ?? 0}
+                numberOfEpisodes={item.numberOfEpisodes ?? undefined}
                 posterPath={item.poster_path || ''}
                 linkHref={item.href ?? undefined}
               />
