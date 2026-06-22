@@ -119,6 +119,7 @@ export function mapCatalogListDoc(doc) {
     type: doc.type,
     genres: genreNamesFromDoc(doc),
     certification: usCertificationFromDoc(doc),
+    vote_average: doc.vote_average ?? null,
   };
 }
 

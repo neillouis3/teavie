@@ -21,6 +21,10 @@ type LargeCardProps = {
   certification?: string | null;
   /** Fill parent height (Explore trending hero carousel). */
   hero?: boolean;
+  /** Rich Explore-style overlay on standard aspect-video cards (Discover upcoming). */
+  richOverlay?: boolean;
+  /** `phrase` = “Releases …”; `short` = “Jun 4, 2026”. */
+  releaseDateStyle?: "short" | "phrase";
 };
 
 function MetaDot() {
@@ -73,6 +77,8 @@ function HeroCardOverlay({
   genres = [],
   voteAverage,
   certification,
+  compact = false,
+  releaseDateStyle = "short",
 }: {
   title: string;
   type: "movie" | "tv";
@@ -83,9 +89,17 @@ function HeroCardOverlay({
   genres?: string[];
   voteAverage?: number | null;
   certification?: string | null;
+  compact?: boolean;
+  releaseDateStyle?: "short" | "phrase";
 }) {
   const typeLabel = type === "tv" ? "TV show" : "Movie";
-  const dateLabel = formatHeroDate(releaseDate);
+  const dateLabel =
+    releaseDateStyle === "phrase"
+      ? (() => {
+          const phrase = formatReleasePhrase(releaseDate);
+          return phrase === "Date TBA" ? null : phrase;
+        })()
+      : formatHeroDate(releaseDate);
   const runtimeLabel =
     type === "movie"
       ? formatHeroRuntime(runtimeSeconds)
@@ -106,7 +120,13 @@ function HeroCardOverlay({
       : null;
 
   return (
-    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-5 pb-8 pt-24 sm:px-8 sm:pb-10 sm:pt-32">
+    <div
+      className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent ${
+        compact
+          ? "px-4 pb-4 pt-16 sm:px-5 sm:pb-5 sm:pt-20"
+          : "px-5 pb-8 pt-24 sm:px-8 sm:pb-10 sm:pt-32"
+      }`}
+    >
       <div className="flex max-w-3xl flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
           <span className="font-medium text-white/55">
@@ -129,7 +149,13 @@ function HeroCardOverlay({
           )}
         </div>
 
-        <h1 className="line-clamp-2 text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">
+        <h1
+          className={`line-clamp-2 font-bold leading-tight text-white ${
+            compact
+              ? "text-xl sm:text-2xl md:text-3xl"
+              : "text-2xl sm:text-3xl md:text-4xl"
+          }`}
+        >
           {title}
         </h1>
 
@@ -176,9 +202,12 @@ export default function LargeCard({
   voteAverage,
   certification,
   hero = false,
+  richOverlay = false,
+  releaseDateStyle = "short",
 }: LargeCardProps) {
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
+  const showRichOverlay = hero || richOverlay;
   const baseUrl = "https://image.tmdb.org/t/p/";
   const backdropSize = "w1280";
   const posterSize = "w500";
@@ -211,7 +240,7 @@ export default function LargeCard({
           alt={title}
           className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
         />
-        {!hero && (
+        {!showRichOverlay && (
           <>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4 text-white sm:bottom-6 sm:left-6 sm:right-auto">
@@ -238,7 +267,7 @@ export default function LargeCard({
             </div>
           </>
         )}
-        {hero && (
+        {showRichOverlay && (
           <HeroCardOverlay
             title={title}
             type={type}
@@ -249,6 +278,8 @@ export default function LargeCard({
             genres={genres}
             voteAverage={voteAverage}
             certification={certification}
+            compact={!hero}
+            releaseDateStyle={releaseDateStyle}
           />
         )}
       </div>
