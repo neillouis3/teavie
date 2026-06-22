@@ -25,53 +25,53 @@ type Mode = "movie" | "tv";
 
 const EMPTY: PopularGenresPayload = { movies: [], tv: [] };
 
-/** Color-code each genre with a gradient. Full class strings so Tailwind keeps them. */
+/** Muted gradient per genre (full class strings for Tailwind). */
 const GENRE_COLORS: Record<string, string> = {
-  Action: "from-red-500 to-rose-700",
-  "Action & Adventure": "from-red-500 to-orange-600",
-  Adventure: "from-orange-400 to-amber-600",
-  Animation: "from-sky-400 to-blue-600",
-  Comedy: "from-amber-400 to-orange-600",
-  Crime: "from-zinc-600 to-slate-800",
-  Documentary: "from-teal-500 to-emerald-700",
-  Drama: "from-indigo-500 to-violet-700",
-  Family: "from-green-500 to-emerald-700",
-  Fantasy: "from-violet-500 to-purple-700",
-  History: "from-amber-600 to-orange-800",
-  Horror: "from-neutral-700 to-zinc-900",
-  Music: "from-pink-400 to-fuchsia-600",
-  Mystery: "from-purple-600 to-indigo-800",
-  Romance: "from-rose-400 to-pink-600",
-  "Science Fiction": "from-cyan-500 to-blue-700",
-  "Sci-Fi & Fantasy": "from-cyan-500 to-blue-700",
-  "TV Movie": "from-blue-500 to-indigo-700",
-  Thriller: "from-red-700 to-rose-900",
-  War: "from-stone-500 to-stone-700",
-  "War & Politics": "from-stone-500 to-stone-700",
-  Western: "from-orange-700 to-amber-900",
-  Kids: "from-lime-500 to-green-700",
-  News: "from-blue-600 to-sky-800",
-  Reality: "from-fuchsia-500 to-pink-700",
-  Soap: "from-rose-500 to-red-700",
-  Talk: "from-emerald-500 to-teal-700",
+  Action: "from-red-400 to-rose-500",
+  "Action & Adventure": "from-red-400 to-orange-500",
+  Adventure: "from-orange-300 to-amber-500",
+  Animation: "from-sky-300 to-blue-500",
+  Comedy: "from-amber-300 to-orange-500",
+  Crime: "from-zinc-500 to-slate-600",
+  Documentary: "from-teal-400 to-emerald-500",
+  Drama: "from-indigo-400 to-violet-500",
+  Family: "from-green-400 to-emerald-500",
+  Fantasy: "from-violet-400 to-purple-500",
+  History: "from-amber-500 to-orange-600",
+  Horror: "from-neutral-600 to-zinc-700",
+  Music: "from-pink-300 to-fuchsia-500",
+  Mystery: "from-purple-500 to-indigo-600",
+  Romance: "from-rose-300 to-pink-500",
+  "Science Fiction": "from-cyan-400 to-blue-500",
+  "Sci-Fi & Fantasy": "from-cyan-400 to-blue-500",
+  "TV Movie": "from-blue-400 to-indigo-500",
+  Thriller: "from-red-500 to-rose-600",
+  War: "from-stone-400 to-stone-600",
+  "War & Politics": "from-stone-400 to-stone-600",
+  Western: "from-orange-500 to-amber-600",
+  Kids: "from-lime-400 to-green-500",
+  News: "from-blue-500 to-sky-600",
+  Reality: "from-fuchsia-400 to-pink-500",
+  Soap: "from-rose-400 to-red-500",
+  Talk: "from-emerald-400 to-teal-500",
 };
 
 const FALLBACK_COLORS = [
-  "from-rose-500 to-pink-700",
-  "from-violet-500 to-purple-700",
-  "from-sky-500 to-blue-700",
-  "from-emerald-500 to-teal-700",
-  "from-amber-500 to-orange-700",
-  "from-fuchsia-500 to-pink-700",
-  "from-cyan-500 to-blue-700",
-  "from-indigo-500 to-violet-700",
+  "from-rose-400 to-pink-500",
+  "from-violet-400 to-purple-500",
+  "from-sky-400 to-blue-500",
+  "from-emerald-400 to-teal-500",
+  "from-amber-400 to-orange-500",
+  "from-fuchsia-400 to-pink-500",
+  "from-cyan-400 to-blue-500",
+  "from-indigo-400 to-violet-500",
 ] as const;
 
 function colorFor(name: string, index: number) {
   return GENRE_COLORS[name] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 }
 
-const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
+const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
 
 function posterUrl(path: string) {
   return /^https?:\/\//i.test(path) ? path : `${TMDB_IMG}${path}`;
@@ -104,7 +104,7 @@ function GenreTile({
       aria-label={`Browse ${genre.name}`}
       className={`group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-br ${colorClass} p-3 shadow-sm transition-transform duration-200 hover:scale-[1.02]`}
     >
-      <div className="relative z-20 flex flex-col">
+      <div className="relative z-20 flex flex-col pr-[40%]">
         <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
           {genre.name}
         </span>
@@ -120,11 +120,11 @@ function GenreTile({
           alt=""
           aria-hidden
           loading="lazy"
-          className="pointer-events-none absolute -bottom-4 -right-3 z-10 h-[64%] w-auto rotate-12 rounded-md object-cover shadow-xl ring-1 ring-black/10 transition-transform duration-200 group-hover:-translate-y-1 group-hover:rotate-6"
+          className="pointer-events-none absolute -bottom-6 -right-4 z-10 h-[80%] w-auto max-w-[52%] rotate-12 rounded-lg object-cover shadow-2xl ring-1 ring-black/10 transition-transform duration-200 group-hover:-translate-y-1.5 group-hover:rotate-6 sm:-right-5"
         />
       )}
 
-      <span className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-white/10 to-black/25" />
+      <span className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-white/15 to-black/20" />
     </Link>
   );
 }

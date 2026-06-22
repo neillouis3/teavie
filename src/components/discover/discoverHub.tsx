@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Chip } from "@heroui/react";
 import Header from "@/components/ui/header";
 import CatalogRail, { CatalogRailSkeleton } from "@/components/explore/catalogRail";
 import TrendingHeroViewer from "@/components/explore/trendingHeroViewer";
@@ -24,7 +23,7 @@ const EMPTY: TmdbDiscoverPayload = {
   popularTv: [],
 };
 
-const TRENDING_SECTION_MIN_H = "min-h-[75vh]";
+const TRENDING_SECTION_MIN_H = "min-h-[85vh]";
 
 function PopularRailsSkeleton({ horizontal }: { horizontal: boolean }) {
   return (
@@ -92,14 +91,9 @@ export default function DiscoverHub() {
 
       {showTrendingHero && (
         <section
-          className={`mt-6 mb-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
-          aria-label="Trending this week"
+          className={`mb-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
+          aria-label="Trending"
         >
-          <div className="mb-4 px-3 sm:pl-4">
-            <Chip color="success" size="md" radius="sm">
-              Trending this week
-            </Chip>
-          </div>
           {loading ? (
             <TrendingHeroLoading />
           ) : (
