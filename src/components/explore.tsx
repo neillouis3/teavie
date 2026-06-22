@@ -29,7 +29,7 @@ export default function Explore({
       <Header pageName="Discover" />
 
       {/* New & Upcoming Section */}
-      <div className="mb-4 flex h-fit w-full flex-col">
+      <div className="mb-4 mt-2 flex h-fit w-full flex-col">
         <div className="mb-4 px-3 sm:pl-4">
           <Chip color="success" size="md" radius="sm">
             New & Upcoming
