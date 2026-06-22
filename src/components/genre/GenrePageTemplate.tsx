@@ -2,17 +2,23 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Pagination } from '@heroui/react';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { StarIcon } from '@hugeicons/core-free-icons';
+import { Chip, Pagination } from '@heroui/react';
+import Header from '@/components/ui/header';
 import type { ContentItem } from '@/types/content';
+import { genrePageDescription } from '@/lib/genrePageCopy';
+import SmallCard from '@/components/ui/smallCard';
+import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
+import SmallCardLoading from '@/components/ui/smallCardLoading';
+import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
 import {
-  genreFeaturedGradient,
-  genrePageDescription,
-} from '@/lib/genrePageCopy';
-import { genrePageHref } from '@/lib/imdbGenres.js';
+  useCatalogCardStyle,
+  type CatalogCardLayoutMode,
+} from '@/contexts/catalogCardStyleContext';
+import {
+  CATALOG_GRID_HORIZONTAL_SEARCH,
+  CATALOG_GRID_VERTICAL_SEARCH,
+} from '@/lib/catalogGrid';
 
 export type GenrePageType = 'all' | 'movie' | 'tv';
 export type GenrePageSort = 'popular' | 'top_rated' | 'new';
@@ -29,22 +35,10 @@ const SORT_OPTIONS: { key: GenrePageSort; label: string }[] = [
   { key: 'new', label: 'New' },
 ];
 
-const TMDB_POSTER = 'https://image.tmdb.org/t/p/w500';
-const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w780';
-
-function posterSrc(path: string | null | undefined) {
-  if (!path?.trim()) return null;
-  return /^https?:\/\//i.test(path) ? path : `${TMDB_POSTER}${path}`;
-}
-
-function backdropSrc(path: string | null | undefined, fallbackPoster?: string | null) {
-  const b = path?.trim();
-  if (b) return /^https?:\/\//i.test(b) ? b : `${TMDB_BACKDROP}${b}`;
-  return posterSrc(fallbackPoster);
-}
-
-function itemTitle(item: ContentItem) {
-  return item.title || item.name || 'Untitled';
+function gridClass(layoutMode: CatalogCardLayoutMode) {
+  return layoutMode === 'horizontal'
+    ? CATALOG_GRID_HORIZONTAL_SEARCH
+    : CATALOG_GRID_VERTICAL_SEARCH;
 }
 
 function itemYear(item: ContentItem) {
@@ -52,18 +46,72 @@ function itemYear(item: ContentItem) {
   return raw.length >= 4 ? raw.slice(0, 4) : '—';
 }
 
-function itemTypeLabel(item: ContentItem) {
-  return item.type === 'tv' ? 'TV' : 'Movie';
+function GenreCardGrid({
+  items,
+  layoutMode,
+}: {
+  items: ContentItem[];
+  layoutMode: CatalogCardLayoutMode;
+}) {
+  const horizontal = layoutMode === 'horizontal';
+
+  return (
+    <div className={gridClass(layoutMode)}>
+      {items.map((item, index) => {
+        const title = item.title || item.name || 'Untitled';
+        const id = item.id;
+        const type = item.type || 'movie';
+        const poster = item.poster_path || '';
+
+        if (horizontal) {
+          return (
+            <HorizontalCatalogCard
+              key={`${type}-${item.id}-${index}`}
+              id={id}
+              title={title}
+              year={itemYear(item)}
+              type={type}
+              posterPath={poster}
+              backdropPath={item.backdrop_path || ''}
+            />
+          );
+        }
+
+        return (
+          <SmallCard
+            key={`${type}-${item.id}-${index}`}
+            id={id}
+            title={title}
+            year={itemYear(item)}
+            type={type}
+            runtimeSeconds={item.runtimeSeconds ?? undefined}
+            seasonAmount={item.season_amount ?? 0}
+            numberOfEpisodes={item.number_of_episodes ?? undefined}
+            posterPath={poster}
+          />
+        );
+      })}
+    </div>
+  );
 }
 
-function itemHref(item: ContentItem) {
-  const id = item.id;
-  return item.type === 'tv' ? `/shows/${id}` : `/movies/${id}`;
-}
+function GenreCardGridSkeleton({
+  count,
+  layoutMode,
+}: {
+  count: number;
+  layoutMode: CatalogCardLayoutMode;
+}) {
+  const horizontal = layoutMode === 'horizontal';
+  const S = horizontal ? HorizontalCatalogCardLoading : SmallCardLoading;
 
-function formatRating(v: number | null | undefined) {
-  if (v == null || !Number.isFinite(v) || v <= 0) return null;
-  return v.toFixed(1);
+  return (
+    <div className={gridClass(layoutMode)}>
+      {Array.from({ length: count }).map((_, i) => (
+        <S key={i} />
+      ))}
+    </div>
+  );
 }
 
 function Pill({
@@ -94,138 +142,6 @@ function Pill({
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-default-500">
-      {children}
-    </p>
-  );
-}
-
-function FeaturedCard({
-  item,
-  gradient,
-}: {
-  item: ContentItem;
-  gradient: string;
-}) {
-  const title = itemTitle(item);
-  const year = itemYear(item);
-  const rating = formatRating(item.vote_average);
-  const image = backdropSrc(item.backdrop_path, item.poster_path);
-  const href = itemHref(item);
-
-  return (
-    <Link
-      href={href}
-      className="group relative flex min-h-[220px] flex-1 overflow-hidden rounded-2xl sm:min-h-[260px]"
-    >
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={image}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-        />
-      ) : (
-        <span
-          className={`absolute inset-0 bg-gradient-to-br ${gradient}`}
-          aria-hidden
-        />
-      )}
-      <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-      {rating ? (
-        <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
-          <HugeiconsIcon icon={StarIcon} size={12} className="text-warning" />
-          {rating}
-        </span>
-      ) : null}
-      <div className="relative mt-auto p-5 sm:p-6">
-        <p className="text-xs font-medium text-white/70">
-          {itemTypeLabel(item)} · {year}
-        </p>
-        <h3 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem]">
-          {title}
-        </h3>
-      </div>
-    </Link>
-  );
-}
-
-function TitleCard({ item }: { item: ContentItem }) {
-  const title = itemTitle(item);
-  const year = itemYear(item);
-  const rating = formatRating(item.vote_average);
-  const image = posterSrc(item.poster_path);
-  const href = itemHref(item);
-
-  return (
-    <Link href={href} className="group flex min-w-0 flex-col gap-2.5">
-      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-default-100 dark:bg-default-50/10">
-        {image ? (
-          <Image
-            src={image}
-            alt={title}
-            fill
-            unoptimized
-            sizes="(max-width: 640px) 45vw, 25vw"
-            className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-xs text-default-400">
-            No poster
-          </div>
-        )}
-      </div>
-      <div className="min-w-0 space-y-1">
-        <h3 className="truncate text-sm font-semibold text-foreground group-hover:text-success">
-          {title}
-        </h3>
-        <p className="text-xs text-default-500">
-          {year}
-          {rating ? (
-            <>
-              {' '}
-              ·{' '}
-              <span className="inline-flex items-center gap-0.5">
-                <HugeiconsIcon icon={StarIcon} size={11} className="text-warning" />
-                {rating}
-              </span>
-            </>
-          ) : null}
-        </p>
-      </div>
-    </Link>
-  );
-}
-
-function FeaturedSkeleton() {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div
-          key={i}
-          className="min-h-[220px] animate-pulse rounded-2xl bg-default-200 sm:min-h-[260px]"
-        />
-      ))}
-    </div>
-  );
-}
-
-function GridSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="space-y-2">
-          <div className="aspect-[2/3] animate-pulse rounded-xl bg-default-200" />
-          <div className="h-4 w-3/4 animate-pulse rounded bg-default-200" />
-          <div className="h-3 w-1/2 animate-pulse rounded bg-default-200" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 type GenrePageTemplateProps = {
   slug: string;
   genreLabel: string;
@@ -235,6 +151,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { mode: cardLayout } = useCatalogCardStyle();
 
   const rawPage = parseInt(searchParams.get('page') || '1', 10);
   const pageParam = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
@@ -303,35 +220,22 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     [pathname, router, searchParams]
   );
 
-  const featured = pageParam === 1 && sort === 'popular' ? items.slice(0, 2) : [];
-  const gridItems =
-    pageParam === 1 && sort === 'popular' && featured.length > 0
-      ? items.slice(featured.length)
-      : items;
-
   const countLabel = loading ? '…' : `${total.toLocaleString()} titles`;
 
   return (
     <div className="bg-main min-h-screen w-full">
-      <div className="mx-auto w-full max-w-6xl px-4 pb-12 pt-8 sm:px-6 sm:pt-10">
-        {/* Hero */}
-        <header className="space-y-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-default-500">
-            Genre
-          </p>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-              {genreLabel}
-            </h1>
-            <p className="pb-1 text-sm text-default-500">{countLabel}</p>
-          </div>
+      <Header pageName={genreLabel} />
+      <div className="mx-auto w-full max-w-6xl space-y-4 px-3 pb-12 pt-2 sm:px-4">
+        <div className="space-y-2">
+          <Chip color="success" variant="flat" size="md" radius="sm">
+            {countLabel}
+          </Chip>
           <p className="max-w-3xl text-sm leading-relaxed text-default-500 sm:text-[15px]">
             {description}
           </p>
-        </header>
+        </div>
 
-        {/* Filters */}
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex flex-wrap gap-2">
             {TYPE_OPTIONS.map((opt) => (
               <Pill
@@ -357,46 +261,19 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           </div>
         </div>
 
-        {/* Featured */}
-        {(loading || featured.length > 0) && pageParam === 1 && sort === 'popular' ? (
-          <section className="mt-10 space-y-4" aria-label="Featured">
-            <SectionLabel>Featured</SectionLabel>
-            {loading ? (
-              <FeaturedSkeleton />
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {featured.map((item, i) => (
-                  <FeaturedCard
-                    key={`${item.type}-${item.id}`}
-                    item={item}
-                    gradient={genreFeaturedGradient(genreLabel, i)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        ) : null}
-
-        {/* All titles */}
-        <section className="mt-10 space-y-5" aria-label="All titles">
-          <SectionLabel>All titles</SectionLabel>
-
+        <section className="mt-6" aria-label="Titles">
           {loading ? (
-            <GridSkeleton />
-          ) : gridItems.length === 0 ? (
+            <GenreCardGridSkeleton count={28} layoutMode={cardLayout} />
+          ) : items.length === 0 ? (
             <p className="py-16 text-center text-sm text-default-500">
               No titles found for {genreLabel}. Try another filter.
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
-              {gridItems.map((item) => (
-                <TitleCard key={`${item.type}-${item.id}`} item={item} />
-              ))}
-            </div>
+            <GenreCardGrid items={items} layoutMode={cardLayout} />
           )}
 
           {totalPages > 1 && !loading && items.length > 0 && (
-            <div className="flex justify-center pt-4">
+            <div className="flex justify-center pt-8">
               <Pagination
                 total={totalPages}
                 page={pageParam}

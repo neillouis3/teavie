@@ -163,11 +163,11 @@ export function countryNamesFromCodes(codes: string[] | undefined): string | nul
   try {
     const dn = new Intl.DisplayNames(["en"], { type: "region" });
     const names = codes
-      .map((c) => dn.of(String(c).toUpperCase()) ?? String(c).toUpperCase())
+      .map((c) => dn.of(String(c).toUpperCase()) ?? String(c).trim())
       .filter(Boolean);
     return names.length ? [...new Set(names)].join(", ") : null;
   } catch {
-    return codes.map((c) => String(c).toUpperCase()).join(", ");
+    return codes.map((c) => String(c).trim()).filter(Boolean).join(", ");
   }
 }
 
@@ -175,9 +175,9 @@ export function languageDisplayName(code: string | undefined | null): string | n
   const c = String(code ?? "").trim().toLowerCase();
   if (!c) return null;
   try {
-    return new Intl.DisplayNames(["en"], { type: "language" }).of(c) ?? c.toUpperCase();
+    return new Intl.DisplayNames(["en"], { type: "language" }).of(c) ?? c;
   } catch {
-    return c.toUpperCase();
+    return c;
   }
 }
 
@@ -243,7 +243,7 @@ export function buildMovieInfoLines(movie: {
       }
       const codes = movie.origin_country;
       if (Array.isArray(codes) && codes.length > 0) {
-        return codes.map((c) => String(c).toUpperCase()).join(", ");
+        return countryNamesFromCodes(codes);
       }
       return null;
     })() ?? null;
