@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Input } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  ArrowLeft01Icon,
   ArrowRight01Icon,
   Clock01Icon,
   PlayIcon,
@@ -46,7 +47,6 @@ function episodeStillUrl(stillPath: string | null | undefined) {
 }
 
 type ShowEpisodePickerProps = {
-  showTitle: string;
   tmdbTvId: string | null;
   seasons: ShowEpisodePickerSeason[];
   selectedSeason: number;
@@ -109,7 +109,6 @@ async function fetchSeasonEpisodes(
 }
 
 export default function ShowEpisodePicker({
-  showTitle,
   tmdbTvId,
   seasons,
   selectedSeason,
@@ -274,6 +273,85 @@ export default function ShowEpisodePicker({
     onMarkWatched?.(row.season, row.episode);
   };
 
+  const currentEpisodeIndex = useMemo(() => {
+    return episodes.findIndex((row) => isSelected(row));
+  }, [episodes, isSelected]);
+
+  const hasPreviousEpisode = useMemo(() => {
+    if (loading || episodes.length === 0) return false;
+    if (currentEpisodeIndex > 0) return true;
+    if (flatMode) return false;
+    const seasonIdx = releasedSeasons.findIndex(
+      (s) => s.season_number === selectedSeason
+    );
+    return seasonIdx > 0;
+  }, [
+    loading,
+    episodes.length,
+    currentEpisodeIndex,
+    flatMode,
+    releasedSeasons,
+    selectedSeason,
+  ]);
+
+  const hasNextEpisode = useMemo(() => {
+    if (loading || episodes.length === 0) return false;
+    if (
+      currentEpisodeIndex >= 0 &&
+      currentEpisodeIndex < episodes.length - 1
+    ) {
+      return true;
+    }
+    if (flatMode) return false;
+    const seasonIdx = releasedSeasons.findIndex(
+      (s) => s.season_number === selectedSeason
+    );
+    return seasonIdx >= 0 && seasonIdx < releasedSeasons.length - 1;
+  }, [
+    loading,
+    episodes.length,
+    currentEpisodeIndex,
+    flatMode,
+    releasedSeasons,
+    selectedSeason,
+  ]);
+
+  const goPreviousEpisode = () => {
+    if (!hasPreviousEpisode) return;
+    if (currentEpisodeIndex > 0) {
+      handleSelect(episodes[currentEpisodeIndex - 1]);
+      return;
+    }
+    const seasonIdx = releasedSeasons.findIndex(
+      (s) => s.season_number === selectedSeason
+    );
+    if (seasonIdx <= 0) return;
+    const prevSeason = releasedSeasons[seasonIdx - 1];
+    const lastEp = Math.max(1, prevSeason.episode_count ?? 1);
+    onSeasonChange(prevSeason.season_number);
+    onEpisodeChange(prevSeason.season_number, lastEp);
+    onMarkWatched?.(prevSeason.season_number, lastEp);
+  };
+
+  const goNextEpisode = () => {
+    if (!hasNextEpisode) return;
+    if (
+      currentEpisodeIndex >= 0 &&
+      currentEpisodeIndex < episodes.length - 1
+    ) {
+      handleSelect(episodes[currentEpisodeIndex + 1]);
+      return;
+    }
+    const seasonIdx = releasedSeasons.findIndex(
+      (s) => s.season_number === selectedSeason
+    );
+    if (seasonIdx < 0 || seasonIdx >= releasedSeasons.length - 1) return;
+    const nextSeason = releasedSeasons[seasonIdx + 1];
+    onSeasonChange(nextSeason.season_number);
+    onEpisodeChange(nextSeason.season_number, 1);
+    onMarkWatched?.(nextSeason.season_number, 1);
+  };
+
   const handleJump = () => {
     const s = parseInt(jumpSeason, 10);
     const e = parseInt(jumpEpisode, 10);
@@ -301,11 +379,7 @@ export default function ShowEpisodePicker({
 
   return (
     <section className="flex w-full flex-col gap-4" aria-label="Episodes">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-          {showTitle}
-        </h2>
-
+      <div className="flex flex-wrap items-end justify-end gap-2">
         <form
           className="flex shrink-0 items-end gap-2"
           onSubmit={(e) => {
@@ -360,6 +434,33 @@ export default function ShowEpisodePicker({
             <span className="text-[10px] font-medium leading-none">Go</span>
           </Button>
         </form>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="bordered"
+          radius="md"
+          isDisabled={!hasPreviousEpisode}
+          onPress={goPreviousEpisode}
+          startContent={
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={16} className="shrink-0" />
+          }
+        >
+          Previous episode
+        </Button>
+        <Button
+          size="sm"
+          variant="bordered"
+          radius="md"
+          isDisabled={!hasNextEpisode}
+          onPress={goNextEpisode}
+          endContent={
+            <HugeiconsIcon icon={ArrowRight01Icon} size={16} className="shrink-0" />
+          }
+        >
+          Next episode
+        </Button>
       </div>
 
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
