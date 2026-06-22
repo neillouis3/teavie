@@ -17,6 +17,7 @@ import {
   genreTileColor,
   type CatalogGenreRow,
 } from "@/components/genre/genreTileShared";
+import { genrePageHref } from "@/lib/imdbGenres";
 
 type KdramaDiscoverPayload = {
   popular: ContentItem[];
