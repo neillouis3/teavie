@@ -13,6 +13,7 @@ import ShowEpisodePicker, {
   ShowEpisodePickerControls,
   ShowEpisodePickerList,
   ShowEpisodePickerProvider,
+  SHOW_VIDEO_PLAYER_ID,
 } from "@/components/show/ShowEpisodePicker";
 import {
   useStreamingSource,
@@ -818,7 +819,10 @@ export default function ShowTemplate({ id }: { id: string }) {
       <div className="w-full flex flex-col gap-6">
 
         {/* ── Video Player (horizontal inset matches root py-4 / px-4) ── */}
-        <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
+        <div
+          id={SHOW_VIDEO_PLAYER_ID}
+          className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]"
+        >
           {loading ? (
             <div className="h-full w-full animate-pulse bg-default-200" />
           ) : isAnimeMovie ? (
