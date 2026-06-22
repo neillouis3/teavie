@@ -6,12 +6,19 @@ import { Chip } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import {
-  Link01Icon,
-  TagsIcon,
-  InformationCircleIcon,
+  Building02Icon,
+  Calendar03Icon,
+  LanguageCircleIcon,
+  LinkSquare02Icon,
+  Location01Icon,
 } from "@hugeicons/core-free-icons";
 
 export type CatalogGenre = { id: number; name: string };
+
+export type CatalogInfoLine = {
+  icon: IconSvgElement;
+  label: string;
+};
 
 export type CatalogDetailLink = {
   href: string;
@@ -22,7 +29,7 @@ export type CatalogDetailLink = {
 type CatalogDetailColumnsProps = {
   mediaType: "movie" | "tv";
   genres: CatalogGenre[];
-  details: string[];
+  infoLines: CatalogInfoLine[];
   links: CatalogDetailLink[];
   className?: string;
 };
@@ -36,16 +43,9 @@ function genreBrowseHref(mediaType: "movie" | "tv", genreId: number) {
   return `${base}?${params.toString()}`;
 }
 
-function ColumnHeading({
-  icon,
-  label,
-}: {
-  icon: IconSvgElement;
-  label: string;
-}) {
+function ColumnHeading({ label }: { label: string }) {
   return (
-    <h3 className="flex items-center gap-2 text-sm font-medium text-default-500">
-      <HugeiconsIcon icon={icon} size={16} className="shrink-0 opacity-80" />
+    <h3 className="text-xs font-medium uppercase tracking-wide text-default-500">
       {label}
     </h3>
   );
@@ -54,7 +54,7 @@ function ColumnHeading({
 export default function CatalogDetailColumns({
   mediaType,
   genres,
-  details,
+  infoLines,
   links,
   className = "",
 }: CatalogDetailColumnsProps) {
@@ -62,7 +62,7 @@ export default function CatalogDetailColumns({
     .filter((g) => g?.name && Number.isFinite(g.id))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 
-  const detailLines = details.filter((line) => String(line ?? "").trim());
+  const infoItems = infoLines.filter((line) => String(line?.label ?? "").trim());
   const linkItems = links.filter((l) => l?.href && l?.label);
 
   return (
@@ -70,7 +70,7 @@ export default function CatalogDetailColumns({
       className={`grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8 ${className}`}
     >
       <div className="min-w-0">
-        <ColumnHeading icon={TagsIcon} label="Genre" />
+        <ColumnHeading label="Genre" />
         <div className="mt-2.5 flex flex-col items-start gap-2">
           {sortedGenres.length > 0 ? (
             sortedGenres.map((genre) => (
@@ -95,12 +95,17 @@ export default function CatalogDetailColumns({
       </div>
 
       <div className="min-w-0">
-        <ColumnHeading icon={InformationCircleIcon} label="Details" />
-        <ul className="mt-2.5 flex flex-col gap-1.5 text-sm text-foreground">
-          {detailLines.length > 0 ? (
-            detailLines.map((line) => (
-              <li key={line} className="leading-snug">
-                {line}
+        <ColumnHeading label="Info" />
+        <ul className="mt-2.5 flex flex-col gap-2 text-sm text-foreground">
+          {infoItems.length > 0 ? (
+            infoItems.map((line, index) => (
+              <li key={`${line.label}-${index}`} className="flex items-start gap-2 leading-snug">
+                <HugeiconsIcon
+                  icon={line.icon}
+                  size={15}
+                  className="mt-0.5 shrink-0 text-default-500"
+                />
+                <span>{line.label}</span>
               </li>
             ))
           ) : (
@@ -110,7 +115,7 @@ export default function CatalogDetailColumns({
       </div>
 
       <div className="min-w-0">
-        <ColumnHeading icon={Link01Icon} label="Links" />
+        <ColumnHeading label="Links" />
         <ul className="mt-2.5 flex flex-col gap-2">
           {linkItems.length > 0 ? (
             linkItems.map((link) => (
@@ -119,12 +124,14 @@ export default function CatalogDetailColumns({
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-primary underline-offset-2 transition-colors hover:text-success hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 transition-colors hover:text-success hover:underline"
                 >
-                  {link.icon ? (
-                    <HugeiconsIcon icon={link.icon} size={15} className="shrink-0 opacity-80" />
-                  ) : null}
                   {link.label}
+                  <HugeiconsIcon
+                    icon={link.icon ?? LinkSquare02Icon}
+                    size={14}
+                    className="shrink-0 opacity-80"
+                  />
                 </a>
               </li>
             ))
@@ -170,4 +177,96 @@ export function sortedCompanyNames(
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
     .slice(0, max);
+}
+
+function primaryStudioOrNetwork(show: {
+  production_companies?: { name?: string }[];
+  networks?: { name?: string }[];
+  studios?: { name?: string }[];
+}): string | null {
+  const company = sortedCompanyNames(show.production_companies, 1)[0];
+  if (company) return company;
+  const networks = (show.networks ?? [])
+    .map((n) => String(n?.name ?? "").trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  if (networks[0]) return networks[0];
+  const studios = (show.studios ?? [])
+    .map((s) => String(s?.name ?? "").trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  return studios[0] ?? null;
+}
+
+function countryLabelFromShow(show: {
+  production_countries?: { name?: string }[];
+  origin_country?: string[];
+}): string | null {
+  const prodNames = (show.production_countries ?? [])
+    .map((p) => String(p?.name ?? "").trim())
+    .filter(Boolean);
+  if (prodNames.length > 0) return [...new Set(prodNames)].join(", ");
+  return countryNamesFromCodes(show.origin_country);
+}
+
+export function buildMovieInfoLines(movie: {
+  production_companies?: { name?: string }[];
+  production_countries?: { iso_3166_1?: string; name?: string }[];
+  origin_country?: string[];
+  original_language?: string;
+  release_date?: string;
+}): CatalogInfoLine[] {
+  const lines: CatalogInfoLine[] = [];
+  const studio = sortedCompanyNames(movie.production_companies, 1)[0] ?? null;
+  const country =
+    (() => {
+      const prod = movie.production_countries;
+      if (Array.isArray(prod) && prod.length > 0) {
+        const names = prod
+          .map((p) => String(p?.name ?? "").trim())
+          .filter(Boolean);
+        if (names.length > 0) return [...new Set(names)].join(", ");
+      }
+      const codes = movie.origin_country;
+      if (Array.isArray(codes) && codes.length > 0) {
+        return codes.map((c) => String(c).toUpperCase()).join(", ");
+      }
+      return null;
+    })() ?? null;
+
+  if (studio) lines.push({ icon: Building02Icon, label: studio });
+  if (country) lines.push({ icon: Location01Icon, label: country });
+
+  const language = languageDisplayName(movie.original_language);
+  if (language) lines.push({ icon: LanguageCircleIcon, label: language });
+
+  const year = movie.release_date?.slice(0, 4);
+  if (year) lines.push({ icon: Calendar03Icon, label: year });
+
+  return lines;
+}
+
+export function buildShowInfoLines(show: {
+  production_companies?: { name?: string }[];
+  networks?: { name?: string }[];
+  studios?: { name?: string }[];
+  production_countries?: { name?: string }[];
+  origin_country?: string[];
+  original_language?: string;
+  first_air_date?: string;
+}): CatalogInfoLine[] {
+  const lines: CatalogInfoLine[] = [];
+  const primary = primaryStudioOrNetwork(show);
+  const country = countryLabelFromShow(show);
+
+  if (primary) lines.push({ icon: Building02Icon, label: primary });
+  if (country) lines.push({ icon: Location01Icon, label: country });
+
+  const language = languageDisplayName(show.original_language);
+  if (language) lines.push({ icon: LanguageCircleIcon, label: language });
+
+  const year = show.first_air_date?.slice(0, 4);
+  if (year) lines.push({ icon: Calendar03Icon, label: `Since ${year}` });
+
+  return lines;
 }

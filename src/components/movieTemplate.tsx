@@ -3,13 +3,16 @@
 import React, { useEffect, useState } from 'react';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
-import CatalogDetailColumns, {
-  languageDisplayName,
-  sortedCompanyNames,
-  Link01Icon,
+import {
+  buildMovieInfoLines,
+  type CatalogDetailLink,
 } from './ui/catalogDetailColumns';
-import { Image, Chip } from '@heroui/react';
+import CatalogMediaPanel, {
+  CatalogMediaPanelSkeleton,
+  movieSubtitleLine,
+} from './ui/catalogMediaPanel';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
+import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
 
 interface Movie {
   id: number;
@@ -34,6 +37,7 @@ interface Movie {
   tagline: string;
   homepage?: string | null;
   imdb_id?: string | null;
+  release_dates?: unknown;
 }
 
 export type MovieServerKey = StreamServerId;
@@ -45,44 +49,17 @@ function isReleasedByDate(releaseDate: string | undefined | null): boolean {
   return ymd <= new Date().toISOString().slice(0, 10);
 }
 
-function formatCountryOfOrigin(movie: Movie): string | null {
-  const prod = movie.production_countries;
-  if (Array.isArray(prod) && prod.length > 0) {
-    const names = prod
-      .map((p) => String(p?.name ?? "").trim())
-      .filter(Boolean);
-    if (names.length > 0) return [...new Set(names)].join(", ");
-  }
-  const codes = movie.origin_country;
-  if (Array.isArray(codes) && codes.length > 0) {
-    return codes.map((c) => String(c).toUpperCase()).join(", ");
-  }
-  return null;
-}
-
-function movieDetailLines(movie: Movie): string[] {
-  const lines: string[] = [
-    ...sortedCompanyNames(movie.production_companies),
-  ];
-  const country = formatCountryOfOrigin(movie);
-  if (country) lines.push(country);
-  const language = languageDisplayName(movie.original_language);
-  if (language) lines.push(language);
-  return lines;
-}
-
-function movieDetailLinks(movie: Movie) {
-  const links: { href: string; label: string; icon: typeof Link01Icon }[] = [];
+function movieDetailLinks(movie: Movie): CatalogDetailLink[] {
+  const links: CatalogDetailLink[] = [];
   if (movie.imdb_id && /^tt\d+/i.test(movie.imdb_id)) {
     links.push({
       href: `https://www.imdb.com/title/${movie.imdb_id}/`,
       label: "IMDb",
-      icon: Link01Icon,
     });
   }
   const homepage = String(movie.homepage ?? "").trim();
   if (homepage) {
-    links.push({ href: homepage, label: "Official site", icon: Link01Icon });
+    links.push({ href: homepage, label: "Official site" });
   }
   return links;
 }
@@ -99,7 +76,7 @@ export default function MovieTemplate({ id }: { id: string }) {
       try {
         setLoading(true);
 
-        const url = `https://api.themoviedb.org/3/movie/${id}?language=en-US`;
+        const url = `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=release_dates`;
         const options = {
           method: 'GET',
           headers: {
@@ -122,7 +99,6 @@ export default function MovieTemplate({ id }: { id: string }) {
     fetchMovieDetails();
   }, [id]);
 
-  // Update page title when movie data loads
   useEffect(() => {
     if (movie?.title) {
       const year = movie.release_date?.slice(0, 4);
@@ -136,7 +112,6 @@ export default function MovieTemplate({ id }: { id: string }) {
   return (
     <div className="flex h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
       <div className="w-full  flex flex-col gap-6">
-        {/* Video Player (horizontal inset matches root py-4 / px-4) */}
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {loading ? (
             <div className="h-full w-full animate-pulse rounded-lg bg-default-200" />
@@ -151,108 +126,26 @@ export default function MovieTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        
-        {/* Movie Details */}
         <div className="w-full">
           {loading ? (
-            <>
-              <section className="w-full">
-                <div className="h-8 sm:h-9 w-3/4 max-w-xl bg-default-200 rounded-lg animate-pulse" />
-                <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-12 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-14 rounded-full bg-default-200 animate-pulse" />
-                  <div className="h-6 w-16 rounded-full bg-default-200 animate-pulse" />
-                </div>
-              </section>
-              <section className="mt-6 w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
-                <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
-                  <div className="flex flex-row gap-3 sm:gap-5">
-                    <div className="w-24 shrink-0 sm:w-32 md:w-36">
-                      <div className="aspect-[2/3] w-full animate-pulse rounded-md bg-default-200" />
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-4">
-                      <div className="space-y-2">
-                        <div className="h-3 w-full max-w-2xl rounded bg-default-200 animate-pulse" />
-                        <div className="h-3 w-full max-w-xl rounded bg-default-200 animate-pulse" />
-                        <div className="h-3 w-2/3 max-w-lg rounded bg-default-200 animate-pulse" />
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                          <div key={i} className="space-y-2">
-                            <div className="h-3 w-20 rounded bg-default-200 animate-pulse" />
-                            <div className="h-6 w-24 rounded-full bg-default-200 animate-pulse" />
-                            <div className="h-6 w-28 rounded-full bg-default-200 animate-pulse" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </>
+            <CatalogMediaPanelSkeleton />
           ) : (
             movie && (
-              <>
-                <section>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-                    {movie.title}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <Chip color="success" size="sm" variant="flat" className="font-normal">
-                      Movie
-                    </Chip>
-                    <span className="rounded-full bg-default-200/80 px-2.5 py-1 text-xs font-normal text-foreground/90 dark:bg-default-100/50">
-                      {movie.release_date?.slice(0, 4) ?? "—"}
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-xs font-medium">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-3.5">
-                        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
-                      </svg>
-                      {movie.vote_average.toFixed(1)}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 text-foreground/90 text-xs font-medium dark:bg-default-100/50">
-                      {(() => {
-                        const m = movie.runtimeSeconds != null ? Math.round(movie.runtimeSeconds / 60) : movie.runtime;
-                        return m != null ? `${m} min` : "—";
-                      })()}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-default-200/80 dark:bg-default-100/50 text-foreground/90 text-xs capitalize">
-                      {movie.status}
-                    </span>
-                  </div>
-                </section>
-
-                <section className="mt-6 w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
-                  <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
-                    <div className="flex flex-row gap-3 sm:gap-5">
-                      <div className="w-24 shrink-0 sm:w-32 md:w-36 lg:w-40">
-                        <Image
-                          src={imageUrl}
-                          alt={movie.title}
-                          className="aspect-[2/3] w-full rounded-md object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
-                          {movie.overview?.trim() ? movie.overview : "No overview available."}
-                        </p>
-                        {movie.tagline ? (
-                          <p className="mt-2 text-xs text-default-500">&ldquo;{movie.tagline}&rdquo;</p>
-                        ) : null}
-                        <CatalogDetailColumns
-                          className="mt-4"
-                          mediaType="movie"
-                          genres={movie.genres ?? []}
-                          details={movieDetailLines(movie)}
-                          links={movieDetailLinks(movie)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </>
+              <CatalogMediaPanel
+                posterUrl={imageUrl}
+                posterAlt={movie.title}
+                title={movie.title}
+                subtitleLine={movieSubtitleLine(movie)}
+                rating={movie.vote_average}
+                certification={usCertificationFromDoc(movie)}
+                status={movie.status}
+                overview={movie.overview}
+                tagline={movie.tagline}
+                mediaType="movie"
+                genres={movie.genres ?? []}
+                infoLines={buildMovieInfoLines(movie)}
+                links={movieDetailLinks(movie)}
+              />
             )
           )}
         </div>
