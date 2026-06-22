@@ -33,6 +33,10 @@ export type EpisodeCardRow = {
 };
 
 const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/w300";
+/** Visible episode cards in the horizontal scroller (one row). */
+const VISIBLE_EPISODE_SLOTS = 7;
+const EPISODE_CAROUSEL_ITEM_CLASS =
+  "pl-3 shrink-0 grow-0 basis-[calc(100%/7)]";
 
 function episodeStillUrl(stillPath: string | null | undefined) {
   const path = String(stillPath ?? "").trim();
@@ -387,14 +391,15 @@ export default function ShowEpisodePicker({
       ) : null}
 
       {loading ? (
-        <div className="flex gap-3 overflow-hidden py-1">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[168px] w-[132px] shrink-0 animate-pulse rounded-xl bg-default-200"
-            />
-          ))}
-        </div>
+        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+          <CarouselContent className="-ml-3">
+            {Array.from({ length: VISIBLE_EPISODE_SLOTS }).map((_, i) => (
+              <CarouselItem key={i} className={EPISODE_CAROUSEL_ITEM_CLASS}>
+                <div className="h-[168px] w-full animate-pulse rounded-xl bg-default-200" />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
       ) : error && episodes.length === 0 ? (
         <p className="text-sm text-default-500">Could not load episodes.</p>
       ) : episodes.length === 0 ? (
@@ -418,14 +423,14 @@ export default function ShowEpisodePicker({
               return (
                 <CarouselItem
                   key={`${row.season}-${row.episode}-${row.displayNumber ?? ""}`}
-                  className="basis-auto pl-3"
+                  className={EPISODE_CAROUSEL_ITEM_CLASS}
                 >
                   <button
                     type="button"
                     onClick={() => handleSelect(row)}
                     aria-label={`Episode ${labelNum}: ${row.name}${watched ? ", watched" : ""}`}
                     aria-current={active ? "true" : undefined}
-                    className={`relative flex w-[132px] flex-col overflow-hidden rounded-xl text-left transition-shadow ${
+                    className={`relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-shadow ${
                       active
                         ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
                         : "ring-1 ring-default-200/50 dark:ring-default-100/20"
