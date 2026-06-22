@@ -860,8 +860,8 @@ export default function ShowTemplate({ id }: { id: string }) {
         {!loading && show && !isAnimeMovie ? (
           <ShowEpisodePickerProvider {...episodePickerProps}>
             <div className="flex w-full flex-col gap-6">
-              <ShowEpisodePickerControls />
               {showDetailsPanel}
+              <ShowEpisodePickerControls />
               <ShowEpisodePickerList />
               {showRelatedSections}
             </div>
