@@ -86,6 +86,23 @@ function genreBrowseHref(mode: Mode, genreId: number) {
   return `${base}?${params.toString()}`;
 }
 
+function deckPosters(posters: string[]): string[] {
+  const raw = posters.filter(Boolean).slice(0, 3);
+  if (raw.length === 0) return [];
+  const out = [...raw];
+  while (out.length < 3) out.push(out[out.length - 1]);
+  return out;
+}
+
+const DECK_CARD_BASE =
+  "absolute bottom-0 right-0 h-full w-auto max-w-full rounded-lg object-cover shadow-2xl ring-1 ring-black/10 origin-bottom-right transition-all duration-300 ease-out will-change-transform";
+
+const DECK_CARD_HOVER = [
+  "z-30 rotate-[12deg] group-hover:-translate-y-3 group-hover:translate-x-0.5 group-hover:rotate-[6deg]",
+  "z-20 rotate-[12deg] group-hover:-translate-x-[42%] group-hover:-translate-y-1 group-hover:-rotate-[-2deg]",
+  "z-10 rotate-[12deg] group-hover:translate-x-[14%] group-hover:-translate-y-5 group-hover:rotate-[20deg]",
+] as const;
+
 function GenreTile({
   genre,
   mode,
@@ -96,14 +113,18 @@ function GenreTile({
   colorClass: string;
 }) {
   const href = genreBrowseHref(mode, genre.id);
-  const poster = genre.posters[0];
+  const posters = deckPosters(genre.posters);
 
   return (
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
-      className={`group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-br ${colorClass} p-3 shadow-sm transition-transform duration-200 hover:scale-[1.02]`}
+      className={`group relative flex aspect-[4/3] w-full rounded-xl p-3`}
     >
+      <span
+        className={`pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br ${colorClass} shadow-sm`}
+        aria-hidden
+      />
       <div className="relative z-20 flex flex-col pr-[40%]">
         <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
           {genre.name}
@@ -113,18 +134,23 @@ function GenreTile({
         </span>
       </div>
 
-      {poster && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={posterUrl(poster)}
-          alt=""
-          aria-hidden
-          loading="lazy"
-          className="pointer-events-none absolute -bottom-6 -right-4 z-10 h-[80%] w-auto max-w-[52%] rotate-12 rounded-lg object-cover shadow-2xl ring-1 ring-black/10 transition-transform duration-200 group-hover:-translate-y-1.5 group-hover:rotate-6 sm:-right-5"
-        />
+      {posters.length > 0 && (
+        <div className="pointer-events-none absolute -bottom-6 -right-4 z-10 h-[80%] w-[52%] sm:-right-5">
+          {posters.map((path, index) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={`${path}-${index}`}
+              src={posterUrl(path)}
+              alt=""
+              aria-hidden
+              loading="lazy"
+              className={`${DECK_CARD_BASE} ${DECK_CARD_HOVER[index]}`}
+            />
+          ))}
+        </div>
       )}
 
-      <span className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-white/15 to-black/20" />
+      <span className="pointer-events-none absolute inset-0 z-[1] rounded-xl bg-gradient-to-br from-white/15 to-black/20" />
     </Link>
   );
 }
