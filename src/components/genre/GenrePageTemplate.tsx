@@ -260,6 +260,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     rawSort === 'top_rated' || rawSort === 'new' ? rawSort : 'popular';
 
   const [items, setItems] = useState<ContentItem[]>([]);
+  const [featured, setFeatured] = useState<ContentItem[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -285,12 +286,14 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
       .then((res) => res.json())
       .then((data) => {
         setItems(data.results ?? []);
+        setFeatured(Array.isArray(data.featured) ? data.featured : []);
         setTotal(typeof data.total === 'number' ? data.total : 0);
         setTotalPages(data.totalPages ?? 1);
       })
       .catch(() => {
         if (!controller.signal.aborted) {
           setItems([]);
+          setFeatured([]);
           setTotal(0);
           setTotalPages(1);
         }
@@ -320,9 +323,6 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const countLabel = loading ? '…' : `${total.toLocaleString()} titles`;
 
   const showFeatured = pageParam === 1 && sort === 'popular';
-  const featured = showFeatured ? items.slice(0, 2) : [];
-  const gridItems =
-    showFeatured && featured.length > 0 ? items.slice(featured.length) : items;
 
   return (
     <div className="bg-main min-h-screen w-full">
@@ -391,12 +391,12 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
 
           {loading ? (
             <GenreCardGridSkeleton count={28} layoutMode={cardLayout} />
-          ) : gridItems.length === 0 ? (
+          ) : items.length === 0 ? (
             <p className="py-16 text-center text-sm text-default-500">
               No titles found for {genreLabel}. Try another filter.
             </p>
           ) : (
-            <GenreCardGrid items={gridItems} layoutMode={cardLayout} />
+            <GenreCardGrid items={items} layoutMode={cardLayout} />
           )}
 
           {totalPages > 1 && !loading && items.length > 0 && (
