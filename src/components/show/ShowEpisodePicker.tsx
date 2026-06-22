@@ -57,7 +57,7 @@ const EPISODE_CARD_TITLE_CLASS =
 const EPISODE_CARD_DESCRIPTION_CLASS =
   "h-[3.5rem] shrink-0 overflow-hidden text-sm leading-snug text-default-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]";
 const EPISODE_CARD_BODY_CLASS =
-  "flex min-h-0 flex-1 flex-col overflow-hidden bg-default-100/90 py-3 pr-6 pl-0 dark:bg-default-50/10";
+  "flex min-h-0 flex-1 flex-col overflow-hidden py-3 pr-6 pl-0";
 
 function scrollToPlayerBottom() {
   const player = document.getElementById(SHOW_VIDEO_PLAYER_ID);
