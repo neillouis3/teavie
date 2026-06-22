@@ -7,24 +7,12 @@ const VIDEASY_TV_QUERY =
   '?color=22c55e&nextEpisode=true&episodeSelector=true&overlay=true';
 /** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
 const VIDCORE_TV_QUERY = '?theme=22c55e&autoPlay=true';
-/**
- * Anime now plays through the standard TV path (`/tv/{id}/{season}/{episode}`),
- * same as live-action shows — the dedicated AniList `/anime` embed was removed.
- * `animePath` is kept as a last-resort fallback for titles that never resolve a
- * TMDB id (see showTemplate playback selection).
- */
-const VIDEASY_ANIME_QUERY =
-  '?color=22c55e&nextEpisode=true&episodeSelector=true&overlay=true';
 
 export const SHOW_SERVERS = {
   videasy: {
     base: 'https://player.videasy.to',
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
     suffix: () => VIDEASY_TV_QUERY,
-    animePath: (anilistId, absoluteEpisode) =>
-      `/anime/${anilistId}/${Math.max(1, absoluteEpisode)}`,
-    animeMoviePath: (anilistId) => `/anime/${anilistId}`,
-    suffixAnime: () => VIDEASY_ANIME_QUERY,
   },
   vidcore: {
     base: 'https://vidcore.net',
@@ -34,58 +22,12 @@ export const SHOW_SERVERS = {
 };
 
 /**
- * @param {{
- *   source: 'tmdb' | 'anilist';
- *   server: string;
- *   videoId?: string;
- *   season: number;
- *   episode: number;
- *   anilistId?: number;
- *   absoluteEpisode: number;
- *   animeMovie: boolean;
- * }} p
+ * @param {{ server: string; videoId?: string; season: number; episode: number }} p
  */
 function buildEmbedUrl(p) {
-  const {
-    source,
-    server,
-    videoId,
-    season,
-    episode,
-    anilistId,
-    absoluteEpisode,
-    animeMovie,
-  } = p;
-
-  const anilistOk =
-    source === 'anilist' &&
-    typeof anilistId === 'number' &&
-    Number.isFinite(anilistId) &&
-    anilistId > 0;
+  const { server, videoId, season, episode } = p;
 
   try {
-    if (anilistOk) {
-      let cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
-      if (typeof cfg.animePath !== 'function') cfg = SHOW_SERVERS.videasy;
-
-      let path;
-      if (animeMovie && typeof cfg.animeMoviePath === 'function') {
-        path = cfg.animeMoviePath(anilistId);
-      } else if (typeof cfg.animePath === 'function') {
-        const abs = Math.max(
-          1,
-          Math.floor(Number(absoluteEpisode)) || Math.floor(Number(episode)) || 1
-        );
-        path = cfg.animePath(anilistId, abs);
-      } else {
-        return { url: '', error: 'No anime player for this server' };
-      }
-      const sfx =
-        typeof cfg.suffixAnime === 'function' ? cfg.suffixAnime : cfg.suffix;
-      const suffix = typeof sfx === 'function' ? sfx() : '';
-      return { url: `${cfg.base}${path}${suffix}`, error: null };
-    }
-
     const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
@@ -103,47 +45,26 @@ function buildEmbedUrl(p) {
 
 /**
  * @param {object} props
- * @param {string} [props.videoId]
+ * @param {string} [props.videoId] TMDB TV id
  * @param {number} props.season
  * @param {number} props.episode
  * @param {string} [props.server]
- * @param {'tmdb' | 'anilist'} [props.source]
- * @param {number} [props.anilistId]
- * @param {number} [props.absoluteEpisode]
- * @param {boolean} [props.animeMovie]
  */
 export default function ShowPlayer({
   videoId,
   season,
   episode,
   server = 'videasy',
-  source = 'tmdb',
-  anilistId,
-  absoluteEpisode = 1,
-  animeMovie = false,
 }) {
   const { url, error } = useMemo(
     () =>
       buildEmbedUrl({
-        source,
         server,
         videoId,
         season,
         episode,
-        anilistId,
-        absoluteEpisode,
-        animeMovie,
       }),
-    [
-      source,
-      server,
-      videoId,
-      season,
-      episode,
-      anilistId,
-      absoluteEpisode,
-      animeMovie,
-    ]
+    [server, videoId, season, episode]
   );
 
   if (error) {

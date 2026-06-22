@@ -113,7 +113,7 @@ function isKdramaShow(show: Show | null | undefined): boolean {
 }
 
 /**
- * not AniList id. Use it when `anilist_id` is missing on the merged show.
+ * MAL id from `/shows/anime_{malId}` or doc fields — for AniList metadata merge and related rails.
  */
 function malIdFromAnimeCatalogRouteId(routeId: string): number | null {
   const m = /^anime_(\d+)$/i.exec(String(routeId ?? "").trim());
@@ -434,38 +434,12 @@ export default function ShowTemplate({ id }: { id: string }) {
 
     const saved = loadWatchProgress(String(id));
     if (saved) {
-      const aniIdH = catalogAnilistId(show);
-      const playerAniH = Boolean(show.is_anime) && aniIdH != null;
-      const movieH =
-        show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC";
-      const aniOnlyH = playerAniH && !movieH;
-      if (aniOnlyH) {
-        const capH = anilistEpisodeCap(show);
-        const sumH = tmdbSeasonsWithEpisodes(show.seasons).reduce(
-          (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
-          0
-        );
-        const maxEp =
-          capH ??
-          (typeof show.number_of_episodes === "number" && show.number_of_episodes > 0
-            ? show.number_of_episodes
-            : sumH > 0
-              ? sumH
-              : 0);
-        setSelectedSeason(1);
-        if (maxEp > 0 && saved.lastSeason === 1 && saved.lastEpisode >= 1 && saved.lastEpisode <= maxEp) {
-          setSelectedEpisode(saved.lastEpisode);
-        } else {
-          setSelectedEpisode(1);
-        }
-      } else {
-        const list = tmdbSeasonsWithEpisodes(show.seasons);
-        const seasonObj = list.find((s) => s.season_number === saved.lastSeason);
-        const max = seasonObj?.episode_count ?? 0;
-        if (max > 0 && saved.lastEpisode >= 1 && saved.lastEpisode <= max) {
-          setSelectedSeason(saved.lastSeason);
-          setSelectedEpisode(saved.lastEpisode);
-        }
+      const list = tmdbSeasonsWithEpisodes(show.seasons);
+      const seasonObj = list.find((s) => s.season_number === saved.lastSeason);
+      const max = seasonObj?.episode_count ?? 0;
+      if (max > 0 && saved.lastEpisode >= 1 && saved.lastEpisode <= max) {
+        setSelectedSeason(saved.lastSeason);
+        setSelectedEpisode(saved.lastEpisode);
       }
       setWatchedEpisodes(new Set(saved.watched));
     } else {
@@ -683,19 +657,11 @@ export default function ShowTemplate({ id }: { id: string }) {
     const cum =
       (multiSeason ? episodeOffsetBeforeSeason(show.seasons, selectedSeason) : 0) +
       selectedEpisode;
-    const playerAni = Boolean(show.is_anime) && catalogAnilistId(show) != null;
-    const aniMovieTitle =
-      show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC";
-    const aniListOnlyTitle = playerAni && !aniMovieTitle;
-    const seasonEpisode = aniListOnlyTitle
-      ? `Ep ${selectedEpisode}`
-      : multiSeason && playerAni
+    const seasonEpisode = multiSeason
+      ? show.is_anime
         ? `S${selectedSeason} · E${selectedEpisode} (#${cum})`
-        : multiSeason && !playerAni
-          ? `S${selectedSeason}E${selectedEpisode}`
-        : multiSeason
-          ? `S${selectedSeason} · Ep ${cum}`
-          : `S${selectedSeason}E${selectedEpisode}`;
+        : `S${selectedSeason}E${selectedEpisode}`
+      : `S${selectedSeason}E${selectedEpisode}`;
     document.title = year
       ? `${displayName} (${year}) ${seasonEpisode} - Teavie`
       : `${displayName} ${seasonEpisode} - Teavie`;
@@ -707,21 +673,10 @@ export default function ShowTemplate({ id }: { id: string }) {
       setTmdbEpCapLoading(false);
       return;
     }
-    if (show.is_anime && catalogAnilistId(show) != null) {
-      setTmdbAiredEpCap(null);
-      setTmdbEpCapLoading(false);
-      return;
-    }
     const releasedSeasonCount =
       show.seasons?.filter((s) => s.season_number >= 1).length ?? 0;
-    const aniMovieSkip =
-      show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC";
-    const useAnilistOnlyEpSkip =
-      Boolean(show.is_anime) && catalogAnilistId(show) != null && !aniMovieSkip;
     const skipSeasonFetchForFlatAnimePicker =
-      releasedSeasonCount > 1 &&
-      !useAnilistOnlyEpSkip &&
-      Boolean(show.is_anime);
+      releasedSeasonCount > 1 && Boolean(show.is_anime);
     if (skipSeasonFetchForFlatAnimePicker) {
       setTmdbAiredEpCap(null);
       setTmdbEpCapLoading(false);
@@ -795,61 +750,38 @@ export default function ShowTemplate({ id }: { id: string }) {
     0
   );
   const resolvedIsNumeric = /^\d+$/.test(String(resolvedPlayerId));
-  const aniId = catalogAnilistId(show);
-  /** MAL id from `/shows/anime_{malId}` or doc — drives AniList APIs when `anilist_id` is missing. */
+  /** MAL id from `/shows/anime_{malId}` or doc — drives related rails / recommendations. */
   const idMalForAnilistRails = catalogMalIdForAnilistApi(show, id);
   const showAnimeRelated =
     !loading &&
     show != null &&
     Boolean(show.is_anime) &&
     idMalForAnilistRails != null;
-  // Anime now plays through the standard TMDB TV embed (/tv/{id}/{season}/{episode}),
-  // same as live-action shows. The AniList /anime embed is only a last resort for
-  // anime that never resolve a TMDB id.
   const playerUsesTmdb = resolvedIsNumeric;
-  const playerUsesAnilist =
-    !playerUsesTmdb && Boolean(show?.is_anime) && aniId != null;
   const aniListEpCap = anilistEpisodeCap(show);
   /** Anime film (AniList format MOVIE/MUSIC): single playback, no episode picker. */
   const isAnimeMovie =
     Boolean(show?.is_anime) &&
     (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
-  const animeMovieEmbed =
-    playerUsesAnilist &&
-    (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
-  /** TV series on AniList: flat 1…N picker only (no TMDB season / cumulative map). */
-  const useAnilistOnlyEpisodePicker = playerUsesAnilist && !animeMovieEmbed;
   /**
-   * Multi-season **anime** without AniList-only picker: one flat cumulative episode grid (TMDB layout).
+   * Multi-season anime: one flat cumulative episode grid mapped to TMDB season/episode.
    * Live-action TMDB TV uses per-season tabs + per-season episode indices.
    */
   const useFlatAllEpisodesPicker =
-    !useAnilistOnlyEpisodePicker &&
-    releasedSeasonsForUi.length > 1 &&
-    Boolean(show?.is_anime);
-  const anilistPickerTotal =
-    aniListEpCap ??
-    (typeof show?.number_of_episodes === "number" && show.number_of_episodes > 0
-      ? show.number_of_episodes
-      : null) ??
-    (totalEpisodesAcrossSeasons > 0 ? totalEpisodesAcrossSeasons : null);
+    releasedSeasonsForUi.length > 1 && Boolean(show?.is_anime);
   const flatEpisodesMax =
-    playerUsesAnilist && useFlatAllEpisodesPicker && aniListEpCap != null
+    useFlatAllEpisodesPicker && aniListEpCap != null
       ? Math.min(totalEpisodesAcrossSeasons, aniListEpCap)
       : totalEpisodesAcrossSeasons;
-  /** TMDB /season/{n} air dates for capping the episode grid (season index matches TMDB for all TMDB playback). */
+  /** TMDB /season/{n} air dates for capping the episode grid (season index matches TMDB). */
   const useTmdbSeasonAiringCap = Boolean(show && playerUsesTmdb);
   /** Per-season aired cap only when the grid is per-season (not the all-episodes flat list). */
   const useTmdbSeasonAiringCapForPlayer =
-    useTmdbSeasonAiringCap && !useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker;
+    useTmdbSeasonAiringCap && !useFlatAllEpisodesPicker;
 
   let displayEpisodeCount = rawEpisodeCount;
   let episodeGridStatus: "normal" | "loading" | "none" = "normal";
-  if (useAnilistOnlyEpisodePicker) {
-    const n = anilistPickerTotal;
-    displayEpisodeCount = typeof n === "number" && n > 0 ? n : 0;
-    episodeGridStatus = displayEpisodeCount > 0 ? "normal" : "none";
-  } else if (useFlatAllEpisodesPicker) {
+  if (useFlatAllEpisodesPicker) {
     displayEpisodeCount = flatEpisodesMax;
     episodeGridStatus = flatEpisodesMax > 0 ? "normal" : "none";
   } else if (useTmdbSeasonAiringCap) {
@@ -869,24 +801,7 @@ export default function ShowTemplate({ id }: { id: string }) {
     !show.first_air_date ||
     String(show.first_air_date).trim().length < 10 ||
     String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
-  const canPlay = playerUsesAnilist || (playerUsesTmdb && tmdbShowPremiered);
-  const absoluteEpisodeForPlayer = (() => {
-    if (useAnilistOnlyEpisodePicker) {
-      const e = Math.max(1, Math.floor(Number(selectedEpisode)) || 1);
-      const max =
-        aniListEpCap ??
-        (typeof anilistPickerTotal === "number" && anilistPickerTotal > 0
-          ? anilistPickerTotal
-          : null);
-      if (max != null && max > 0) return Math.min(e, max);
-      return e;
-    }
-    if (playerUsesAnilist && show) {
-      const raw = cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode);
-      return aniListEpCap != null ? Math.min(Math.max(1, raw), aniListEpCap) : raw;
-    }
-    return 1;
-  })();
+  const canPlay = playerUsesTmdb && tmdbShowPremiered;
   const imageUrl = show?.poster_path
     ? /^https?:\/\//i.test(show.poster_path)
       ? show.poster_path
@@ -897,16 +812,14 @@ export default function ShowTemplate({ id }: { id: string }) {
   const animeHideSeasonRow =
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
   const showSeasonPickerStrip =
-    !animeHideSeasonRow && !useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker;
+    !animeHideSeasonRow && !useFlatAllEpisodesPicker;
   const pickerSectionLabelClass = "text-xs font-medium text-default-500";
   const pickerButtonClass = (selected: boolean) =>
     selected
       ? "h-9 min-w-9 bg-foreground px-0 text-xs font-medium tabular-nums text-background"
       : "h-9 min-w-9 border border-default-300/70 bg-transparent px-0 text-xs font-medium tabular-nums dark:border-default-100/30";
   const useContinuousEpisodeLabels =
-    !useAnilistOnlyEpisodePicker &&
-    releasedSeasonsForUi.length > 1 &&
-    useFlatAllEpisodesPicker;
+    releasedSeasonsForUi.length > 1 && useFlatAllEpisodesPicker;
   const episodeDisplayOffset =
     useContinuousEpisodeLabels && show
       ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
@@ -914,8 +827,8 @@ export default function ShowTemplate({ id }: { id: string }) {
   const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
 
   useEffect(() => {
-    if (useAnilistOnlyEpisodePicker || !show?.seasons?.length || !useFlatAllEpisodesPicker || !playerUsesAnilist) return;
-    if (aniListEpCap == null || flatEpisodesMax <= 0) return;
+    if (!show?.seasons?.length || !useFlatAllEpisodesPicker) return;
+    if (flatEpisodesMax <= 0) return;
     const cur = cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode);
     if (cur <= flatEpisodesMax) return;
     const coords = tmdbSeasonEpisodeFromAbsolute(show.seasons, flatEpisodesMax);
@@ -923,26 +836,11 @@ export default function ShowTemplate({ id }: { id: string }) {
     setSelectedEpisode(coords.episode);
   }, [
     show,
-    useAnilistOnlyEpisodePicker,
     useFlatAllEpisodesPicker,
-    playerUsesAnilist,
-    aniListEpCap,
     flatEpisodesMax,
     selectedSeason,
     selectedEpisode,
   ]);
-
-  useEffect(() => {
-    if (!useAnilistOnlyEpisodePicker) return;
-    if (selectedSeason !== 1) setSelectedSeason(1);
-  }, [useAnilistOnlyEpisodePicker, selectedSeason]);
-
-  useEffect(() => {
-    if (!useAnilistOnlyEpisodePicker) return;
-    if (displayEpisodeCount > 0 && selectedEpisode > displayEpisodeCount) {
-      setSelectedEpisode(displayEpisodeCount);
-    }
-  }, [useAnilistOnlyEpisodePicker, displayEpisodeCount, selectedEpisode]);
 
   const episodeBlockLo =
     displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
@@ -957,22 +855,17 @@ export default function ShowTemplate({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
-    if (useFlatAllEpisodesPicker || useAnilistOnlyEpisodePicker) return;
+    if (useFlatAllEpisodesPicker) return;
     setEpisodeRangeStart(0);
-  }, [selectedSeason, useFlatAllEpisodesPicker, useAnilistOnlyEpisodePicker]);
+  }, [selectedSeason, useFlatAllEpisodesPicker]);
 
   useEffect(() => {
-    if (!useFlatAllEpisodesPicker && !useAnilistOnlyEpisodePicker) return;
-    const c = useAnilistOnlyEpisodePicker ? selectedEpisode : cumulativeEpisodeSelected;
+    if (!useFlatAllEpisodesPicker) return;
     const start =
-      Math.floor(Math.max(0, c - 1) / EPISODE_RANGE_BLOCK) * EPISODE_RANGE_BLOCK;
+      Math.floor(Math.max(0, cumulativeEpisodeSelected - 1) / EPISODE_RANGE_BLOCK) *
+      EPISODE_RANGE_BLOCK;
     setEpisodeRangeStart(start);
-  }, [
-    useFlatAllEpisodesPicker,
-    useAnilistOnlyEpisodePicker,
-    cumulativeEpisodeSelected,
-    selectedEpisode,
-  ]);
+  }, [useFlatAllEpisodesPicker, cumulativeEpisodeSelected]);
 
   useEffect(() => {
     if (displayEpisodeCount <= 0) return;
@@ -997,17 +890,6 @@ export default function ShowTemplate({ id }: { id: string }) {
               </div>
             ) : animeMovieTmdbId ? (
               <MoviePlayer key={`movie-${id}`} videoId={animeMovieTmdbId} server={server} />
-            ) : playerUsesAnilist && aniId != null ? (
-              <ShowPlayer
-                key={id}
-                server={server}
-                source="anilist"
-                anilistId={aniId}
-                absoluteEpisode={1}
-                animeMovie
-                season={1}
-                episode={1}
-              />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
                 No playback source available for this page yet. Try again later.
@@ -1031,11 +913,7 @@ export default function ShowTemplate({ id }: { id: string }) {
             <ShowPlayer
               key={id}
               server={server}
-              source={playerUsesAnilist ? "anilist" : "tmdb"}
-              videoId={playerUsesTmdb ? resolvedPlayerId : undefined}
-              anilistId={playerUsesAnilist ? aniId : undefined}
-              absoluteEpisode={absoluteEpisodeForPlayer}
-              animeMovie={animeMovieEmbed}
+              videoId={resolvedPlayerId}
               season={selectedSeason}
               episode={selectedEpisode}
             />
@@ -1107,9 +985,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                         )}
                         {episodeGridStatus === "none" && (
                           <div className="rounded-lg bg-default-100/80 px-2 py-4 text-center text-xs text-default-500 dark:bg-default-50/10">
-                            {useAnilistOnlyEpisodePicker
-                              ? "Episode list not ready yet."
-                              : "Nothing to show for this season yet."}
+                            Nothing to show for this season yet.
                           </div>
                         )}
                         {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
@@ -1160,19 +1036,15 @@ export default function ShowTemplate({ id }: { id: string }) {
                                   useFlatAllEpisodesPicker && show?.seasons
                                     ? tmdbSeasonEpisodeFromAbsolute(show.seasons, ep)
                                     : null;
-                                const watchKey = useAnilistOnlyEpisodePicker
-                                  ? formatWatchEpKey(1, ep)
-                                  : coordsFlat
-                                    ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
-                                    : formatWatchEpKey(selectedSeason, ep);
+                                const watchKey = coordsFlat
+                                  ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
+                                  : formatWatchEpKey(selectedSeason, ep);
                                 const watchedThis = watchedEpisodes.has(watchKey);
-                                const epLabel = useAnilistOnlyEpisodePicker
+                                const epLabel = useFlatAllEpisodesPicker
                                   ? ep
-                                  : useFlatAllEpisodesPicker
-                                    ? ep
-                                    : useContinuousEpisodeLabels
-                                      ? ep + episodeDisplayOffset
-                                      : ep;
+                                  : useContinuousEpisodeLabels
+                                    ? ep + episodeDisplayOffset
+                                    : ep;
                                 const isCurrent = useFlatAllEpisodesPicker
                                   ? cumulativeEpisodeSelected === ep
                                   : selectedEpisode === ep;
@@ -1199,14 +1071,6 @@ export default function ShowTemplate({ id }: { id: string }) {
                                                 coordsFlat.episode
                                               )
                                             );
-                                            return next;
-                                          });
-                                        } else if (useAnilistOnlyEpisodePicker) {
-                                          setSelectedSeason(1);
-                                          setSelectedEpisode(ep);
-                                          setWatchedEpisodes((prev) => {
-                                            const next = new Set(prev);
-                                            next.add(formatWatchEpKey(1, ep));
                                             return next;
                                           });
                                         } else {
