@@ -13,7 +13,11 @@ import {
   Location01Icon,
 } from "@hugeicons/core-free-icons";
 
-import { genrePageHref, imdbGenreSlugFromLabel } from "@/lib/imdbGenres";
+import {
+  genrePageHref,
+  imdbGenreSlugFromLabel,
+  imdbGenresForDisplayInput,
+} from "@/lib/imdbGenres";
 
 export type CatalogGenre = { name: string; slug: string };
 
@@ -281,31 +285,24 @@ export function buildShowInfoLines(show: {
   return lines;
 }
 
-/** Map IMDb labels or legacy `{ name }` objects to browse chips. */
+/** Map catalog / TMDB / OMDb genre sources to browse chips (unified IMDb labels). */
 export function catalogGenresForDisplay(
-  source: { name?: string }[] | string[] | null | undefined
+  source:
+    | {
+        name?: string;
+        imdb_genres?: string[];
+        omdb?: { genre?: string | null };
+      }
+    | { name?: string }[]
+    | string[]
+    | null
+    | undefined
 ): CatalogGenre[] {
-  if (!Array.isArray(source) || source.length === 0) return [];
-
-  if (typeof source[0] === "string") {
-    return (source as string[])
-      .map((label) => String(label).trim())
-      .filter(Boolean)
-      .map((name) => ({
-        name,
-        slug:
-          imdbGenreSlugFromLabel(name) ??
-          name.toLowerCase().replace(/\s+/g, "-"),
-      }));
-  }
-
-  return (source as { name?: string }[])
-    .map((g) => String(g?.name ?? "").trim())
-    .filter(Boolean)
-    .map((name) => ({
-      name,
-      slug:
-        imdbGenreSlugFromLabel(name) ??
-        name.toLowerCase().replace(/\s+/g, "-"),
-    }));
+  const labels = imdbGenresForDisplayInput(source);
+  return labels.map((name) => ({
+    name,
+    slug:
+      imdbGenreSlugFromLabel(name) ??
+      name.toLowerCase().replace(/\s+/g, "-"),
+  }));
 }

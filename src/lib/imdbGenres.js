@@ -1,7 +1,7 @@
 /**
  * Unified IMDb / OMDb genre labels (same taxonomy for movies and TV).
- * `imdb_genres` is the canonical genre field on catalog docs — TMDB `genre_ids`
- * and `genres` are not stored after normalization.
+ * `imdb_genres` is the only canonical genre field on catalog docs.
+ * TMDB `genre_ids` / `genres` are never stored or used as a genre source.
  */
 
 /** @typedef {{ slug: string; label: string }} ImdbGenre */
@@ -46,76 +46,7 @@ const IMDB_LABEL_TO_SLUG = new Map(
   IMDB_GENRES.map((g) => [g.label.toLowerCase(), g.slug])
 );
 
-/** TMDB genre name → IMDb-style label. */
-const TMDB_NAME_TO_IMDB = {
-  "action & adventure": "Action",
-  action: "Action",
-  adventure: "Adventure",
-  animation: "Animation",
-  comedy: "Comedy",
-  crime: "Crime",
-  documentary: "Documentary",
-  drama: "Drama",
-  family: "Family",
-  fantasy: "Fantasy",
-  history: "History",
-  horror: "Horror",
-  music: "Music",
-  mystery: "Mystery",
-  romance: "Romance",
-  "science fiction": "Sci-Fi",
-  "sci-fi & fantasy": "Sci-Fi",
-  thriller: "Thriller",
-  war: "War",
-  "war & politics": "War",
-  western: "Western",
-  kids: "Family",
-  reality: "Reality-TV",
-  "reality-tv": "Reality-TV",
-  news: "News",
-  "game-show": "Game-Show",
-  "game show": "Game-Show",
-  "talk-show": "Talk-Show",
-  "talk show": "Talk-Show",
-  talk: "Talk-Show",
-  "film-noir": "Film-Noir",
-  "film noir": "Film-Noir",
-  soap: "Drama",
-  "tv movie": "Drama",
-};
-
-/** TMDB genre id → display name (movie + tv combined). */
-const TMDB_ID_TO_NAME = {
-  28: "Action",
-  12: "Adventure",
-  16: "Animation",
-  35: "Comedy",
-  80: "Crime",
-  99: "Documentary",
-  18: "Drama",
-  10751: "Family",
-  14: "Fantasy",
-  36: "History",
-  27: "Horror",
-  10402: "Music",
-  9648: "Mystery",
-  10749: "Romance",
-  878: "Science Fiction",
-  10770: "TV Movie",
-  53: "Thriller",
-  10752: "War",
-  37: "Western",
-  10759: "Action & Adventure",
-  10762: "Kids",
-  10763: "News",
-  10764: "Reality",
-  10765: "Sci-Fi & Fantasy",
-  10766: "Soap",
-  10767: "Talk",
-  10768: "War & Politics",
-};
-
-/** Anime / AniList genre strings → IMDb label (null = skip). */
+/** AniList / MAL genre strings → IMDb label (null = skip). Not TMDB. */
 const ANIME_GENRE_TO_IMDB = {
   action: "Action",
   adventure: "Adventure",
@@ -171,10 +102,8 @@ function imdbLabelFromRawGenreName(raw) {
   const key = name.toLowerCase();
   if (ANIME_GENRE_TO_IMDB[key] === null) return null;
   if (ANIME_GENRE_TO_IMDB[key]) return ANIME_GENRE_TO_IMDB[key];
-  if (TMDB_NAME_TO_IMDB[key]) return TMDB_NAME_TO_IMDB[key];
   const direct = IMDB_GENRES.find((g) => g.label.toLowerCase() === key);
   if (direct) return direct.label;
-  // Keep valid OMDb-style labels even when not in the browse dropdown.
   if (/^[a-z]+(-[a-z]+)*$/i.test(name.replace(/\s+/g, "-"))) return name;
   return null;
 }
@@ -217,17 +146,8 @@ export function imdbGenreSlugFromLabel(label) {
   return IMDB_LABEL_TO_SLUG.get(key) ?? null;
 }
 
-/** Legacy TMDB genre id → IMDb browse slug. */
-const TMDB_ID_TO_IMDB_SLUG = new Map(
-  Object.entries(TMDB_ID_TO_NAME).map(([id, name]) => {
-    const label = imdbLabelFromRawGenreName(name);
-    const slug = label ? imdbGenreSlugFromLabel(label) : null;
-    return slug ? [Number(id), slug] : null;
-  }).filter(Boolean)
-);
-
 /**
- * Normalize a browse/search `genre` query param (slug, label, or legacy TMDB id).
+ * Normalize a browse/search `genre` query param (IMDb slug or label only).
  * @param {string | null | undefined} param
  * @returns {string | null} IMDb slug
  */
@@ -238,9 +158,6 @@ export function imdbGenreSlugFromBrowseParam(param) {
   if (IMDB_SLUG_TO_LABEL.has(lower)) return lower;
   const fromLabel = imdbGenreSlugFromLabel(raw);
   if (fromLabel) return fromLabel;
-  if (/^\d+$/.test(raw)) {
-    return TMDB_ID_TO_IMDB_SLUG.get(parseInt(raw, 10)) ?? null;
-  }
   const fromRaw = imdbLabelFromRawGenreName(raw);
   if (fromRaw) return imdbGenreSlugFromLabel(fromRaw);
   return null;
@@ -288,52 +205,18 @@ export function isValidImdbGenreSlug(slug) {
 }
 
 /**
- * @param {number[] | undefined} genreIds
- * @returns {string[]}
- */
-export function imdbGenresFromTmdbGenreIds(genreIds) {
-  if (!Array.isArray(genreIds)) return [];
-  const out = [];
-  for (const id of genreIds) {
-    const n = Number(id);
-    if (!Number.isFinite(n)) continue;
-    const tmdbName = TMDB_ID_TO_NAME[n];
-    if (!tmdbName) continue;
-    const mapped = imdbLabelFromRawGenreName(tmdbName);
-    if (mapped) out.push(mapped);
-  }
-  return [...new Set(out)];
-}
-
-/**
- * @param {{ name?: string }[] | undefined} tmdbGenres
- * @returns {string[]}
- */
-export function imdbGenresFromTmdbGenres(tmdbGenres) {
-  if (!Array.isArray(tmdbGenres)) return [];
-  const out = [];
-  for (const g of tmdbGenres) {
-    const mapped = imdbLabelFromRawGenreName(g?.name);
-    if (mapped) out.push(mapped);
-  }
-  return [...new Set(out)];
-}
-
-/**
+ * Map AniList / MAL genre strings to IMDb labels (anime rows without OMDb).
  * @param {Record<string, unknown>} doc
  * @returns {string[]}
  */
 export function imdbGenresFromAnimeSources(doc) {
   const names = [];
-  if (Array.isArray(doc.genres)) {
-    for (const g of doc.genres) {
-      if (typeof g === "string") names.push(g);
-      else if (g && typeof g === "object" && g.name) names.push(String(g.name));
-    }
-  }
   const anilist = doc.anilist;
   if (anilist && typeof anilist === "object" && Array.isArray(anilist.genres)) {
     for (const g of anilist.genres) names.push(String(g));
+  }
+  if (Array.isArray(doc.mal_genre_names)) {
+    for (const g of doc.mal_genre_names) names.push(String(g));
   }
   const out = [];
   for (const n of names) {
@@ -348,37 +231,61 @@ export function imdbGenresFromAnimeSources(doc) {
 }
 
 /**
- * Merge all known sources into canonical IMDb genre labels.
+ * Canonical IMDb genre labels for a catalog doc (OMDb → stored → anime only).
  * @param {Record<string, unknown>} doc
  * @returns {string[]}
  */
 export function imdbGenresForDoc(doc) {
-  const fromStored = Array.isArray(doc.imdb_genres)
-    ? doc.imdb_genres
-        .map((g) => imdbLabelFromRawGenreName(String(g)))
-        .filter(Boolean)
-    : [];
   const omdb = doc.omdb;
   const fromOmdb =
     omdb && typeof omdb === "object"
       ? parseImdbGenresFromOmdb(/** @type {{ genre?: string }} */ (omdb).genre)
       : [];
-  const fromTmdbObjects = imdbGenresFromTmdbGenres(
-    /** @type {{ name?: string }[]} */ (doc.genres)
-  );
-  const fromTmdbIds = imdbGenresFromTmdbGenreIds(
-    /** @type {number[]} */ (doc.genre_ids)
-  );
-  const fromAnime = imdbGenresFromAnimeSources(doc);
-  return [
-    ...new Set([
-      ...fromStored,
-      ...fromOmdb,
-      ...fromTmdbObjects,
-      ...fromTmdbIds,
-      ...fromAnime,
-    ]),
-  ];
+  if (fromOmdb.length > 0) return fromOmdb;
+
+  const fromStored = Array.isArray(doc.imdb_genres)
+    ? doc.imdb_genres
+        .map((g) => imdbLabelFromRawGenreName(String(g)))
+        .filter(Boolean)
+    : [];
+  if (fromStored.length > 0) return [...new Set(fromStored)];
+
+  const idStr = String(doc.id ?? "");
+  if (idStr.startsWith("anime_") || doc.is_anime === true) {
+    return imdbGenresFromAnimeSources(doc);
+  }
+
+  return [];
+}
+
+/**
+ * Resolve IMDb genre labels for UI (detail pages, chips).
+ * @param {unknown} source
+ * @returns {string[]}
+ */
+export function imdbGenresForDisplayInput(source) {
+  if (!source) return [];
+
+  if (typeof source === "object" && !Array.isArray(source)) {
+    const doc = /** @type {Record<string, unknown>} */ (source);
+    if ("imdb_genres" in doc || "omdb" in doc) {
+      return imdbGenresForDoc(doc);
+    }
+  }
+
+  if (!Array.isArray(source) || source.length === 0) return [];
+
+  if (typeof source[0] === "string") {
+    return [
+      ...new Set(
+        source
+          .map((g) => imdbLabelFromRawGenreName(String(g).trim()))
+          .filter(Boolean)
+      ),
+    ];
+  }
+
+  return [];
 }
 
 /**
@@ -440,19 +347,26 @@ export function isKdramaDoc(doc) {
  * @returns {Record<string, unknown>}
  */
 export function kdramaTagFields(doc) {
-  const imdb_genres = imdbGenresForDoc(doc);
-  const categories = new Set(
-    Array.isArray(doc.catalog_categories) ? doc.catalog_categories : []
-  );
-  categories.add("kdrama");
-  if (!imdb_genres.includes("Drama")) {
-    imdb_genres.unshift("Drama");
-  }
   return {
-    imdb_genres,
-    catalog_categories: [...categories],
+    imdb_genres: imdbGenresForDoc(doc),
+    catalog_categories: [
+      ...new Set([
+        ...(Array.isArray(doc.catalog_categories) ? doc.catalog_categories : []),
+        "kdrama",
+      ]),
+    ],
     is_kdrama: true,
   };
+}
+
+/** Drop TMDB genre fields from a payload before write. */
+export function omitTmdbGenreFields(doc) {
+  if (!doc || typeof doc !== "object") return doc;
+  const next = { ...doc };
+  delete next.genres;
+  delete next.genre_ids;
+  delete next.mal_genre_names;
+  return next;
 }
 
 /**
@@ -463,9 +377,7 @@ export function kdramaTagFields(doc) {
 export function applyImdbGenresToCatalogDoc(doc) {
   const imdb_genres = imdbGenresForDoc(doc);
   /** @type {Record<string, unknown>} */
-  const next = { ...doc, imdb_genres };
-  delete next.genre_ids;
-  delete next.genres;
+  const next = { ...omitTmdbGenreFields(doc), imdb_genres };
   if (isKdramaDoc(next)) {
     Object.assign(next, kdramaTagFields(next));
   }
@@ -487,7 +399,7 @@ export function catalogGenreMongoPatch(doc) {
   }
   return {
     set,
-    unset: { genre_ids: "", genres: "" },
+    unset: { genre_ids: "", genres: "", mal_genre_names: "" },
   };
 }
 
@@ -499,8 +411,5 @@ export function catalogGenreMongoPatch(doc) {
  */
 export function genreNamesFromDoc(doc, max = 2) {
   if (!doc || typeof doc !== "object") return [];
-  const labels = Array.isArray(doc.imdb_genres)
-    ? doc.imdb_genres.map((g) => String(g).trim()).filter(Boolean)
-    : imdbGenresForDoc(doc);
-  return labels.slice(0, max);
+  return imdbGenresForDoc(doc).slice(0, max);
 }

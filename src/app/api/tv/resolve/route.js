@@ -1,12 +1,12 @@
 import clientPromise from "@/lib/mongo";
+import {
+  enrichCatalogDocGenres,
+  findCatalogDocByResolveId,
+  imdbGenresFromOmdbForTmdbId,
+  normalizeCatalogResolveFallback,
+} from "@/lib/catalogResolve";
 import { resolveTmdbTvFromDoc } from "@/lib/tmdbResolveFromTitle";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
-
-function normalizeDate(dateValue) {
-  if (dateValue == null) return null;
-  if (typeof dateValue === "string") return dateValue;
-  return dateValue.toISOString?.().split("T")[0] ?? null;
-}
 
 function pickNumericAnilistId(doc) {
   const raw = doc?.anilist_id ?? doc?.anilist?.id;
@@ -18,21 +18,11 @@ function pickNumericAnilistId(doc) {
   return null;
 }
 
-function normalizeFallback(doc) {
+function normalizeTvFallback(doc) {
+  const base = normalizeCatalogResolveFallback(doc, "tv");
   return {
-    id: doc.id,
-    name: doc.name ?? doc.title ?? "Untitled",
-    first_air_date: normalizeDate(doc.first_air_date ?? doc.release_date ?? null),
-    overview: doc.overview ?? "",
-    poster_path: doc.poster_path ?? null,
-    backdrop_path: doc.backdrop_path ?? null,
-    vote_average: typeof doc.vote_average === "number" ? doc.vote_average : 0,
-    status: typeof doc.status === "string" && doc.status ? doc.status : "Released",
-    genres: Array.isArray(doc.genres) ? doc.genres : [],
-    imdb_genres: Array.isArray(doc.imdb_genres) ? doc.imdb_genres : [],
-    origin_country: Array.isArray(doc.origin_country) ? doc.origin_country : [],
-    original_language:
-      typeof doc.original_language === "string" ? doc.original_language : null,
+    ...base,
+    genres: [],
     is_kdrama: doc.is_kdrama === true,
     catalog_categories: Array.isArray(doc.catalog_categories)
       ? doc.catalog_categories
@@ -67,65 +57,43 @@ export async function GET(req) {
     const db = client.db("teavie");
     const collection = db.collection("content");
 
-    const doc = await collection.findOne(
-      { type: "tv", id },
-      {
-        projection: {
-          _id: 1,
-          id: 1,
-          tmdb_id: 1,
-          imdb_id: 1,
-          title: 1,
-          name: 1,
-          first_air_date: 1,
-          release_date: 1,
-          overview: 1,
-          poster_path: 1,
-          backdrop_path: 1,
-          vote_average: 1,
-          season_amount: 1,
-          number_of_seasons: 1,
-          number_of_episodes: 1,
-          is_anime: 1,
-          tags: 1,
-          anilist_id: 1,
-          anilist: 1,
-          external_ids: 1,
-          mal_id: 1,
-          genres: 1,
-          imdb_genres: 1,
-          is_kdrama: 1,
-          catalog_categories: 1,
-          origin_country: 1,
-          original_language: 1,
-          status: 1,
-        },
-      }
-    );
+    let doc = await findCatalogDocByResolveId(collection, "tv", id);
+
+    const numeric = Number(id);
+    const isNumericId = Number.isFinite(numeric) && numeric > 0;
+
+    if (!doc && isNumericId) {
+      const imdb_genres = await imdbGenresFromOmdbForTmdbId(numeric, "tv");
+      return Response.json({
+        playerId: numeric,
+        imdbId: null,
+        fallback: imdb_genres.length
+          ? { id: String(numeric), imdb_genres, omdb: null }
+          : null,
+      });
+    }
 
     if (!doc) {
-      // Numeric ids can still be treated as TMDB ids for old routes.
-      const numeric = Number(id);
-      if (Number.isFinite(numeric) && numeric > 0) {
-        return Response.json({ playerId: numeric, imdbId: null, fallback: null });
-      }
       return Response.json({ error: "Show not found" }, { status: 404 });
     }
 
-    let tmdbIdNum =
-      typeof doc.tmdb_id === "number"
-        ? doc.tmdb_id
-        : typeof doc.tmdb_id === "string"
-          ? Number(doc.tmdb_id)
-          : Number(doc.id);
+    let merged = await enrichCatalogDocGenres(doc, "tv", {
+      persistCollection: collection,
+    });
 
-    let merged = { ...doc };
+    let tmdbIdNum =
+      typeof merged.tmdb_id === "number"
+        ? merged.tmdb_id
+        : typeof merged.tmdb_id === "string"
+          ? Number(merged.tmdb_id)
+          : Number(merged.id);
+
     const hasPlayer = Number.isFinite(tmdbIdNum) && tmdbIdNum > 0;
 
     const token = tmdbBearerToken();
-    if (!hasPlayer && token && doc._id) {
+    if (!hasPlayer && token && merged._id) {
       try {
-        const hit = await resolveTmdbTvFromDoc(doc, token);
+        const hit = await resolveTmdbTvFromDoc(merged, token);
         if (hit) {
           const setDoc = {
             tmdb_id: hit.tmdbId,
@@ -134,7 +102,7 @@ export async function GET(req) {
           };
           if (hit.poster_path) setDoc.poster_path = hit.poster_path;
           if (hit.backdrop_path) setDoc.backdrop_path = hit.backdrop_path;
-          await collection.updateOne({ _id: doc._id }, { $set: setDoc });
+          await collection.updateOne({ _id: merged._id }, { $set: setDoc });
           merged = {
             ...merged,
             tmdb_id: hit.tmdbId,
@@ -143,6 +111,11 @@ export async function GET(req) {
             backdrop_path: hit.backdrop_path || merged.backdrop_path,
           };
           tmdbIdNum = hit.tmdbId;
+          if (hit.imdbId && !merged.omdb?.genre) {
+            merged = await enrichCatalogDocGenres(merged, "tv", {
+              persistCollection: collection,
+            });
+          }
         }
       } catch (e) {
         console.error("Lazy TMDB resolve failed:", e);
@@ -154,11 +127,10 @@ export async function GET(req) {
     return Response.json({
       playerId: Number.isFinite(tmdbIdNum) && tmdbIdNum > 0 ? tmdbIdNum : null,
       imdbId: typeof merged.imdb_id === "string" ? merged.imdb_id : null,
-      fallback: normalizeFallback(docForFallback),
+      fallback: normalizeTvFallback(docForFallback),
     });
   } catch (err) {
     console.error(err);
     return Response.json({ error: "Failed to resolve show id" }, { status: 500 });
   }
 }
-

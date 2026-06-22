@@ -12,7 +12,7 @@ import {
   shouldRejectTmdbMovieFromCatalog,
   tmdbListMovieLooksAdult,
 } from "./tmdbMovieContentPolicy.js";
-import { applyImdbGenresToCatalogDoc } from "./imdbGenres.js";
+import { applyImdbGenresToCatalogDoc, omitTmdbGenreFields } from "./imdbGenres.js";
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";
@@ -43,18 +43,20 @@ export function mapTmdbMovieToDoc(movie) {
   const title = movie.title ?? movie.original_title ?? `Movie ${id}`;
   const runtimeMin =
     typeof movie.runtime === "number" && movie.runtime > 0 ? movie.runtime : null;
-  return applyImdbGenresToCatalogDoc({
-    ...movie,
-    type: "movie",
-    name: title,
-    runtimeSeconds:
-      runtimeMin != null
-        ? runtimeMin * 60
-        : typeof movie.runtimeSeconds === "number" && movie.runtimeSeconds > 0
-          ? movie.runtimeSeconds
-          : null,
-    updatedAt: new Date(),
-  });
+  return applyImdbGenresToCatalogDoc(
+    omitTmdbGenreFields({
+      ...movie,
+      type: "movie",
+      name: title,
+      runtimeSeconds:
+        runtimeMin != null
+          ? runtimeMin * 60
+          : typeof movie.runtimeSeconds === "number" && movie.runtimeSeconds > 0
+            ? movie.runtimeSeconds
+            : null,
+      updatedAt: new Date(),
+    })
+  );
 }
 
 async function tmdbGet(pathWithQuery, token) {

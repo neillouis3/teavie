@@ -10,7 +10,7 @@
     "round-icon": "node scripts/round-app-icon.mjs",
     "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs",
     "seed:popular": "node scripts/seed-popular-catalog.mjs",
-    "seed:kdrama": "node scripts/seed-kdrama-catalog.mjs",
+    "seed:kdrama": "node scripts/seed-kdrama-catalog.mjs --target=5000",
     "backfill:imdb-genres": "node scripts/backfill-imdb-genres.mjs",
     "fill:imdb-genres": "node scripts/fill-missing-imdb-genres.mjs",
     "purge:adult-movies": "node scripts/purge-adult-catalog-movies.mjs",

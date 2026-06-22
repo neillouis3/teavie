@@ -29,6 +29,7 @@ import CatalogMediaPanel, {
   showSubtitleLine,
 } from "@/components/ui/catalogMediaPanel";
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
+import { imdbGenresFromAnimeSources } from "@/lib/imdbGenres";
 
 interface Season {
   season_number: number;
@@ -47,6 +48,7 @@ interface Show {
   status: string;
   genres: { id: number; name: string }[];
   imdb_genres?: string[];
+  omdb?: { genre?: string | null };
   origin_country?: string[];
   production_countries?: { iso_3166_1?: string; name?: string }[];
   production_companies?: { id?: number; name?: string }[];
@@ -265,8 +267,13 @@ function mergeAnilistIntoShow(
   if (desc && (!next.overview || next.overview.trim().length < 40)) {
     next.overview = desc;
   }
-  if (Array.isArray(ani.genres) && ani.genres.length && (!next.genres?.length)) {
-    next.genres = ani.genres.map((name, i) => ({ id: 9000 + i, name }));
+  if (Array.isArray(ani.genres) && ani.genres.length) {
+    const fromAni = imdbGenresFromAnimeSources({
+      id: next.id,
+      is_anime: next.is_anime ?? true,
+      anilist: { genres: ani.genres },
+    });
+    if (fromAni.length) next.imdb_genres = fromAni;
   }
   if (ani.averageScore != null) {
     const tmdbScore = Number(next.vote_average);
@@ -494,21 +501,20 @@ export default function ShowTemplate({ id }: { id: string }) {
 
         let targetTmdbId = id;
         let fallbackShow: Show | null = null;
-        const isNumericId = /^\d+$/.test(id);
 
-        if (!isNumericId) {
-          const resolveRes = await fetch(`/api/tv/resolve?id=${encodeURIComponent(id)}`);
-          if (resolveRes.ok) {
-            const resolved = await resolveRes.json();
-            if (resolved?.playerId != null) {
-              targetTmdbId = String(resolved.playerId);
-              setResolvedPlayerId(String(resolved.playerId));
-            }
-            if (resolved?.fallback && typeof resolved.fallback === "object") {
-              fallbackShow = resolved.fallback as Show;
-            }
+        const resolveRes = await fetch(`/api/tv/resolve?id=${encodeURIComponent(id)}`);
+        if (resolveRes.ok) {
+          const resolved = await resolveRes.json();
+          if (resolved?.playerId != null) {
+            targetTmdbId = String(resolved.playerId);
+            setResolvedPlayerId(String(resolved.playerId));
+          }
+          if (resolved?.fallback && typeof resolved.fallback === "object") {
+            fallbackShow = resolved.fallback as Show;
           }
         }
+
+        const isNumericId = /^\d+$/.test(targetTmdbId);
 
         const pickFirstSeason = (seasons: Season[] | undefined) => {
           if (!seasons?.length) return;
@@ -582,11 +588,11 @@ export default function ShowTemplate({ id }: { id: string }) {
         if (fallbackShow?.external_ids) {
           data.external_ids = { ...fallbackShow.external_ids, ...data.external_ids };
         }
-        if (
-          Array.isArray(fallbackShow?.imdb_genres) &&
-          fallbackShow.imdb_genres.length > 0
-        ) {
+        if (fallbackShow?.imdb_genres?.length) {
           data.imdb_genres = fallbackShow.imdb_genres;
+        }
+        if (fallbackShow?.omdb) {
+          data.omdb = fallbackShow.omdb;
         }
 
         const tmdbSeasonsPlayback =
@@ -1053,9 +1059,10 @@ export default function ShowTemplate({ id }: { id: string }) {
                 overview={show.overview}
                 tagline={show.tagline}
                 mediaType="tv"
-                genres={catalogGenresForDisplay(
-                  show.imdb_genres ?? show.genres
-                )}
+                genres={catalogGenresForDisplay({
+                  imdb_genres: show.imdb_genres,
+                  omdb: show.omdb,
+                })}
                 infoLines={buildShowInfoLines(show)}
                 links={showDetailLinks(show)}
                 genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}

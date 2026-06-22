@@ -181,60 +181,6 @@ export function catalogTvBrowseReleasedClause(dateField, todayIso) {
 }
 
 /**
- * TMDB TV genre id filter that also matches catalog anime rows:
- * `genre_ids` on anime are MAL ids, so we match Jikan `genres.name` / AniList `genres`.
- * @param {number} tmdbGenreId
- */
-export function catalogTmdbTvGenreMatchClause(tmdbGenreId) {
-  /** @type {Record<number, string | null>} null = no extra anime branch */
-  const animeRegexByTmdb = {
-    10759: "^(Action|Adventure)$",
-    16: "__ALL_ANIME__",
-    35: "^(Comedy|Parody)$",
-    80: "^Crime$",
-    99: "^Documentary$",
-    18: "^Drama$",
-    10751: "^Family$",
-    10762: "^(Kids|Children)$",
-    9648: "^(Mystery|Suspense)$",
-    10763: null,
-    10764: "^Reality$",
-    10765: "^(Science Fiction|Sci-Fi|Fantasy|Supernatural)$",
-    10766: "^Soap$",
-    10767: "^Talk$",
-    10768: "^(War|Military)$",
-    37: "^Western$",
-  };
-  const token = animeRegexByTmdb[tmdbGenreId];
-  // Non-anime TV docs store genres as objects in `genres` ({ id, name }); legacy /
-  // movie-style rows use the numeric `genre_ids` array. Match either.
-  const parts = [
-    { genre_ids: tmdbGenreId },
-    { genres: { $elemMatch: { id: tmdbGenreId } } },
-  ];
-
-  if (token === "__ALL_ANIME__") {
-    parts.push(catalogAnimeIdMongoExpr());
-    return { $or: parts };
-  }
-  if (typeof token === "string" && token.length > 0) {
-    const rx = new RegExp(token, "i");
-    parts.push({
-      $and: [
-        catalogAnimeIdMongoExpr(),
-        {
-          $or: [
-            { genres: { $elemMatch: { name: rx } } },
-            { "anilist.genres": rx },
-          ],
-        },
-      ],
-    });
-  }
-  return parts.length === 1 ? parts[0] : { $or: parts };
-}
-
-/**
  * K-Drama browse: Korean TV (non-anime), tagged or inferred from origin + language.
  * @returns {Record<string, unknown>}
  */

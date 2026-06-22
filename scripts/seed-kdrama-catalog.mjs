@@ -2,7 +2,8 @@
  * Upsert Korean TV into `teavie.content` and tag as K-Drama with IMDb genres.
  *
  *   node scripts/seed-kdrama-catalog.mjs
- *   node scripts/seed-kdrama-catalog.mjs --dry-run --pages=8
+ *   node scripts/seed-kdrama-catalog.mjs --target=5000
+ *   node scripts/seed-kdrama-catalog.mjs --dry-run --pages=20
  *
  * Env: MONGODB_URI, TMDB_BEARER — see scripts/lib/mongoEnv.cjs
  */
@@ -11,10 +12,13 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { MongoClient } from "mongodb";
 import { tmdbBearerToken } from "../src/lib/tmdbAuth.js";
+import { fetchOmdbGenreRaw } from "../src/lib/omdbGenre.js";
+import { shouldRejectTmdbTvFromCatalog } from "../src/lib/tmdbMovieContentPolicy.js";
 import {
-  shouldRejectTmdbTvFromCatalog,
-} from "../src/lib/tmdbMovieContentPolicy.js";
-import { applyImdbGenresToCatalogDoc } from "../src/lib/imdbGenres.js";
+  applyImdbGenresToCatalogDoc,
+  kdramaTagFields,
+  omitTmdbGenreFields,
+} from "../src/lib/imdbGenres.js";
 
 const require = createRequire(import.meta.url);
 const { loadMongoEnv, mongoHostHint } = require(path.join(
@@ -25,8 +29,8 @@ const { loadMongoEnv, mongoHostHint } = require(path.join(
 const DB_NAME = "teavie";
 const COLLECTION = "content";
 const TMDB_BASE = "https://api.themoviedb.org/3";
-const FETCH_TIMEOUT_MS = 20000;
-const SLEEP_MS = 40;
+const FETCH_TIMEOUT_MS = 25000;
+const SLEEP_MS = 25;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -49,7 +53,7 @@ function parseIntFlag(name, def) {
   return def;
 }
 
-function mapTmdbTvToKdramaDoc(show) {
+function mapTmdbTvToKdramaDoc(show, { omdbGenreRaw = null } = {}) {
   const id = show.id;
   if (typeof id !== "number" || !Number.isFinite(id)) return null;
   if (shouldRejectTmdbTvFromCatalog(show)) return null;
@@ -63,13 +67,20 @@ function mapTmdbTvToKdramaDoc(show) {
   if (!hasKr && lang !== "ko") return null;
 
   const name = show.name ?? show.original_name ?? `TV ${id}`;
-  const base = {
+  const ext = show.external_ids && typeof show.external_ids === "object" ? show.external_ids : null;
+  const imdbFromExt =
+    typeof ext?.imdb_id === "string" && /^tt/i.test(ext.imdb_id) ? ext.imdb_id.trim() : null;
+
+  /** @type {Record<string, unknown>} */
+  const base = omitTmdbGenreFields({
     ...show,
     type: "tv",
     id,
     name,
     title: show.name ?? name,
     tmdb_id: id,
+    imdb_id: imdbFromExt ?? (typeof show.imdb_id === "string" ? show.imdb_id : null),
+    external_ids: ext ?? show.external_ids ?? null,
     season_amount:
       typeof show.number_of_seasons === "number" && show.number_of_seasons > 0
         ? show.number_of_seasons
@@ -80,9 +91,15 @@ function mapTmdbTvToKdramaDoc(show) {
         : null,
     updatedAt: new Date(),
     is_anime: false,
-  };
+  });
 
-  return applyImdbGenresToCatalogDoc(base);
+  if (omdbGenreRaw) {
+    base.omdb = { ...(typeof show.omdb === "object" ? show.omdb : {}), genre: omdbGenreRaw };
+  }
+
+  const withGenres = applyImdbGenresToCatalogDoc(base);
+  Object.assign(withGenres, kdramaTagFields(withGenres));
+  return withGenres;
 }
 
 async function tmdbGet(pathWithQuery, token) {
@@ -133,37 +150,160 @@ async function animeClaimedTmdbIds(col) {
   return blocked;
 }
 
-async function discoverIds(token, maxPages, sortBy) {
-  const ids = [];
-  const seen = new Set();
-  for (let page = 1; page <= maxPages; page += 1) {
+async function loadExistingTvIds(col) {
+  const existing = new Set();
+  const cursor = col.find({ type: "tv" }, { projection: { id: 1, tmdb_id: 1 } });
+  for await (const d of cursor) {
+    const id = Number(d.id);
+    if (Number.isFinite(id) && id > 0) existing.add(id);
+    const tid = Number(d.tmdb_id);
+    if (Number.isFinite(tid) && tid > 0) existing.add(tid);
+  }
+  return existing;
+}
+
+/**
+ * @param {string} token
+ * @param {Record<string, string>} baseParams
+ * @param {number} maxPages
+ * @param {Set<number>} into
+ * @param {Set<number>} blocked
+ */
+async function discoverInto(token, baseParams, maxPages, into, blocked) {
+  let totalPages = 1;
+  for (let page = 1; page <= maxPages && page <= totalPages; page += 1) {
     const q = new URLSearchParams({
       language: "en-US",
       include_adult: "false",
-      with_origin_country: "KR",
-      with_original_language: "ko",
-      sort_by: sortBy,
+      ...baseParams,
       page: String(page),
     });
     const json = await tmdbGet(`/discover/tv?${q}`, token);
+    totalPages = Math.min(maxPages, json.total_pages || 1);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
       if (shouldRejectTmdbTvFromCatalog(r)) continue;
       const id = Number(r.id);
-      if (!Number.isFinite(id) || id <= 0 || seen.has(id)) continue;
-      seen.add(id);
-      ids.push(id);
+      if (!Number.isFinite(id) || id <= 0 || blocked.has(id)) continue;
+      into.add(id);
     }
-    if (results.length === 0 || page >= (json.total_pages || 0)) break;
+    if (results.length === 0) break;
     await sleep(SLEEP_MS);
+    if (page % 50 === 0) {
+      console.log(`  discover [${baseParams.sort_by}] page ${page}/${totalPages} pool=${into.size}`);
+    }
   }
-  return ids;
+}
+
+/** Build discover passes to maximize KR/ko TV coverage on TMDB (~9.5k titles). */
+function discoverPlans(maxPages) {
+  const sorts = [
+    "popularity.desc",
+    "first_air_date.desc",
+    "first_air_date.asc",
+    "vote_average.desc",
+  ];
+  /** @type {{ params: Record<string, string>; maxPages: number }[]} */
+  const plans = [];
+
+  for (const sort_by of sorts) {
+    plans.push({
+      maxPages,
+      params: {
+        with_origin_country: "KR",
+        with_original_language: "ko",
+        sort_by,
+      },
+    });
+  }
+
+  plans.push({
+    maxPages: Math.min(maxPages, 200),
+    params: { with_origin_country: "KR", sort_by: "popularity.desc" },
+  });
+  plans.push({
+    maxPages: Math.min(maxPages, 200),
+    params: { with_original_language: "ko", sort_by: "popularity.desc" },
+  });
+
+  const year = new Date().getFullYear();
+  for (let y = year; y >= 1970; y -= 1) {
+    plans.push({
+      maxPages: 20,
+      params: {
+        with_origin_country: "KR",
+        with_original_language: "ko",
+        sort_by: "popularity.desc",
+        "first_air_date.gte": `${y}-01-01`,
+        "first_air_date.lte": `${y}-12-31`,
+      },
+    });
+  }
+
+  return plans;
+}
+
+async function fetchAndMapShow(id, token, { fetchOmdb = true } = {}) {
+  const q = new URLSearchParams({
+    language: "en-US",
+    include_adult: "false",
+    append_to_response: "external_ids",
+  });
+  const show = await tmdbGet(`/tv/${id}?${q}`, token);
+
+  let omdbGenreRaw = null;
+  const imdbId =
+    typeof show?.external_ids?.imdb_id === "string" &&
+    /^tt/i.test(show.external_ids.imdb_id)
+      ? show.external_ids.imdb_id.trim()
+      : null;
+
+  if (fetchOmdb && imdbId) {
+    omdbGenreRaw = await fetchOmdbGenreRaw(imdbId, "tv");
+    await sleep(120);
+  }
+
+  return mapTmdbTvToKdramaDoc(show, { omdbGenreRaw });
+}
+
+async function mapPoolConcurrent(ids, token, concurrency) {
+  /** @type {Record<string, unknown>[]} */
+  const docs = [];
+  let err = 0;
+  let idx = 0;
+
+  async function worker() {
+    while (idx < ids.length) {
+      const i = idx;
+      idx += 1;
+      const id = ids[i];
+      try {
+        const doc = await fetchAndMapShow(id, token);
+        if (doc) docs.push(doc);
+      } catch (e) {
+        err += 1;
+        if (err <= 5) {
+          console.warn(`tv ${id}: ${e instanceof Error ? e.message : e}`);
+        }
+      }
+      await sleep(SLEEP_MS);
+      if ((i + 1) % 100 === 0) {
+        console.log(`  fetched ${i + 1}/${ids.length} (docs=${docs.length} err=${err})`);
+      }
+    }
+  }
+
+  const workers = Array.from({ length: concurrency }, () => worker());
+  await Promise.all(workers);
+  return { docs, err };
 }
 
 async function main() {
   loadMongoEnv();
   const dryRun = hasFlag("--dry-run");
-  const pages = Math.max(1, parseIntFlag("--pages", 5));
+  const maxPages = Math.max(1, parseIntFlag("--pages", 500));
+  const target = Math.max(1, parseIntFlag("--target", 5000));
+  const concurrency = Math.min(12, Math.max(1, parseIntFlag("--concurrency", 8)));
 
   const uri = String(process.env.MONGODB_URI ?? "").trim();
   const token = tmdbBearerToken().trim();
@@ -177,51 +317,61 @@ async function main() {
   }
 
   console.log(
-    `seed kdrama | mongo=${mongoHostHint(uri)} pages=${pages} dryRun=${dryRun}`
+    `seed kdrama | mongo=${mongoHostHint(uri)} target=${target} pages=${maxPages} concurrency=${concurrency} dryRun=${dryRun}`
   );
 
   const client = new MongoClient(uri);
   await client.connect();
   const col = client.db(DB_NAME).collection(COLLECTION);
 
-  const animeBlocked = await animeClaimedTmdbIds(col);
-  console.log(`anime-blocked TMDB tv ids: ${animeBlocked.size}`);
+  const currentTagged = await col.countDocuments({
+    $or: [{ catalog_categories: "kdrama" }, { is_kdrama: true }],
+  });
+  console.log(`current tagged kdrama: ${currentTagged}`);
 
-  const popIds = await discoverIds(token, pages, "popularity.desc");
-  const ratedIds = await discoverIds(token, Math.min(pages, 3), "vote_average.desc");
-  const allIds = [...new Set([...popIds, ...ratedIds])].filter(
-    (id) => !animeBlocked.has(id)
-  );
-  console.log(`discover KR/ko tv: ${allIds.length} unique ids`);
-
-  const ops = [];
-  let ok = 0;
-  let err = 0;
-
-  for (let i = 0; i < allIds.length; i += 1) {
-    const id = allIds[i];
-    try {
-      const q = new URLSearchParams({ language: "en-US", include_adult: "false" });
-      const show = await tmdbGet(`/tv/${id}?${q}`, token);
-      const doc = mapTmdbTvToKdramaDoc(show);
-      if (doc) {
-        ops.push({
-          updateOne: {
-            filter: { type: "tv", id: doc.id },
-            update: { $set: doc },
-            upsert: true,
-          },
-        });
-        ok += 1;
-      }
-    } catch (e) {
-      err += 1;
-      console.warn(`tv ${id}: ${e instanceof Error ? e.message : e}`);
-    }
-    await sleep(SLEEP_MS);
-    if ((i + 1) % 20 === 0) console.log(`  fetched ${i + 1}/${allIds.length}…`);
+  if (currentTagged >= target) {
+    console.log(`already at target (${currentTagged} >= ${target})`);
+    await client.close();
+    return;
   }
-  console.log(`detail ok=${ok} err=${err}`);
+
+  const need = target - currentTagged;
+  console.log(`need ~${need} more kdrama titles`);
+
+  const [animeBlocked, existingTv] = await Promise.all([
+    animeClaimedTmdbIds(col),
+    loadExistingTvIds(col),
+  ]);
+  console.log(`anime-blocked TMDB ids: ${animeBlocked.size}`);
+  console.log(`existing tv ids in catalog: ${existingTv.size}`);
+
+  const pool = new Set();
+  const plans = discoverPlans(maxPages);
+  console.log(`running ${plans.length} discover passes…`);
+
+  for (const plan of plans) {
+    await discoverInto(token, plan.params, plan.maxPages, pool, animeBlocked);
+    const newCount = [...pool].filter((id) => !existingTv.has(id)).length;
+    console.log(`  pool=${pool.size} new-vs-catalog=${newCount}`);
+    if (newCount >= need) break;
+  }
+
+  const newIds = [...pool].filter((id) => !existingTv.has(id));
+  console.log(`discover complete: ${newIds.length} new ids to import`);
+
+  const toFetch = newIds.slice(0, need + Math.ceil(need * 0.05));
+  console.log(`fetching details for ${toFetch.length} shows…`);
+
+  const { docs, err } = await mapPoolConcurrent(toFetch, token, concurrency);
+  console.log(`detail docs=${docs.length} fetchErrors=${err}`);
+
+  const ops = docs.map((doc) => ({
+    updateOne: {
+      filter: { type: "tv", id: doc.id },
+      update: { $set: doc },
+      upsert: true,
+    },
+  }));
 
   if (ops.length === 0) {
     console.log("nothing to write");
@@ -251,7 +401,9 @@ async function main() {
   const kdramaCount = await col.countDocuments({
     $or: [{ catalog_categories: "kdrama" }, { is_kdrama: true }],
   });
-  console.log(`done: upserted=${upserted} modified=${modified} tagged_kdrama=${kdramaCount}`);
+  console.log(
+    `done: upserted=${upserted} modified=${modified} tagged_kdrama=${kdramaCount} (target=${target})`
+  );
   await client.close();
 }
 

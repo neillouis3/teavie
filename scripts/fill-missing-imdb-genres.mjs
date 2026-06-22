@@ -1,5 +1,6 @@
 /**
- * Fill empty `imdb_genres` by fetching genres from TMDB (find by IMDb id, detail, search).
+ * Fill empty `imdb_genres` from OMDb (IMDb ids via TMDB external_ids lookup only).
+ * Anime without OMDb uses AniList → IMDb mapping. No TMDB genre fallback.
  *
  *   node scripts/fill-missing-imdb-genres.mjs
  *   node scripts/fill-missing-imdb-genres.mjs --dry-run
@@ -11,6 +12,7 @@ import { MongoClient } from "mongodb";
 import { tmdbBearerToken } from "../src/lib/tmdbAuth.js";
 import { omdbApiKey } from "../src/lib/omdbAuth.js";
 import { applyImdbGenresToCatalogDoc } from "../src/lib/imdbGenres.js";
+import { fetchOmdbGenreRaw } from "../src/lib/omdbGenre.js";
 
 const require = createRequire(import.meta.url);
 const { loadMongoEnv, mongoHostHint } = require(path.join(
@@ -21,8 +23,8 @@ const { loadMongoEnv, mongoHostHint } = require(path.join(
 const DB_NAME = "teavie";
 const COLLECTION = "content";
 const TMDB_BASE = "https://api.themoviedb.org/3";
-const OMDB_BASE = "https://www.omdbapi.com/";
-const SLEEP_MS = 45;
+const TMDB_SLEEP_MS = 30;
+const OMDB_SLEEP_MS = 120;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -45,19 +47,6 @@ function missingGenresQuery() {
   };
 }
 
-function docTitle(doc) {
-  return String(doc.title ?? doc.name ?? "").trim();
-}
-
-function docYear(doc) {
-  const raw =
-    doc.type === "movie"
-      ? doc.release_date ?? doc.releaseDate
-      : doc.first_air_date ?? doc.firstAirDate;
-  const s = String(raw ?? "").trim();
-  return /^\d{4}/.test(s) ? s.slice(0, 4) : "";
-}
-
 function tmdbIdFromDoc(doc) {
   const fromField =
     typeof doc.tmdb_id === "number"
@@ -73,272 +62,62 @@ function tmdbIdFromDoc(doc) {
   return null;
 }
 
-function genrePayloadFromTmdbJson(data) {
-  if (!data || typeof data !== "object") return null;
-  const genres = Array.isArray(data.genres) ? data.genres : [];
-  let genre_ids = Array.isArray(data.genre_ids)
-    ? data.genre_ids
-    : genres.map((g) => g.id).filter((id) => Number.isFinite(id));
-  if (genres.length === 0 && genre_ids.length === 0) return null;
-  if (genres.length === 0 && genre_ids.length > 0) {
-    return { genres: [], genre_ids };
-  }
-  return { genres, genre_ids };
-}
-
-async function tmdbGet(pathWithQuery, token) {
-  const url = pathWithQuery.startsWith("http")
-    ? pathWithQuery
-    : `${TMDB_BASE}${pathWithQuery}`;
-  const res = await fetch(url, {
+async function tmdbExternalImdbId(tmdbId, type, token) {
+  const segment = type === "movie" ? "movie" : "tv";
+  const res = await fetch(`${TMDB_BASE}/${segment}/${tmdbId}/external_ids`, {
     headers: {
       accept: "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
   if (!res.ok) return null;
-  return res.json();
-}
-
-async function fetchTmdbDetailGenres(doc, token) {
-  const id = tmdbIdFromDoc(doc);
-  if (id == null) return null;
-  const segment = doc.type === "movie" ? "movie" : "tv";
-  const data = await tmdbGet(`/${segment}/${id}?language=en-US`, token);
-  return genrePayloadFromTmdbJson(data);
-}
-
-async function fetchTmdbFindByImdb(imdbId, type, token) {
-  if (!imdbId || !/^tt\d+$/i.test(imdbId)) return null;
-  const data = await tmdbGet(
-    `/find/${imdbId}?external_source=imdb_id&language=en-US`,
-    token
-  );
-  if (!data) return null;
-  const list =
-    type === "movie"
-      ? data.movie_results
-      : data.tv_results?.length
-        ? data.tv_results
-        : data.movie_results;
-  const hit = Array.isArray(list) ? list[0] : null;
-  if (!hit?.id) return null;
-  const segment =
-    type === "movie" || (data.movie_results?.length && !data.tv_results?.length)
-      ? "movie"
-      : "tv";
-  const detail = await tmdbGet(`/${segment}/${hit.id}?language=en-US`, token);
-  const payload = genrePayloadFromTmdbJson(detail ?? hit);
-  return payload ? { ...payload, tmdb_id: hit.id } : null;
-}
-
-async function fetchTmdbSearchGenres(doc, token) {
-  const title = docTitle(doc);
-  if (title.length < 2) return null;
-  const segment = doc.type === "movie" ? "movie" : "tv";
-  const q = new URLSearchParams({
-    query: title,
-    include_adult: "false",
-    language: "en-US",
-  });
-  const year = docYear(doc);
-  if (year) q.set("year", year);
-  const data = await tmdbGet(`/search/${segment}?${q}`, token);
-  const results = Array.isArray(data?.results) ? data.results : [];
-  for (const hit of results.slice(0, 3)) {
-    if (!hit?.id) continue;
-    const fromList = genrePayloadFromTmdbJson(hit);
-    if (fromList) return { ...fromList, tmdb_id: hit.id };
-    const detail = await tmdbGet(`/${segment}/${hit.id}?language=en-US`, token);
-    const payload = genrePayloadFromTmdbJson(detail ?? hit);
-    if (payload) return { ...payload, tmdb_id: hit.id };
-    await sleep(SLEEP_MS);
-  }
-  return null;
-}
-
-async function fetchOmdbGenreRaw(imdbId, type, apiKey) {
-  if (!imdbId || !apiKey) return null;
-  const url = new URL(OMDB_BASE);
-  url.searchParams.set("apikey", apiKey);
-  url.searchParams.set("i", imdbId);
-  url.searchParams.set("type", type === "movie" ? "movie" : "series");
-  url.searchParams.set("r", "json");
-  const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
-  if (!res.ok) return null;
   const data = await res.json();
-  if (data?.Response !== "True") return null;
-  const genre = data.Genre;
-  if (typeof genre !== "string" || genre === "N/A") return null;
-  return genre;
+  const imdbId = data?.imdb_id;
+  return typeof imdbId === "string" && /^tt/i.test(imdbId) ? imdbId.trim() : null;
 }
 
-function titleGenreHints(doc) {
-  const title = docTitle(doc).toLowerCase();
-  const hints = [];
-  if (/documentary|docuseries|true crime|unredacted story|reel\?|reel$/.test(title)) {
-    hints.push("Documentary");
-  }
-  if (/comedy|stand.?up|funny/.test(title)) hints.push("Comedy");
-  if (/horror| haunted |exorcist|devil|zombie|vampire|fallen|apollo has/.test(title)) {
-    hints.push("Horror");
-    hints.push("Action");
-  }
-  if (/kingsman|007|bond|mission impossible|fast & furious|marvel|batman|superman|avengers|shang-chi|sherlock|lucy|star wars|jurassic|terminator|matrix|rambo|rocky|john wick|expendables|equalizer/.test(title)) {
-    hints.push("Action");
-    hints.push("Adventure");
-  }
-  if (/romance| valentine|love story|wedding/.test(title)) hints.push("Romance");
-  if (/mystery|detective| sherlock |clue|whodunit/.test(title)) hints.push("Mystery");
-  if (/crime|criminal|heist|robbery|gangster|mob | mafia/.test(title)) {
-    hints.push("Crime");
-  }
-  if (/sci-fi|space|galaxy|alien|cyber|future|time travel|wreckage of time/.test(title)) {
-    hints.push("Sci-Fi");
-  }
-  if (/animation|animated|cartoon/.test(title)) hints.push("Animation");
-  if (/musical|concert|singer|band tour/.test(title)) hints.push("Music");
-  if (/sport|championship|olympic|nba|nfl|fifa/.test(title)) hints.push("Sport");
-  if (/war|battle|soldier|military|combat/.test(title)) hints.push("War");
-  if (/fantasy|dragon|wizard|magic kingdom|enchanted/.test(title)) hints.push("Fantasy");
-  if (/western|cowboy|frontier/.test(title)) hints.push("Western");
-  if (/biopic|biography|life of /.test(title)) hints.push("Biography");
-  if (/newsnight|news night|nightly news|evening news/.test(title)) hints.push("News");
-  if (/tonight show|late night|talk show|consequences|entertainment tonight/.test(title)) {
-    hints.push("Talk-Show");
-  }
-  if (/reality|bachelor|baddies|wildcard kitchen/.test(title)) hints.push("Reality-TV");
-  if (/sex criminals|pasila|swingers/.test(title)) hints.push("Comedy");
-  if (/phototherapy|filmé|filmed by|documentaire|docu/.test(title)) {
-    hints.push("Documentary");
-  }
-  if (/映画|eiga/.test(title)) hints.push("Drama");
-  if (/joust|tournament|medieval/.test(title)) hints.push("Action", "History");
-  if (/zoo|mungchi|boyuna|dëmm|geheugen|ndobine|incasable|lof joe|dobine/.test(title)) {
-    hints.push("Drama");
-  }
-  return [...new Set(hints)];
-}
-
-async function fetchFranchiseGenres(doc, token) {
-  const title = docTitle(doc);
-  let base = title.split(/[:–—-]/)[0].trim();
-  base = base.replace(/\s+(2|3|4|5|part\s+\d+|season\s+\d+)$/i, "").trim();
-  if (base.length < 3) return null;
-
-  const segment = doc.type === "movie" ? "movie" : "tv";
-  const q = new URLSearchParams({
-    query: base,
-    include_adult: "false",
-    language: "en-US",
-  });
-  const data = await tmdbGet(`/search/${segment}?${q}`, token);
-  const results = Array.isArray(data?.results) ? data.results : [];
-
-  for (const hit of results.slice(0, 5)) {
-    if (!hit?.id) continue;
-    const detail = await tmdbGet(`/${segment}/${hit.id}?language=en-US`, token);
-    const payload = genrePayloadFromTmdbJson(detail ?? hit);
-    if (payload) return { ...payload, tmdb_id: hit.id };
-  }
-  return null;
-}
-
-async function fetchAggressiveFranchiseGenres(doc, token) {
-  const words = docTitle(doc)
-    .replace(/[:–—-].*$/, "")
-    .split(/\s+/)
-    .map((w) => w.replace(/[^a-z0-9']/gi, ""))
-    .filter(
-      (w) =>
-        w.length >= 4 &&
-        !/^(the|and|part|season|story|tales|chapter|volume|from|with|into|over)$/i.test(
-          w
-        )
-    );
-  for (const word of [...new Set(words)]) {
-    const hit = await fetchFranchiseGenres(
-      { ...doc, title: word, name: word },
-      token
-    );
-    if (hit) return hit;
-    await sleep(SLEEP_MS);
-  }
-  return null;
-}
-
-async function enrichDocGenres(doc, token, omdbKey) {
+async function enrichDocGenres(doc, token) {
   /** @type {Record<string, unknown>} */
-  let enriched = { ...doc };
-  const imdbId =
-    typeof doc.imdb_id === "string" && /^tt/i.test(doc.imdb_id)
-      ? doc.imdb_id.trim()
+  let merged = { ...doc };
+  let imdbId =
+    typeof merged.imdb_id === "string" && /^tt/i.test(merged.imdb_id)
+      ? merged.imdb_id.trim()
       : "";
 
-  if (omdbKey && imdbId) {
-    const genreRaw = await fetchOmdbGenreRaw(imdbId, doc.type, omdbKey);
+  if (!imdbId && !String(doc.id ?? "").startsWith("anime_")) {
+    const tmdbId = tmdbIdFromDoc(doc);
+    if (tmdbId != null && token) {
+      imdbId = await tmdbExternalImdbId(tmdbId, doc.type, token);
+      await sleep(TMDB_SLEEP_MS);
+      if (imdbId) {
+        merged.imdb_id = imdbId;
+        merged.external_ids = {
+          ...(typeof merged.external_ids === "object" ? merged.external_ids : {}),
+          imdb_id: imdbId,
+          tmdb_id: tmdbId,
+        };
+      }
+    }
+  }
+
+  const omdb =
+    merged.omdb && typeof merged.omdb === "object"
+      ? { ...merged.omdb }
+      : {};
+  const hasOmdb =
+    typeof omdb.genre === "string" && omdb.genre.trim() && omdb.genre !== "N/A";
+
+  if (imdbId && !hasOmdb) {
+    const genreRaw = await fetchOmdbGenreRaw(imdbId, doc.type);
+    await sleep(OMDB_SLEEP_MS);
     if (genreRaw) {
-      enriched = {
-        ...enriched,
-        omdb: { ...(doc.omdb ?? {}), genre: genreRaw },
-      };
+      omdb.genre = genreRaw;
+      merged = { ...merged, imdb_id: imdbId, omdb };
     }
-    await sleep(120);
   }
 
-  let normalized = applyImdbGenresToCatalogDoc(enriched);
-  if (normalized.imdb_genres?.length) return { normalized, enriched };
-
-  if (imdbId) {
-    const found = await fetchTmdbFindByImdb(imdbId, doc.type, token);
-    if (found) {
-      enriched = { ...enriched, ...found };
-      normalized = applyImdbGenresToCatalogDoc(enriched);
-      if (normalized.imdb_genres?.length) return { normalized, enriched };
-    }
-    await sleep(SLEEP_MS);
-  }
-
-  const detail = await fetchTmdbDetailGenres(doc, token);
-  if (detail) {
-    enriched = { ...enriched, ...detail };
-    normalized = applyImdbGenresToCatalogDoc(enriched);
-    if (normalized.imdb_genres?.length) return { normalized, enriched };
-  }
-  await sleep(SLEEP_MS);
-
-  const searched = await fetchTmdbSearchGenres(doc, token);
-  if (searched) {
-    enriched = { ...enriched, ...searched };
-    normalized = applyImdbGenresToCatalogDoc(enriched);
-    if (normalized.imdb_genres?.length) return { normalized, enriched };
-  }
-  await sleep(SLEEP_MS);
-
-  const franchise = await fetchFranchiseGenres(doc, token);
-  if (franchise) {
-    enriched = { ...enriched, ...franchise };
-    normalized = applyImdbGenresToCatalogDoc(enriched);
-    if (normalized.imdb_genres?.length) return { normalized, enriched };
-  }
-  await sleep(SLEEP_MS);
-
-  const aggressive = await fetchAggressiveFranchiseGenres(doc, token);
-  if (aggressive) {
-    enriched = { ...enriched, ...aggressive };
-    normalized = applyImdbGenresToCatalogDoc(enriched);
-    if (normalized.imdb_genres?.length) return { normalized, enriched };
-  }
-  await sleep(SLEEP_MS);
-
-  const hints = titleGenreHints(doc);
-  if (hints.length) {
-    enriched = { ...enriched, imdb_genres: hints };
-    normalized = applyImdbGenresToCatalogDoc(enriched);
-    if (normalized.imdb_genres?.length) return { normalized, enriched };
-  }
-
-  return { normalized: applyImdbGenresToCatalogDoc(doc), enriched: doc };
+  const normalized = applyImdbGenresToCatalogDoc(merged);
+  return { normalized, enriched: merged };
 }
 
 async function main() {
@@ -347,7 +126,6 @@ async function main() {
 
   const uri = String(process.env.MONGODB_URI ?? "").trim();
   const token = tmdbBearerToken().trim();
-  const omdbKey = omdbApiKey();
 
   if (!uri) {
     console.error("Missing MONGODB_URI");
@@ -359,7 +137,7 @@ async function main() {
   }
 
   console.log(
-    `fill missing imdb genres | mongo=${mongoHostHint(uri)} dryRun=${dryRun} omdb=${omdbKey ? "yes" : "no"}`
+    `fill missing imdb genres (omdb only) | mongo=${mongoHostHint(uri)} dryRun=${dryRun} omdb=${omdbApiKey() ? "yes" : "no"}`
   );
 
   const client = new MongoClient(uri);
@@ -375,13 +153,10 @@ async function main() {
       title: 1,
       name: 1,
       omdb: 1,
-      release_date: 1,
-      first_air_date: 1,
-      origin_country: 1,
-      original_language: 1,
       is_anime: 1,
       catalog_categories: 1,
       anilist: 1,
+      external_ids: 1,
     },
   });
 
@@ -394,7 +169,7 @@ async function main() {
   for await (const doc of cursor) {
     scanned += 1;
     try {
-      const { normalized, enriched } = await enrichDocGenres(doc, token, omdbKey);
+      const { normalized, enriched } = await enrichDocGenres(doc, token);
       const imdb_genres = normalized.imdb_genres ?? [];
       if (!imdb_genres.length) {
         stillEmpty += 1;
@@ -410,15 +185,21 @@ async function main() {
       if (enriched.omdb?.genre && !doc.omdb?.genre) {
         set.omdb = enriched.omdb;
       }
-      if (enriched.tmdb_id && !doc.tmdb_id) {
-        set.tmdb_id = enriched.tmdb_id;
+      if (enriched.imdb_id && !doc.imdb_id) {
+        set.imdb_id = enriched.imdb_id;
+      }
+      if (enriched.external_ids) {
+        set.external_ids = enriched.external_ids;
       }
 
       if (!dryRun) {
         ops.push({
           updateOne: {
             filter: { _id: doc._id },
-            update: { $set: set },
+            update: {
+              $set: set,
+              $unset: { genre_ids: "", genres: "", mal_genre_names: "" },
+            },
           },
         });
         if (ops.length >= 100) {

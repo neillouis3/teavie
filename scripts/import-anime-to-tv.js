@@ -281,7 +281,6 @@ function mapAnimeToTvDoc(anime, anilist) {
     poster;
 
   const genres = toGenres(anime);
-  const genreIds = genres.map((g) => g.id);
 
   const tags = ["anime"];
   if (anime.type) tags.push(String(anime.type).toLowerCase());
@@ -326,8 +325,7 @@ function mapAnimeToTvDoc(anime, anilist) {
     status: pickString(anime.status),
     original_language: pickLanguage(anime),
     origin_country: ["JP"],
-    genre_ids: genreIds,
-    genres,
+    mal_genre_names: genres.map((g) => g?.name).filter(Boolean),
     tagline: pickString(anime.background),
     studios: Array.isArray(anime?.studios)
       ? anime.studios
@@ -397,6 +395,7 @@ async function fetchJikanPage(page) {
 
 async function run() {
   loadEnvLocal();
+  const { applyImdbGenresToCatalogDoc } = await import("../src/lib/imdbGenres.js");
   const startPage = Math.max(1, parseInt(process.argv[2] || "1", 10));
   const maxPages = Math.max(1, parseInt(process.argv[3] || String(MAX_PAGES), 10));
   const resumeMode = process.argv.includes("--resume");
@@ -459,7 +458,7 @@ async function run() {
       }
       if (anilist?.id != null) withAniList++;
       else if (includeAniList) withoutAniList++;
-      const doc = mapAnimeToTvDoc(anime, anilist);
+      const doc = applyImdbGenresToCatalogDoc(mapAnimeToTvDoc(anime, anilist));
       pageBuffer.push(JSON.stringify(doc));
       existing.add(String(malId));
       scanned++;

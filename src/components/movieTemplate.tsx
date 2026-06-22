@@ -33,6 +33,8 @@ interface Movie {
   production_countries?: { iso_3166_1?: string; name?: string }[];
   production_companies?: { id?: number; name?: string }[];
   genres: { id: number; name: string }[];
+  imdb_genres?: string[];
+  omdb?: { genre?: string | null };
   poster_path: string;
   vote_average: number;
   tagline: string;
@@ -77,6 +79,21 @@ export default function MovieTemplate({ id }: { id: string }) {
       try {
         setLoading(true);
 
+        let catalogFallback: {
+          imdb_genres?: string[];
+          omdb?: { genre?: string | null };
+        } | null = null;
+
+        const resolveRes = await fetch(
+          `/api/movie/resolve?id=${encodeURIComponent(id)}`
+        );
+        if (resolveRes.ok) {
+          const resolved = await resolveRes.json();
+          if (resolved?.fallback && typeof resolved.fallback === "object") {
+            catalogFallback = resolved.fallback;
+          }
+        }
+
         const url = `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=release_dates`;
         const options = {
           method: 'GET',
@@ -89,6 +106,12 @@ export default function MovieTemplate({ id }: { id: string }) {
         const res = await fetch(url, options);
         if (!res.ok) throw new Error('Failed to fetch movie details');
         const data = await res.json();
+        if (catalogFallback?.imdb_genres?.length) {
+          data.imdb_genres = catalogFallback.imdb_genres;
+        }
+        if (catalogFallback?.omdb) {
+          data.omdb = catalogFallback.omdb;
+        }
         setMovie(data);
       } catch (err) {
         console.error('Error fetching movie details:', err);
@@ -143,10 +166,10 @@ export default function MovieTemplate({ id }: { id: string }) {
                 overview={movie.overview}
                 tagline={movie.tagline}
                 mediaType="movie"
-                genres={catalogGenresForDisplay(
-                  (movie as { imdb_genres?: string[] }).imdb_genres ??
-                    movie.genres
-                )}
+                genres={catalogGenresForDisplay({
+                  imdb_genres: movie.imdb_genres,
+                  omdb: movie.omdb,
+                })}
                 infoLines={buildMovieInfoLines(movie)}
                 links={movieDetailLinks(movie)}
               />
