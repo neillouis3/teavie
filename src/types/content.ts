@@ -15,6 +15,7 @@ export interface ContentItem {
   number_of_episodes?: number | null;
   vote_average?: number | null;
   genres?: string[];
+  imdb_genres?: string[];
   certification?: string | null;
 }
   

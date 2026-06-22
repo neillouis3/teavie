@@ -2,7 +2,7 @@
  * Map a `content` collection document to a ContentItem-style payload for rails/cards.
  */
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
-import { genreNamesFromDoc } from "@/lib/imdbGenres";
+import { genreNamesFromDoc, imdbGenresForDoc } from "@/lib/imdbGenres";
 
 /** YYYY-MM-DD or null from mixed TMDB / catalog date fields. */
 export function catalogDocReleaseDateString(doc) {
@@ -103,14 +103,11 @@ export function mapCatalogListDoc(doc) {
       doc,
       isAnimeRow ? { anime: true } : undefined
     ),
-    genre_ids: [],
     poster_path: doc.poster_path ?? null,
     backdrop_path: doc.backdrop_path ?? null,
     type: doc.type,
     genres: genreNamesFromDoc(doc),
-    imdb_genres: Array.isArray(doc.imdb_genres)
-      ? doc.imdb_genres.map((g) => String(g).trim()).filter(Boolean)
-      : genreNamesFromDoc(doc),
+    imdb_genres: imdbGenresForDoc(doc),
     certification: usCertificationFromDoc(doc),
     vote_average: doc.vote_average ?? null,
   };
@@ -139,9 +136,7 @@ export function mapContentDocToItem(doc) {
     ),
     vote_average: doc.vote_average ?? null,
     genres: genreNamesFromDoc(doc),
-    imdb_genres: Array.isArray(doc.imdb_genres)
-      ? doc.imdb_genres.map((g) => String(g).trim()).filter(Boolean)
-      : genreNamesFromDoc(doc),
+    imdb_genres: imdbGenresForDoc(doc),
     certification: usCertificationFromDoc(doc),
   };
 }

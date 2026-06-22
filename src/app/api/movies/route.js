@@ -6,10 +6,7 @@ import {
   releasedCatalogClause,
 } from "@/lib/catalogQuery";
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
-import {
-  catalogDocReleaseDateString,
-  runtimeSecondsFromDoc,
-} from "@/lib/mapContentDocToItem";
+import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
 
 export async function GET(req) {
   try {
@@ -53,19 +50,7 @@ export async function GET(req) {
       limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
-      results: results.map((doc) => ({
-        id: doc.id.toString(),
-        title: doc.title ?? doc.name,
-        release_date: catalogDocReleaseDateString(doc),
-        runtimeSeconds: runtimeSecondsFromDoc(doc),
-        season_amount: doc.season_amount ?? null,
-        popularity: catalogPopularityScore(doc),
-        vote_average: doc.vote_average ?? null,
-        genre_ids: doc.genre_ids ?? [],
-        poster_path: doc.poster_path ?? null,
-        backdrop_path: doc.backdrop_path ?? null,
-        type: doc.type,
-      })),
+      results: results.map(mapCatalogListDoc),
     });
   } catch (err) {
     console.error(err);

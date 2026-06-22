@@ -11,29 +11,14 @@ import {
   catalogPopularityScore,
   mongoAnimeCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
-import {
-  catalogDocReleaseDateString,
-  runtimeSecondsFromDoc,
-  tvEpisodeCountFromDoc,
-  tvSeasonCountFromDoc,
-} from "@/lib/mapContentDocToItem";
+import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
 
 function mapAnimeRow(doc) {
-  const release_date = catalogDocReleaseDateString(doc);
-  return {
-    id: doc.id.toString(),
-    title: doc.title ?? doc.name,
-    release_date,
-    runtimeSeconds: runtimeSecondsFromDoc(doc),
-    season_amount: tvSeasonCountFromDoc(doc),
-    number_of_episodes: tvEpisodeCountFromDoc(doc),
-    popularity: catalogPopularityScore(doc, { anime: true }),
+  return mapCatalogListDoc({
+    ...doc,
     vote_average: catalogDisplayVoteAverage(doc),
-    genre_ids: doc.genre_ids ?? [],
-    poster_path: doc.poster_path ?? null,
-    backdrop_path: doc.backdrop_path ?? null,
-    type: "tv",
-  };
+    popularity: catalogPopularityScore(doc, { anime: true }),
+  });
 }
 
 export async function GET(req) {

@@ -18,7 +18,7 @@ import {
   shouldRejectTmdbTvFromCatalog,
   tmdbListMovieLooksAdult,
 } from "../src/lib/tmdbMovieContentPolicy.js";
-import { applyImdbGenresToCatalogDoc } from "../src/lib/imdbGenres.js";
+import { applyImdbGenresToCatalogDoc, omitTmdbGenreFields } from "../src/lib/imdbGenres.js";
 
 const require = createRequire(import.meta.url);
 const { loadMongoEnv, mongoHostHint } = require(path.join(
@@ -58,24 +58,26 @@ function mapTmdbTvToDoc(show) {
   if (typeof id !== "number" || !Number.isFinite(id)) return null;
   if (shouldRejectTmdbTvFromCatalog(show)) return null;
   const name = show.name ?? show.original_name ?? `TV ${id}`;
-  return applyImdbGenresToCatalogDoc({
-    ...show,
-    type: "tv",
-    id,
-    name,
-    title: show.name ?? name,
-    tmdb_id: id,
-    season_amount:
-      typeof show.number_of_seasons === "number" && show.number_of_seasons > 0
-        ? show.number_of_seasons
-        : show.season_amount ?? null,
-    number_of_episodes:
-      typeof show.number_of_episodes === "number" && show.number_of_episodes > 0
-        ? show.number_of_episodes
-        : null,
-    updatedAt: new Date(),
-    is_anime: false,
-  });
+  return applyImdbGenresToCatalogDoc(
+    omitTmdbGenreFields({
+      ...show,
+      type: "tv",
+      id,
+      name,
+      title: show.name ?? name,
+      tmdb_id: id,
+      season_amount:
+        typeof show.number_of_seasons === "number" && show.number_of_seasons > 0
+          ? show.number_of_seasons
+          : show.season_amount ?? null,
+      number_of_episodes:
+        typeof show.number_of_episodes === "number" && show.number_of_episodes > 0
+          ? show.number_of_episodes
+          : null,
+      updatedAt: new Date(),
+      is_anime: false,
+    })
+  );
 }
 
 async function tmdbGet(pathWithQuery, token) {
