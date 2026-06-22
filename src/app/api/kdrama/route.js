@@ -1,9 +1,8 @@
 import clientPromise from "@/lib/mongo";
 import {
-  buildCatalogFilter,
+  buildKdramaCatalogFilter,
   catalogSort,
   catalogTodayIsoUtc,
-  catalogTvBrowseNonAnimeClause,
   catalogTvBrowseReleasedClause,
 } from "@/lib/catalogQuery";
 import {
@@ -18,7 +17,7 @@ import {
   tvSeasonCountFromDoc,
 } from "@/lib/mapContentDocToItem";
 
-function mapTvRow(doc) {
+function mapKdramaRow(doc) {
   const release_date = catalogDocReleaseDateString(doc);
   return {
     id: doc.id.toString(),
@@ -32,7 +31,7 @@ function mapTvRow(doc) {
     genre_ids: doc.genre_ids ?? [],
     poster_path: doc.poster_path ?? null,
     backdrop_path: doc.backdrop_path ?? null,
-    type: doc.type,
+    type: "tv",
   };
 }
 
@@ -58,21 +57,17 @@ export async function GET(req) {
       dateAsc: { first_air_date: 1, _id: -1 },
     });
 
-    const core = buildCatalogFilter(searchParams, {
-      type: "tv",
-      dateField: "first_air_date",
-      animeMultilingualTitleSearch: true,
-    });
-
     const includeUnreleased = searchParams.get("include_unreleased") === "1";
     const todayIso = catalogTodayIsoUtc();
-
-    /** @type {Record<string, unknown>[]} */
-    const clauses = [core, catalogTvBrowseNonAnimeClause()];
-    if (!includeUnreleased) {
-      clauses.push(catalogTvBrowseReleasedClause("first_air_date", todayIso));
-    }
-    const filter = { $and: clauses };
+    const core = buildKdramaCatalogFilter(searchParams);
+    const filter = includeUnreleased
+      ? core
+      : {
+          $and: [
+            core,
+            catalogTvBrowseReleasedClause("first_air_date", todayIso),
+          ],
+        };
 
     const popPipeline = [
       { $match: filter },
@@ -95,10 +90,10 @@ export async function GET(req) {
       limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
-      results: results.map(mapTvRow),
+      results: results.map(mapKdramaRow),
     });
   } catch (err) {
     console.error(err);
-    return Response.json({ error: "Failed to fetch tv shows" }, { status: 500 });
+    return Response.json({ error: "Failed to fetch K-Drama" }, { status: 500 });
   }
 }

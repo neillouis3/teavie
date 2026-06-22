@@ -1,22 +1,18 @@
 /**
- * Upsert popular TMDB movies + TV into `teavie.content` so Discover/Search rails fill.
+ * Upsert Korean TV into `teavie.content` and tag as K-Drama with IMDb genres.
  *
- * TV: skips TMDB ids already owned by catalog anime (anime_* / is_anime / tags + tmdb mapping).
+ *   node scripts/seed-kdrama-catalog.mjs
+ *   node scripts/seed-kdrama-catalog.mjs --dry-run --pages=8
  *
- *   node scripts/seed-popular-catalog.mjs
- *   node scripts/seed-popular-catalog.mjs --dry-run --pages=5
- *
- * Env: MONGODB_URI, TMDB_BEARER (or NEXT_PUBLIC_TMDB_BEARER) — see scripts/lib/mongoEnv.cjs
+ * Env: MONGODB_URI, TMDB_BEARER — see scripts/lib/mongoEnv.cjs
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { MongoClient } from "mongodb";
-import { mapTmdbMovieToDoc } from "../src/lib/syncMoviesTmdbDaily.js";
 import { tmdbBearerToken } from "../src/lib/tmdbAuth.js";
 import {
   shouldRejectTmdbTvFromCatalog,
-  tmdbListMovieLooksAdult,
 } from "../src/lib/tmdbMovieContentPolicy.js";
 import { applyImdbGenresToCatalogDoc } from "../src/lib/imdbGenres.js";
 
@@ -53,12 +49,21 @@ function parseIntFlag(name, def) {
   return def;
 }
 
-function mapTmdbTvToDoc(show) {
+function mapTmdbTvToKdramaDoc(show) {
   const id = show.id;
   if (typeof id !== "number" || !Number.isFinite(id)) return null;
   if (shouldRejectTmdbTvFromCatalog(show)) return null;
+
+  const origins = show.origin_country;
+  const lang = String(show.original_language ?? "").toLowerCase();
+  const hasKr =
+    (Array.isArray(origins) &&
+      origins.some((c) => String(c).toUpperCase() === "KR")) ||
+    String(origins ?? "").toUpperCase() === "KR";
+  if (!hasKr && lang !== "ko") return null;
+
   const name = show.name ?? show.original_name ?? `TV ${id}`;
-  return applyImdbGenresToCatalogDoc({
+  const base = {
     ...show,
     type: "tv",
     id,
@@ -75,7 +80,9 @@ function mapTmdbTvToDoc(show) {
         : null,
     updatedAt: new Date(),
     is_anime: false,
-  });
+  };
+
+  return applyImdbGenresToCatalogDoc(base);
 }
 
 async function tmdbGet(pathWithQuery, token) {
@@ -102,7 +109,6 @@ async function tmdbGet(pathWithQuery, token) {
   }
 }
 
-/** TMDB ids already represented as catalog anime — do not upsert numeric TV for these. */
 async function animeClaimedTmdbIds(col) {
   const blocked = new Set();
   const cursor = col.find(
@@ -114,7 +120,7 @@ async function animeClaimedTmdbIds(col) {
         { tags: "anime" },
       ],
     },
-    { projection: { id: 1, tmdb_id: 1, external_ids: 1, is_anime: 1, tags: 1 } }
+    { projection: { id: 1, tmdb_id: 1, external_ids: 1 } }
   );
 
   for await (const d of cursor) {
@@ -123,32 +129,26 @@ async function animeClaimedTmdbIds(col) {
     const ext = d.external_ids?.tmdb_id;
     const extn = typeof ext === "number" ? ext : Number(ext);
     if (Number.isFinite(extn) && extn > 0) blocked.add(extn);
-    const idNum = typeof d.id === "number" ? d.id : Number(d.id);
-    if (
-      Number.isFinite(idNum) &&
-      idNum > 0 &&
-      !String(d.id ?? "").startsWith("anime_") &&
-      (d.is_anime === true || (Array.isArray(d.tags) && d.tags.includes("anime")))
-    ) {
-      blocked.add(idNum);
-    }
   }
   return blocked;
 }
 
-async function popularIds(endpoint, token, maxPages, listRowSkip) {
+async function discoverIds(token, maxPages, sortBy) {
   const ids = [];
   const seen = new Set();
   for (let page = 1; page <= maxPages; page += 1) {
     const q = new URLSearchParams({
       language: "en-US",
       include_adult: "false",
+      with_origin_country: "KR",
+      with_original_language: "ko",
+      sort_by: sortBy,
       page: String(page),
     });
-    const json = await tmdbGet(`${endpoint}?${q}`, token);
+    const json = await tmdbGet(`/discover/tv?${q}`, token);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
-      if (listRowSkip && listRowSkip(r)) continue;
+      if (shouldRejectTmdbTvFromCatalog(r)) continue;
       const id = Number(r.id);
       if (!Number.isFinite(id) || id <= 0 || seen.has(id)) continue;
       seen.add(id);
@@ -163,9 +163,7 @@ async function popularIds(endpoint, token, maxPages, listRowSkip) {
 async function main() {
   loadMongoEnv();
   const dryRun = hasFlag("--dry-run");
-  const pages = Math.max(1, parseIntFlag("--pages", 3));
-  const moviesOnly = hasFlag("--movies-only");
-  const tvOnly = hasFlag("--tv-only");
+  const pages = Math.max(1, parseIntFlag("--pages", 5));
 
   const uri = String(process.env.MONGODB_URI ?? "").trim();
   const token = tmdbBearerToken().trim();
@@ -179,93 +177,51 @@ async function main() {
   }
 
   console.log(
-    `seed popular | mongo=${mongoHostHint(uri)} pages=${pages} dryRun=${dryRun} movies=${!tvOnly} tv=${!moviesOnly}`
+    `seed kdrama | mongo=${mongoHostHint(uri)} pages=${pages} dryRun=${dryRun}`
   );
 
   const client = new MongoClient(uri);
   await client.connect();
   const col = client.db(DB_NAME).collection(COLLECTION);
 
-  let animeBlocked = new Set();
-  if (!moviesOnly) {
-    animeBlocked = await animeClaimedTmdbIds(col);
-    console.log(`anime-blocked TMDB tv ids: ${animeBlocked.size}`);
-  }
+  const animeBlocked = await animeClaimedTmdbIds(col);
+  console.log(`anime-blocked TMDB tv ids: ${animeBlocked.size}`);
+
+  const popIds = await discoverIds(token, pages, "popularity.desc");
+  const ratedIds = await discoverIds(token, Math.min(pages, 3), "vote_average.desc");
+  const allIds = [...new Set([...popIds, ...ratedIds])].filter(
+    (id) => !animeBlocked.has(id)
+  );
+  console.log(`discover KR/ko tv: ${allIds.length} unique ids`);
 
   const ops = [];
+  let ok = 0;
+  let err = 0;
 
-  if (!tvOnly) {
-    const movieIds = await popularIds("/movie/popular", token, pages, (r) =>
-      tmdbListMovieLooksAdult(r)
-    );
-    console.log(`popular movies: ${movieIds.length} ids`);
-    let ok = 0;
-    let err = 0;
-    for (let i = 0; i < movieIds.length; i += 1) {
-      const id = movieIds[i];
-      try {
-        const q = new URLSearchParams({
-          language: "en-US",
-          include_adult: "false",
-          append_to_response: "release_dates",
+  for (let i = 0; i < allIds.length; i += 1) {
+    const id = allIds[i];
+    try {
+      const q = new URLSearchParams({ language: "en-US", include_adult: "false" });
+      const show = await tmdbGet(`/tv/${id}?${q}`, token);
+      const doc = mapTmdbTvToKdramaDoc(show);
+      if (doc) {
+        ops.push({
+          updateOne: {
+            filter: { type: "tv", id: doc.id },
+            update: { $set: doc },
+            upsert: true,
+          },
         });
-        const movie = await tmdbGet(`/movie/${id}?${q}`, token);
-        const doc = mapTmdbMovieToDoc(movie);
-        if (doc) {
-          ops.push({
-            updateOne: {
-              filter: { type: "movie", id: doc.id },
-              update: { $set: doc },
-              upsert: true,
-            },
-          });
-          ok += 1;
-        }
-      } catch (e) {
-        err += 1;
-        console.warn(`movie ${id}: ${e instanceof Error ? e.message : e}`);
+        ok += 1;
       }
-      await sleep(SLEEP_MS);
-      if ((i + 1) % 20 === 0) console.log(`  movies fetched ${i + 1}/${movieIds.length}…`);
+    } catch (e) {
+      err += 1;
+      console.warn(`tv ${id}: ${e instanceof Error ? e.message : e}`);
     }
-    console.log(`movies detail ok=${ok} err=${err}`);
+    await sleep(SLEEP_MS);
+    if ((i + 1) % 20 === 0) console.log(`  fetched ${i + 1}/${allIds.length}…`);
   }
-
-  if (!moviesOnly) {
-    const tvIds = await popularIds("/tv/popular", token, pages, (r) =>
-      shouldRejectTmdbTvFromCatalog(r)
-    );
-    const toFetch = tvIds.filter((id) => !animeBlocked.has(id));
-    console.log(
-      `popular tv: ${tvIds.length} ids (${tvIds.length - toFetch.length} skipped — already anime in catalog)`
-    );
-    let ok = 0;
-    let err = 0;
-    for (let i = 0; i < toFetch.length; i += 1) {
-      const id = toFetch[i];
-      try {
-        const q = new URLSearchParams({ language: "en-US", include_adult: "false" });
-        const show = await tmdbGet(`/tv/${id}?${q}`, token);
-        const doc = mapTmdbTvToDoc(show);
-        if (doc) {
-          ops.push({
-            updateOne: {
-              filter: { type: "tv", id: doc.id },
-              update: { $set: doc },
-              upsert: true,
-            },
-          });
-          ok += 1;
-        }
-      } catch (e) {
-        err += 1;
-        console.warn(`tv ${id}: ${e instanceof Error ? e.message : e}`);
-      }
-      await sleep(SLEEP_MS);
-      if ((i + 1) % 20 === 0) console.log(`  tv fetched ${i + 1}/${toFetch.length}…`);
-    }
-    console.log(`tv detail ok=${ok} err=${err}`);
-  }
+  console.log(`detail ok=${ok} err=${err}`);
 
   if (ops.length === 0) {
     console.log("nothing to write");
@@ -282,18 +238,20 @@ async function main() {
   const batch = 100;
   let upserted = 0;
   let modified = 0;
-  let matched = 0;
   for (let i = 0; i < ops.length; i += batch) {
     const chunk = ops.slice(i, i + batch);
     const r = await col.bulkWrite(chunk, { ordered: false });
     upserted += r.upsertedCount;
     modified += r.modifiedCount;
-    matched += r.matchedCount;
     console.log(
       `bulk ${Math.min(i + chunk.length, ops.length)}/${ops.length}: upserted+=${r.upsertedCount} modified+=${r.modifiedCount}`
     );
   }
-  console.log(`done: upserted=${upserted} modified=${modified} matched=${matched}`);
+
+  const kdramaCount = await col.countDocuments({
+    $or: [{ catalog_categories: "kdrama" }, { is_kdrama: true }],
+  });
+  console.log(`done: upserted=${upserted} modified=${modified} tagged_kdrama=${kdramaCount}`);
   await client.close();
 }
 

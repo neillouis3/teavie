@@ -2,6 +2,7 @@
 
 import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import Header from '@/components/ui/header';
 import AllShowsViewer from '@/components/viewer/allShowsViewer';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
@@ -9,7 +10,7 @@ import BrowseCatalogFilters from '@/components/browse/BrowseCatalogFilters';
 import { Pagination } from '@heroui/react';
 import { ContentItem } from '@/types/content';
 
-function AllAnimePageContent() {
+function AllKdramaPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -22,15 +23,17 @@ function AllAnimePageContent() {
   const yearMaxParam = searchParams.get('year_max') ?? '';
   const qParam = searchParams.get('q') ?? '';
 
-  const [anime, setAnime] = useState<ContentItem[]>([]);
+  const [shows, setShows] = useState<ContentItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { document.title = 'All Anime - Teavie'; }, []);
+  useEffect(() => {
+    document.title = 'Korean Drama - Teavie';
+  }, []);
 
   useEffect(() => {
-    const fetchAnime = async () => {
+    const fetchKdrama = async () => {
       setLoading(true);
       try {
         const qs = new URLSearchParams();
@@ -42,20 +45,20 @@ function AllAnimePageContent() {
         if (yearMaxParam) qs.set('year_max', yearMaxParam);
         if (qParam.trim()) qs.set('q', qParam.trim());
 
-        const res = await fetch(`/api/anime?${qs.toString()}`);
+        const res = await fetch(`/api/kdrama?${qs.toString()}`);
         if (res.ok) {
           const data = await res.json();
-          setAnime(data.results || []);
+          setShows(data.results || []);
           setTotalPages(data.totalPages || 1);
           setTotal(typeof data.total === 'number' ? data.total : 0);
         }
       } catch (err) {
-        console.error('Error fetching anime:', err);
+        console.error('Error fetching K-Drama:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchAnime();
+    fetchKdrama();
   }, [pageParam, sortParam, genreParam, yearMinParam, yearMaxParam, qParam]);
 
   const setPage = (p: number) => {
@@ -66,21 +69,27 @@ function AllAnimePageContent() {
 
   return (
     <div className="bg-main min-h-screen w-full">
-      <Header pageName="All Anime" />
+      <Header pageName="Korean Drama" />
       <div className="space-y-4 px-3 pb-8 pt-2 sm:px-4">
-        <BrowseCatalogFilters mode="anime" total={total} loading={loading} />
+        <BrowseCatalogFilters mode="kdrama" total={total} loading={loading} />
+
+        <p className="text-sm text-default-500">
+          <Link href="/kdrama" className="text-success hover:underline">
+            ← Back to Korean Drama
+          </Link>
+        </p>
 
         {loading ? (
           <AllMoviesViewerLoading />
-        ) : anime.length === 0 ? (
+        ) : shows.length === 0 ? (
           <p className="py-16 text-center text-sm text-default-500">
-            No anime match these filters. Try adjusting your search.
+            No Korean dramas match these filters. Try adjusting your search.
           </p>
         ) : (
-          <AllShowsViewer allContentData={anime} />
+          <AllShowsViewer allContentData={shows} />
         )}
 
-        {totalPages > 1 && !loading && anime.length > 0 && (
+        {totalPages > 1 && !loading && shows.length > 0 && (
           <div className="flex justify-center pt-2">
             <Pagination
               total={totalPages}
@@ -98,20 +107,19 @@ function AllAnimePageContent() {
   );
 }
 
-export default function AllAnimePage() {
+export default function AllKdramaPage() {
   return (
     <Suspense
       fallback={
         <div className="bg-main min-h-screen w-full">
-          <Header pageName="All Anime" />
+          <Header pageName="Korean Drama" />
           <div className="px-3 pb-8 pt-2 sm:px-4">
             <AllMoviesViewerLoading />
           </div>
         </div>
       }
     >
-      <AllAnimePageContent />
+      <AllKdramaPageContent />
     </Suspense>
   );
 }
-

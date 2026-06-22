@@ -29,8 +29,15 @@ function normalizeFallback(doc) {
     vote_average: typeof doc.vote_average === "number" ? doc.vote_average : 0,
     status: typeof doc.status === "string" && doc.status ? doc.status : "Released",
     genres: Array.isArray(doc.genres) ? doc.genres : [],
+    imdb_genres: Array.isArray(doc.imdb_genres) ? doc.imdb_genres : [],
+    origin_country: Array.isArray(doc.origin_country) ? doc.origin_country : [],
+    original_language:
+      typeof doc.original_language === "string" ? doc.original_language : null,
+    is_kdrama: doc.is_kdrama === true,
+    catalog_categories: Array.isArray(doc.catalog_categories)
+      ? doc.catalog_categories
+      : [],
     mal_id: typeof doc.mal_id === "number" ? doc.mal_id : null,
-    origin_country: [],
     tagline: null,
     number_of_seasons:
       typeof doc.season_amount === "number"
@@ -86,6 +93,11 @@ export async function GET(req) {
           external_ids: 1,
           mal_id: 1,
           genres: 1,
+          imdb_genres: 1,
+          is_kdrama: 1,
+          catalog_categories: 1,
+          origin_country: 1,
+          original_language: 1,
           status: 1,
         },
       }

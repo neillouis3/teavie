@@ -1,12 +1,6 @@
 /**
- * Popular-genre "algo": ranks the existing TMDB genres by how much popular content
- * the catalog actually holds for each one. We do NOT invent or rename genres — we
- * only reorder the fixed TMDB lists by a popularity score so Discover can surface
- * the genres worth browsing first (Netflix-style "Browse by genre").
- *
- * Score per genre = sum of catalog `popularity` across titles tagged with it.
- * `count` = number of titles in that genre. A few top posters are returned so the
- * Discover tiles can show a small collage.
+ * Popular-genre ranking for Discover: ranks IMDb genres by catalog popularity score.
+ * Uses canonical `imdb_genres` on every doc (same labels for movies and TV).
  */
 
 import clientPromise from "@/lib/mongo";
@@ -14,27 +8,19 @@ import {
   catalogMoviePolicyClause,
   catalogTvBrowseNonAnimeClause,
 } from "@/lib/catalogQuery";
-import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from "@/lib/tmdbGenres";
+import { IMDB_GENRES } from "@/lib/imdbGenres";
 
-const TILE_POSTERS = 5; // sample posters per genre; UI picks unique leads across tiles
-
-function genreNameMap(list) {
-  const map = new Map();
-  for (const g of list) map.set(g.id, g.name);
-  return map;
-}
+const TILE_POSTERS = 5;
 
 /**
  * @param {object} cfg
  * @param {Record<string, unknown>} cfg.matchStage
- * @param {number[]} cfg.keys
- * @param {string} cfg.unwindPath  Array field to unwind (e.g. "genre_ids" or "genres").
- * @param {string} cfg.idFieldPath Path to the genre id after unwind (e.g. "genre_ids" or "genres.id").
+ * @param {string[]} cfg.labels
  * @param {boolean} cfg.withPosters
  */
-function buildPipeline({ matchStage, keys, unwindPath, idFieldPath, withPosters }) {
+function buildPipeline({ matchStage, labels, withPosters }) {
   const group = {
-    _id: `$${idFieldPath}`,
+    _id: "$imdb_genres",
     count: { $sum: 1 },
     score: { $sum: "$_pop" },
   };
@@ -52,38 +38,32 @@ function buildPipeline({ matchStage, keys, unwindPath, idFieldPath, withPosters 
         },
       },
     },
-    { $unwind: `$${unwindPath}` },
-    { $match: { [idFieldPath]: { $in: keys } } },
+    { $unwind: "$imdb_genres" },
+    { $match: { imdb_genres: { $in: labels } } },
     { $group: group },
     { $sort: { score: -1, count: -1 } },
   ];
 }
 
-async function rankGenres(col, matchStage, nameMap, genreFields) {
-  const keys = [...nameMap.keys()];
-  const { unwindPath, idFieldPath } = genreFields;
-
+async function rankImdbGenres(col, matchStage, labels) {
   let rows;
   try {
-    // `$topN` needs MongoDB 5.2+. Fall back to no posters on older servers.
     rows = await col
-      .aggregate(
-        buildPipeline({ matchStage, keys, unwindPath, idFieldPath, withPosters: true })
-      )
+      .aggregate(buildPipeline({ matchStage, labels, withPosters: true }))
       .toArray();
   } catch {
     rows = await col
-      .aggregate(
-        buildPipeline({ matchStage, keys, unwindPath, idFieldPath, withPosters: false })
-      )
+      .aggregate(buildPipeline({ matchStage, labels, withPosters: false }))
       .toArray();
   }
 
+  const slugByLabel = new Map(IMDB_GENRES.map((g) => [g.label, g.slug]));
+
   return rows
-    .filter((r) => nameMap.has(r._id))
+    .filter((r) => labels.includes(r._id))
     .map((r) => ({
-      id: r._id,
-      name: nameMap.get(r._id),
+      slug: slugByLabel.get(r._id) ?? String(r._id).toLowerCase().replace(/\s+/g, "-"),
+      name: r._id,
       count: r.count,
       posters: (r.posters || [])
         .filter((p) => typeof p === "string" && p.trim().length > 0)
@@ -91,7 +71,6 @@ async function rankGenres(col, matchStage, nameMap, genreFields) {
     }));
 }
 
-/** Prefer a different lead poster per genre tile (popular titles overlap many genres). */
 function assignUniqueLeadPosters(rows) {
   const used = new Set();
   return rows.map((row) => {
@@ -108,21 +87,14 @@ export async function GET() {
   try {
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
+    const labels = IMDB_GENRES.map((g) => g.label);
 
     const [movies, tv] = await Promise.all([
-      // Movies tag genres via the numeric `genre_ids` array.
-      rankGenres(
-        col,
-        { type: "movie", ...catalogMoviePolicyClause() },
-        genreNameMap(TMDB_MOVIE_GENRES),
-        { unwindPath: "genre_ids", idFieldPath: "genre_ids" }
-      ),
-      // TV shows leave `genre_ids` empty; genres live in `genres: [{ id, name }]`.
-      rankGenres(
+      rankImdbGenres(col, { type: "movie", ...catalogMoviePolicyClause() }, labels),
+      rankImdbGenres(
         col,
         { $and: [{ type: "tv" }, catalogTvBrowseNonAnimeClause()] },
-        genreNameMap(TMDB_TV_GENRES),
-        { unwindPath: "genres", idFieldPath: "genres.id" }
+        labels
       ),
     ]);
 

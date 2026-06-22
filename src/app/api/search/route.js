@@ -15,6 +15,7 @@ import clientPromise from "@/lib/mongo";
 import {
   animeTitleSearchConditions,
   catalogAnimeIdMongoExpr,
+  catalogKdramaClause,
   catalogMoviePolicyClause,
   catalogTodayIsoUtc,
   escapeRegex,
@@ -22,6 +23,7 @@ import {
   releasedCatalogClause,
 } from "@/lib/catalogQuery";
 import { detectGenres, fetchActorCreditIds } from "@/lib/catalogSearch";
+import { imdbGenreMatchConditions } from "@/lib/imdbGenres";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 
@@ -63,14 +65,19 @@ export async function GET(req) {
       { tagline: { $regex: safe, $options: "i" } },
     ];
 
-    // --- Genre conditions ---
-    const { ids: genreIds } = detectGenres(q);
-    const genreConds = genreIds.length
-      ? [
-          { genre_ids: { $in: genreIds } },
-          { genres: { $elemMatch: { id: { $in: genreIds } } } },
-        ]
-      : [];
+    // --- Genre conditions (canonical `imdb_genres` on catalog docs) ---
+    const { imdbLabels, kdrama } = detectGenres(q);
+    /** @type {Record<string, unknown>[]} */
+    const genreConds = [];
+    for (const label of imdbLabels) {
+      genreConds.push(imdbGenreMatchConditions(label));
+    }
+    /** K-Drama is TV-only; keep off the movie branch. */
+    const tvGenreConds = [...genreConds];
+    if (kdrama) {
+      tvGenreConds.push(catalogKdramaClause());
+    }
+    const genreBoostLabels = [...imdbLabels];
 
     // --- Actor conditions (TMDB credits -> catalog by TMDB id) ---
     const token = tmdbBearerToken();
@@ -112,6 +119,7 @@ export async function GET(req) {
             ...animeTitleSearchConditions(safe),
             { overview: { $regex: safe, $options: "i" } },
             { tagline: { $regex: safe, $options: "i" } },
+            ...genreConds,
           ],
         },
         catalogAnimeIdMongoExpr(),
@@ -122,7 +130,7 @@ export async function GET(req) {
     const tvLiveBranch = {
       $and: [
         { type: "tv" },
-        { $or: [...textConds, ...genreConds, ...actorTvCond] },
+        { $or: [...textConds, ...tvGenreConds, ...actorTvCond] },
         notAnimeTv,
         ...(includeUnreleased
           ? []
@@ -167,6 +175,29 @@ export async function GET(req) {
           _pop: popExpr,
           _rel: {
             $add: [
+              ...(genreBoostLabels.length
+                ? [
+                    {
+                      $cond: [
+                        {
+                          $gt: [
+                            {
+                              $size: {
+                                $setIntersection: [
+                                  { $ifNull: ["$imdb_genres", []] },
+                                  genreBoostLabels,
+                                ],
+                              },
+                            },
+                            0,
+                          ],
+                        },
+                        400,
+                        0,
+                      ],
+                    },
+                  ]
+                : []),
               ...(actorBoostIds.length
                 ? [{ $cond: [{ $in: ["$id", actorBoostIds] }, 150, 0] }]
                 : []),
