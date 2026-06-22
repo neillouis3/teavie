@@ -40,10 +40,18 @@ export function mapTmdbMovieToDoc(movie) {
   if (typeof id !== "number" || !Number.isFinite(id)) return null;
   if (shouldRejectTmdbMovieFromCatalog(movie)) return null;
   const title = movie.title ?? movie.original_title ?? `Movie ${id}`;
+  const runtimeMin =
+    typeof movie.runtime === "number" && movie.runtime > 0 ? movie.runtime : null;
   return {
     ...movie,
     type: "movie",
     name: title,
+    runtimeSeconds:
+      runtimeMin != null
+        ? runtimeMin * 60
+        : typeof movie.runtimeSeconds === "number" && movie.runtimeSeconds > 0
+          ? movie.runtimeSeconds
+          : null,
     updatedAt: new Date(),
   };
 }

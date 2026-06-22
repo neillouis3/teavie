@@ -33,19 +33,18 @@ export default function LargeCard({
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const baseUrl = "https://image.tmdb.org/t/p/";
-  const backdropSize = "w1280"; // nice for hero cards
+  const backdropSize = "w1280";
   const posterSize = "w500";
 
-  // Prefer backdrop image, fallback to poster
   const imageUrl = backdropPath
     ? /^https?:\/\//i.test(backdropPath)
       ? backdropPath
       : `${baseUrl}${backdropSize}${backdropPath}`
     : posterPath
-    ? /^https?:\/\//i.test(posterPath)
-      ? posterPath
-      : `${baseUrl}${posterSize}${posterPath}`
-    : "/placeholder.jpg";
+      ? /^https?:\/\//i.test(posterPath)
+        ? posterPath
+        : `${baseUrl}${posterSize}${posterPath}`
+      : "/placeholder.jpg";
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
   const when =

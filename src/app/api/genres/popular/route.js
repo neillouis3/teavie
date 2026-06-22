@@ -16,7 +16,7 @@ import {
 } from "@/lib/catalogQuery";
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from "@/lib/tmdbGenres";
 
-const TILE_POSTERS = 3; // sample posters returned per genre for the tile collage
+const TILE_POSTERS = 5; // sample posters per genre; UI picks unique leads across tiles
 
 function genreNameMap(list) {
   const map = new Map();
@@ -91,6 +91,19 @@ async function rankGenres(col, matchStage, nameMap, genreFields) {
     }));
 }
 
+/** Prefer a different lead poster per genre tile (popular titles overlap many genres). */
+function assignUniqueLeadPosters(rows) {
+  const used = new Set();
+  return rows.map((row) => {
+    const pool = row.posters ?? [];
+    let lead = pool.find((p) => !used.has(p));
+    if (!lead && pool.length) lead = pool[0];
+    if (lead) used.add(lead);
+    const rest = pool.filter((p) => p !== lead);
+    return { ...row, posters: lead ? [lead, ...rest].slice(0, 3) : [] };
+  });
+}
+
 export async function GET() {
   try {
     const client = await clientPromise;
@@ -113,7 +126,10 @@ export async function GET() {
       ),
     ]);
 
-    return Response.json({ movies, tv });
+    return Response.json({
+      movies: assignUniqueLeadPosters(movies),
+      tv: assignUniqueLeadPosters(tv),
+    });
   } catch (err) {
     console.error(err);
     return Response.json(

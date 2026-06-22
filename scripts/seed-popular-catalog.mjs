@@ -64,6 +64,14 @@ function mapTmdbTvToDoc(show) {
     name,
     title: show.name ?? name,
     tmdb_id: id,
+    season_amount:
+      typeof show.number_of_seasons === "number" && show.number_of_seasons > 0
+        ? show.number_of_seasons
+        : show.season_amount ?? null,
+    number_of_episodes:
+      typeof show.number_of_episodes === "number" && show.number_of_episodes > 0
+        ? show.number_of_episodes
+        : null,
     updatedAt: new Date(),
     /** Explicit non-anime seed row (anime stays on `anime_*` ids). */
     is_anime: false,
