@@ -673,11 +673,11 @@ function ShowEpisodePickerSeasonRow() {
           classNames={{
             base: "w-full min-w-0 max-w-full lg:w-auto lg:max-w-none",
             tabList:
-              "w-full max-w-full gap-0 overflow-x-auto p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:w-auto lg:max-w-none",
+              "w-full max-w-full gap-0 overflow-x-auto p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:w-auto lg:max-w-none lg:flex-wrap lg:overflow-visible",
             tab: manySeasons
-              ? "h-8 min-h-8 shrink-0 basis-[40%] px-2 text-xs lg:basis-auto lg:px-3"
-              : "h-8 min-h-8 min-w-0 flex-1 px-2 text-xs lg:flex-none lg:shrink-0 lg:px-3",
-            tabContent: "truncate",
+              ? "h-8 min-h-8 shrink-0 basis-[40%] px-2 text-xs lg:basis-auto lg:flex-none lg:px-3"
+              : "h-8 min-h-8 min-w-0 flex-1 px-2 text-xs lg:min-w-0 lg:flex-none lg:shrink-0 lg:px-3",
+            tabContent: "truncate max-lg:truncate lg:whitespace-nowrap",
             panel: "hidden",
           }}
         >
