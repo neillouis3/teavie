@@ -98,9 +98,9 @@ const DECK_CARD_BASE =
   "absolute bottom-0 right-0 h-full w-auto max-w-full rounded-lg object-cover shadow-2xl ring-1 ring-black/10 origin-bottom-right transition-all duration-300 ease-out will-change-transform";
 
 const DECK_CARD_HOVER = [
-  "z-30 rotate-[12deg] group-hover:-translate-y-3 group-hover:translate-x-0.5 group-hover:rotate-[6deg]",
-  "z-20 rotate-[12deg] group-hover:-translate-x-[42%] group-hover:-translate-y-1 group-hover:-rotate-[-2deg]",
-  "z-10 rotate-[12deg] group-hover:translate-x-[14%] group-hover:-translate-y-5 group-hover:rotate-[20deg]",
+  "z-30 rotate-[10deg] group-hover:-translate-y-1.5 group-hover:rotate-[6deg]",
+  "z-20 rotate-[10deg] group-hover:-translate-x-[24%] group-hover:-translate-y-0.5 group-hover:-rotate-[-2deg]",
+  "z-10 rotate-[10deg] group-hover:translate-x-[6%] group-hover:-translate-y-2 group-hover:rotate-[14deg]",
 ] as const;
 
 function GenreTile({
@@ -119,7 +119,7 @@ function GenreTile({
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
-      className={`group relative flex aspect-[4/3] w-full rounded-xl p-3`}
+      className="group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl p-3"
     >
       <span
         className={`pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br ${colorClass} shadow-sm`}
@@ -135,7 +135,7 @@ function GenreTile({
       </div>
 
       {posters.length > 0 && (
-        <div className="pointer-events-none absolute -bottom-6 -right-4 z-10 h-[80%] w-[52%] sm:-right-5">
+        <div className="pointer-events-none absolute bottom-3 right-3 z-10 h-[68%] w-[40%]">
           {posters.map((path, index) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
