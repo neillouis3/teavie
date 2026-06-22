@@ -20,6 +20,78 @@ import { imdbGenreLabelFromSlug, isValidImdbGenreSlug } from "@/lib/imdbGenres";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 
 const DEFAULT_LIMIT = 28;
+const FEATURED_SIZE = 2;
+const FEATURED_POOL = 48;
+
+function popularityExpr() {
+  const popDouble = {
+    $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
+  };
+  return {
+    $cond: [
+      { $regexMatch: { input: { $toString: "$id" }, regex: "^anime_" } },
+      { $divide: [popDouble, 1000] },
+      popDouble,
+    ],
+  };
+}
+
+const HAS_POSTER_OR_BACKDROP = {
+  $or: [
+    { backdrop_path: { $type: "string", $regex: /\S/ } },
+    { poster_path: { $type: "string", $regex: /\S/ } },
+  ],
+};
+
+const HAS_IMDB_ID = { imdb_id: { $type: "string", $regex: /^tt/i } };
+
+/**
+ * Two random featured picks from a popular pool — prefer IMDb-linked titles with art.
+ * @param {import("mongodb").Collection} col
+ * @param {Record<string, unknown>} filter
+ */
+async function pickFeatured(col, filter) {
+  const popExpr = popularityExpr();
+  const baseStages = [
+    { $match: filter },
+    {
+      $addFields: {
+        _pop: popExpr,
+        _vote: {
+          $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
+        },
+      },
+    },
+  ];
+
+  async function sample(extraMatch, poolSize = FEATURED_POOL) {
+    return col
+      .aggregate([
+        ...baseStages,
+        { $match: extraMatch },
+        { $sort: { _pop: -1, _id: -1 } },
+        { $limit: poolSize },
+        { $sample: { size: FEATURED_SIZE } },
+        { $project: { _pop: 0, _vote: 0 } },
+      ])
+      .toArray();
+  }
+
+  const tiers = [
+    { $and: [HAS_POSTER_OR_BACKDROP, HAS_IMDB_ID, { _vote: { $gte: 6 } }] },
+    { $and: [HAS_POSTER_OR_BACKDROP, HAS_IMDB_ID] },
+    HAS_POSTER_OR_BACKDROP,
+    {},
+  ];
+
+  for (const tier of tiers) {
+    const docs = await sample(tier);
+    if (docs.length >= FEATURED_SIZE) return docs.slice(0, FEATURED_SIZE);
+    if (docs.length > 0) return docs;
+  }
+
+  return [];
+}
 
 function mapSortParam(sort) {
   switch (String(sort ?? "").trim()) {
@@ -115,19 +187,25 @@ export async function GET(req) {
       return Response.json({ error: "Invalid genre filter" }, { status: 400 });
     }
 
-    const popDouble = {
-      $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
-    };
-    const popExpr = {
-      $cond: [
-        { $regexMatch: { input: { $toString: "$id" }, regex: "^anime_" } },
-        { $divide: [popDouble, 1000] },
-        popDouble,
-      ],
-    };
+    const popExpr = popularityExpr();
+
+    const client = await clientPromise;
+    const col = client.db("teavie").collection("content");
+
+    const includeFeatured = page === 1 && sortBy === "popularity";
+    let featuredDocs = [];
+    let listFilter = filter;
+
+    if (includeFeatured) {
+      featuredDocs = await pickFeatured(col, filter);
+      const featuredIds = featuredDocs.map((d) => d._id).filter(Boolean);
+      if (featuredIds.length > 0) {
+        listFilter = { $and: [filter, { _id: { $nin: featuredIds } }] };
+      }
+    }
 
     const pipeline = [
-      { $match: filter },
+      { $match: listFilter },
       {
         $addFields: {
           _pop: popExpr,
@@ -148,9 +226,6 @@ export async function GET(req) {
       { $project: { _pop: 0, _sortDate: 0 } },
     ];
 
-    const client = await clientPromise;
-    const col = client.db("teavie").collection("content");
-
     const [total, docs] = await Promise.all([
       col.countDocuments(filter),
       col.aggregate(pipeline).toArray(),
@@ -163,6 +238,7 @@ export async function GET(req) {
       limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
+      featured: featuredDocs.map(mapDocRow),
       results: docs.map(mapDocRow),
     });
   } catch (err) {
