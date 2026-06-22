@@ -1,18 +1,31 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Chip } from '@heroui/react';
 import Header from '@/components/ui/header';
+import { IMDB_GENRES } from '@/lib/imdbGenres';
 import {
-  GenreCatalogTile,
-  GenreTilesSkeleton,
+  GenreSquareTile,
+  GenreSquareTilesSkeleton,
   genreTileColor,
   type CatalogGenreRow,
 } from '@/components/genre/genreTileShared';
+
+function mergeAllGenres(fromApi: CatalogGenreRow[]): CatalogGenreRow[] {
+  const bySlug = new Map(fromApi.map((g) => [g.slug, g]));
+  return IMDB_GENRES.map(({ slug, label }) => {
+    const row = bySlug.get(slug);
+    return row ?? { slug, name: label, count: 0, posters: [] };
+  });
+}
 
 export default function GenresIndexPage() {
   const [genres, setGenres] = useState<CatalogGenreRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  const allGenres = useMemo(() => mergeAllGenres(genres), [genres]);
+  const withTitles = allGenres.filter((g) => g.count > 0).length;
 
   useEffect(() => {
     document.title = 'Genres - Teavie';
@@ -47,35 +60,29 @@ export default function GenresIndexPage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Genres" />
-      <div className="space-y-6 px-3 pb-8 pt-2 sm:px-4">
-        <div className="max-w-2xl space-y-2">
-          <p className="text-sm text-default-500">
-            Browse by IMDb genre — labels come from each title&apos;s{' '}
-            <span className="text-foreground">imdb_genres</span> catalog field (OMDb /
-            AniList), not TMDB.
-          </p>
-          {!loading && genres.length > 0 ? (
-            <p className="text-xs text-default-400">
-              {genres.length} genres with catalog titles
-            </p>
+      <div className="w-full space-y-4 px-3 pb-12 pt-2 sm:px-4">
+        <div className="space-y-2 text-left">
+          {!loading ? (
+            <Chip color="success" variant="flat" size="md" radius="sm">
+              {withTitles} of {allGenres.length} genres with titles
+            </Chip>
           ) : null}
+          <p className="text-sm leading-relaxed text-default-500 sm:text-[15px]">
+            Browse movies and TV by IMDb genre — labels come from each title&apos;s{' '}
+            <span className="text-foreground">imdb_genres</span> catalog field.
+          </p>
         </div>
 
         {loading ? (
-          <GenreTilesSkeleton />
+          <GenreSquareTilesSkeleton />
         ) : error ? (
-          <p className="py-12 text-center text-sm text-default-500">
+          <p className="py-12 text-left text-sm text-default-500">
             Could not load genres. Try again later.
           </p>
-        ) : genres.length === 0 ? (
-          <p className="py-12 text-center text-sm text-default-500">
-            No IMDb genres in the catalog yet. Run the OMDb genre backfill scripts to
-            populate <code className="text-foreground">imdb_genres</code> on titles.
-          </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {genres.map((genre, i) => (
-              <GenreCatalogTile
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
+            {allGenres.map((genre, i) => (
+              <GenreSquareTile
                 key={genre.slug}
                 genre={genre}
                 colorClass={genreTileColor(genre.name, i)}
