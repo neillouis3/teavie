@@ -15,18 +15,14 @@ export type StreamServerId = keyof typeof MOVIE_SERVERS;
 const STORAGE_KEY = 'teavie-streaming-server';
 const DEFAULT_SERVER: StreamServerId = 'videasy';
 
-const ORDER: StreamServerId[] = ['videasy', 'vidking', '111movies', 'moviesapi'];
+const ORDER: StreamServerId[] = ['videasy', 'vidcore'];
 
 export function streamServerLabel(id: StreamServerId): string {
   switch (id) {
     case 'videasy':
       return 'Videasy';
-    case 'vidking':
-      return 'Vidking';
-    case '111movies':
-      return '111movies';
-    case 'moviesapi':
-      return 'MoviesAPI';
+    case 'vidcore':
+      return 'VidCore';
     default:
       return id;
   }

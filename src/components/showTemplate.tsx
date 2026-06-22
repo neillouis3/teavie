@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import ShowPlayer from "./showPlayer";
+import MoviePlayer from "./moviePlayer";
 import YouMightLike from "./youMightLike";
 import AnimeRelatedSection from "./animeRelatedSection";
 import {
@@ -348,6 +349,9 @@ export default function ShowTemplate({ id }: { id: string }) {
   const [show, setShow] = useState<Show | null>(null);
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
   const [loading, setLoading] = useState(true);
+  /** TMDB movie id for anime films (AniList format MOVIE/MUSIC), resolved via /api/anime/resolve-movie. */
+  const [animeMovieTmdbId, setAnimeMovieTmdbId] = useState<string | null>(null);
+  const [animeMovieResolving, setAnimeMovieResolving] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   /** First episode index in current block: 0 → eps 1–100, 100 → 101–200, … */
@@ -570,6 +574,44 @@ export default function ShowTemplate({ id }: { id: string }) {
     fetchShowDetails();
   }, [id]);
 
+  // Anime films (AniList format MOVIE/MUSIC) have no TMDB tv id; resolve a TMDB movie id so they
+  // play through the standard movie embed instead of the legacy AniList /anime path.
+  useEffect(() => {
+    if (!show || loading) {
+      return;
+    }
+    const isMovie =
+      Boolean(show.is_anime) &&
+      (show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC");
+    if (!isMovie) {
+      setAnimeMovieTmdbId(null);
+      setAnimeMovieResolving(false);
+      return;
+    }
+
+    let cancelled = false;
+    setAnimeMovieResolving(true);
+    setAnimeMovieTmdbId(null);
+    fetch(`/api/anime/resolve-movie?id=${encodeURIComponent(id)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled) return;
+        const mid =
+          j && typeof j.movieId === "number" && j.movieId > 0 ? String(j.movieId) : null;
+        setAnimeMovieTmdbId(mid);
+      })
+      .catch(() => {
+        if (!cancelled) setAnimeMovieTmdbId(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAnimeMovieResolving(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [show, loading, id]);
+
   useEffect(() => {
     const displayName = showDisplayTitle(show);
     if (!show || !displayName) return;
@@ -699,9 +741,17 @@ export default function ShowTemplate({ id }: { id: string }) {
     show != null &&
     Boolean(show.is_anime) &&
     idMalForAnilistRails != null;
-  const playerUsesAnilist = Boolean(show?.is_anime) && aniId != null;
-  const playerUsesTmdb = !playerUsesAnilist && resolvedIsNumeric;
+  // Anime now plays through the standard TMDB TV embed (/tv/{id}/{season}/{episode}),
+  // same as live-action shows. The AniList /anime embed is only a last resort for
+  // anime that never resolve a TMDB id.
+  const playerUsesTmdb = resolvedIsNumeric;
+  const playerUsesAnilist =
+    !playerUsesTmdb && Boolean(show?.is_anime) && aniId != null;
   const aniListEpCap = anilistEpisodeCap(show);
+  /** Anime film (AniList format MOVIE/MUSIC): single playback, no episode picker. */
+  const isAnimeMovie =
+    Boolean(show?.is_anime) &&
+    (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
   const animeMovieEmbed =
     playerUsesAnilist &&
     (show?.anilist?.format === "MOVIE" || show?.anilist?.format === "MUSIC");
@@ -896,6 +946,29 @@ export default function ShowTemplate({ id }: { id: string }) {
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {loading ? (
             <div className="h-full w-full animate-pulse bg-default-200" />
+          ) : isAnimeMovie ? (
+            animeMovieResolving ? (
+              <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+                Loading player…
+              </div>
+            ) : animeMovieTmdbId ? (
+              <MoviePlayer key={`movie-${id}`} videoId={animeMovieTmdbId} server={server} />
+            ) : playerUsesAnilist && aniId != null ? (
+              <ShowPlayer
+                key={id}
+                server={server}
+                source="anilist"
+                anilistId={aniId}
+                absoluteEpisode={1}
+                animeMovie
+                season={1}
+                episode={1}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+                No playback source available for this page yet. Try again later.
+              </div>
+            )
           ) : !canPlay ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               {playerUsesTmdb && show && !tmdbShowPremiered
@@ -964,6 +1037,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                 </section>
 
                 {/* ── Season & episode picker (shared layout; TV uses season + episode sections) ── */}
+                {!isAnimeMovie ? (
                 <div className="w-full rounded-xl border border-default-200/40 bg-default-100/35 p-3 sm:p-4 flex flex-col gap-3 dark:bg-default-100/10">
                   {showPickerTopRow ? (
                     <div
@@ -1172,6 +1246,7 @@ export default function ShowTemplate({ id }: { id: string }) {
                     )}
                   </div>
                 </div>
+                ) : null}
 
                 <section className="w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
                   <div className="bg-default-50 px-4 py-4 dark:bg-default-50/10 sm:px-5 sm:py-5">
