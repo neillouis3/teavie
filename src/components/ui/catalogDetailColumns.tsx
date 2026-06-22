@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { Chip } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import {
@@ -91,15 +90,9 @@ export default function CatalogDetailColumns({
               <Link
                 key={genre.slug}
                 href={genreBrowseHref(mediaType, genre.slug, genreBrowseBase)}
-                className="inline-flex max-w-full"
+                className="inline-flex max-w-full items-center rounded-full border border-default-200/80 bg-default-100/80 px-2.5 py-1 text-sm leading-snug text-foreground transition-colors hover:border-success/40 hover:bg-success/10 dark:border-default-100/30 dark:bg-default-100/20"
               >
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  className="cursor-pointer border border-default-200/80 bg-default-100/80 transition-colors hover:border-success/40 hover:bg-success/10 dark:border-default-100/30 dark:bg-default-100/20"
-                >
-                  {genre.name}
-                </Chip>
+                {genre.name}
               </Link>
             ))
           ) : (
@@ -110,7 +103,7 @@ export default function CatalogDetailColumns({
 
       <div className="min-w-0">
         <ColumnHeading label="Info" />
-        <ul className="mt-2.5 flex flex-col gap-2 text-sm text-foreground">
+        <ul className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-foreground">
           {infoItems.length > 0 ? (
             infoItems.map((line, index) => (
               <li key={`${line.label}-${index}`} className="flex items-start gap-2 leading-snug">
@@ -123,7 +116,7 @@ export default function CatalogDetailColumns({
               </li>
             ))
           ) : (
-            <li className="text-foreground/70">—</li>
+            <li className="col-span-2 text-foreground/70">—</li>
           )}
         </ul>
       </div>
