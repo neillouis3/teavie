@@ -3,6 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
+import CatalogDetailColumns, {
+  languageDisplayName,
+  sortedCompanyNames,
+  Link01Icon,
+} from './ui/catalogDetailColumns';
 import { Image, Chip } from '@heroui/react';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 
@@ -40,7 +45,7 @@ function isReleasedByDate(releaseDate: string | undefined | null): boolean {
   return ymd <= new Date().toISOString().slice(0, 10);
 }
 
-function formatCountryOfOrigin(movie: Movie): string {
+function formatCountryOfOrigin(movie: Movie): string | null {
   const prod = movie.production_countries;
   if (Array.isArray(prod) && prod.length > 0) {
     const names = prod
@@ -52,39 +57,34 @@ function formatCountryOfOrigin(movie: Movie): string {
   if (Array.isArray(codes) && codes.length > 0) {
     return codes.map((c) => String(c).toUpperCase()).join(", ");
   }
-  return "N/A";
+  return null;
 }
 
-function languageDisplayName(code: string | undefined | null): string {
-  const c = String(code ?? "").trim().toLowerCase();
-  if (!c) return "—";
-  try {
-    return new Intl.DisplayNames(["en"], { type: "language" }).of(c) ?? c.toUpperCase();
-  } catch {
-    return c.toUpperCase();
+function movieDetailLines(movie: Movie): string[] {
+  const lines: string[] = [
+    ...sortedCompanyNames(movie.production_companies),
+  ];
+  const country = formatCountryOfOrigin(movie);
+  if (country) lines.push(country);
+  const language = languageDisplayName(movie.original_language);
+  if (language) lines.push(language);
+  return lines;
+}
+
+function movieDetailLinks(movie: Movie) {
+  const links: { href: string; label: string; icon: typeof Link01Icon }[] = [];
+  if (movie.imdb_id && /^tt\d+/i.test(movie.imdb_id)) {
+    links.push({
+      href: `https://www.imdb.com/title/${movie.imdb_id}/`,
+      label: "IMDb",
+      icon: Link01Icon,
+    });
   }
-}
-
-function formatFullReleaseDate(ymd: string | undefined | null): string {
-  const d = String(ymd ?? "").trim();
-  if (d.length < 10) return "—";
-  const iso = d.slice(0, 10);
-  const parsed = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return "—";
-  return parsed.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function formatProductionCompanies(movie: Movie): string {
-  const list = movie.production_companies;
-  if (!Array.isArray(list) || list.length === 0) return "—";
-  const names = list
-    .map((c) => String(c?.name ?? "").trim())
-    .filter(Boolean);
-  return names.length > 0 ? names.join(", ") : "—";
+  const homepage = String(movie.homepage ?? "").trim();
+  if (homepage) {
+    links.push({ href: homepage, label: "Official site", icon: Link01Icon });
+  }
+  return links;
 }
 
 export default function MovieTemplate({ id }: { id: string }) {
@@ -178,11 +178,12 @@ export default function MovieTemplate({ id }: { id: string }) {
                         <div className="h-3 w-full max-w-xl rounded bg-default-200 animate-pulse" />
                         <div className="h-3 w-2/3 max-w-lg rounded bg-default-200 animate-pulse" />
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                          <div key={i} className="space-y-1.5">
-                            <div className="h-2.5 w-24 rounded bg-default-200 animate-pulse" />
-                            <div className="h-4 w-full max-w-[14rem] rounded bg-default-200 animate-pulse" />
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="space-y-2">
+                            <div className="h-3 w-20 rounded bg-default-200 animate-pulse" />
+                            <div className="h-6 w-24 rounded-full bg-default-200 animate-pulse" />
+                            <div className="h-6 w-28 rounded-full bg-default-200 animate-pulse" />
                           </div>
                         ))}
                       </div>
@@ -240,70 +241,13 @@ export default function MovieTemplate({ id }: { id: string }) {
                         {movie.tagline ? (
                           <p className="mt-2 text-xs text-default-500">&ldquo;{movie.tagline}&rdquo;</p>
                         ) : null}
-                        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                          <div>
-                            <dt className="text-default-500">Country of origin</dt>
-                            <dd className="mt-0.5 text-foreground">{formatCountryOfOrigin(movie)}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-default-500">Genre</dt>
-                            <dd className="mt-0.5 text-foreground">
-                              {movie.genres?.length
-                                ? movie.genres.map((g) => g.name).join(", ")
-                                : "—"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-default-500">Release date</dt>
-                            <dd className="mt-0.5 text-foreground">
-                              {formatFullReleaseDate(movie.release_date)}
-                            </dd>
-                          </div>
-                          {movie.original_title &&
-                          String(movie.original_title).trim() !== String(movie.title).trim() ? (
-                            <div>
-                              <dt className="text-default-500">Original title</dt>
-                              <dd className="mt-0.5 text-foreground">{movie.original_title}</dd>
-                            </div>
-                          ) : null}
-                          <div>
-                            <dt className="text-default-500">Original language</dt>
-                            <dd className="mt-0.5 text-foreground">
-                              {languageDisplayName(movie.original_language)}
-                            </dd>
-                          </div>
-                          <div className="sm:col-span-2 lg:col-span-3">
-                            <dt className="text-default-500">Studios</dt>
-                            <dd className="mt-0.5 text-foreground">{formatProductionCompanies(movie)}</dd>
-                          </div>
-                          {movie.homepage || (movie.imdb_id && /^tt\d+/i.test(movie.imdb_id)) ? (
-                            <div className="sm:col-span-2 lg:col-span-3">
-                              <dt className="text-default-500">Links</dt>
-                              <dd className="mt-0.5 flex flex-wrap gap-x-4 gap-y-1">
-                                {movie.imdb_id && /^tt\d+/i.test(movie.imdb_id) ? (
-                                  <a
-                                    href={`https://www.imdb.com/title/${movie.imdb_id}/`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary underline-offset-2 hover:underline"
-                                  >
-                                    IMDb
-                                  </a>
-                                ) : null}
-                                {movie.homepage ? (
-                                  <a
-                                    href={movie.homepage}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary underline-offset-2 hover:underline"
-                                  >
-                                    Official site
-                                  </a>
-                                ) : null}
-                              </dd>
-                            </div>
-                          ) : null}
-                        </dl>
+                        <CatalogDetailColumns
+                          className="mt-4"
+                          mediaType="movie"
+                          genres={movie.genres ?? []}
+                          details={movieDetailLines(movie)}
+                          links={movieDetailLinks(movie)}
+                        />
                       </div>
                     </div>
                   </div>
