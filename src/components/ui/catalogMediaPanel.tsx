@@ -123,65 +123,86 @@ export default function CatalogMediaPanel({
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
   const statusDisplay = formatStatusDisplay(status);
 
+  const titleAndStats = (
+    <>
+      <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        {title}
+      </h1>
+      <p className="mt-1.5 text-sm text-default-500">{subtitleLine}</p>
+      {(ratingLabel || certification || statusDisplay) && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          {ratingLabel ? (
+            <span className="inline-flex items-center gap-1 text-foreground">
+              <HugeiconsIcon
+                icon={StarIcon}
+                size={15}
+                className="text-warning"
+              />
+              {ratingLabel}
+            </span>
+          ) : null}
+          {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
+          {certification ? (
+            <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-medium text-foreground/90">
+              {certification}
+            </span>
+          ) : null}
+          {certification && statusDisplay ? <MetaDot /> : null}
+          {statusDisplay ? (
+            <span
+              className={
+                statusDisplay.active
+                  ? "font-medium text-success"
+                  : "capitalize text-foreground/80"
+              }
+            >
+              {statusDisplay.label}
+            </span>
+          ) : null}
+        </div>
+      )}
+    </>
+  );
+
+  const overviewBlock = (
+    <>
+      <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
+        {overview?.trim() ? overview : "No overview available."}
+      </p>
+      {tagline?.trim() ? (
+        <p className="mt-2 text-sm italic text-default-500">
+          &ldquo;{tagline.trim()}&rdquo;
+        </p>
+      ) : null}
+    </>
+  );
+
+  const posterEl = posterUrl ? (
+    <Image
+      src={posterUrl}
+      alt={posterAlt}
+      className="aspect-[2/3] w-full rounded-lg object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
+    />
+  ) : (
+    <div className="aspect-[2/3] w-full rounded-lg bg-default-200/80 ring-1 ring-default-200/35 dark:bg-default-100/20 dark:ring-default-100/15" />
+  );
+
   return (
     <div className="w-full space-y-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
-        <div className="mx-auto w-28 shrink-0 sm:mx-0 sm:w-32 md:w-36 lg:w-40">
-          {posterUrl ? (
-            <Image
-              src={posterUrl}
-              alt={posterAlt}
-              className="aspect-[2/3] w-full rounded-lg object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
-            />
-          ) : (
-            <div className="aspect-[2/3] w-full rounded-lg bg-default-200/80 ring-1 ring-default-200/35 dark:bg-default-100/20 dark:ring-default-100/15" />
-          )}
-        </div>
+      {/* Mobile: title & stats → poster + description → details */}
+      <div className="min-w-0 sm:hidden">{titleAndStats}</div>
+
+      <div className="flex gap-4 sm:hidden">
+        <div className="w-28 shrink-0">{posterEl}</div>
+        <div className="min-w-0 flex-1 pt-0.5">{overviewBlock}</div>
+      </div>
+
+      {/* sm+: poster beside title, stats, and description */}
+      <div className="hidden gap-5 sm:flex sm:flex-row">
+        <div className="w-32 shrink-0 md:w-36 lg:w-40">{posterEl}</div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            {title}
-          </h1>
-          <p className="mt-1.5 text-sm text-default-500">{subtitleLine}</p>
-          {(ratingLabel || certification || statusDisplay) && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-              {ratingLabel ? (
-                <span className="inline-flex items-center gap-1 text-foreground">
-                  <HugeiconsIcon
-                    icon={StarIcon}
-                    size={15}
-                    className="text-warning"
-                  />
-                  {ratingLabel}
-                </span>
-              ) : null}
-              {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
-              {certification ? (
-                <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-medium text-foreground/90">
-                  {certification}
-                </span>
-              ) : null}
-              {certification && statusDisplay ? <MetaDot /> : null}
-              {statusDisplay ? (
-                <span
-                  className={
-                    statusDisplay.active
-                      ? "font-medium text-success"
-                      : "capitalize text-foreground/80"
-                  }
-                >
-                  {statusDisplay.label}
-                </span>
-              ) : null}
-            </div>
-          )}
-          <p className="mt-4 text-sm leading-relaxed text-foreground/85 sm:mt-5 sm:text-[15px]">
-            {overview?.trim() ? overview : "No overview available."}
-          </p>
-          {tagline?.trim() ? (
-            <p className="mt-2 text-sm italic text-default-500">
-              &ldquo;{tagline.trim()}&rdquo;
-            </p>
-          ) : null}
+          {titleAndStats}
+          <div className="mt-4 sm:mt-5">{overviewBlock}</div>
         </div>
       </div>
 
@@ -211,8 +232,27 @@ export function CatalogMediaPanelSkeleton({
 }) {
   return (
     <div className="w-full space-y-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
-        <div className="mx-auto aspect-[2/3] w-28 shrink-0 animate-pulse rounded-lg bg-default-200 sm:mx-0 sm:w-32 md:w-36" />
+      <div className="space-y-3 sm:hidden">
+        <div className="h-8 w-3/4 max-w-xl animate-pulse rounded-lg bg-default-200" />
+        <div className="h-4 w-48 animate-pulse rounded bg-default-200" />
+        <div className="h-4 w-56 animate-pulse rounded bg-default-200" />
+      </div>
+
+      <div className="flex gap-4 sm:hidden">
+        <div className="aspect-[2/3] w-28 shrink-0 animate-pulse rounded-lg bg-default-200" />
+        <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+          {[90, 75, 55].map((w, i) => (
+            <div
+              key={i}
+              className="h-3 animate-pulse rounded bg-default-200"
+              style={{ width: `${w}%` }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="hidden gap-5 sm:flex sm:flex-row">
+        <div className="aspect-[2/3] w-32 shrink-0 animate-pulse rounded-lg bg-default-200 md:w-36" />
         <div className="min-w-0 flex-1 space-y-3">
           <div className="h-8 w-3/4 max-w-xl animate-pulse rounded-lg bg-default-200 sm:h-9" />
           <div className="h-4 w-48 animate-pulse rounded bg-default-200" />
