@@ -38,7 +38,7 @@ const SORT_OPTIONS: { key: GenrePageSort; label: string }[] = [
 
 /** Match Explore trending hero overlay; tuned for two-up featured row. */
 const FEATURED_CARD_HEIGHT =
-  'h-[min(440px,55vh)] sm:h-[min(520px,62vh)]';
+  'h-[min(310px,40vh)] sm:h-[min(365px,44vh)]';
 
 function gridClass(layoutMode: CatalogCardLayoutMode) {
   return layoutMode === 'horizontal'
@@ -235,50 +235,43 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-3">
-          <div
-            className="flex flex-wrap justify-center gap-2"
-            role="group"
-            aria-label="Content type"
-          >
-            {TYPE_OPTIONS.map((opt) => {
-              const active = type === opt.key;
-              return (
-                <Button
-                  key={opt.key}
-                  size="sm"
-                  radius="full"
-                  variant={active ? 'solid' : 'bordered'}
-                  color={active ? 'success' : 'default'}
-                  onPress={() => mergeParams({ type: opt.key, page: '1' })}
-                >
-                  {opt.label}
-                </Button>
-              );
-            })}
-          </div>
-          <div
-            className="flex flex-wrap justify-center gap-2"
-            role="group"
-            aria-label="Sort by"
-          >
-            {SORT_OPTIONS.map((opt) => {
-              const active = sort === opt.key;
-              return (
-                <Button
-                  key={opt.key}
-                  size="sm"
-                  radius="full"
-                  variant={active ? 'solid' : 'bordered'}
-                  color={active ? 'success' : 'default'}
-                  onPress={() => mergeParams({ sort: opt.key, page: '1' })}
-                >
-                  {opt.label}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
+        <nav
+          className="flex flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-1"
+          aria-label="Genre filters"
+        >
+          {TYPE_OPTIONS.map((opt) => {
+            const active = type === opt.key;
+            return (
+              <Button
+                key={`type-${opt.key}`}
+                size="sm"
+                radius="full"
+                className="shrink-0"
+                variant={active ? 'solid' : 'bordered'}
+                color={active ? 'success' : 'default'}
+                onPress={() => mergeParams({ type: opt.key, page: '1' })}
+              >
+                {opt.label}
+              </Button>
+            );
+          })}
+          {SORT_OPTIONS.map((opt) => {
+            const active = sort === opt.key;
+            return (
+              <Button
+                key={`sort-${opt.key}`}
+                size="sm"
+                radius="full"
+                className="shrink-0"
+                variant={active ? 'solid' : 'bordered'}
+                color={active ? 'success' : 'default'}
+                onPress={() => mergeParams({ sort: opt.key, page: '1' })}
+              >
+                {opt.label}
+              </Button>
+            );
+          })}
+        </nav>
 
         {(loading || featured.length > 0) && showFeatured ? (
           <section className="mt-6 space-y-3" aria-label="Featured">
