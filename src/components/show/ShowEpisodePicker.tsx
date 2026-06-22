@@ -656,7 +656,7 @@ function ShowEpisodePickerSeasonRow() {
   const manySeasons = releasedSeasons.length > 3;
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1.5 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-2 lg:gap-y-1.5">
+    <div className="flex w-full min-w-0 flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-x-2">
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
         <Tabs
           aria-label="Seasons"
@@ -673,11 +673,11 @@ function ShowEpisodePickerSeasonRow() {
           classNames={{
             base: "w-full min-w-0 max-w-full lg:w-auto lg:max-w-none",
             tabList:
-              "w-full max-w-full gap-0 overflow-x-auto p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:w-auto lg:max-w-none lg:flex-wrap lg:overflow-visible",
+              "flex flex-row flex-nowrap w-full max-w-full gap-0 overflow-x-auto p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:w-auto lg:max-w-none",
             tab: manySeasons
-              ? "h-8 min-h-8 shrink-0 basis-[40%] px-2 text-xs lg:basis-auto lg:flex-none lg:px-3"
-              : "h-8 min-h-8 min-w-0 flex-1 px-2 text-xs lg:min-w-0 lg:flex-none lg:shrink-0 lg:px-3",
-            tabContent: "truncate max-lg:truncate lg:whitespace-nowrap",
+              ? "h-8 min-h-8 shrink-0 basis-[40%] px-2 text-xs lg:basis-auto lg:w-auto lg:flex-none lg:px-3"
+              : "h-8 min-h-8 min-w-0 flex-1 px-2 text-xs lg:w-auto lg:min-w-0 lg:flex-none lg:shrink-0 lg:px-3",
+            tabContent: "truncate lg:whitespace-nowrap",
             panel: "hidden",
           }}
         >
