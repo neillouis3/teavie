@@ -70,7 +70,7 @@ export default function SmallCard({
           <p className="flex-1 truncate text-start text-xs">{year}</p>
           <div className="flex-shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs transition-colors duration-300 group-hover:border-success group-hover:text-success">
             {typeLower === 'tv'
-              ? 'Show'
+              ? 'TV'
               : typeLower === 'movie'
                 ? 'Movie'
                 : type}
