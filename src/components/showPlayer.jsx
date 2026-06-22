@@ -5,7 +5,14 @@ import VideoEmbedFrame from '@/components/videoEmbedFrame';
 
 const VIDEASY_TV_QUERY =
   '?color=22c55e&nextEpisode=true&episodeSelector=true&overlay=true';
-const VIDKING_QUERY = '?color=22c55e&nextEpisode=true&episodeSelector=true';
+/** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
+const VIDCORE_TV_QUERY = '?theme=22c55e&autoPlay=true';
+/**
+ * Anime now plays through the standard TV path (`/tv/{id}/{season}/{episode}`),
+ * same as live-action shows — the dedicated AniList `/anime` embed was removed.
+ * `animePath` is kept as a last-resort fallback for titles that never resolve a
+ * TMDB id (see showTemplate playback selection).
+ */
 const VIDEASY_ANIME_QUERY =
   '?color=22c55e&nextEpisode=true&episodeSelector=true&overlay=true';
 
@@ -19,18 +26,10 @@ export const SHOW_SERVERS = {
     animeMoviePath: (anilistId) => `/anime/${anilistId}`,
     suffixAnime: () => VIDEASY_ANIME_QUERY,
   },
-  vidking: {
-    base: 'https://www.vidking.net',
-    path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
-    suffix: () => VIDKING_QUERY,
-  },
-  '111movies': {
-    base: 'https://111movies.net',
+  vidcore: {
+    base: 'https://vidcore.net',
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
-  },
-  moviesapi: {
-    base: 'https://moviesapi.club',
-    path: (id, season, episode) => `/tv/${id}-${season}-${episode}`,
+    suffix: () => VIDCORE_TV_QUERY,
   },
 };
 

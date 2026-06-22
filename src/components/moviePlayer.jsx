@@ -5,8 +5,8 @@ import VideoEmbedFrame from '@/components/videoEmbedFrame';
 /** Videasy — https://www.videasy.net/docs — overlay = Netflix-style pause overlay */
 const VIDEASY_QUERY = '?color=22c55e&overlay=true';
 
-/** Vidking — https://www.vidking.net */
-const VIDKING_QUERY = '?color=22c55e';
+/** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
+const VIDCORE_QUERY = '?theme=22c55e&autoPlay=true';
 
 export const MOVIE_SERVERS = {
   videasy: {
@@ -14,13 +14,11 @@ export const MOVIE_SERVERS = {
     path: (id) => `/movie/${id}`,
     suffix: () => VIDEASY_QUERY,
   },
-  vidking: {
-    base: 'https://www.vidking.net',
-    path: (id) => `/embed/movie/${id}`,
-    suffix: () => VIDKING_QUERY,
+  vidcore: {
+    base: 'https://vidcore.net',
+    path: (id) => `/movie/${id}`,
+    suffix: () => VIDCORE_QUERY,
   },
-  '111movies': { base: 'https://111movies.net', path: (id) => `/movie/${id}` },
-  moviesapi: { base: 'https://moviesapi.club', path: (id) => `/movie/${id}` },
 };
 
 const MoviePlayer = ({ videoId, server = 'videasy' }) => {
