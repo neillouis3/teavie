@@ -787,7 +787,6 @@ export default function ShowTemplate({ id }: { id: string }) {
 
         {!loading && show && !isAnimeMovie ? (
           <ShowEpisodePicker
-            showTitle={title}
             tmdbTvId={playerUsesTmdb ? String(resolvedPlayerId) : null}
             seasons={show.seasons ?? []}
             selectedSeason={selectedSeason}
