@@ -11,7 +11,7 @@
 
 import clientPromise from "@/lib/mongo";
 import {
-  catalogMovieHideAdultClause,
+  catalogMoviePolicyClause,
   catalogTvBrowseNonAnimeClause,
 } from "@/lib/catalogQuery";
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES } from "@/lib/tmdbGenres";
@@ -113,7 +113,7 @@ export async function GET() {
       // Movies tag genres via the numeric `genre_ids` array.
       rankGenres(
         col,
-        { type: "movie", ...catalogMovieHideAdultClause() },
+        { type: "movie", ...catalogMoviePolicyClause() },
         genreNameMap(TMDB_MOVIE_GENRES),
         { unwindPath: "genre_ids", idFieldPath: "genre_ids" }
       ),

@@ -5,7 +5,7 @@
 
 import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
-import { catalogMovieHideAdultClause } from "@/lib/catalogQuery";
+import { catalogMoviePolicyClause } from "@/lib/catalogQuery";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
 
 /**
@@ -37,7 +37,7 @@ async function movieItemsFromTmdbOrder(col, tmdbRows) {
     .find({
       type: "movie",
       id: { $in: variants },
-      ...catalogMovieHideAdultClause(),
+      ...catalogMoviePolicyClause(),
     })
     .toArray();
 

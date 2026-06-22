@@ -2,7 +2,7 @@
 
 import React from "react";
 
-const TRENDING_CAROUSEL_H = "h-[calc(85vh-2rem)]";
+const TRENDING_CAROUSEL_H = "h-[calc(80vh-2rem)]";
 
 export default function TrendingHeroLoading() {
   return (

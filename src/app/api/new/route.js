@@ -4,7 +4,7 @@ import {
   mongoCatalogPopularitySortExpr,
   mongoMixedTvCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
-import { catalogMovieHideAdultClause } from "@/lib/catalogQuery";
+import { catalogMoviePolicyClause } from "@/lib/catalogQuery";
 
 export async function GET(req) {
   try {
@@ -43,7 +43,7 @@ export async function GET(req) {
               $lte: endDate,
             },
           },
-          catalogMovieHideAdultClause(),
+          catalogMoviePolicyClause(),
         ],
       };
     } else if (type === "tv") {
@@ -66,7 +66,7 @@ export async function GET(req) {
                   $lte: endDate,
                 },
               },
-              catalogMovieHideAdultClause(),
+              catalogMoviePolicyClause(),
             ],
           },
           {

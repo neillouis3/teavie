@@ -2,6 +2,8 @@
  * Shared helpers for /api/movies and /api/tv catalog filters.
  */
 
+import { BLOCKED_MOVIE_PRODUCTION_COMPANIES } from "./tmdbMovieContentPolicy.js";
+
 /** UTC calendar day YYYY-MM-DD for catalog filters. */
 export function catalogTodayIsoUtc() {
   return new Date().toISOString().slice(0, 10);
@@ -50,6 +52,30 @@ export function escapeRegex(str) {
 /** Exclude TMDB-flagged adult / pornographic movies from catalog queries. */
 export function catalogMovieHideAdultClause() {
   return { $nor: [{ adult: true }] };
+}
+
+/** Exclude movies from blocked production companies (see tmdbMovieContentPolicy). */
+export function catalogMovieHideBlockedStudiosClause() {
+  if (BLOCKED_MOVIE_PRODUCTION_COMPANIES.length === 0) return {};
+  return {
+    $nor: BLOCKED_MOVIE_PRODUCTION_COMPANIES.map((name) => ({
+      production_companies: {
+        $elemMatch: {
+          name: { $regex: `^${escapeRegex(name)}$`, $options: "i" },
+        },
+      },
+    })),
+  };
+}
+
+/** Adult + blocked-studio exclusions for movie catalog queries. */
+export function catalogMoviePolicyClause() {
+  return {
+    $and: [
+      catalogMovieHideAdultClause(),
+      catalogMovieHideBlockedStudiosClause(),
+    ],
+  };
 }
 
 /**
@@ -242,7 +268,7 @@ export function buildCatalogFilter(
   }
 
   if (type === "movie") {
-    return { $and: [filter, catalogMovieHideAdultClause()] };
+    return { $and: [filter, catalogMoviePolicyClause()] };
   }
 
   return filter;

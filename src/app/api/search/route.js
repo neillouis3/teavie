@@ -15,7 +15,7 @@ import clientPromise from "@/lib/mongo";
 import {
   animeTitleSearchConditions,
   catalogAnimeIdMongoExpr,
-  catalogMovieHideAdultClause,
+  catalogMoviePolicyClause,
   catalogTodayIsoUtc,
   escapeRegex,
   releasedAnimeFirstAirClause,
@@ -100,7 +100,7 @@ export async function GET(req) {
         ...(includeUnreleased
           ? []
           : [releasedCatalogClause("release_date", todayIso)]),
-        catalogMovieHideAdultClause(),
+        catalogMoviePolicyClause(),
       ],
     };
 

@@ -4,6 +4,36 @@
  * that indicate hardcore / legacy X-rated theatrical (when `release_dates` is present).
  */
 
+/** Production companies excluded from the movie catalog (exact name match, case-insensitive). */
+export const BLOCKED_MOVIE_PRODUCTION_COMPANIES = [
+  "Vivamax",
+  "DMV Entertainment",
+  "Lumino",
+];
+
+function normalizeCompanyName(name) {
+  return String(name ?? "").trim().toLowerCase();
+}
+
+/** @param {unknown} movie */
+export function movieProductionCompanyNames(movie) {
+  const list = movie?.production_companies;
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((c) => String(c?.name ?? "").trim())
+    .filter(Boolean);
+}
+
+/** @param {unknown} movie */
+export function movieHasBlockedProductionCompany(movie) {
+  const blocked = new Set(
+    BLOCKED_MOVIE_PRODUCTION_COMPANIES.map(normalizeCompanyName)
+  );
+  return movieProductionCompanyNames(movie).some((name) =>
+    blocked.has(normalizeCompanyName(name))
+  );
+}
+
 /** @param {unknown} row */
 export function tmdbListMovieLooksAdult(row) {
   if (!row || typeof row !== "object") return true;
@@ -37,6 +67,7 @@ export function shouldRejectTmdbMovieFromCatalog(movie) {
   const m = /** @type {Record<string, unknown>} */ (movie);
   if (m.adult === true) return true;
   if (usReleaseDatesBlocked(m)) return true;
+  if (movieHasBlockedProductionCompany(m)) return true;
   return false;
 }
 
