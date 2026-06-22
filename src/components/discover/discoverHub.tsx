@@ -2,16 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Header from "@/components/ui/header";
-import CatalogRail from "@/components/explore/catalogRail";
+import CatalogRail, { CatalogRailSkeleton } from "@/components/explore/catalogRail";
 import GenreDiscover from "@/components/discover/genreDiscover";
-import SmallCardLoading from "@/components/ui/smallCardLoading";
-import HorizontalCatalogCardLoading from "@/components/ui/horizontalCatalogCardLoading";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
-import {
-  CATALOG_GRID_HORIZONTAL_SEARCH,
-  CATALOG_GRID_VERTICAL_SEARCH,
-} from "@/lib/catalogGrid";
 
 export type TmdbDiscoverPayload = {
   trendingMovies: ContentItem[];
@@ -28,24 +22,12 @@ const EMPTY: TmdbDiscoverPayload = {
 };
 
 function TmdbRailsSkeleton({ horizontal }: { horizontal: boolean }) {
-  const gridClass = horizontal
-    ? CATALOG_GRID_HORIZONTAL_SEARCH
-    : CATALOG_GRID_VERTICAL_SEARCH;
-  const tileCount = horizontal ? 8 : 14;
   return (
     <div className="flex w-full flex-col gap-8">
       {Array.from({ length: 2 }).map((_, section) => (
         <div key={section} className="flex flex-col gap-3">
           <div className="h-7 w-40 animate-pulse rounded-lg bg-default-200" />
-          <div className={`${gridClass} items-start`}>
-            {Array.from({ length: tileCount }).map((__, i) =>
-              horizontal ? (
-                <HorizontalCatalogCardLoading key={i} />
-              ) : (
-                <SmallCardLoading key={i} />
-              )
-            )}
-          </div>
+          <CatalogRailSkeleton horizontal={horizontal} count={horizontal ? 6 : 10} />
         </div>
       ))}
     </div>
@@ -57,7 +39,7 @@ export default function DiscoverHub() {
   const [loading, setLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === "horizontal";
-  const sectionMaxItems = horizontal ? 8 : 14;
+  const sectionMaxItems = 24;
 
   useEffect(() => {
     document.title = "Explore - Teavie";
