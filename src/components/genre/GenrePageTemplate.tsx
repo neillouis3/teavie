@@ -327,17 +327,17 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={genreLabel} />
-      <div className="mx-auto w-full max-w-6xl space-y-4 px-3 pb-12 pt-2 sm:px-4">
+      <div className="w-full space-y-4 px-3 pb-12 pt-2 sm:px-4">
         <div className="space-y-2">
           <Chip color="success" variant="flat" size="md" radius="sm">
             {countLabel}
           </Chip>
-          <p className="max-w-3xl text-sm leading-relaxed text-default-500 sm:text-[15px]">
+          <p className="text-left text-sm leading-relaxed text-default-500 sm:text-[15px]">
             {description}
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-start">
           <div className="flex flex-wrap gap-2">
             {TYPE_OPTIONS.map((opt) => (
               <Pill
@@ -392,7 +392,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           {loading ? (
             <GenreCardGridSkeleton count={28} layoutMode={cardLayout} />
           ) : items.length === 0 ? (
-            <p className="py-16 text-center text-sm text-default-500">
+            <p className="py-16 text-left text-sm text-default-500">
               No titles found for {genreLabel}. Try another filter.
             </p>
           ) : (
@@ -400,7 +400,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           )}
 
           {totalPages > 1 && !loading && items.length > 0 && (
-            <div className="flex justify-center pt-8">
+            <div className="flex justify-start pt-8">
               <Pagination
                 total={totalPages}
                 page={pageParam}
@@ -414,7 +414,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           )}
         </section>
 
-        <p className="mt-10 text-center text-xs text-default-400">
+        <p className="mt-10 text-left text-xs text-default-400">
           <Link href="/genres" className="hover:text-success hover:underline">
             Browse all genres
           </Link>
