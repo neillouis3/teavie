@@ -656,7 +656,7 @@ function ShowEpisodePickerSeasonRow() {
   const manySeasons = releasedSeasons.length > 3;
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1.5">
+    <div className="flex w-full min-w-0 flex-col gap-1.5 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-2 lg:gap-y-1.5">
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
         <Tabs
           aria-label="Seasons"
@@ -671,11 +671,12 @@ function ShowEpisodePickerSeasonRow() {
           variant="bordered"
           radius="md"
           classNames={{
-            base: "w-full min-w-0 max-w-full",
-            tabList: "w-full max-w-full gap-0 overflow-x-auto p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            base: "w-full min-w-0 max-w-full lg:w-auto lg:max-w-none",
+            tabList:
+              "w-full max-w-full gap-0 overflow-x-auto p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:w-auto lg:max-w-none",
             tab: manySeasons
-              ? "h-8 min-h-8 shrink-0 basis-[40%] px-2 text-xs sm:basis-auto sm:px-3"
-              : "h-8 min-h-8 min-w-0 flex-1 px-2 text-xs sm:flex-none sm:shrink-0 sm:px-3",
+              ? "h-8 min-h-8 shrink-0 basis-[40%] px-2 text-xs lg:basis-auto lg:px-3"
+              : "h-8 min-h-8 min-w-0 flex-1 px-2 text-xs lg:flex-none lg:shrink-0 lg:px-3",
             tabContent: "truncate",
             panel: "hidden",
           }}
