@@ -533,7 +533,7 @@ export default function ShowEpisodePicker({
                     aria-current={active ? "true" : undefined}
                     className={`relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-shadow ${
                       active
-                        ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
+                        ? "ring-1 ring-default-400/45 dark:ring-default-500/35"
                         : "ring-1 ring-default-200/50 dark:ring-default-100/20"
                     }`}
                   >
