@@ -97,10 +97,12 @@ function deckPosters(posters: string[]): string[] {
 const DECK_CARD_BASE =
   "absolute bottom-0 right-0 h-full w-auto max-w-full rounded-lg object-cover shadow-2xl ring-1 ring-black/10 origin-bottom-right transition-all duration-300 ease-out will-change-transform";
 
+const DECK_CARD_REST = "translate-y-5";
+
 const DECK_CARD_HOVER = [
-  "z-30 rotate-[10deg] group-hover:-translate-y-1.5 group-hover:rotate-[6deg]",
-  "z-20 rotate-[10deg] group-hover:-translate-x-[24%] group-hover:-translate-y-0.5 group-hover:-rotate-[-2deg]",
-  "z-10 rotate-[10deg] group-hover:translate-x-[6%] group-hover:-translate-y-2 group-hover:rotate-[14deg]",
+  `z-30 rotate-[10deg] ${DECK_CARD_REST} group-hover:-translate-y-1 group-hover:rotate-[6deg]`,
+  `z-20 rotate-[10deg] ${DECK_CARD_REST} group-hover:-translate-x-[40%] group-hover:translate-y-4 group-hover:-rotate-[-5deg]`,
+  `z-10 rotate-[10deg] ${DECK_CARD_REST} group-hover:translate-x-[14%] group-hover:translate-y-3 group-hover:rotate-[20deg]`,
 ] as const;
 
 function GenreTile({
@@ -125,7 +127,7 @@ function GenreTile({
         className={`pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br ${colorClass} shadow-sm`}
         aria-hidden
       />
-      <div className="relative z-20 flex flex-col pr-[46%] sm:pr-[44%]">
+      <div className="relative z-20 flex flex-col pr-[54%] sm:pr-[52%]">
         <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
           {genre.name}
         </span>
@@ -135,7 +137,7 @@ function GenreTile({
       </div>
 
       {posters.length > 0 && (
-        <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-[80%] w-[48%] sm:bottom-2.5 sm:right-2.5 sm:w-[50%]">
+        <div className="pointer-events-none absolute bottom-0 right-1 z-10 h-[90%] w-[56%] sm:right-1.5 sm:w-[60%]">
           {posters.map((path, index) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
