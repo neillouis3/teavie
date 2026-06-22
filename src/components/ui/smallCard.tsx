@@ -68,9 +68,9 @@ export default function SmallCard({
     <div className="mt-2 flex shrink-0 flex-col gap-1 rounded-b-xl text-gray-500">
         <div className="flex w-full flex-row items-center justify-between gap-1">
           <p className="flex-1 truncate text-start text-xs">{year}</p>
-          <div className="flex-shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs uppercase transition-colors duration-300 group-hover:border-success group-hover:text-success">
+          <div className="flex-shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs transition-colors duration-300 group-hover:border-success group-hover:text-success">
             {typeLower === 'tv'
-              ? 'TV'
+              ? 'Show'
               : typeLower === 'movie'
                 ? 'Movie'
                 : type}

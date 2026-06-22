@@ -40,7 +40,7 @@ export default function HorizontalCatalogCard({
     hrefProp?.trim() ||
     (isTv ? `/shows/${id}` : `/movies/${id}`);
   const isExternal = /^https?:\/\//i.test(href);
-  const label = isExternal ? 'WEB' : isTv ? 'TV' : 'MOVIE';
+  const label = isExternal ? 'Web' : isTv ? 'TV show' : 'Movie';
 
   const backdrop = backdropPath?.trim();
   const poster = posterPath?.trim();

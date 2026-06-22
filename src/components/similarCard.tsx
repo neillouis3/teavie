@@ -61,7 +61,7 @@ export default function SimilarCard({
                         : seasonAmount != null && seasonAmount > 0
                           ? `${seasonAmount} season${seasonAmount === 1 ? "" : "s"}`
                           : "—";
-                    return `TV Show / ${year} / ${meta}`;
+                    return `TV show / ${year} / ${meta}`;
                   })()
                 : `Movie / ${year} / ${runtimeMin ?? "-"} min`}
             </h1>

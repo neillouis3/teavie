@@ -81,7 +81,7 @@ export function showSubtitleLine(show: {
   number_of_seasons?: number;
   number_of_episodes?: number;
 }): string {
-  const parts = [show.is_anime ? "Anime" : "TV"];
+  const parts = [show.is_anime ? "Anime" : "TV show"];
   const year = show.first_air_date?.slice(0, 4);
   if (year) parts.push(year);
   const seasons = show.number_of_seasons;
@@ -149,7 +149,7 @@ export default function CatalogMediaPanel({
                 ) : null}
                 {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
                 {certification ? (
-                  <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-foreground/90">
+                  <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-medium text-foreground/90">
                     {certification}
                   </span>
                 ) : null}

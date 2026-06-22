@@ -45,7 +45,7 @@ function genreBrowseHref(mediaType: "movie" | "tv", genreId: number) {
 
 function ColumnHeading({ label }: { label: string }) {
   return (
-    <h3 className="text-xs font-medium uppercase tracking-wide text-default-500">
+    <h3 className="text-xs font-medium text-default-500">
       {label}
     </h3>
   );
