@@ -27,9 +27,19 @@ export type EpisodeCardRow = {
   episode: number;
   name: string;
   runtime: number | null;
+  still_path?: string | null;
   /** 1-based cumulative index when flatMode */
   displayNumber?: number;
 };
+
+const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/w300";
+
+function episodeStillUrl(stillPath: string | null | undefined) {
+  const path = String(stillPath ?? "").trim();
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${TMDB_STILL_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 type ShowEpisodePickerProps = {
   showTitle: string;
@@ -83,11 +93,13 @@ async function fetchSeasonEpisodes(
       episode_number: number;
       name: string;
       runtime: number | null;
+      still_path?: string | null;
     }) => ({
       season: seasonNum,
       episode: ep.episode_number,
       name: ep.name,
       runtime: ep.runtime,
+      still_path: ep.still_path ?? null,
     })
   );
 }
@@ -283,11 +295,6 @@ export default function ShowEpisodePicker({
     onMarkWatched?.(s, ep);
   };
 
-  const seasonTabClass = (active: boolean) =>
-    active
-      ? "border-2 border-foreground bg-transparent text-foreground"
-      : "border border-default-300/60 bg-transparent text-default-500 hover:text-foreground dark:border-default-100/25";
-
   return (
     <section className="flex w-full flex-col gap-4" aria-label="Episodes">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -295,21 +302,29 @@ export default function ShowEpisodePicker({
           {showTitle}
         </h2>
 
-        <div className="flex shrink-0 items-end gap-2 rounded-xl border border-default-200/60 bg-default-100/40 p-2 dark:border-default-100/20 dark:bg-default-100/10">
+        <form
+          className="flex shrink-0 items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleJump();
+          }}
+        >
           <Input
             size="sm"
             type="number"
             min={1}
             label="S"
-            labelPlacement="outside-left"
+            labelPlacement="outside-top"
+            variant="bordered"
+            radius="md"
             aria-label="Season"
             value={jumpSeason}
             onValueChange={setJumpSeason}
             classNames={{
-              base: "max-w-[88px]",
+              base: "w-[72px]",
+              label: "text-xs font-medium text-default-500",
               input: "text-sm tabular-nums",
-              inputWrapper: "h-9 min-h-9 bg-default-100 dark:bg-default-50/10",
-              label: "text-xs text-default-500",
+              inputWrapper: "h-9 min-h-9",
             }}
           />
           <Input
@@ -317,27 +332,30 @@ export default function ShowEpisodePicker({
             type="number"
             min={1}
             label="E"
-            labelPlacement="outside-left"
+            labelPlacement="outside-top"
+            variant="bordered"
+            radius="md"
             aria-label="Episode"
             value={jumpEpisode}
             onValueChange={setJumpEpisode}
             classNames={{
-              base: "max-w-[88px]",
+              base: "w-[72px]",
+              label: "text-xs font-medium text-default-500",
               input: "text-sm tabular-nums",
-              inputWrapper: "h-9 min-h-9 bg-default-100 dark:bg-default-50/10",
-              label: "text-xs text-default-500",
+              inputWrapper: "h-9 min-h-9",
             }}
           />
           <Button
+            type="submit"
             size="sm"
-            variant="flat"
+            variant="bordered"
+            radius="md"
             className="h-9 min-w-[52px] flex-col gap-0 px-2"
-            onPress={handleJump}
           >
             <HugeiconsIcon icon={ArrowRight01Icon} size={14} className="shrink-0" />
             <span className="text-[10px] font-medium leading-none">Go</span>
           </Button>
-        </div>
+        </form>
       </div>
 
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
@@ -345,17 +363,24 @@ export default function ShowEpisodePicker({
           {releasedSeasons.map((s) => {
             const active = selectedSeason === s.season_number;
             return (
-              <button
+              <Button
                 key={s.season_number}
-                type="button"
-                onClick={() => {
+                size="sm"
+                radius="lg"
+                variant={active ? "solid" : "bordered"}
+                color="default"
+                className={
+                  active
+                    ? "border-2 border-foreground bg-transparent font-medium text-foreground"
+                    : "font-medium text-default-500"
+                }
+                onPress={() => {
                   onSeasonChange(s.season_number);
                   onEpisodeChange(s.season_number, 1);
                 }}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seasonTabClass(active)}`}
               >
                 Season {s.season_number}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -388,6 +413,7 @@ export default function ShowEpisodePicker({
               const watchKey = formatWatchEpKey(row.season, row.episode);
               const watched = watchedKeys?.has(watchKey) ?? false;
               const runtime = formatRuntimeLabel(row.runtime);
+              const stillUrl = episodeStillUrl(row.still_path);
 
               return (
                 <CarouselItem
@@ -405,12 +431,32 @@ export default function ShowEpisodePicker({
                         : "ring-1 ring-default-200/50 dark:ring-default-100/20"
                     }`}
                   >
-                    <div className="flex h-[88px] items-center justify-center bg-default-200/80 dark:bg-default-100/15">
-                      <HugeiconsIcon
-                        icon={PlayIcon}
-                        size={28}
-                        className="text-secondary"
-                      />
+                    <div className="relative h-[88px] w-full overflow-hidden bg-default-200/80 dark:bg-default-100/15">
+                      {stillUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={stillUrl}
+                          alt=""
+                          aria-hidden
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : null}
+                      <div
+                        className={`absolute inset-0 flex items-center justify-center ${
+                          stillUrl ? "bg-black/35" : ""
+                        }`}
+                      >
+                        <HugeiconsIcon
+                          icon={PlayIcon}
+                          size={stillUrl ? 24 : 28}
+                          className={
+                            stillUrl
+                              ? "text-white drop-shadow-md"
+                              : "text-secondary"
+                          }
+                        />
+                      </div>
                     </div>
                     <div className="flex flex-col gap-1 bg-default-100/90 p-2.5 dark:bg-default-50/10">
                       <span className="text-[11px] font-medium text-default-500">
