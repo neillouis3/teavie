@@ -23,7 +23,7 @@ const EMPTY: TmdbDiscoverPayload = {
   popularTv: [],
 };
 
-const TRENDING_SECTION_MIN_H = "min-h-[85vh]";
+const TRENDING_SECTION_MIN_H = "min-h-[80vh]";
 
 function PopularRailsSkeleton({ horizontal }: { horizontal: boolean }) {
   return (
@@ -91,7 +91,7 @@ export default function DiscoverHub() {
 
       {showTrendingHero && (
         <section
-          className={`mb-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
+          className={`mb-4 mt-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
           aria-label="Trending"
         >
           {loading ? (
