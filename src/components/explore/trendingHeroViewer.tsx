@@ -5,12 +5,19 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import LargeCard from "@/components/ui/largeCard";
 import type { ContentItem } from "@/types/content";
 
 const TRENDING_CAROUSEL_H = "h-[calc(80vh-2rem)]";
+
+const TRENDING_ARROW_CLASS =
+  "top-1/2 z-20 h-10 w-10 -translate-y-1/2 border-none bg-black/45 text-white backdrop-blur-sm hover:bg-black/60 disabled:opacity-40";
 
 function interleaveTrending(
   movies: ContentItem[],
@@ -103,6 +110,20 @@ export default function TrendingHeroViewer({
             );
           })}
         </CarouselContent>
+        <CarouselPrevious
+          variant="flat"
+          aria-label="Previous trending title"
+          className={`${TRENDING_ARROW_CLASS} left-3 sm:left-4`}
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={20} />
+        </CarouselPrevious>
+        <CarouselNext
+          variant="flat"
+          aria-label="Next trending title"
+          className={`${TRENDING_ARROW_CLASS} right-3 sm:right-4`}
+        >
+          <HugeiconsIcon icon={ArrowRight01Icon} size={20} />
+        </CarouselNext>
       </Carousel>
 
       <div className="mt-4 flex items-center justify-center space-x-2">
