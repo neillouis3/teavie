@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Chip, Tabs, Tab } from "@heroui/react";
+import { Chip } from "@heroui/react";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  type CarouselApi,
 } from "@/components/ui/carousel";
 
 type GenreRow = {
@@ -25,10 +24,6 @@ type PopularGenresPayload = {
 type Mode = "movie" | "tv";
 
 const EMPTY: PopularGenresPayload = { movies: [], tv: [] };
-
-/** Browse-by-genre block height (matches Discover “New & Upcoming” hero feel). */
-const GENRE_SECTION_MIN_H = "min-h-[75vh]";
-const GENRE_CAROUSEL_H = "h-[calc(75vh-5.5rem)]";
 
 /** Color-code each genre with a gradient. Full class strings so Tailwind keeps them. */
 const GENRE_COLORS: Record<string, string> = {
@@ -76,7 +71,7 @@ function colorFor(name: string, index: number) {
   return GENRE_COLORS[name] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 }
 
-const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
+const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 
 function posterUrl(path: string) {
   return /^https?:\/\//i.test(path) ? path : `${TMDB_IMG}${path}`;
@@ -101,42 +96,31 @@ function GenreTile({
   colorClass: string;
 }) {
   const href = genreBrowseHref(mode, genre.id);
-  const [lead, ...stack] = genre.posters.filter(Boolean).slice(0, 3);
+  const poster = genre.posters[0];
 
   return (
     <Link
       href={href}
-      aria-label={`Browse ${genre.name}, sorted by popularity`}
-      className={`group relative flex h-full min-h-[280px] w-full overflow-hidden rounded-xl bg-gradient-to-br ${colorClass} p-4 shadow-sm transition-transform duration-200 hover:scale-[1.01] sm:p-5`}
+      aria-label={`Browse ${genre.name}`}
+      className={`group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-br ${colorClass} p-3 shadow-sm transition-transform duration-200 hover:scale-[1.02]`}
     >
-      <div className="relative z-20 flex flex-col pr-[44%]">
-        <span className="text-lg font-bold leading-tight text-white drop-shadow-sm sm:text-2xl">
+      <div className="relative z-20 flex flex-col">
+        <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
           {genre.name}
         </span>
-        <span className="mt-1 text-xs font-medium text-white/80 sm:text-sm">
+        <span className="mt-0.5 text-[11px] font-medium text-white/80">
           {genre.count.toLocaleString()} titles
         </span>
       </div>
 
-      {stack.length > 0 && (
-        <div className="pointer-events-none absolute -bottom-6 right-8 z-[8] h-[74%] w-[36%] rotate-[4deg] overflow-hidden rounded-lg opacity-75 shadow-lg ring-1 ring-black/15 sm:right-10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={posterUrl(stack[0])}
-            alt=""
-            aria-hidden
-            className="h-full w-full object-cover"
-          />
-        </div>
-      )}
-
-      {lead && (
+      {poster && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={posterUrl(lead)}
+          src={posterUrl(poster)}
           alt=""
           aria-hidden
-          className="pointer-events-none absolute -bottom-8 -right-5 z-10 h-[90%] w-auto max-w-[46%] rotate-12 rounded-lg object-cover shadow-2xl ring-1 ring-black/15 transition-transform duration-200 group-hover:-translate-y-1.5 group-hover:rotate-6 sm:-right-6"
+          loading="lazy"
+          className="pointer-events-none absolute -bottom-4 -right-3 z-10 h-[64%] w-auto rotate-12 rounded-md object-cover shadow-xl ring-1 ring-black/10 transition-transform duration-200 group-hover:-translate-y-1 group-hover:rotate-6"
         />
       )}
 
@@ -145,203 +129,102 @@ function GenreTile({
   );
 }
 
-function posterUrlsForRows(rows: GenreRow[]): string[] {
-  const urls: string[] = [];
-  for (const row of rows) {
-    for (const p of row.posters) {
-      if (typeof p === "string" && p.trim()) urls.push(posterUrl(p));
-    }
-  }
-  return urls;
-}
-
-function preloadImages(urls: string[]): Promise<void> {
-  const unique = [...new Set(urls)];
-  if (unique.length === 0) return Promise.resolve();
-  return Promise.all(
-    unique.map(
-      (src) =>
-        new Promise<void>((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          img.src = src;
-        })
-    )
-  ).then(() => undefined);
-}
-
-function GenreCarousel({ rows, mode }: { rows: GenreRow[]; mode: Mode }) {
-  const [api, setApi] = React.useState<CarouselApi>();
-  const [current, setCurrent] = React.useState(0);
-  const [count, setCount] = React.useState(0);
-
-  React.useEffect(() => {
-    if (!api) return;
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap() + 1);
-    api.on("select", () => {
-      setCurrent(api.selectedScrollSnap() + 1);
-    });
-  }, [api]);
-
-  if (rows.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-default-500">
-        No genres to show yet.
-      </p>
-    );
-  }
-
-  return (
-    <div className={`flex w-full flex-col items-center ${GENRE_CAROUSEL_H}`}>
-      <Carousel
-        opts={{ align: "center", loop: true }}
-        className="h-full w-full [&>div]:h-full"
-        setApi={setApi}
-      >
-        <CarouselContent className="-ml-4 h-full [&>div]:h-full">
-          {rows.map((genre, i) => (
-            <CarouselItem
-              key={`${mode}-${genre.id}`}
-              className="h-full basis-[88%] pl-3 sm:basis-2/3 sm:pl-4"
-            >
-              <GenreTile
-                genre={genre}
-                mode={mode}
-                colorClass={colorFor(genre.name, i)}
-              />
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      </Carousel>
-
-      <div className="mt-4 flex items-center justify-center space-x-2">
-        {Array.from({ length: count }).map((_, index) => (
-          <div
-            key={index}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              index === current - 1 ? "w-2 bg-gray-400" : "w-2 bg-gray-500"
-            }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function GenreTilesSkeleton() {
   return (
-    <div className={`flex w-full flex-col items-center ${GENRE_CAROUSEL_H}`}>
-      <div className="h-[calc(100%-2rem)] w-full overflow-hidden px-3 sm:px-4">
-        <div className="mx-auto h-full max-w-4xl animate-pulse rounded-xl bg-default-200" />
-      </div>
-      <div className="mt-4 flex items-center justify-center gap-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-2 w-2 animate-pulse rounded-full bg-default-300" />
-        ))}
-      </div>
+    <div className="flex gap-3 overflow-hidden">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="aspect-[4/3] w-[42%] shrink-0 animate-pulse rounded-xl bg-default-200 sm:w-[30%] md:w-1/4 lg:w-1/5 xl:w-1/6"
+        />
+      ))}
     </div>
   );
 }
-
-function GenreSectionSkeleton() {
-  return (
-    <section
-      className={`flex w-full flex-col gap-3 ${GENRE_SECTION_MIN_H}`}
-      aria-hidden
-    >
-      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <div className="h-7 w-36 animate-pulse rounded-lg bg-default-200" />
-        <div className="h-8 w-[8.5rem] animate-pulse rounded-lg bg-default-200" />
-      </div>
-      <GenreTilesSkeleton />
-    </section>
-  );
-}
-
-const GENRE_TABS_CLASSNAMES = {
-  base: "w-auto max-w-full",
-  tabList: "gap-0 p-0.5",
-  tab: "h-8 px-3 text-xs font-medium",
-  panel: "hidden",
-} as const;
 
 export default function GenreDiscover() {
   const [data, setData] = useState<PopularGenresPayload | null>(null);
-  const [ready, setReady] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>("movie");
 
   useEffect(() => {
     let cancelled = false;
-    setReady(false);
-    setData(null);
-
+    setLoading(true);
     fetch("/api/genres/popular")
       .then((res) => res.json())
-      .then(async (json) => {
+      .then((json) => {
         if (cancelled) return;
-        const payload: PopularGenresPayload = {
-          movies: json.movies ?? [],
-          tv: json.tv ?? [],
-        };
-        const posterUrls = [
-          ...posterUrlsForRows(payload.movies),
-          ...posterUrlsForRows(payload.tv),
-        ];
-        await preloadImages(posterUrls);
-        if (cancelled) return;
-        setData(payload);
-        setReady(true);
+        setData({ movies: json.movies ?? [], tv: json.tv ?? [] });
       })
       .catch(() => {
-        if (!cancelled) {
-          setData(EMPTY);
-          setReady(true);
-        }
+        if (!cancelled) setData(EMPTY);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (!ready) {
-    return <GenreSectionSkeleton />;
-  }
+  const rows = useMemo(
+    () => (mode === "movie" ? data?.movies ?? [] : data?.tv ?? []),
+    [data, mode]
+  );
 
-  if (!data || (data.movies.length === 0 && data.tv.length === 0)) {
+  if (!loading && (!data || (data.movies.length === 0 && data.tv.length === 0))) {
     return null;
   }
 
-  const rows = mode === "movie" ? data.movies : data.tv;
-
   return (
-    <section
-      className={`flex w-full flex-col gap-3 ${GENRE_SECTION_MIN_H}`}
-      aria-label="Browse by genre"
-    >
+    <section className="flex w-full flex-col gap-3" aria-label="Browse by genre">
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
         <Chip color="success" variant="flat" size="md" radius="sm">
           Browse by genre
         </Chip>
 
-        <Tabs
-          aria-label="Genre catalog type"
-          selectedKey={mode}
-          onSelectionChange={(key) => setMode(String(key) as Mode)}
-          size="sm"
-          color="success"
-          variant="bordered"
-          radius="lg"
-          classNames={GENRE_TABS_CLASSNAMES}
-        >
-          <Tab key="movie" title="Movies" />
-          <Tab key="tv" title="TV" />
-        </Tabs>
+        <div className="inline-flex rounded-lg border border-default-200 p-0.5 dark:border-white/10">
+          {(["movie", "tv"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                mode === m
+                  ? "bg-success text-success-foreground shadow-sm"
+                  : "text-default-500 hover:text-foreground"
+              }`}
+            >
+              {m === "movie" ? "Movies" : "TV"}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <GenreCarousel key={mode} rows={rows} mode={mode} />
+      {loading ? (
+        <GenreTilesSkeleton />
+      ) : rows.length === 0 ? (
+        <p className="py-6 text-center text-sm text-default-500">
+          No genres to show yet.
+        </p>
+      ) : (
+        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+          <CarouselContent className="-ml-3">
+            {rows.map((genre, i) => (
+              <CarouselItem
+                key={`${mode}-${genre.id}`}
+                className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
+              >
+                <GenreTile
+                  genre={genre}
+                  mode={mode}
+                  colorClass={colorFor(genre.name, i)}
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      )}
     </section>
   );
 }

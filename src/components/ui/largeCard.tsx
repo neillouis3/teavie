@@ -16,6 +16,8 @@ type LargeCardProps = {
   type: "movie" | "tv";
   posterPath?: string;
   backdropPath?: string;
+  /** Fill parent height (Explore trending hero carousel). */
+  hero?: boolean;
 };
 
 export default function LargeCard({
@@ -29,6 +31,7 @@ export default function LargeCard({
   type,
   posterPath,
   backdropPath,
+  hero = false,
 }: LargeCardProps) {
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
@@ -53,8 +56,12 @@ export default function LargeCard({
       : null;
 
   return (
-    <Link href={href} className="block min-w-0 w-full">
-      <div className="group relative aspect-video w-full overflow-hidden rounded-xl">
+    <Link href={href} className={`block min-w-0 w-full ${hero ? "h-full" : ""}`}>
+      <div
+        className={`group relative w-full overflow-hidden ${
+          hero ? "h-full min-h-[280px] rounded-none" : "aspect-video rounded-xl"
+        }`}
+      >
         <img
           src={imageUrl}
           alt={title}
