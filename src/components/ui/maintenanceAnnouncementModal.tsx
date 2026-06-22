@@ -10,7 +10,7 @@ import {
   ModalHeader,
 } from "@heroui/react";
 
-const STORAGE_KEY = "teavie:maintenance-announcement-seen:v2";
+const STORAGE_KEY = "teavie:maintenance-announcement-seen:v3";
 
 export default function MaintenanceAnnouncementModal() {
   const [open, setOpen] = useState(false);
@@ -52,21 +52,18 @@ export default function MaintenanceAnnouncementModal() {
       }}
     >
       <ModalContent>
-        <ModalHeader className="pb-1">A quick heads-up</ModalHeader>
+        <ModalHeader className="pb-1">What&apos;s new on Teavie</ModalHeader>
         <ModalBody className="gap-3">
           <p className="text-sm leading-relaxed text-foreground/85">
-            We&apos;re refreshing the movie catalog and updating genres, browse,
-            and search across Teavie. The site is being actively worked on right
-            now.
+            Thank you for your patience.
           </p>
           <p className="text-sm leading-relaxed text-foreground/85">
-            You might notice a few bugs — missing posters, odd genre labels, or
-            titles shuffling around while data syncs. That&apos;s expected for
-            the moment.
+            Teavie has a fresh new look and a bigger library — more anime,
+            K-Drama, and easier ways to browse what you want to watch.
           </p>
           <p className="text-sm leading-relaxed text-foreground/85">
-            Feel free to keep using the site. Movies and shows should still play
-            as usual. Thanks for your patience while we improve things.
+            Take a look around and see what&apos;s new. We&apos;re glad
+            you&apos;re here.
           </p>
         </ModalBody>
         <ModalFooter>
