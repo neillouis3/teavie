@@ -62,12 +62,15 @@ type BrowseCatalogFiltersProps = {
   mode: 'movie' | 'tv' | 'kdrama' | 'anime';
   total: number;
   loading: boolean;
+  /** When set, genre filter only lists these slugs (e.g. category-scoped browse). */
+  genreSlugs?: string[];
 };
 
 export default function BrowseCatalogFilters({
   mode,
   total,
   loading,
+  genreSlugs,
 }: BrowseCatalogFiltersProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -93,14 +96,15 @@ export default function BrowseCatalogFilters({
     []
   );
 
-  const genreItems: SelectRow[] = useMemo(
-    () =>
-      (IMDB_GENRES as ImdbGenre[]).map((g) => ({
-        id: g.slug,
-        label: g.label,
-      })),
-    []
-  );
+  const genreItems: SelectRow[] = useMemo(() => {
+    const all = (IMDB_GENRES as ImdbGenre[]).map((g) => ({
+      id: g.slug,
+      label: g.label,
+    }));
+    if (!genreSlugs?.length) return all;
+    const allowed = new Set(genreSlugs);
+    return all.filter((g) => allowed.has(g.id));
+  }, [genreSlugs]);
 
   const yearItems: SelectRow[] = useMemo(
     () => years.map((y) => ({ id: y, label: y })),

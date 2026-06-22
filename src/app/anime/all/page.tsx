@@ -25,8 +25,21 @@ function AllAnimePageContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [genreSlugs, setGenreSlugs] = useState<string[] | undefined>();
 
   useEffect(() => { document.title = 'All Anime - Teavie'; }, []);
+
+  useEffect(() => {
+    fetch('/api/category/anime/genres')
+      .then((res) => res.json())
+      .then((json) => {
+        const slugs = (json.genres ?? [])
+          .filter((g: { count?: number }) => (g.count ?? 0) > 0)
+          .map((g: { slug: string }) => g.slug);
+        setGenreSlugs(slugs);
+      })
+      .catch(() => setGenreSlugs(undefined));
+  }, []);
 
   useEffect(() => {
     const fetchAnime = async () => {
@@ -67,7 +80,12 @@ function AllAnimePageContent() {
     <div className="bg-main min-h-screen w-full">
       <Header pageName="All Anime" />
       <div className="space-y-4 px-3 pb-8 pt-2 sm:px-4">
-        <BrowseCatalogFilters mode="anime" total={total} loading={loading} />
+        <BrowseCatalogFilters
+          mode="anime"
+          total={total}
+          loading={loading}
+          genreSlugs={genreSlugs}
+        />
 
         {loading ? (
           <AllMoviesViewerLoading />

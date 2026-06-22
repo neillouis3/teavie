@@ -41,7 +41,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     id: "categories",
     title: "Categories",
     items: [
-      { key: "anime", label: "Anime", href: "/anime/all", icon: OrangeIcon },
+      { key: "anime", label: "Anime", href: "/anime", icon: OrangeIcon },
       { key: "kdrama", label: "Korean Drama", href: "/kdrama", icon: LoveKoreanFingerIcon },
     ],
   },

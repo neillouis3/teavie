@@ -21,6 +21,8 @@ type LargeCardProps = {
   certification?: string | null;
   /** Fill parent height (Explore trending hero carousel). */
   hero?: boolean;
+  /** Smaller hero overlay type (category featured row). */
+  heroCompact?: boolean;
   /** Rich Explore-style overlay on standard aspect-video cards (Discover upcoming). */
   richOverlay?: boolean;
   /** `phrase` = “Releases …”; `short` = “Jun 4, 2026”. */
@@ -202,6 +204,7 @@ export default function LargeCard({
   voteAverage,
   certification,
   hero = false,
+  heroCompact = false,
   richOverlay = false,
   releaseDateStyle = "short",
 }: LargeCardProps) {
@@ -278,7 +281,7 @@ export default function LargeCard({
             genres={genres}
             voteAverage={voteAverage}
             certification={certification}
-            compact={!hero}
+            compact={!hero || heroCompact}
             releaseDateStyle={releaseDateStyle}
           />
         )}
