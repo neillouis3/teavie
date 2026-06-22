@@ -28,6 +28,12 @@ export type CatalogMediaPanelProps = {
   genreBrowseBase?: string;
 };
 
+const DETAIL_META_CARD =
+  "w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35";
+
+const DETAIL_META_CARD_INNER =
+  "bg-default-50 px-4 py-5 dark:bg-default-50/10 sm:px-6 sm:py-6";
+
 function formatStatusDisplay(
   status: string | null | undefined
 ): { label: string; active: boolean } | null {
@@ -183,13 +189,17 @@ export default function CatalogMediaPanel({
         <div className="space-y-4">{seasonEpisodeSection}</div>
       ) : null}
 
-      <CatalogDetailColumns
-        mediaType={mediaType}
-        genres={genres}
-        infoLines={infoLines}
-        links={links}
-        genreBrowseBase={genreBrowseBase}
-      />
+      <section className={DETAIL_META_CARD}>
+        <div className={DETAIL_META_CARD_INNER}>
+          <CatalogDetailColumns
+            mediaType={mediaType}
+            genres={genres}
+            infoLines={infoLines}
+            links={links}
+            genreBrowseBase={genreBrowseBase}
+          />
+        </div>
+      </section>
     </div>
   );
 }
@@ -244,15 +254,19 @@ export function CatalogMediaPanelSkeleton({
           </div>
         </div>
       ) : null}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="space-y-2">
-            <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
-            <div className="h-6 w-24 animate-pulse rounded-full bg-default-200" />
-            <div className="h-6 w-28 animate-pulse rounded-full bg-default-200" />
+      <section className={DETAIL_META_CARD}>
+        <div className={DETAIL_META_CARD_INNER}>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
+                <div className="h-6 w-24 animate-pulse rounded-full bg-default-200" />
+                <div className="h-6 w-28 animate-pulse rounded-full bg-default-200" />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      </section>
     </div>
   );
 }
