@@ -195,7 +195,7 @@ export default function GenreDiscover() {
                   : "text-default-500 hover:text-foreground"
               }`}
             >
-              {m === "movie" ? "Movies" : "TV"}
+              {m === "movie" ? "Movies" : "TV shows"}
             </button>
           ))}
         </div>

@@ -12,7 +12,7 @@ export type HorizontalSportsCardProps = {
 };
 
 const pill =
-  'rounded-sm bg-black/55 px-2.5 py-1 text-[10px] uppercase tracking-wide text-white backdrop-blur-sm tabular-nums';
+  'rounded-sm bg-black/55 px-2.5 py-1 text-[10px] text-white backdrop-blur-sm tabular-nums';
 
 /**
  * Same wide tile treatment as {@link HorizontalCatalogCard}: backdrop image, title on bottom-left;

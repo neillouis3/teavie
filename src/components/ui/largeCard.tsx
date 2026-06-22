@@ -84,7 +84,7 @@ function HeroCardOverlay({
   voteAverage?: number | null;
   certification?: string | null;
 }) {
-  const typeLabel = type === "tv" ? "TV SHOW" : "MOVIE";
+  const typeLabel = type === "tv" ? "TV show" : "Movie";
   const dateLabel = formatHeroDate(releaseDate);
   const runtimeLabel =
     type === "movie"
@@ -109,7 +109,7 @@ function HeroCardOverlay({
     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-5 pb-8 pt-24 sm:px-8 sm:pb-10 sm:pt-32">
       <div className="flex max-w-3xl flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-          <span className="font-medium uppercase tracking-wide text-white/55">
+          <span className="font-medium text-white/55">
             {typeLabel}
           </span>
           {genres.length > 0 && (
@@ -151,7 +151,7 @@ function HeroCardOverlay({
           {ratingLabel && <span>{ratingLabel}</span>}
           {ratingLabel && certification && <MetaDot />}
           {certification && (
-            <span className="rounded border border-white/35 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-white/90 sm:text-xs">
+            <span className="rounded border border-white/35 px-1.5 py-0.5 text-[11px] font-medium text-white/90 sm:text-xs">
               {certification}
             </span>
           )}
@@ -231,7 +231,7 @@ export default function LargeCard({
                           : seasonAmount != null && seasonAmount > 0
                             ? `${seasonAmount} season${seasonAmount === 1 ? "" : "s"}`
                             : "—";
-                      return `TV Show • ${when ?? year} • ${meta}`;
+                      return `TV show • ${when ?? year} • ${meta}`;
                     })()
                   : `Movie • ${when ?? year} • ${runtimeMin != null ? `${runtimeMin} min` : "—"}`}
               </p>

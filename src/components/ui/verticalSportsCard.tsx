@@ -12,7 +12,7 @@ export type VerticalSportsCardProps = {
 };
 
 const livePill =
-  'rounded-sm bg-black/55 px-2.5 py-1 text-[10px] uppercase tracking-wide text-white backdrop-blur-sm tabular-nums';
+  'rounded-sm bg-black/55 px-2.5 py-1 text-[10px] text-white backdrop-blur-sm tabular-nums';
 
 /**
  * Poster-style tile aligned with {@link SmallCard}: 2/3 image, meta row, title;
@@ -63,7 +63,7 @@ export default function VerticalSportsCard({
       <div className="mt-2 flex shrink-0 flex-col gap-1 rounded-b-xl text-gray-500">
         <div className="flex w-full flex-row items-center justify-between gap-1">
           <p className="flex-1 truncate text-start text-xs text-default-500">—</p>
-          <div className="shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs uppercase transition-colors duration-300 group-hover:border-success group-hover:text-success">
+          <div className="shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs transition-colors duration-300 group-hover:border-success group-hover:text-success">
             Sports
           </div>
           <p className="flex-1 truncate text-end text-xs text-default-500">Live</p>
