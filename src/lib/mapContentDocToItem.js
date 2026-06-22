@@ -58,6 +58,44 @@ export function tvEpisodeCountFromDoc(doc) {
   return null;
 }
 
+export function genreNamesFromDoc(doc, max = 2) {
+  if (!doc || typeof doc !== "object") return [];
+  if (Array.isArray(doc.genres) && doc.genres.length > 0) {
+    return doc.genres
+      .map((g) => String(g?.name ?? "").trim())
+      .filter(Boolean)
+      .slice(0, max);
+  }
+  return [];
+}
+
+export function usCertificationFromDoc(doc) {
+  if (!doc || typeof doc !== "object") return null;
+
+  const movieResults = doc.release_dates?.results;
+  if (Array.isArray(movieResults)) {
+    const us = movieResults.find((r) => r?.iso_3166_1 === "US");
+    const rels = us?.release_dates;
+    if (Array.isArray(rels)) {
+      const theatrical = rels.find(
+        (rd) => rd?.type === 3 && String(rd?.certification ?? "").trim()
+      );
+      if (theatrical?.certification) return String(theatrical.certification).trim();
+      const any = rels.find((rd) => String(rd?.certification ?? "").trim());
+      if (any?.certification) return String(any.certification).trim();
+    }
+  }
+
+  const tvResults = doc.content_ratings?.results;
+  if (Array.isArray(tvResults)) {
+    const us = tvResults.find((r) => r?.iso_3166_1 === "US");
+    const rating = us?.rating;
+    if (rating && String(rating).trim()) return String(rating).trim();
+  }
+
+  return null;
+}
+
 /**
  * Compact row for /api/new, /api/upcoming, /api/updated (shared shape, avoids duplicate mapping).
  */
@@ -79,6 +117,8 @@ export function mapCatalogListDoc(doc) {
     poster_path: doc.poster_path ?? null,
     backdrop_path: doc.backdrop_path ?? null,
     type: doc.type,
+    genres: genreNamesFromDoc(doc),
+    certification: usCertificationFromDoc(doc),
   };
 }
 
@@ -104,5 +144,7 @@ export function mapContentDocToItem(doc) {
       isAnimeRow ? { anime: true } : undefined
     ),
     vote_average: doc.vote_average ?? null,
+    genres: genreNamesFromDoc(doc),
+    certification: usCertificationFromDoc(doc),
   };
 }
