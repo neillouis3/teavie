@@ -46,7 +46,7 @@ export default function Explore({
 
       {/* New + Updated Section */}
       <div className="mb-8 mt-2 flex h-fit w-full flex-col gap-8 px-3 sm:px-4 lg:flex-row lg:gap-16 xl:gap-24">
-        <div className="flex-4 flex w-full flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex h-fit flex-row items-center justify-between">
             <Chip
               color="success"
@@ -68,7 +68,7 @@ export default function Explore({
           </div>
         </div>
 
-        <div className="flex-2 hidden h-fit flex-col md:block lg:pr-4">
+        <div className="hidden h-fit min-w-0 flex-col md:block lg:w-80 lg:shrink-0 lg:pr-4">
           <Chip
             color="success"
             variant="flat"

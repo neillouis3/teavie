@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { genrePageHref } from "@/lib/imdbGenres";
+import { tmdbImageUrl } from "@/lib/tmdbImage";
 
 export type CatalogGenreRow = {
   slug: string;
@@ -56,10 +57,8 @@ export function genreTileColor(name: string, index: number) {
   return GENRE_TILE_COLORS[name] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 }
 
-const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
-
 function posterUrl(path: string) {
-  return /^https?:\/\//i.test(path) ? path : `${TMDB_IMG}${path}`;
+  return tmdbImageUrl(path);
 }
 
 function deckPosters(posters: string[]): string[] {
@@ -184,9 +183,12 @@ export function GenreTilesSkeleton({ count = 12 }: { count?: number }) {
   );
 }
 
+export const GENRE_SQUARE_GRID =
+  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7";
+
 export function GenreSquareTilesSkeleton({ count = 27 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-7 gap-3">
+    <div className={GENRE_SQUARE_GRID}>
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}

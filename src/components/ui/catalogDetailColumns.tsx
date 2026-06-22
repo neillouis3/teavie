@@ -103,7 +103,7 @@ export default function CatalogDetailColumns({
 
       <div className="min-w-0 flex-[2]">
         <ColumnHeading label="Info" />
-        <ul className="mt-2.5 grid w-full max-w-[85%] grid-cols-2 gap-x-4 gap-y-2 text-sm text-foreground">
+        <ul className="mt-2.5 grid w-full max-w-full grid-cols-1 gap-x-4 gap-y-2 text-sm text-foreground sm:max-w-[85%] sm:grid-cols-2">
           {infoItems.length > 0 ? (
             infoItems.map((line, index) => (
               <li key={`${line.label}-${index}`} className="flex items-start gap-2 leading-snug">

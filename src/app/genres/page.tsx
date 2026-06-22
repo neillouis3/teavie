@@ -6,6 +6,7 @@ import { IMDB_GENRES } from '@/lib/imdbGenres';
 import {
   GenreSquareTile,
   GenreSquareTilesSkeleton,
+  GENRE_SQUARE_GRID,
   genreTileColor,
   type CatalogGenreRow,
 } from '@/components/genre/genreTileShared';
@@ -66,7 +67,7 @@ export default function GenresIndexPage() {
             Could not load genres. Try again later.
           </p>
         ) : (
-          <div className="grid grid-cols-7 gap-3">
+          <div className={GENRE_SQUARE_GRID}>
             {allGenres.map((genre, i) => (
               <GenreSquareTile
                 key={genre.slug}

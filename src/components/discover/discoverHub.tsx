@@ -23,7 +23,7 @@ const EMPTY: TmdbDiscoverPayload = {
   popularTv: [],
 };
 
-const TRENDING_SECTION_MIN_H = "min-h-[80vh]";
+const TRENDING_SECTION_MIN_H = "min-h-[52vh] sm:min-h-[62vh] lg:min-h-[80vh]";
 
 function PopularRailsSkeleton({ horizontal }: { horizontal: boolean }) {
   return (

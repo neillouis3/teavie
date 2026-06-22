@@ -14,6 +14,7 @@ import CatalogMediaPanel, {
 } from './ui/catalogMediaPanel';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
+import { tmdbImageUrl } from '@/lib/tmdbImage';
 
 interface Movie {
   id: number;
@@ -68,8 +69,6 @@ function movieDetailLinks(movie: Movie): CatalogDetailLink[] {
 }
 
 export default function MovieTemplate({ id }: { id: string }) {
-  const baseUrl = 'https://image.tmdb.org/t/p/';
-  const size = 'w500';
   const { server } = useStreamingSource();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,7 +129,7 @@ export default function MovieTemplate({ id }: { id: string }) {
     }
   }, [movie]);
 
-  const imageUrl = movie?.poster_path ? `${baseUrl}${size}${movie.poster_path}` : '';
+  const imageUrl = tmdbImageUrl(movie?.poster_path);
   const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
 
   return (

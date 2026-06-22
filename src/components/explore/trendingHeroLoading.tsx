@@ -2,7 +2,8 @@
 
 import React from "react";
 
-const TRENDING_CAROUSEL_H = "h-[calc(80vh-2rem)]";
+const TRENDING_CAROUSEL_H =
+  "h-[min(52vh,400px)] sm:h-[min(62vh,480px)] lg:h-[calc(80vh-2rem)]";
 
 export default function TrendingHeroLoading({
   rounded = false,
@@ -13,9 +14,7 @@ export default function TrendingHeroLoading({
 }) {
   return (
     <div
-      className={`flex w-full flex-col items-center ${TRENDING_CAROUSEL_H} ${
-        rounded ? "px-3 sm:px-4" : ""
-      }`}
+      className={`flex w-full flex-col items-center px-3 sm:px-4 ${TRENDING_CAROUSEL_H}`}
     >
       <div
         className={`w-full animate-pulse bg-default-200 ${

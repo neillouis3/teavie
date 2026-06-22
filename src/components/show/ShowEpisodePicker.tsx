@@ -23,6 +23,7 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { formatRuntimeLabel } from "@/components/ui/catalogMediaPanel";
+import { tmdbImageUrl } from "@/lib/tmdbImage";
 import { formatWatchEpKey } from "@/lib/watchProgress";
 import { tmdbSeasonEpisodeFromAbsolute } from "@/lib/cumulativeTvEpisode";
 
@@ -42,15 +43,15 @@ export type EpisodeCardRow = {
   displayNumber?: number;
 };
 
-const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/original";
+
 export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
 /** Visible episode cards in the horizontal scroller (4 full + ⅓ peek). */
 const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[calc(100%/4.3333333333)]";
-const EPISODE_CARD_HEIGHT = "h-[360px]";
-const EPISODE_CARD_STILL_HEIGHT = "h-[160px]";
+  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)]";
+const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px]";
+const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px]";
 const EPISODE_CARD_TITLE_CLASS =
   "shrink-0 overflow-hidden text-sm font-semibold leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
 const EPISODE_CARD_DESCRIPTION_CLASS =
@@ -67,10 +68,7 @@ function scrollToPlayerBottom() {
 }
 
 function episodeStillUrl(stillPath: string | null | undefined) {
-  const path = String(stillPath ?? "").trim();
-  if (!path) return null;
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${TMDB_STILL_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  return tmdbImageUrl(stillPath) || null;
 }
 
 function EpisodeCardSkeleton() {
@@ -544,7 +542,7 @@ export function ShowEpisodePickerControls() {
   } = useEpisodePicker();
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5" aria-label="Episode controls">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5" aria-label="Episode controls">
           <div className="flex shrink-0 items-center gap-1.5">
             <div className="flex items-center gap-1">
               <span className="text-[11px] font-medium text-default-500">S</span>
@@ -656,7 +654,7 @@ function ShowEpisodePickerSeasonRow() {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
         <Tabs
           aria-label="Seasons"
@@ -671,9 +669,9 @@ function ShowEpisodePickerSeasonRow() {
           variant="bordered"
           radius="md"
           classNames={{
-            base: "w-auto max-w-full",
-            tabList: "gap-0",
-            tab: "h-8 min-h-8 px-3 text-xs",
+            base: "w-full max-w-full min-w-0",
+            tabList: "max-w-full gap-0 overflow-x-auto",
+            tab: "h-8 min-h-8 shrink-0 px-3 text-xs",
             panel: "hidden",
           }}
         >
