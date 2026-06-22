@@ -131,6 +131,53 @@ export function GenreCatalogTile({
   );
 }
 
+export function GenreSquareTile({
+  genre,
+  colorClass,
+}: {
+  genre: CatalogGenreRow;
+  colorClass: string;
+}) {
+  const href = genrePageHref(genre.slug);
+  const poster = genre.posters.find(Boolean);
+
+  return (
+    <Link
+      href={href}
+      aria-label={`Browse ${genre.name}`}
+      className="group relative flex aspect-square w-full overflow-hidden rounded-xl"
+    >
+      {poster ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={posterUrl(poster)}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : null}
+      <span
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${colorClass} ${
+          poster ? "opacity-80 mix-blend-multiply" : ""
+        }`}
+        aria-hidden
+      />
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+      <div className="relative z-10 flex h-full flex-col justify-end p-3 sm:p-4">
+        <span className="text-sm font-bold leading-tight text-white drop-shadow-sm sm:text-base">
+          {genre.name}
+        </span>
+        {genre.count > 0 ? (
+          <span className="mt-0.5 text-[11px] font-medium text-white/80">
+            {genre.count.toLocaleString()} titles
+          </span>
+        ) : null}
+      </div>
+    </Link>
+  );
+}
+
 export function GenreTilesSkeleton({ count = 12 }: { count?: number }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -138,6 +185,19 @@ export function GenreTilesSkeleton({ count = 12 }: { count?: number }) {
         <div
           key={i}
           className="aspect-[4/3] w-full animate-pulse rounded-xl bg-default-200"
+        />
+      ))}
+    </div>
+  );
+}
+
+export function GenreSquareTilesSkeleton({ count = 27 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="aspect-square w-full animate-pulse rounded-xl bg-default-200"
         />
       ))}
     </div>

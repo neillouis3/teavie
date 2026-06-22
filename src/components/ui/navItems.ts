@@ -6,6 +6,7 @@ import {
   PopcornIcon,
   OrangeIcon,
   LoveKoreanFingerIcon,
+  GridViewIcon,
 } from '@hugeicons/core-free-icons';
 
 export type NavIcon = IconSvgElement;
@@ -33,6 +34,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
       { key: "discover", label: "Discover", href: "/discover", icon: PopcornIcon },
       { key: "movies", label: "Movies", href: "/movies/all", icon: FilmRoll02Icon },
       { key: "shows", label: "TV Shows", href: "/shows/all", icon: Tv01Icon },
+      { key: "genres", label: "Genres", href: "/genres", icon: GridViewIcon },
     ],
   },
   {
