@@ -6,7 +6,10 @@ import {
   releasedCatalogClause,
 } from "@/lib/catalogQuery";
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
-import { catalogDocReleaseDateString } from "@/lib/mapContentDocToItem";
+import {
+  catalogDocReleaseDateString,
+  runtimeSecondsFromDoc,
+} from "@/lib/mapContentDocToItem";
 
 export async function GET(req) {
   try {
@@ -54,7 +57,7 @@ export async function GET(req) {
         id: doc.id.toString(),
         title: doc.title ?? doc.name,
         release_date: catalogDocReleaseDateString(doc),
-        runtimeSeconds: doc.runtimeSeconds ?? null,
+        runtimeSeconds: runtimeSecondsFromDoc(doc),
         season_amount: doc.season_amount ?? null,
         popularity: catalogPopularityScore(doc),
         vote_average: doc.vote_average ?? null,

@@ -1,9 +1,12 @@
 import React from "react";
 import Header from "./ui/header";
 import UpcomingViewer from "./viewer/upcomingViewer";
-import CatalogRail from "./explore/catalogRail";
+import NewViewer from "./viewer/newViewer";
+import UpdatedViewer from "./viewer/updatedViewer";
 
 import UpcomingViewerLoading from "./viewer/skeleton/upcomingViewerLoading";
+import NewViewerLoading from "./viewer/skeleton/newViewerLoading";
+import UpdatedViewerLoading from "./viewer/skeleton/updatedViewerLoading";
 
 import { Chip } from "@heroui/react";
 import { ContentItem } from "@/types/content";
@@ -41,19 +44,48 @@ export default function Explore({
         </div>
       </div>
 
-      {/* New + Updated */}
-      <div className="mb-8 mt-2 flex h-fit w-full flex-col gap-10 px-3 sm:px-4">
-        <CatalogRail
-          title="New on Teavie"
-          items={newContentData}
-          showReleaseNote
-          loading={loading}
-        />
-        <CatalogRail
-          title="Recently Updated"
-          items={updatedContentData}
-          loading={loading}
-        />
+      {/* New + Updated Section */}
+      <div className="mb-8 mt-2 flex h-fit w-full flex-col gap-8 px-3 sm:px-4 lg:flex-row lg:gap-16 xl:gap-24">
+        <div className="flex-4 flex w-full flex-col">
+          <div className="flex h-fit flex-row items-center justify-between">
+            <Chip
+              color="success"
+              variant="flat"
+              size="md"
+              className="mb-4"
+              radius="sm"
+            >
+              New on Teavie
+            </Chip>
+            <a className="hidden cursor-pointer text-sm underline">View All</a>
+          </div>
+          <div className="w-full">
+            {loading ? (
+              <NewViewerLoading />
+            ) : (
+              <NewViewer newContent={newContentData} />
+            )}
+          </div>
+        </div>
+
+        <div className="flex-2 hidden h-fit flex-col md:block lg:pr-4">
+          <Chip
+            color="success"
+            variant="flat"
+            size="md"
+            className="mb-4"
+            radius="sm"
+          >
+            Recently Updated
+          </Chip>
+          <div className="h-fit w-full rounded-xl">
+            {loading ? (
+              <UpdatedViewerLoading />
+            ) : (
+              <UpdatedViewer updatedContent={updatedContentData} />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

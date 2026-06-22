@@ -99,29 +99,21 @@ export default function DiscoverHub() {
                   title="Trending movies this week"
                   items={data.trendingMovies}
                   maxItems={sectionMaxItems}
-                  moreHref="/search"
-                  moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Trending TV this week"
                   items={data.trendingTv}
                   maxItems={sectionMaxItems}
-                  moreHref="/search"
-                  moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Popular movies"
                   items={data.popularMovies}
                   maxItems={sectionMaxItems}
-                  moreHref="/search"
-                  moreLabel="Search & more"
                 />
                 <CatalogRail
                   title="Popular TV shows"
                   items={data.popularTv}
                   maxItems={sectionMaxItems}
-                  moreHref="/search"
-                  moreLabel="Search & more"
                 />
               </div>
             )
