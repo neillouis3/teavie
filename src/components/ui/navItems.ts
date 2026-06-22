@@ -3,7 +3,6 @@ import {
   Home01Icon,
   FilmRoll02Icon,
   Tv01Icon,
-  OlympicTorchIcon,
   PopcornIcon,
   OrangeIcon,
   LoveKoreanFingerIcon,
@@ -42,7 +41,6 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     items: [
       { key: "anime", label: "Anime", href: "/anime/all", icon: OrangeIcon },
       { key: "kdrama", label: "Korean Drama", href: "/kdrama", icon: LoveKoreanFingerIcon },
-      { key: "sports", label: "Sports", href: "/sports", icon: OlympicTorchIcon },
     ],
   },
 ];
