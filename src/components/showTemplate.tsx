@@ -9,7 +9,7 @@ import {
   cumulativeTvEpisode,
   tmdbSeasonEpisodeFromAbsolute,
 } from "@/lib/cumulativeTvEpisode";
-import { Button } from "@heroui/react";
+import ShowEpisodePicker from "@/components/show/ShowEpisodePicker";
 import {
   useStreamingSource,
   type StreamServerId,
@@ -396,9 +396,6 @@ async function fetchAnilistAndMerge(
 
 export type ShowServerKey = StreamServerId;
 
-/** Episode picker: tabs 0–99, 100–199, … (labels); grid uses 1-based episode numbers. */
-const EPISODE_RANGE_BLOCK = 100;
-
 export default function ShowTemplate({ id }: { id: string }) {
   const baseUrl = "https://image.tmdb.org/t/p/";
   const size = "w500";
@@ -411,11 +408,8 @@ export default function ShowTemplate({ id }: { id: string }) {
   const [animeMovieResolving, setAnimeMovieResolving] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
-  /** First episode index in current block: 0 → eps 1–100, 100 → 101–200, … */
-  const [episodeRangeStart, setEpisodeRangeStart] = useState(0);
-  /** null = no cap (anime / error); number = last episode number aired by TMDB calendar */
-  const [tmdbAiredEpCap, setTmdbAiredEpCap] = useState<number | null>(null);
-  const [tmdbEpCapLoading, setTmdbEpCapLoading] = useState(false);
+  const [pickerEpisodesLoading, setPickerEpisodesLoading] = useState(false);
+  const [pickerPlayableCount, setPickerPlayableCount] = useState(0);
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(
     () => new Set()
   );
@@ -667,83 +661,6 @@ export default function ShowTemplate({ id }: { id: string }) {
       : `${displayName} ${seasonEpisode} - Teavie`;
   }, [show, selectedSeason, selectedEpisode]);
 
-  useEffect(() => {
-    if (!show || !/^\d+$/.test(String(resolvedPlayerId))) {
-      setTmdbAiredEpCap(null);
-      setTmdbEpCapLoading(false);
-      return;
-    }
-    const releasedSeasonCount =
-      show.seasons?.filter((s) => s.season_number >= 1).length ?? 0;
-    const skipSeasonFetchForFlatAnimePicker =
-      releasedSeasonCount > 1 && Boolean(show.is_anime);
-    if (skipSeasonFetchForFlatAnimePicker) {
-      setTmdbAiredEpCap(null);
-      setTmdbEpCapLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setTmdbEpCapLoading(true);
-    setTmdbAiredEpCap(null);
-
-    const run = async () => {
-      const token = process.env.NEXT_PUBLIC_TMDB_BEARER;
-      if (!token) {
-        if (!cancelled) {
-          setTmdbAiredEpCap(null);
-          setTmdbEpCapLoading(false);
-        }
-        return;
-      }
-      try {
-        const url = `https://api.themoviedb.org/3/tv/${resolvedPlayerId}/season/${selectedSeason}?language=en-US`;
-        const res = await fetch(url, {
-          headers: { accept: "application/json", Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error("season fetch failed");
-        const json = (await res.json()) as {
-          air_date?: string | null;
-          episodes?: { air_date?: string | null; episode_number?: number }[];
-        };
-        const today = catalogTodayYmdUtc();
-        let max = 0;
-        const eps = json.episodes ?? [];
-        for (const ep of eps) {
-          const ad = String(ep.air_date ?? "").trim();
-          if (!ad || ad.length < 10) continue;
-          if (ad > today) continue;
-          const n = Number(ep.episode_number);
-          if (Number.isFinite(n) && n > max) max = n;
-        }
-        const seasonAir = String(json.air_date ?? "").trim();
-        if (max === 0 && eps.length > 0 && seasonAir.length >= 10 && seasonAir <= today) {
-          max = eps.length;
-        }
-        if (!cancelled) setTmdbAiredEpCap(max);
-      } catch {
-        if (!cancelled) setTmdbAiredEpCap(null);
-      } finally {
-        if (!cancelled) setTmdbEpCapLoading(false);
-      }
-    };
-
-    void run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [show, resolvedPlayerId, selectedSeason]);
-
-  useEffect(() => {
-    if (tmdbEpCapLoading) return;
-    if (tmdbAiredEpCap != null && tmdbAiredEpCap > 0 && selectedEpisode > tmdbAiredEpCap) {
-      setSelectedEpisode(tmdbAiredEpCap);
-    }
-  }, [tmdbEpCapLoading, tmdbAiredEpCap, selectedEpisode]);
-
-  const currentSeason = show?.seasons?.find((s) => s.season_number === selectedSeason);
-  const rawEpisodeCount = currentSeason?.episode_count ?? 0;
   const releasedSeasonsForUi = show?.seasons?.filter((s) => s.season_number >= 1) ?? [];
   const totalEpisodesAcrossSeasons = tmdbSeasonsWithEpisodes(show?.seasons).reduce(
     (acc, s) => acc + (typeof s.episode_count === "number" ? s.episode_count : 0),
@@ -773,28 +690,8 @@ export default function ShowTemplate({ id }: { id: string }) {
     useFlatAllEpisodesPicker && aniListEpCap != null
       ? Math.min(totalEpisodesAcrossSeasons, aniListEpCap)
       : totalEpisodesAcrossSeasons;
-  /** TMDB /season/{n} air dates for capping the episode grid (season index matches TMDB). */
-  const useTmdbSeasonAiringCap = Boolean(show && playerUsesTmdb);
-  /** Per-season aired cap only when the grid is per-season (not the all-episodes flat list). */
   const useTmdbSeasonAiringCapForPlayer =
-    useTmdbSeasonAiringCap && !useFlatAllEpisodesPicker;
-
-  let displayEpisodeCount = rawEpisodeCount;
-  let episodeGridStatus: "normal" | "loading" | "none" = "normal";
-  if (useFlatAllEpisodesPicker) {
-    displayEpisodeCount = flatEpisodesMax;
-    episodeGridStatus = flatEpisodesMax > 0 ? "normal" : "none";
-  } else if (useTmdbSeasonAiringCap) {
-    if (tmdbEpCapLoading) {
-      episodeGridStatus = "loading";
-      displayEpisodeCount = 0;
-    } else if (tmdbAiredEpCap === 0 && rawEpisodeCount > 0) {
-      episodeGridStatus = "none";
-      displayEpisodeCount = 0;
-    } else if (tmdbAiredEpCap != null && tmdbAiredEpCap > 0) {
-      displayEpisodeCount = Math.min(rawEpisodeCount, tmdbAiredEpCap);
-    }
-  }
+    Boolean(show && playerUsesTmdb) && !useFlatAllEpisodesPicker;
 
   const tmdbShowPremiered =
     !show ||
@@ -813,18 +710,14 @@ export default function ShowTemplate({ id }: { id: string }) {
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
   const showSeasonPickerStrip =
     !animeHideSeasonRow && !useFlatAllEpisodesPicker;
-  const pickerSectionLabelClass = "text-xs font-medium text-default-500";
-  const pickerButtonClass = (selected: boolean) =>
-    selected
-      ? "h-9 min-w-9 bg-foreground px-0 text-xs font-medium tabular-nums text-background"
-      : "h-9 min-w-9 border border-default-300/70 bg-transparent px-0 text-xs font-medium tabular-nums dark:border-default-100/30";
-  const useContinuousEpisodeLabels =
-    releasedSeasonsForUi.length > 1 && useFlatAllEpisodesPicker;
-  const episodeDisplayOffset =
-    useContinuousEpisodeLabels && show
-      ? episodeOffsetBeforeSeason(show.seasons, selectedSeason)
-      : 0;
-  const cumulativeEpisodeSelected = episodeDisplayOffset + selectedEpisode;
+
+  const markEpisodeWatched = (season: number, episode: number) => {
+    setWatchedEpisodes((prev) => {
+      const next = new Set(prev);
+      next.add(formatWatchEpKey(season, episode));
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!show?.seasons?.length || !useFlatAllEpisodesPicker) return;
@@ -841,39 +734,6 @@ export default function ShowTemplate({ id }: { id: string }) {
     selectedSeason,
     selectedEpisode,
   ]);
-
-  const episodeBlockLo =
-    displayEpisodeCount > 0 ? episodeRangeStart + 1 : 1;
-  const episodeBlockHi =
-    displayEpisodeCount > 0
-      ? Math.min(episodeRangeStart + EPISODE_RANGE_BLOCK, displayEpisodeCount)
-      : 0;
-  const showEpisodeRangeTabs = displayEpisodeCount > EPISODE_RANGE_BLOCK;
-
-  useEffect(() => {
-    setEpisodeRangeStart(0);
-  }, [id]);
-
-  useEffect(() => {
-    if (useFlatAllEpisodesPicker) return;
-    setEpisodeRangeStart(0);
-  }, [selectedSeason, useFlatAllEpisodesPicker]);
-
-  useEffect(() => {
-    if (!useFlatAllEpisodesPicker) return;
-    const start =
-      Math.floor(Math.max(0, cumulativeEpisodeSelected - 1) / EPISODE_RANGE_BLOCK) *
-      EPISODE_RANGE_BLOCK;
-    setEpisodeRangeStart(start);
-  }, [useFlatAllEpisodesPicker, cumulativeEpisodeSelected]);
-
-  useEffect(() => {
-    if (displayEpisodeCount <= 0) return;
-    const maxStart =
-      Math.max(0, Math.floor((displayEpisodeCount - 1) / EPISODE_RANGE_BLOCK)) *
-      EPISODE_RANGE_BLOCK;
-    setEpisodeRangeStart((s) => Math.min(s, maxStart));
-  }, [displayEpisodeCount]);
 
   return (
     <div className="flex min-h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
@@ -901,11 +761,11 @@ export default function ShowTemplate({ id }: { id: string }) {
                 ? `This series has not premiered yet (first episode ${String(show.first_air_date).slice(0, 10)}).`
                 : "No playback source available for this page yet. Try again later."}
             </div>
-          ) : useTmdbSeasonAiringCapForPlayer && tmdbEpCapLoading ? (
+          ) : useTmdbSeasonAiringCapForPlayer && pickerEpisodesLoading ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               Loading aired episodes…
             </div>
-          ) : useTmdbSeasonAiringCapForPlayer && displayEpisodeCount < 1 ? (
+          ) : useTmdbSeasonAiringCapForPlayer && pickerPlayableCount < 1 ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               No released episodes to play in this season yet.
             </div>
@@ -920,10 +780,32 @@ export default function ShowTemplate({ id }: { id: string }) {
           )}
         </div>
 
+        {!loading && show && !isAnimeMovie ? (
+          <ShowEpisodePicker
+            showTitle={title}
+            tmdbTvId={playerUsesTmdb ? String(resolvedPlayerId) : null}
+            seasons={show.seasons ?? []}
+            selectedSeason={selectedSeason}
+            selectedEpisode={selectedEpisode}
+            onSeasonChange={setSelectedSeason}
+            onEpisodeChange={(season, episode) => {
+              setSelectedSeason(season);
+              setSelectedEpisode(episode);
+            }}
+            showSeasonTabs={showSeasonPickerStrip}
+            flatMode={useFlatAllEpisodesPicker}
+            flatEpisodeCap={useFlatAllEpisodesPicker ? flatEpisodesMax : null}
+            watchedKeys={watchedEpisodes}
+            onMarkWatched={markEpisodeWatched}
+            onEpisodesLoadingChange={setPickerEpisodesLoading}
+            onPlayableEpisodeCountChange={setPickerPlayableCount}
+          />
+        ) : null}
+
         {/* ── Show Details ── */}
         <div className="w-full">
           {loading ? (
-            <CatalogMediaPanelSkeleton withSeasonPicker />
+            <CatalogMediaPanelSkeleton />
           ) : (
             show && (
               <CatalogMediaPanel
@@ -944,163 +826,6 @@ export default function ShowTemplate({ id }: { id: string }) {
                 infoLines={buildShowInfoLines(show)}
                 links={showDetailLinks(show)}
                 genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
-                seasonEpisodeSection={
-                  !isAnimeMovie ? (
-                    <div className="flex flex-col gap-4">
-                      {showSeasonPickerStrip ? (
-                        <div className="flex flex-col gap-2">
-                          <p className={pickerSectionLabelClass}>Season</p>
-                          <div className="flex flex-wrap gap-2">
-                            {show.seasons
-                              ?.filter((s) => s.season_number >= 1)
-                              .map((s) => {
-                                const sel = selectedSeason === s.season_number;
-                                return (
-                                  <Button
-                                    key={s.season_number}
-                                    size="sm"
-                                    radius="full"
-                                    variant="light"
-                                    className={pickerButtonClass(sel)}
-                                    onPress={() => {
-                                      setSelectedSeason(s.season_number);
-                                      setSelectedEpisode(1);
-                                    }}
-                                  >
-                                    S{s.season_number}
-                                  </Button>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div className="flex flex-col gap-2">
-                        <p className={pickerSectionLabelClass}>Episode</p>
-
-                        {episodeGridStatus === "loading" && (
-                          <div className="rounded-lg bg-default-100/80 px-2 py-4 text-center text-xs text-default-500 dark:bg-default-50/10">
-                            Loading episodes…
-                          </div>
-                        )}
-                        {episodeGridStatus === "none" && (
-                          <div className="rounded-lg bg-default-100/80 px-2 py-4 text-center text-xs text-default-500 dark:bg-default-50/10">
-                            Nothing to show for this season yet.
-                          </div>
-                        )}
-                        {episodeGridStatus === "normal" && displayEpisodeCount > 0 && (
-                          <div className="flex flex-col gap-2">
-                            {showEpisodeRangeTabs && (
-                              <div className="flex flex-wrap gap-1.5">
-                                {Array.from(
-                                  { length: Math.ceil(displayEpisodeCount / EPISODE_RANGE_BLOCK) },
-                                  (_, b) => {
-                                    const start = b * EPISODE_RANGE_BLOCK;
-                                    const labelHi = Math.min(
-                                      start + EPISODE_RANGE_BLOCK - 1,
-                                      displayEpisodeCount - 1
-                                    );
-                                    const withinLo = start + 1;
-                                    const withinHi = Math.min(
-                                      start + EPISODE_RANGE_BLOCK,
-                                      displayEpisodeCount
-                                    );
-                                    const rangeLabel = useFlatAllEpisodesPicker
-                                      ? `${withinLo}–${withinHi}`
-                                      : useContinuousEpisodeLabels
-                                        ? `${withinLo + episodeDisplayOffset}–${withinHi + episodeDisplayOffset}`
-                                        : `${start}–${labelHi}`;
-                                    const rangeSel = episodeRangeStart === start;
-                                    return (
-                                      <Button
-                                        key={start}
-                                        size="sm"
-                                        radius="full"
-                                        variant="light"
-                                        className={pickerButtonClass(rangeSel)}
-                                        onPress={() => setEpisodeRangeStart(start)}
-                                      >
-                                        {rangeLabel}
-                                      </Button>
-                                    );
-                                  }
-                                )}
-                              </div>
-                            )}
-                            <div className="flex flex-wrap gap-2">
-                              {Array.from(
-                                { length: Math.max(0, episodeBlockHi - episodeBlockLo + 1) },
-                                (_, i) => episodeBlockLo + i
-                              ).map((ep) => {
-                                const coordsFlat =
-                                  useFlatAllEpisodesPicker && show?.seasons
-                                    ? tmdbSeasonEpisodeFromAbsolute(show.seasons, ep)
-                                    : null;
-                                const watchKey = coordsFlat
-                                  ? formatWatchEpKey(coordsFlat.season, coordsFlat.episode)
-                                  : formatWatchEpKey(selectedSeason, ep);
-                                const watchedThis = watchedEpisodes.has(watchKey);
-                                const epLabel = useFlatAllEpisodesPicker
-                                  ? ep
-                                  : useContinuousEpisodeLabels
-                                    ? ep + episodeDisplayOffset
-                                    : ep;
-                                const isCurrent = useFlatAllEpisodesPicker
-                                  ? cumulativeEpisodeSelected === ep
-                                  : selectedEpisode === ep;
-                                const ariaEp = `Episode ${epLabel}`;
-                                return (
-                                  <div key={ep} className="relative">
-                                    <Button
-                                      size="sm"
-                                      radius="full"
-                                      variant="light"
-                                      className={pickerButtonClass(isCurrent)}
-                                      aria-label={
-                                        watchedThis ? `${ariaEp}, watched` : ariaEp
-                                      }
-                                      onPress={() => {
-                                        if (coordsFlat) {
-                                          setSelectedSeason(coordsFlat.season);
-                                          setSelectedEpisode(coordsFlat.episode);
-                                          setWatchedEpisodes((prev) => {
-                                            const next = new Set(prev);
-                                            next.add(
-                                              formatWatchEpKey(
-                                                coordsFlat.season,
-                                                coordsFlat.episode
-                                              )
-                                            );
-                                            return next;
-                                          });
-                                        } else {
-                                          setSelectedEpisode(ep);
-                                          setWatchedEpisodes((prev) => {
-                                            const next = new Set(prev);
-                                            next.add(formatWatchEpKey(selectedSeason, ep));
-                                            return next;
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      {epLabel}
-                                    </Button>
-                                    {watchedThis ? (
-                                      <span
-                                        className="pointer-events-none absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-success shadow-sm ring-2 ring-background"
-                                        aria-hidden
-                                      />
-                                    ) : null}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : undefined
-                }
               />
             )
           )}
