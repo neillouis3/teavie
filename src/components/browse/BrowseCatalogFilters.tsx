@@ -127,31 +127,6 @@ export default function BrowseCatalogFilters({
     }
   }, [rawGenre, mergeParams]);
 
-  const browseTypeForGenre =
-    mode === 'movie'
-      ? 'movie'
-      : mode === 'tv'
-        ? 'tv'
-        : mode === 'anime'
-          ? 'anime'
-          : 'kdrama';
-
-  const navigateToGenre = useCallback(
-    (slug: string) => {
-      const params = new URLSearchParams();
-      if (browseTypeForGenre === 'movie') {
-        params.set('type', 'movie');
-      } else if (browseTypeForGenre === 'tv') {
-        params.set('type', 'tv');
-      } else {
-        router.push(`/genre/${slug}`);
-        return;
-      }
-      router.push(`/genre/${slug}?${params.toString()}`);
-    },
-    [browseTypeForGenre, router]
-  );
-
   const hasActiveFilters =
     Boolean(genre) || Boolean(yearMin) || Boolean(yearMax) || Boolean(qUrl.trim());
 
@@ -219,7 +194,7 @@ export default function BrowseCatalogFilters({
           selectedKeys={genre ? new Set([genre]) : new Set()}
           onSelectionChange={(keys) => {
             const v = Array.from(keys)[0] as string | undefined;
-            if (v) navigateToGenre(v);
+            if (v) mergeParams({ genre: v, page: '1' });
           }}
           size="sm"
           variant="bordered"
