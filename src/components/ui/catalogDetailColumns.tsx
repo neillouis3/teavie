@@ -80,7 +80,7 @@ export default function CatalogDetailColumns({
 
   return (
     <div
-      className={`grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8 ${className}`}
+      className={`grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-4 ${className}`}
     >
       <div className="min-w-0">
         <ColumnHeading label="Genre" />
