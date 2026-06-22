@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button, Chip } from '@heroui/react';
@@ -8,7 +8,6 @@ import Header from '@/components/ui/header';
 import LargeCard from '@/components/ui/largeCard';
 import CatalogRail from '@/components/explore/catalogRail';
 import type { ContentItem } from '@/types/content';
-import { genrePageDescription } from '@/lib/genrePageCopy';
 
 export type GenrePageType = 'all' | 'movie' | 'tv';
 export type GenrePageSort = 'popular' | 'top_rated' | 'new';
@@ -91,8 +90,6 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const description = useMemo(() => genrePageDescription(genreLabel), [genreLabel]);
-
   useEffect(() => {
     document.title = `${genreLabel} - Teavie`;
   }, [genreLabel]);
@@ -170,14 +167,9 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     <div className="bg-main min-h-screen w-full">
       <Header pageName={genreLabel} />
       <div className="w-full space-y-4 px-3 pb-12 pt-2 sm:px-4">
-        <div className="space-y-2">
-          <Chip color="success" variant="flat" size="md" radius="sm">
-            {countLabel}
-          </Chip>
-          <p className="text-left text-sm leading-relaxed text-default-500 sm:text-[15px]">
-            {description}
-          </p>
-        </div>
+        <Chip color="success" variant="flat" size="md" radius="sm">
+          {countLabel}
+        </Chip>
 
         <nav
           className="flex flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-1"
