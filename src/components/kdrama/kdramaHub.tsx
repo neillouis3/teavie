@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/carousel";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
+import { genrePageHref } from "@/lib/imdbGenres";
 
 type GenreRow = {
   slug: string;
@@ -52,11 +53,7 @@ function posterUrl(path: string) {
 }
 
 function genreBrowseHref(slug: string) {
-  const params = new URLSearchParams({
-    genre: slug,
-    sort_by: "popularity",
-  });
-  return `/kdrama/all?${params.toString()}`;
+  return genrePageHref(slug);
 }
 
 function GenreTile({ genre, colorClass }: { genre: GenreRow; colorClass: string }) {
@@ -238,13 +235,13 @@ export default function KdramaHub() {
             <CatalogRail
               title="Romance"
               items={data?.romance ?? []}
-              moreHref="/kdrama/all?genre=romance&sort_by=popularity"
+              moreHref={genrePageHref("romance")}
               moreLabel="More romance"
             />
             <CatalogRail
               title="Drama"
               items={data?.drama ?? []}
-              moreHref="/kdrama/all?genre=drama&sort_by=popularity"
+              moreHref={genrePageHref("drama")}
               moreLabel="More drama"
             />
           </div>

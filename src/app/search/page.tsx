@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Input, Chip, Pagination } from '@heroui/react';
+import { Input, Pagination } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon } from '@hugeicons/core-free-icons';
 import Header from '@/components/ui/header';
@@ -16,6 +16,7 @@ import {
   type CatalogCardLayoutMode,
 } from '@/contexts/catalogCardStyleContext';
 import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
+import SearchCatalogFilters from '@/components/browse/SearchCatalogFilters';
 import { ContentItem } from '@/types/content';
 import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
@@ -53,6 +54,11 @@ function SearchContent() {
   const qParam = searchParams.get('q') ?? '';
   const rawPage = parseInt(searchParams.get('page') || '1', 10);
   const pageParam = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+  const typeParam = searchParams.get('type') ?? '';
+  const genreParam = searchParams.get('genre') ?? '';
+  const yearMinParam = searchParams.get('year_min') ?? '';
+  const yearMaxParam = searchParams.get('year_max') ?? '';
+  const sortParam = searchParams.get('sort_by') ?? '';
 
   const [inputValue, setInputValue] = useState(qParam);
   const [results, setResults] = useState<ContentItem[]>([]);
@@ -101,10 +107,17 @@ function SearchContent() {
     setLoading(true);
     setError(null);
 
-    fetch(
-      `/api/search?q=${encodeURIComponent(q)}&page=${pageParam}&limit=28`,
-      { signal: controller.signal }
-    )
+    const qs = new URLSearchParams();
+    qs.set('q', q);
+    qs.set('page', String(pageParam));
+    qs.set('limit', '28');
+    if (typeParam && typeParam !== 'all') qs.set('type', typeParam);
+    if (genreParam) qs.set('genre', genreParam);
+    if (yearMinParam) qs.set('year_min', yearMinParam);
+    if (yearMaxParam) qs.set('year_max', yearMaxParam);
+    if (sortParam && sortParam !== 'relevance') qs.set('sort_by', sortParam);
+
+    fetch(`/api/search?${qs.toString()}`, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         setResults(data.results ?? []);
@@ -120,24 +133,26 @@ function SearchContent() {
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [qParam, pageParam]);
+  }, [qParam, pageParam, typeParam, genreParam, yearMinParam, yearMaxParam, sortParam]);
 
   const submitSearch = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
+      const params = new URLSearchParams(searchParams.toString());
       const trimmed = inputValue.trim();
-      const params = new URLSearchParams();
       if (trimmed) params.set('q', trimmed);
-      router.push(trimmed ? `${pathname}?${params}` : pathname);
+      else params.delete('q');
+      params.delete('page');
+      router.push(params.toString() ? `${pathname}?${params}` : pathname);
     },
-    [inputValue, pathname, router]
+    [inputValue, pathname, router, searchParams]
   );
 
   const goPage = (p: number) => {
-    const params = new URLSearchParams();
-    if (qParam.trim()) params.set('q', qParam.trim());
+    const params = new URLSearchParams(searchParams.toString());
     if (p > 1) params.set('page', String(p));
-    router.push(params.toString() ? `${pathname}?${params}` : pathname);
+    else params.delete('page');
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const renderCards = (items: ContentItem[], keyPrefix: string) => (
@@ -217,6 +232,12 @@ function SearchContent() {
           />
         </form>
 
+        <SearchCatalogFilters
+          total={total}
+          loading={loading}
+          hasQuery={hasQuery}
+        />
+
         {/* Popular (no query) */}
         {!hasQuery && (
           <div className="space-y-8">
@@ -250,16 +271,11 @@ function SearchContent() {
         {/* Search results */}
         {hasQuery && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Chip color="success" size="md" radius="sm" variant="flat">
-                {loading ? 'Searching…' : `${total} result${total === 1 ? '' : 's'}`}
-              </Chip>
-              {!loading && (
-                <span className="text-xs text-default-500">
-                  for &ldquo;{qParam}&rdquo;{totalPages > 1 && ` · page ${pageParam} of ${totalPages}`}
-                </span>
-              )}
-            </div>
+            {!loading && (
+              <span className="text-xs text-default-500">
+                for &ldquo;{qParam}&rdquo;{totalPages > 1 && ` · page ${pageParam} of ${totalPages}`}
+              </span>
+            )}
 
             {error && (
               <p className="text-sm text-danger">{error}</p>

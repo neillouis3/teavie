@@ -13,7 +13,7 @@ import {
   Location01Icon,
 } from "@hugeicons/core-free-icons";
 
-import { imdbGenreSlugFromLabel } from "@/lib/imdbGenres";
+import { genrePageHref, imdbGenreSlugFromLabel } from "@/lib/imdbGenres";
 
 export type CatalogGenre = { name: string; slug: string };
 
@@ -43,14 +43,13 @@ function genreBrowseHref(
   slug: string,
   genreBrowseBase?: string
 ) {
-  const base =
-    genreBrowseBase ??
-    (mediaType === "movie" ? "/movies/all" : "/shows/all");
-  const params = new URLSearchParams({
-    genre: slug,
-    sort_by: "popularity",
+  if (genreBrowseBase?.startsWith("/kdrama")) {
+    const params = new URLSearchParams({ genre: slug, sort_by: "popularity" });
+    return `/kdrama/all?${params.toString()}`;
+  }
+  return genrePageHref(slug, {
+    type: mediaType === "movie" ? "movie" : "tv",
   });
-  return `${base}?${params.toString()}`;
 }
 
 function ColumnHeading({ label }: { label: string }) {

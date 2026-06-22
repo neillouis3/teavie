@@ -1,23 +1,26 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Input, Button, Select, SelectItem, Chip } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
-import {
-  IMDB_GENRES,
-  imdbGenreSlugFromBrowseParam,
-} from '@/lib/imdbGenres.js';
 
-type ImdbGenre = { slug: string; label: string };
+const TYPE_OPTIONS = [
+  { key: 'movie', label: 'Movies' },
+  { key: 'tv', label: 'TV Shows' },
+  { key: 'anime', label: 'Anime' },
+  { key: 'kdrama', label: 'K-Drama' },
+] as const;
+
+export type GenreBrowseType = (typeof TYPE_OPTIONS)[number]['key'];
 
 const SORT_OPTIONS = [
+  { key: 'popularity', label: 'Most popular' },
   { key: 'title', label: 'Title A-Z' },
   { key: 'title_desc', label: 'Title Z-A' },
   { key: 'release_year', label: 'Newest first' },
   { key: 'release_year_asc', label: 'Oldest first' },
-  { key: 'popularity', label: 'Most popular' },
   { key: 'runtime_desc', label: 'Longest runtime' },
   { key: 'runtime_asc', label: 'Shortest runtime' },
 ] as const;
@@ -27,11 +30,9 @@ type SelectRow = { id: string; label: string };
 const BORDERED_FIELD =
   'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
 
-/** Full width on small screens; fixed width from `sm` up */
 const SELECT_BASE =
   'w-full min-w-0 sm:w-32 sm:min-w-32 sm:max-w-32 sm:shrink-0';
 
-/** Wider variant for the Sort ("title") and Genre selects, whose labels run long. */
 const SELECT_BASE_WIDE =
   'w-full min-w-0 sm:w-44 sm:min-w-44 sm:max-w-44 sm:shrink-0';
 
@@ -58,47 +59,41 @@ function yearChoices() {
   return out;
 }
 
-type BrowseCatalogFiltersProps = {
-  mode: 'movie' | 'tv' | 'kdrama' | 'anime';
+type GenreCatalogFiltersProps = {
+  genreLabel: string;
   total: number;
   loading: boolean;
+  searchDraft: string;
+  onSearchDraftChange: (v: string) => void;
+  onSearchSubmit: (e: React.FormEvent) => void;
 };
 
-export default function BrowseCatalogFilters({
-  mode,
+export default function GenreCatalogFilters({
+  genreLabel,
   total,
   loading,
-}: BrowseCatalogFiltersProps) {
+  searchDraft,
+  onSearchDraftChange,
+  onSearchSubmit,
+}: GenreCatalogFiltersProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const rawSort = searchParams.get('sort_by') || 'title';
-  const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort) ? rawSort : 'title';
-  const rawGenre = searchParams.get('genre') || '';
-  const genre = imdbGenreSlugFromBrowseParam(rawGenre) ?? rawGenre;
+  const rawType = searchParams.get('type') || 'movie';
+  const type: GenreBrowseType = TYPE_OPTIONS.some((o) => o.key === rawType)
+    ? (rawType as GenreBrowseType)
+    : 'movie';
+  const rawSort = searchParams.get('sort_by') || 'popularity';
+  const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort) ? rawSort : 'popularity';
   const yearMin = searchParams.get('year_min') || '';
   const yearMax = searchParams.get('year_max') || '';
   const qUrl = searchParams.get('q') || '';
-
-  const [searchDraft, setSearchDraft] = useState(qUrl);
-  useEffect(() => {
-    setSearchDraft(qUrl);
-  }, [qUrl]);
 
   const years = useMemo(() => yearChoices(), []);
 
   const sortItems: SelectRow[] = useMemo(
     () => SORT_OPTIONS.map((o) => ({ id: o.key, label: o.label })),
-    []
-  );
-
-  const genreItems: SelectRow[] = useMemo(
-    () =>
-      (IMDB_GENRES as ImdbGenre[]).map((g) => ({
-        id: g.slug,
-        label: g.label,
-      })),
     []
   );
 
@@ -111,70 +106,68 @@ export default function BrowseCatalogFilters({
     (patch: Record<string, string | null | undefined>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [k, v] of Object.entries(patch)) {
-        if (!v) params.delete(k);
-        else params.set(k, String(v));
+        if (!v || (k === 'type' && v === 'movie') || (k === 'sort_by' && v === 'popularity')) {
+          params.delete(k);
+        } else {
+          params.set(k, String(v));
+        }
       }
       router.push(`${pathname}?${params.toString()}`);
     },
     [pathname, router, searchParams]
   );
 
-  useEffect(() => {
-    if (!rawGenre) return;
-    const normalized = imdbGenreSlugFromBrowseParam(rawGenre);
-    if (normalized && normalized !== rawGenre) {
-      mergeParams({ genre: normalized, page: '1' });
-    }
-  }, [rawGenre, mergeParams]);
-
-  const browseTypeForGenre =
-    mode === 'movie'
-      ? 'movie'
-      : mode === 'tv'
-        ? 'tv'
-        : mode === 'anime'
-          ? 'anime'
-          : 'kdrama';
-
-  const navigateToGenre = useCallback(
-    (slug: string) => {
-      const params = new URLSearchParams();
-      if (browseTypeForGenre === 'movie') {
-        params.set('type', 'movie');
-      } else if (browseTypeForGenre === 'tv') {
-        params.set('type', 'tv');
-      } else {
-        router.push(`/genre/${slug}`);
-        return;
-      }
-      router.push(`/genre/${slug}?${params.toString()}`);
-    },
-    [browseTypeForGenre, router]
-  );
-
   const hasActiveFilters =
-    Boolean(genre) || Boolean(yearMin) || Boolean(yearMax) || Boolean(qUrl.trim());
+    type !== 'movie' ||
+    sortBy !== 'popularity' ||
+    Boolean(yearMin) ||
+    Boolean(yearMax) ||
+    Boolean(qUrl.trim());
 
   const clearFilters = () =>
-    mergeParams({ genre: null, year_min: null, year_max: null, q: null, page: '1' });
-
-  const onSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    mergeParams({ q: searchDraft.trim() || null, page: '1' });
-  };
+    mergeParams({
+      type: null,
+      sort_by: null,
+      year_min: null,
+      year_max: null,
+      q: null,
+      page: '1',
+    });
 
   const countLabel = loading ? 'Loading…' : `${total.toLocaleString()} titles`;
-
-  const searchPlaceholder = 'Search titles…';
+  const typeLabel = TYPE_OPTIONS.find((o) => o.key === type)?.label ?? 'Titles';
 
   return (
-    <section className="mb-4 w-full space-y-3" aria-label="Browse">
+    <section className="mb-4 w-full space-y-3" aria-label={`${genreLabel} browse`}>
+      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
+        <Chip color="success" variant="flat" size="md" radius="sm">
+          {genreLabel}
+        </Chip>
+
+        <div className="inline-flex rounded-lg border border-default-200 p-0.5 dark:border-white/10">
+          {TYPE_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => mergeParams({ type: opt.key, page: '1' })}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                type === opt.key
+                  ? 'bg-success text-success-foreground shadow-sm'
+                  : 'text-default-500 hover:text-foreground'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <form onSubmit={onSearchSubmit} className="w-full">
         <Input
-          aria-label="Search titles"
-          placeholder={searchPlaceholder}
+          aria-label={`Search ${genreLabel} ${typeLabel.toLowerCase()}`}
+          placeholder={`Search ${typeLabel.toLowerCase()}…`}
           value={searchDraft}
-          onValueChange={setSearchDraft}
+          onValueChange={onSearchDraftChange}
           size="sm"
           variant="flat"
           radius="sm"
@@ -208,23 +201,6 @@ export default function BrowseCatalogFilters({
           variant="bordered"
           radius="sm"
           classNames={sortSelectClassNames}
-        >
-          {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
-        </Select>
-
-        <Select<SelectRow>
-          aria-label="Genre"
-          placeholder="Genre"
-          items={genreItems}
-          selectedKeys={genre ? new Set([genre]) : new Set()}
-          onSelectionChange={(keys) => {
-            const v = Array.from(keys)[0] as string | undefined;
-            if (v) navigateToGenre(v);
-          }}
-          size="sm"
-          variant="bordered"
-          radius="sm"
-          classNames={filterSelectClassNames(Boolean(genre), true)}
         >
           {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
         </Select>
@@ -282,7 +258,26 @@ export default function BrowseCatalogFilters({
         <Chip color="success" size="md" radius="sm" variant="flat">
           {countLabel}
         </Chip>
+        <span className="text-xs text-default-500">{typeLabel}</span>
       </div>
     </section>
   );
+}
+
+export function genreBrowseApiPath(type: GenreBrowseType): string {
+  switch (type) {
+    case 'anime':
+      return '/api/anime';
+    case 'kdrama':
+      return '/api/kdrama';
+    case 'tv':
+      return '/api/tv';
+    case 'movie':
+    default:
+      return '/api/movies';
+  }
+}
+
+export function genreBrowseTypeLabel(type: GenreBrowseType): string {
+  return TYPE_OPTIONS.find((o) => o.key === type)?.label ?? 'Titles';
 }

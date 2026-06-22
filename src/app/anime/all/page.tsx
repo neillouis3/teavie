@@ -8,8 +8,10 @@ import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewer
 import BrowseCatalogFilters from '@/components/browse/BrowseCatalogFilters';
 import { Pagination } from '@heroui/react';
 import { ContentItem } from '@/types/content';
+import { useGenreBrowseRedirect } from '@/lib/useGenreBrowseRedirect';
 
 function AllAnimePageContent() {
+  useGenreBrowseRedirect('anime');
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
