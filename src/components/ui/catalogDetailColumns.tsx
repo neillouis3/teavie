@@ -71,7 +71,7 @@ export default function CatalogDetailColumns({
     >
       <div className="min-w-0">
         <ColumnHeading label="Genre" />
-        <div className="mt-2.5 flex flex-col items-start gap-2">
+        <div className="mt-2.5 flex flex-wrap gap-2">
           {sortedGenres.length > 0 ? (
             sortedGenres.map((genre) => (
               <Link
