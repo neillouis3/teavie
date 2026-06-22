@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Chip } from "@heroui/react";
 import {
@@ -8,6 +8,7 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
+import { genrePageHref } from "@/lib/imdbGenres";
 
 type GenreRow = {
   slug: string;
@@ -15,15 +16,6 @@ type GenreRow = {
   count: number;
   posters: string[];
 };
-
-type PopularGenresPayload = {
-  movies: GenreRow[];
-  tv: GenreRow[];
-};
-
-type Mode = "movie" | "tv";
-
-const EMPTY: PopularGenresPayload = { movies: [], tv: [] };
 
 /** Muted gradient per genre (full class strings for Tailwind). */
 const GENRE_COLORS: Record<string, string> = {
@@ -76,15 +68,6 @@ function posterUrl(path: string) {
   return /^https?:\/\//i.test(path) ? path : `${TMDB_IMG}${path}`;
 }
 
-function genreBrowseHref(mode: Mode, slug: string) {
-  const base = mode === "movie" ? "/movies/all" : "/shows/all";
-  const params = new URLSearchParams({
-    genre: slug,
-    sort_by: "popularity",
-  });
-  return `${base}?${params.toString()}`;
-}
-
 function deckPosters(posters: string[]): string[] {
   const raw = posters.filter(Boolean).slice(0, 3);
   if (raw.length === 0) return [];
@@ -106,14 +89,12 @@ const DECK_CARD_HOVER = [
 
 function GenreTile({
   genre,
-  mode,
   colorClass,
 }: {
   genre: GenreRow;
-  mode: Mode;
   colorClass: string;
 }) {
-  const href = genreBrowseHref(mode, genre.slug);
+  const href = genrePageHref(genre.slug);
   const posters = deckPosters(genre.posters);
 
   return (
@@ -170,9 +151,8 @@ function GenreTilesSkeleton() {
 }
 
 export default function GenreDiscover() {
-  const [data, setData] = useState<PopularGenresPayload | null>(null);
+  const [genres, setGenres] = useState<GenreRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<Mode>("movie");
 
   useEffect(() => {
     let cancelled = false;
@@ -181,10 +161,10 @@ export default function GenreDiscover() {
       .then((res) => res.json())
       .then((json) => {
         if (cancelled) return;
-        setData({ movies: json.movies ?? [], tv: json.tv ?? [] });
+        setGenres(json.genres ?? []);
       })
       .catch(() => {
-        if (!cancelled) setData(EMPTY);
+        if (!cancelled) setGenres([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -194,59 +174,27 @@ export default function GenreDiscover() {
     };
   }, []);
 
-  const rows = useMemo(
-    () => (mode === "movie" ? data?.movies ?? [] : data?.tv ?? []),
-    [data, mode]
-  );
-
-  if (!loading && (!data || (data.movies.length === 0 && data.tv.length === 0))) {
+  if (!loading && genres.length === 0) {
     return null;
   }
 
   return (
     <section className="flex w-full flex-col gap-3" aria-label="Browse by genre">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <Chip color="success" variant="flat" size="md" radius="sm">
-          Browse by genre
-        </Chip>
-
-        <div className="inline-flex rounded-lg border border-default-200 p-0.5 dark:border-white/10">
-          {(["movie", "tv"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                mode === m
-                  ? "bg-success text-success-foreground shadow-sm"
-                  : "text-default-500 hover:text-foreground"
-              }`}
-            >
-              {m === "movie" ? "Movies" : "TV shows"}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Chip color="success" variant="flat" size="md" radius="sm">
+        Browse by genre
+      </Chip>
 
       {loading ? (
         <GenreTilesSkeleton />
-      ) : rows.length === 0 ? (
-        <p className="py-6 text-center text-sm text-default-500">
-          No genres to show yet.
-        </p>
       ) : (
         <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
           <CarouselContent className="-ml-3">
-            {rows.map((genre, i) => (
+            {genres.map((genre, i) => (
               <CarouselItem
-                key={`${mode}-${genre.slug}`}
+                key={genre.slug}
                 className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
               >
-                <GenreTile
-                  genre={genre}
-                  mode={mode}
-                  colorClass={colorFor(genre.name, i)}
-                />
+                <GenreTile genre={genre} colorClass={colorFor(genre.name, i)} />
               </CarouselItem>
             ))}
           </CarouselContent>

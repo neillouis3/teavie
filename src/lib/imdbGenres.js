@@ -257,6 +257,37 @@ export function imdbGenreLabelFromBrowseParam(param) {
 }
 
 /**
+ * Canonical href for a genre landing page.
+ * @param {string | null | undefined} slugOrParam
+ * @param {{ type?: "movie" | "tv" | "anime" | "kdrama"; sortBy?: string }} [opts]
+ */
+export function genrePageHref(slugOrParam, opts = {}) {
+  const slug = imdbGenreSlugFromBrowseParam(slugOrParam) ?? null;
+  if (!slug) return "/genres";
+  const params = new URLSearchParams();
+  const type = opts.type ?? "all";
+  if (type !== "all") params.set("type", type);
+
+  let sort = opts.sort ?? opts.sortBy ?? "popular";
+  if (sort === "popularity") sort = "popular";
+  if (sort === "release_year") sort = "new";
+  if (sort === "vote_average") sort = "top_rated";
+  if (sort !== "popular") params.set("sort", sort);
+
+  const qs = params.toString();
+  return qs ? `/genre/${slug}?${qs}` : `/genre/${slug}`;
+}
+
+/**
+ * @param {string | null | undefined} slug
+ * @returns {boolean}
+ */
+export function isValidImdbGenreSlug(slug) {
+  const s = String(slug ?? "").trim().toLowerCase();
+  return Boolean(s && IMDB_SLUG_TO_LABEL.has(s));
+}
+
+/**
  * @param {number[] | undefined} genreIds
  * @returns {string[]}
  */

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Input, Button, Select, SelectItem, Chip } from '@heroui/react';
+import { Button, Select, SelectItem, Chip } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import {
   IMDB_GENRES,
   imdbGenreSlugFromBrowseParam,
@@ -12,7 +12,16 @@ import {
 
 type ImdbGenre = { slug: string; label: string };
 
+const TYPE_OPTIONS = [
+  { key: 'all', label: 'All types' },
+  { key: 'movie', label: 'Movies' },
+  { key: 'tv', label: 'TV Shows' },
+  { key: 'anime', label: 'Anime' },
+  { key: 'kdrama', label: 'K-Drama' },
+] as const;
+
 const SORT_OPTIONS = [
+  { key: 'relevance', label: 'Relevance' },
   { key: 'title', label: 'Title A-Z' },
   { key: 'title_desc', label: 'Title Z-A' },
   { key: 'release_year', label: 'Newest first' },
@@ -27,11 +36,9 @@ type SelectRow = { id: string; label: string };
 const BORDERED_FIELD =
   'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
 
-/** Full width on small screens; fixed width from `sm` up */
 const SELECT_BASE =
   'w-full min-w-0 sm:w-32 sm:min-w-32 sm:max-w-32 sm:shrink-0';
 
-/** Wider variant for the Sort ("title") and Genre selects, whose labels run long. */
 const SELECT_BASE_WIDE =
   'w-full min-w-0 sm:w-44 sm:min-w-44 sm:max-w-44 sm:shrink-0';
 
@@ -58,35 +65,37 @@ function yearChoices() {
   return out;
 }
 
-type BrowseCatalogFiltersProps = {
-  mode: 'movie' | 'tv' | 'kdrama' | 'anime';
+type SearchCatalogFiltersProps = {
   total: number;
   loading: boolean;
+  hasQuery: boolean;
 };
 
-export default function BrowseCatalogFilters({
-  mode,
+export default function SearchCatalogFilters({
   total,
   loading,
-}: BrowseCatalogFiltersProps) {
+  hasQuery,
+}: SearchCatalogFiltersProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const rawSort = searchParams.get('sort_by') || 'title';
-  const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort) ? rawSort : 'title';
+  const rawType = searchParams.get('type') || 'all';
+  const type =
+    TYPE_OPTIONS.some((o) => o.key === rawType) ? rawType : 'all';
+  const rawSort = searchParams.get('sort_by') || 'relevance';
+  const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort) ? rawSort : 'relevance';
   const rawGenre = searchParams.get('genre') || '';
   const genre = imdbGenreSlugFromBrowseParam(rawGenre) ?? rawGenre;
   const yearMin = searchParams.get('year_min') || '';
   const yearMax = searchParams.get('year_max') || '';
-  const qUrl = searchParams.get('q') || '';
-
-  const [searchDraft, setSearchDraft] = useState(qUrl);
-  useEffect(() => {
-    setSearchDraft(qUrl);
-  }, [qUrl]);
 
   const years = useMemo(() => yearChoices(), []);
+
+  const typeItems: SelectRow[] = useMemo(
+    () => TYPE_OPTIONS.map((o) => ({ id: o.key, label: o.label })),
+    []
+  );
 
   const sortItems: SelectRow[] = useMemo(
     () => SORT_OPTIONS.map((o) => ({ id: o.key, label: o.label })),
@@ -111,8 +120,11 @@ export default function BrowseCatalogFilters({
     (patch: Record<string, string | null | undefined>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [k, v] of Object.entries(patch)) {
-        if (!v) params.delete(k);
-        else params.set(k, String(v));
+        if (!v || (k === 'type' && v === 'all') || (k === 'sort_by' && v === 'relevance')) {
+          params.delete(k);
+        } else {
+          params.set(k, String(v));
+        }
       }
       router.push(`${pathname}?${params.toString()}`);
     },
@@ -127,74 +139,49 @@ export default function BrowseCatalogFilters({
     }
   }, [rawGenre, mergeParams]);
 
-  const browseTypeForGenre =
-    mode === 'movie'
-      ? 'movie'
-      : mode === 'tv'
-        ? 'tv'
-        : mode === 'anime'
-          ? 'anime'
-          : 'kdrama';
-
-  const navigateToGenre = useCallback(
-    (slug: string) => {
-      const params = new URLSearchParams();
-      if (browseTypeForGenre === 'movie') {
-        params.set('type', 'movie');
-      } else if (browseTypeForGenre === 'tv') {
-        params.set('type', 'tv');
-      } else {
-        router.push(`/genre/${slug}`);
-        return;
-      }
-      router.push(`/genre/${slug}?${params.toString()}`);
-    },
-    [browseTypeForGenre, router]
-  );
-
   const hasActiveFilters =
-    Boolean(genre) || Boolean(yearMin) || Boolean(yearMax) || Boolean(qUrl.trim());
+    type !== 'all' ||
+    sortBy !== 'relevance' ||
+    Boolean(genre) ||
+    Boolean(yearMin) ||
+    Boolean(yearMax);
 
   const clearFilters = () =>
-    mergeParams({ genre: null, year_min: null, year_max: null, q: null, page: '1' });
+    mergeParams({
+      type: null,
+      sort_by: null,
+      genre: null,
+      year_min: null,
+      year_max: null,
+      page: '1',
+    });
 
-  const onSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    mergeParams({ q: searchDraft.trim() || null, page: '1' });
-  };
-
-  const countLabel = loading ? 'Loading…' : `${total.toLocaleString()} titles`;
-
-  const searchPlaceholder = 'Search titles…';
+  const countLabel = !hasQuery
+    ? 'Enter a search term'
+    : loading
+      ? 'Searching…'
+      : `${total.toLocaleString()} result${total === 1 ? '' : 's'}`;
 
   return (
-    <section className="mb-4 w-full space-y-3" aria-label="Browse">
-      <form onSubmit={onSearchSubmit} className="w-full">
-        <Input
-          aria-label="Search titles"
-          placeholder={searchPlaceholder}
-          value={searchDraft}
-          onValueChange={setSearchDraft}
-          size="sm"
-          variant="flat"
-          radius="sm"
-          className="w-full"
-          startContent={
-            <HugeiconsIcon
-              icon={Search01Icon}
-              size={16}
-              className="shrink-0 text-default-400"
-            />
-          }
-          classNames={{
-            base: 'w-full',
-            input: 'text-sm',
-            inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
-          }}
-        />
-      </form>
-
+    <section className="w-full space-y-3" aria-label="Search filters">
       <div className="flex w-full flex-wrap items-end gap-2">
+        <Select<SelectRow>
+          aria-label="Content type"
+          placeholder="Type"
+          items={typeItems}
+          selectedKeys={new Set([type])}
+          onSelectionChange={(keys) => {
+            const v = Array.from(keys)[0] as string | undefined;
+            if (v) mergeParams({ type: v, page: '1' });
+          }}
+          size="sm"
+          variant="bordered"
+          radius="sm"
+          classNames={filterSelectClassNames(type !== 'all', true)}
+        >
+          {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
+        </Select>
+
         <Select<SelectRow>
           aria-label="Sort by"
           placeholder="Sort"
@@ -219,7 +206,7 @@ export default function BrowseCatalogFilters({
           selectedKeys={genre ? new Set([genre]) : new Set()}
           onSelectionChange={(keys) => {
             const v = Array.from(keys)[0] as string | undefined;
-            if (v) navigateToGenre(v);
+            if (v) mergeParams({ genre: v, page: '1' });
           }}
           size="sm"
           variant="bordered"

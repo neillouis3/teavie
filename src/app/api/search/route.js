@@ -15,6 +15,7 @@ import clientPromise from "@/lib/mongo";
 import {
   animeTitleSearchConditions,
   catalogAnimeIdMongoExpr,
+  catalogImdbGenreMatchClause,
   catalogKdramaClause,
   catalogMoviePolicyClause,
   catalogTodayIsoUtc,
@@ -33,10 +34,54 @@ const notAnimeTv = {
   $nor: [{ is_anime: true }, { tags: "anime" }],
 };
 
+function yearRangeClause(dateField, yearMin, yearMax) {
+  const yMinOk = yearMin && /^\d{4}$/.test(yearMin);
+  const yMaxOk = yearMax && /^\d{4}$/.test(yearMax);
+  if (!yMinOk && !yMaxOk) return null;
+  /** @type {Record<string, string>} */
+  const range = {};
+  if (yMinOk) range.$gte = `${yearMin}-01-01`;
+  if (yMaxOk) range.$lte = `${yearMax}-12-31`;
+  return { [dateField]: range };
+}
+
+/** @param {Record<string, unknown>[]} andParts */
+function pushClauses(andParts, clauses) {
+  for (const c of clauses) {
+    if (c) andParts.push(c);
+  }
+}
+
+function buildSortFields(sortBy) {
+  switch (sortBy) {
+    case "title_desc":
+      return { _sortTitle: -1, _id: -1 };
+    case "release_year":
+      return { _sortDate: -1, _id: -1 };
+    case "release_year_asc":
+      return { _sortDate: 1, _id: -1 };
+    case "popularity":
+      return { _pop: -1, _id: -1 };
+    case "runtime_desc":
+      return { runtimeSeconds: -1, _id: -1 };
+    case "runtime_asc":
+      return { runtimeSeconds: 1, _id: -1 };
+    case "title":
+      return { _sortTitle: 1, _id: -1 };
+    default:
+      return null;
+  }
+}
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const q = (searchParams.get("q") || "").trim();
+    const typeFilter = searchParams.get("type")?.trim() || "all";
+    const genreParam = searchParams.get("genre")?.trim() || "";
+    const yearMin = searchParams.get("year_min")?.trim() || "";
+    const yearMax = searchParams.get("year_max")?.trim() || "";
+    const sortBy = searchParams.get("sort_by")?.trim() || "relevance";
     const clientPage = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(
       40,
@@ -97,48 +142,82 @@ export async function GET(req) {
         ]
       : [];
 
+    const genreFilterClause = genreParam
+      ? catalogImdbGenreMatchClause(genreParam)
+      : null;
+    const movieYearClause = yearRangeClause("release_date", yearMin, yearMax);
+    const tvYearClause = yearRangeClause("first_air_date", yearMin, yearMax);
+
     const todayIso = catalogTodayIsoUtc();
     const includeUnreleased = searchParams.get("include_unreleased") === "1";
 
-    const movieBranch = {
-      $and: [
-        { type: "movie" },
-        { $or: [...textConds, ...genreConds, ...actorMovieCond] },
-        ...(includeUnreleased
-          ? []
-          : [releasedCatalogClause("release_date", todayIso)]),
-        catalogMoviePolicyClause(),
-      ],
-    };
+    /** @param {Record<string, unknown>[]} andParts */
+    function finalizeBranch(andParts) {
+      pushClauses(andParts, [genreFilterClause]);
+      return andParts.length === 1 ? andParts[0] : { $and: andParts };
+    }
 
-    const tvAnimeBranch = {
-      $and: [
-        { type: "tv" },
-        {
-          $or: [
-            ...animeTitleSearchConditions(safe),
-            { overview: { $regex: safe, $options: "i" } },
-            { tagline: { $regex: safe, $options: "i" } },
-            ...genreConds,
-          ],
-        },
-        catalogAnimeIdMongoExpr(),
-        ...(includeUnreleased ? [] : [releasedAnimeFirstAirClause(todayIso)]),
-      ],
-    };
+    const movieBranch = finalizeBranch([
+      { type: "movie" },
+      { $or: [...textConds, ...genreConds, ...actorMovieCond] },
+      ...(includeUnreleased
+        ? []
+        : [releasedCatalogClause("release_date", todayIso)]),
+      catalogMoviePolicyClause(),
+      movieYearClause,
+    ].filter(Boolean));
 
-    const tvLiveBranch = {
-      $and: [
-        { type: "tv" },
-        { $or: [...textConds, ...tvGenreConds, ...actorTvCond] },
-        notAnimeTv,
-        ...(includeUnreleased
-          ? []
-          : [releasedCatalogClause("first_air_date", todayIso)]),
-      ],
-    };
+    const tvAnimeBranch = finalizeBranch([
+      { type: "tv" },
+      {
+        $or: [
+          ...animeTitleSearchConditions(safe),
+          { overview: { $regex: safe, $options: "i" } },
+          { tagline: { $regex: safe, $options: "i" } },
+          ...genreConds,
+        ],
+      },
+      catalogAnimeIdMongoExpr(),
+      ...(includeUnreleased ? [] : [releasedAnimeFirstAirClause(todayIso)]),
+      tvYearClause,
+    ].filter(Boolean));
 
-    const filter = { $or: [movieBranch, tvAnimeBranch, tvLiveBranch] };
+    const tvLiveBranch = finalizeBranch([
+      { type: "tv" },
+      { $or: [...textConds, ...tvGenreConds, ...actorTvCond] },
+      notAnimeTv,
+      ...(includeUnreleased
+        ? []
+        : [releasedCatalogClause("first_air_date", todayIso)]),
+      tvYearClause,
+    ].filter(Boolean));
+
+    const kdramaBranch = finalizeBranch([
+      { type: "tv" },
+      catalogKdramaClause(),
+      { $or: [...textConds, ...tvGenreConds, ...actorTvCond] },
+      ...(includeUnreleased
+        ? []
+        : [releasedCatalogClause("first_air_date", todayIso)]),
+      tvYearClause,
+    ].filter(Boolean));
+
+    /** @type {Record<string, unknown>[]} */
+    const branches = [];
+    if (typeFilter === "movie") {
+      branches.push(movieBranch);
+    } else if (typeFilter === "anime") {
+      branches.push(tvAnimeBranch);
+    } else if (typeFilter === "tv") {
+      branches.push(tvLiveBranch);
+    } else if (typeFilter === "kdrama") {
+      branches.push(kdramaBranch);
+    } else {
+      branches.push(movieBranch, tvAnimeBranch, tvLiveBranch);
+    }
+
+    const filter =
+      branches.length === 1 ? branches[0] : { $or: branches };
 
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
@@ -168,6 +247,28 @@ export async function GET(req) {
 
     // Relevance: exact title/name (1000) > prefix (300) > contains (120),
     // then catalog popularity.
+    const sortFields = buildSortFields(sortBy);
+    const useRelevance = !sortFields;
+
+    const sortedPipeline = sortFields
+      ? [
+          { $match: filter },
+          {
+            $addFields: {
+              _pop: popExpr,
+              _sortTitle: {
+                $toLower: { $ifNull: ["$name", { $ifNull: ["$title", ""] }] },
+              },
+              _sortDate: { $ifNull: ["$release_date", "$first_air_date"] },
+            },
+          },
+          { $sort: sortFields },
+          { $skip: skip },
+          { $limit: limit },
+          { $project: { _pop: 0, _sortTitle: 0, _sortDate: 0 } },
+        ]
+      : null;
+
     const relevancePipeline = [
       { $match: filter },
       {
@@ -275,7 +376,9 @@ export async function GET(req) {
 
     const [total, docs] = await Promise.all([
       col.countDocuments(filter),
-      col.aggregate(relevancePipeline).toArray(),
+      col
+        .aggregate(useRelevance ? relevancePipeline : sortedPipeline)
+        .toArray(),
     ]);
 
     const totalPages = Math.max(1, Math.ceil(total / limit));

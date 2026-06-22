@@ -4,10 +4,7 @@
  */
 
 import clientPromise from "@/lib/mongo";
-import {
-  catalogMoviePolicyClause,
-  catalogTvBrowseNonAnimeClause,
-} from "@/lib/catalogQuery";
+import { catalogMoviePolicyClause } from "@/lib/catalogQuery";
 import { IMDB_GENRES } from "@/lib/imdbGenres";
 
 const TILE_POSTERS = 5;
@@ -89,23 +86,22 @@ export async function GET() {
     const col = client.db("teavie").collection("content");
     const labels = IMDB_GENRES.map((g) => g.label);
 
-    const [movies, tv] = await Promise.all([
-      rankImdbGenres(col, { type: "movie", ...catalogMoviePolicyClause() }, labels),
-      rankImdbGenres(
-        col,
-        { $and: [{ type: "tv" }, catalogTvBrowseNonAnimeClause()] },
-        labels
-      ),
-    ]);
+    const matchStage = {
+      $or: [
+        { $and: [{ type: "movie" }, catalogMoviePolicyClause()] },
+        { type: "tv" },
+      ],
+    };
 
-    return Response.json({
-      movies: assignUniqueLeadPosters(movies),
-      tv: assignUniqueLeadPosters(tv),
-    });
+    const genres = assignUniqueLeadPosters(
+      await rankImdbGenres(col, matchStage, labels)
+    );
+
+    return Response.json({ genres });
   } catch (err) {
     console.error(err);
     return Response.json(
-      { movies: [], tv: [], error: "popular genres failed" },
+      { genres: [], error: "popular genres failed" },
       { status: 500 }
     );
   }
