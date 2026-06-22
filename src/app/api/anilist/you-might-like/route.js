@@ -4,6 +4,12 @@ import {
   jikanPayloadsToCandidates,
 } from "@/lib/jikanFetch";
 
+import {
+  runtimeSecondsFromDoc,
+  tvEpisodeCountFromDoc,
+  tvSeasonCountFromDoc,
+} from "@/lib/mapContentDocToItem";
+
 function docAnilistKey(d) {
   const a = d?.anilist_id;
   if (typeof a === "number" && Number.isFinite(a) && a > 0) return a;
@@ -90,6 +96,12 @@ export async function GET(req) {
             poster_path: 1,
             first_air_date: 1,
             release_date: 1,
+            runtimeSeconds: 1,
+            runtime: 1,
+            season_amount: 1,
+            number_of_seasons: 1,
+            number_of_episodes: 1,
+            anilist: 1,
           },
         }
       )
@@ -145,6 +157,9 @@ export async function GET(req) {
         title,
         year,
         posterPath,
+        runtimeSeconds: doc ? runtimeSecondsFromDoc(doc) : null,
+        seasonAmount: doc ? tvSeasonCountFromDoc(doc) ?? 0 : 0,
+        numberOfEpisodes: doc ? tvEpisodeCountFromDoc(doc) : null,
         externalUrl: null,
       });
       if (items.length >= limit) break;

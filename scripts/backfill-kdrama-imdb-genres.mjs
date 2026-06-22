@@ -2,6 +2,7 @@
  * Backfill K-Drama rows with IMDb ids (TMDB external_ids) and OMDb genre labels.
  *
  *   node scripts/backfill-kdrama-imdb-genres.mjs
+ *   node scripts/backfill-kdrama-imdb-genres.mjs --concurrency=10 --delay=15
  *   node scripts/backfill-kdrama-imdb-genres.mjs --dry-run --limit=50
  *   node scripts/backfill-kdrama-imdb-genres.mjs --skip-omdb   # only resolve imdb_id
  */
@@ -22,8 +23,11 @@ const { loadMongoEnv, mongoHostHint } = require(path.join(
 const DB_NAME = "teavie";
 const COLLECTION = "content";
 const TMDB_BASE = "https://api.themoviedb.org/3";
-const TMDB_SLEEP_MS = 30;
-const OMDB_SLEEP_MS = 120;
+const DEFAULT_CONCURRENCY = 16;
+const DEFAULT_OMDB_DELAY_MS = 0;
+const DEFAULT_TMDB_DELAY_MS = 0;
+const BULK_SIZE = 100;
+const PROGRESS_EVERY = 100;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -44,6 +48,55 @@ function parseIntFlag(name, def) {
 function kdramaFilter() {
   return {
     $or: [{ catalog_categories: "kdrama" }, { is_kdrama: true }],
+  };
+}
+
+function needsWorkFilter({ skipOmdb = false, all = false, imdbOnly = false } = {}) {
+  if (all) return kdramaFilter();
+  const missingOmdb = {
+    $or: [
+      { "omdb.genre": { $exists: false } },
+      { "omdb.genre": null },
+      { "omdb.genre": "N/A" },
+    ],
+  };
+  if (imdbOnly) {
+    return {
+      $and: [
+        kdramaFilter(),
+        { imdb_id: { $type: "string", $regex: /^tt/i } },
+        missingOmdb,
+      ],
+    };
+  }
+  if (skipOmdb) {
+    return {
+      $and: [
+        kdramaFilter(),
+        {
+          $or: [
+            { imdb_id: { $exists: false } },
+            { imdb_id: null },
+            { imdb_id: { $not: { $regex: /^tt/i } } },
+          ],
+        },
+      ],
+    };
+  }
+  return {
+    $and: [
+      kdramaFilter(),
+      {
+        $or: [
+          missingOmdb,
+          { imdb_id: { $exists: false } },
+          { imdb_id: null },
+          { imdb_id: { $not: { $regex: /^tt/i } } },
+          { genres: { $exists: true } },
+          { genre_ids: { $exists: true } },
+        ],
+      },
+    ],
   };
 }
 
@@ -68,7 +121,7 @@ async function tmdbExternalImdbId(tmdbId, token) {
   return typeof imdbId === "string" && /^tt/i.test(imdbId) ? imdbId.trim() : null;
 }
 
-async function enrichKdramaDoc(doc, token, { skipOmdb = false } = {}) {
+async function enrichKdramaDoc(doc, token, { skipOmdb = false, omdbDelayMs = 0, tmdbDelayMs = 0 } = {}) {
   /** @type {Record<string, unknown>} */
   let merged = { ...doc };
   let imdbId =
@@ -87,7 +140,7 @@ async function enrichKdramaDoc(doc, token, { skipOmdb = false } = {}) {
     const tmdbId = tmdbIdFromDoc(doc);
     if (tmdbId != null && token) {
       imdbId = await tmdbExternalImdbId(tmdbId, token);
-      await sleep(TMDB_SLEEP_MS);
+      if (tmdbDelayMs > 0) await sleep(tmdbDelayMs);
       if (imdbId) {
         merged.imdb_id = imdbId;
         merged.external_ids = {
@@ -109,7 +162,7 @@ async function enrichKdramaDoc(doc, token, { skipOmdb = false } = {}) {
 
   if (!skipOmdb && imdbId && !hasOmdbGenre) {
     const genreRaw = await fetchOmdbGenreRaw(imdbId, "tv");
-    await sleep(OMDB_SLEEP_MS);
+    if (omdbDelayMs > 0) await sleep(omdbDelayMs);
     if (genreRaw) {
       omdb.genre = genreRaw;
       merged = { ...merged, imdb_id: imdbId, omdb };
@@ -124,7 +177,13 @@ async function main() {
   loadMongoEnv();
   const dryRun = hasFlag("--dry-run");
   const skipOmdb = hasFlag("--skip-omdb");
+  const allRows = hasFlag("--all");
+  const imdbOnly = hasFlag("--imdb-only");
+  const verbose = hasFlag("--verbose");
   const limit = parseIntFlag("--limit", 0);
+  const concurrency = Math.min(16, Math.max(1, parseIntFlag("--concurrency", DEFAULT_CONCURRENCY)));
+  const omdbDelayMs = Math.max(0, parseIntFlag("--delay", DEFAULT_OMDB_DELAY_MS));
+  const tmdbDelayMs = Math.max(0, parseIntFlag("--tmdb-delay", DEFAULT_TMDB_DELAY_MS));
 
   const uri = String(process.env.MONGODB_URI ?? "").trim();
   const token = tmdbBearerToken().trim();
@@ -138,30 +197,36 @@ async function main() {
   }
 
   console.log(
-    `backfill kdrama imdb genres | mongo=${mongoHostHint(uri)} dryRun=${dryRun} skipOmdb=${skipOmdb} limit=${limit || "all"}`
+    `backfill kdrama imdb genres | mongo=${mongoHostHint(uri)} dryRun=${dryRun} skipOmdb=${skipOmdb} limit=${limit || "all"} concurrency=${concurrency} delay=${omdbDelayMs}ms`
   );
 
+  const startedAt = Date.now();
   const client = new MongoClient(uri);
   await client.connect();
   const col = client.db(DB_NAME).collection(COLLECTION);
 
   const base = kdramaFilter();
-  const total = await col.countDocuments(base);
-  const missingOmdb = await col.countDocuments({
-    $and: [
-      base,
-      {
-        $or: [
-          { "omdb.genre": { $exists: false } },
-          { "omdb.genre": null },
-          { "omdb.genre": "N/A" },
-        ],
-      },
-    ],
-  });
-  console.log(`kdrama rows=${total} missing_omdb_genre=${missingOmdb}`);
+  const workFilter = needsWorkFilter({ skipOmdb, all: allRows, imdbOnly });
+  const [total, missingOmdb, queueCount] = await Promise.all([
+    col.countDocuments(base),
+    col.countDocuments({
+      $and: [
+        base,
+        {
+          $or: [
+            { "omdb.genre": { $exists: false } },
+            { "omdb.genre": null },
+            { "omdb.genre": "N/A" },
+          ],
+        },
+      ],
+    }),
+    col.countDocuments(workFilter),
+  ]);
+  const scanTotal = limit > 0 ? Math.min(limit, queueCount) : queueCount;
+  console.log(`kdrama rows=${total} missing_omdb_genre=${missingOmdb} queue=${scanTotal}`);
 
-  let cursor = col.find(base, {
+  let query = col.find(workFilter, {
     projection: {
       id: 1,
       tmdb_id: 1,
@@ -177,99 +242,138 @@ async function main() {
       catalog_categories: 1,
     },
   });
-  if (limit > 0) cursor = cursor.limit(limit);
+  if (limit > 0) query = query.limit(limit);
+  const docs = await query.toArray();
 
   let scanned = 0;
   let updated = 0;
   let imdbResolved = 0;
   let omdbFilled = 0;
   let unchanged = 0;
+  let idx = 0;
+  let rateLimited = false;
   /** @type {import('mongodb').AnyBulkWriteOperation[]} */
   const ops = [];
+  let flushChain = Promise.resolve();
 
-  for await (const doc of cursor) {
-    scanned += 1;
-    const hadImdb = typeof doc.imdb_id === "string" && /^tt/i.test(doc.imdb_id);
-    const hadOmdb =
-      typeof doc.omdb?.genre === "string" &&
-      doc.omdb.genre.trim() &&
-      doc.omdb.genre !== "N/A";
-
-    try {
-      const { merged, normalized } = await enrichKdramaDoc(doc, token, { skipOmdb });
-      const nextGenres = normalized.imdb_genres ?? [];
-      const prevGenres = Array.isArray(doc.imdb_genres) ? doc.imdb_genres : [];
-
-      const gotImdb =
-        !hadImdb &&
-        typeof merged.imdb_id === "string" &&
-        /^tt/i.test(merged.imdb_id);
-      const gotOmdb =
-        !hadOmdb &&
-        typeof merged.omdb?.genre === "string" &&
-        merged.omdb.genre.trim() &&
-        merged.omdb.genre !== "N/A";
-
-      const changed =
-        gotImdb ||
-        gotOmdb ||
-        JSON.stringify(prevGenres) !== JSON.stringify(nextGenres) ||
-        doc.genres != null ||
-        doc.genre_ids != null;
-
-      if (!changed) {
-        unchanged += 1;
-        continue;
+  function triggerFlush() {
+    if (ops.length < BULK_SIZE) return;
+    flushChain = flushChain.then(async () => {
+      while (!dryRun && ops.length >= BULK_SIZE) {
+        const batch = ops.splice(0, BULK_SIZE);
+        await col.bulkWrite(batch, { ordered: false });
       }
+    });
+  }
 
-      if (gotImdb) imdbResolved += 1;
-      if (gotOmdb) omdbFilled += 1;
-      updated += 1;
+  function logProgress() {
+    const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
+    const rate = elapsedSec > 0 ? (scanned / elapsedSec).toFixed(1) : "?";
+    const etaSec =
+      scanTotal > 0 && scanned > 0 && elapsedSec > 0
+        ? Math.round(((scanTotal - scanned) / scanned) * elapsedSec)
+        : null;
+    const eta = etaSec != null ? ` eta~${Math.ceil(etaSec / 60)}m` : "";
+    console.log(
+      `progress ${scanned}/${scanTotal} updated=${updated} imdb_new=${imdbResolved} omdb_new=${omdbFilled} rate=${rate}/s${eta} elapsed=${elapsedSec}s`
+    );
+  }
 
-      const label = doc.title ?? doc.name ?? doc.id;
-      console.log(
-        `${dryRun ? "[dry-run] " : ""}${doc.id} ${label}: ${nextGenres.join(", ")}`
-      );
+  async function worker() {
+    while (idx < docs.length && !rateLimited) {
+      const i = idx;
+      idx += 1;
+      const doc = docs[i];
+      const hadImdb = typeof doc.imdb_id === "string" && /^tt/i.test(doc.imdb_id);
+      const hadOmdb =
+        typeof doc.omdb?.genre === "string" &&
+        doc.omdb.genre.trim() &&
+        doc.omdb.genre !== "N/A";
 
-      if (!dryRun) {
-        /** @type {Record<string, unknown>} */
-        const set = {
-          imdb_genres: nextGenres,
-          is_kdrama: normalized.is_kdrama ?? true,
-          catalog_categories: normalized.catalog_categories ?? ["kdrama"],
-        };
-        if (merged.imdb_id) set.imdb_id = merged.imdb_id;
-        if (merged.external_ids) set.external_ids = merged.external_ids;
-        if (merged.omdb) set.omdb = merged.omdb;
-
-        ops.push({
-          updateOne: {
-            filter: { _id: doc._id },
-            update: {
-              $set: set,
-              $unset: { genre_ids: "", genres: "", mal_genre_names: "" },
-            },
-          },
+      try {
+        const { merged, normalized } = await enrichKdramaDoc(doc, token, {
+          skipOmdb,
+          omdbDelayMs,
+          tmdbDelayMs,
         });
+        const nextGenres = normalized.imdb_genres ?? [];
+        const prevGenres = Array.isArray(doc.imdb_genres) ? doc.imdb_genres : [];
 
-        if (ops.length >= 100) {
-          await col.bulkWrite(ops, { ordered: false });
-          ops.length = 0;
+        const gotImdb =
+          !hadImdb &&
+          typeof merged.imdb_id === "string" &&
+          /^tt/i.test(merged.imdb_id);
+        const gotOmdb =
+          !hadOmdb &&
+          typeof merged.omdb?.genre === "string" &&
+          merged.omdb.genre.trim() &&
+          merged.omdb.genre !== "N/A";
+
+        const changed =
+          gotImdb ||
+          gotOmdb ||
+          JSON.stringify(prevGenres) !== JSON.stringify(nextGenres) ||
+          doc.genres != null ||
+          doc.genre_ids != null;
+
+        scanned += 1;
+
+        if (!changed) {
+          unchanged += 1;
+        } else {
+          if (gotImdb) imdbResolved += 1;
+          if (gotOmdb) omdbFilled += 1;
+          updated += 1;
+
+          if (verbose) {
+            const label = doc.title ?? doc.name ?? doc.id;
+            console.log(
+              `${dryRun ? "[dry-run] " : ""}${doc.id} ${label}: ${nextGenres.join(", ")}`
+            );
+          }
+
+          if (!dryRun) {
+            /** @type {Record<string, unknown>} */
+            const set = {
+              imdb_genres: nextGenres,
+              is_kdrama: normalized.is_kdrama ?? true,
+              catalog_categories: normalized.catalog_categories ?? ["kdrama"],
+            };
+            if (merged.imdb_id) set.imdb_id = merged.imdb_id;
+            if (merged.external_ids) set.external_ids = merged.external_ids;
+            if (merged.omdb) set.omdb = merged.omdb;
+
+            ops.push({
+              updateOne: {
+                filter: { _id: doc._id },
+                update: {
+                  $set: set,
+                  $unset: { genre_ids: "", genres: "", mal_genre_names: "" },
+                },
+              },
+            });
+
+            triggerFlush();
+          }
         }
+      } catch (e) {
+        scanned += 1;
+        if (e instanceof Error && e.code === "OMDB_RATE_LIMIT") {
+          rateLimited = true;
+          console.error(`${e.message} — stopping early (scanned=${scanned}). Retry after daily reset.`);
+          break;
+        }
+        console.warn(`doc ${doc.id}: ${e instanceof Error ? e.message : e}`);
       }
-    } catch (e) {
-      console.warn(`doc ${doc.id}: ${e instanceof Error ? e.message : e}`);
-    }
 
-    if (scanned % 50 === 0) {
-      console.log(
-        `progress scanned=${scanned} updated=${updated} imdb_new=${imdbResolved} omdb_new=${omdbFilled}`
-      );
+      if (scanned % PROGRESS_EVERY === 0) logProgress();
     }
   }
 
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  await flushChain;
   if (!dryRun && ops.length > 0) {
-    await col.bulkWrite(ops, { ordered: false });
+    await col.bulkWrite(ops.splice(0, ops.length), { ordered: false });
   }
 
   const withOmdb = await col.countDocuments({
@@ -280,7 +384,7 @@ async function main() {
   });
 
   console.log(
-    `done scanned=${scanned} updated=${updated} unchanged=${unchanged} imdb_resolved=${imdbResolved} omdb_filled=${omdbFilled} kdrama_with_omdb=${withOmdb} kdrama_with_genres=${withGenres}`
+    `done scanned=${scanned} updated=${updated} unchanged=${unchanged} imdb_resolved=${imdbResolved} omdb_filled=${omdbFilled} kdrama_with_omdb=${withOmdb} kdrama_with_genres=${withGenres} elapsed=${Math.round((Date.now() - startedAt) / 1000)}s`
   );
   await client.close();
 }

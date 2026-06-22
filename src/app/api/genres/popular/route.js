@@ -42,29 +42,47 @@ function buildPipeline({ matchStage, labels, withPosters }) {
   ];
 }
 
-async function rankImdbGenres(col, matchStage, labels) {
-  let rows;
+async function rankImdbGenres(col, matchStage, labels, posterMatchStage) {
+  let countRows;
   try {
-    rows = await col
-      .aggregate(buildPipeline({ matchStage, labels, withPosters: true }))
-      .toArray();
-  } catch {
-    rows = await col
+    countRows = await col
       .aggregate(buildPipeline({ matchStage, labels, withPosters: false }))
       .toArray();
+  } catch {
+    countRows = [];
   }
+
+  let posterRows = [];
+  if (posterMatchStage) {
+    try {
+      posterRows = await col
+        .aggregate(
+          buildPipeline({ matchStage: posterMatchStage, labels, withPosters: true })
+        )
+        .toArray();
+    } catch {
+      posterRows = [];
+    }
+  }
+
+  const postersByLabel = new Map(
+    posterRows.map((r) => [
+      r._id,
+      (r.posters || [])
+        .filter((p) => typeof p === "string" && p.trim().length > 0)
+        .slice(0, TILE_POSTERS),
+    ])
+  );
 
   const slugByLabel = new Map(IMDB_GENRES.map((g) => [g.label, g.slug]));
 
-  return rows
+  return countRows
     .filter((r) => labels.includes(r._id))
     .map((r) => ({
       slug: slugByLabel.get(r._id) ?? String(r._id).toLowerCase().replace(/\s+/g, "-"),
       name: r._id,
       count: r.count,
-      posters: (r.posters || [])
-        .filter((p) => typeof p === "string" && p.trim().length > 0)
-        .slice(0, TILE_POSTERS),
+      posters: postersByLabel.get(r._id) ?? [],
     }));
 }
 
@@ -80,8 +98,11 @@ function assignUniqueLeadPosters(rows) {
   });
 }
 
-export async function GET() {
+export async function GET(req) {
   try {
+    const { searchParams } = new URL(req.url);
+    const sortByName = searchParams.get("sort") === "name";
+
     const client = await clientPromise;
     const col = client.db("teavie").collection("content");
     const labels = IMDB_GENRES.map((g) => g.label);
@@ -91,10 +112,24 @@ export async function GET() {
         { $and: [{ type: "movie" }, catalogMoviePolicyClause()] },
         { type: "tv" },
       ],
+      imdb_genres: { $exists: true, $not: { $size: 0 } },
+    };
+
+    const moviePosterStage = {
+      $and: [
+        { type: "movie" },
+        catalogMoviePolicyClause(),
+        { imdb_genres: { $exists: true, $not: { $size: 0 } } },
+        { poster_path: { $type: "string", $ne: "" } },
+      ],
     };
 
     const genres = assignUniqueLeadPosters(
-      await rankImdbGenres(col, matchStage, labels)
+      await rankImdbGenres(col, matchStage, labels, moviePosterStage)
+    ).sort((a, b) =>
+      sortByName
+        ? a.name.localeCompare(b.name)
+        : b.count - a.count || a.name.localeCompare(b.name)
     );
 
     return Response.json({ genres });
