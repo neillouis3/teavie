@@ -125,7 +125,7 @@ function GenreTile({
         className={`pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br ${colorClass} shadow-sm`}
         aria-hidden
       />
-      <div className="relative z-20 flex flex-col pr-[40%]">
+      <div className="relative z-20 flex flex-col pr-[46%] sm:pr-[44%]">
         <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
           {genre.name}
         </span>
@@ -135,7 +135,7 @@ function GenreTile({
       </div>
 
       {posters.length > 0 && (
-        <div className="pointer-events-none absolute bottom-3 right-3 z-10 h-[68%] w-[40%]">
+        <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-[80%] w-[48%] sm:bottom-2.5 sm:right-2.5 sm:w-[50%]">
           {posters.map((path, index) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
