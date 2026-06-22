@@ -118,8 +118,8 @@ export default function CatalogMediaPanel({
   return (
     <section className="w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
       <div className="bg-default-50 px-4 py-5 dark:bg-default-50/10 sm:px-6 sm:py-6">
-        <div className="flex flex-row gap-4 sm:gap-5">
-          <div className="w-24 shrink-0 sm:w-32 md:w-36 lg:w-40">
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+          <div className="mx-auto w-28 shrink-0 sm:mx-0 sm:w-32 md:w-36 lg:w-40">
             {posterUrl ? (
               <Image
                 src={posterUrl}
@@ -167,18 +167,15 @@ export default function CatalogMediaPanel({
                 ) : null}
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
-            {overview?.trim() ? overview : "No overview available."}
-          </p>
-          {tagline?.trim() ? (
-            <p className="mt-2 text-sm italic text-default-500">
-              &ldquo;{tagline.trim()}&rdquo;
+            <p className="mt-4 text-sm leading-relaxed text-foreground/85 sm:mt-5 sm:text-[15px]">
+              {overview?.trim() ? overview : "No overview available."}
             </p>
-          ) : null}
+            {tagline?.trim() ? (
+              <p className="mt-2 text-sm italic text-default-500">
+                &ldquo;{tagline.trim()}&rdquo;
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {seasonEpisodeSection ? (
@@ -214,22 +211,22 @@ export function CatalogMediaPanelSkeleton({
   return (
     <section className="w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35">
       <div className="bg-default-50 px-4 py-5 dark:bg-default-50/10 sm:px-6 sm:py-6">
-        <div className="flex flex-row gap-4 sm:gap-5">
-          <div className="aspect-[2/3] w-24 shrink-0 animate-pulse rounded-lg bg-default-200 sm:w-32 md:w-36" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+          <div className="mx-auto aspect-[2/3] w-28 shrink-0 animate-pulse rounded-lg bg-default-200 sm:mx-0 sm:w-32 md:w-36" />
           <div className="min-w-0 flex-1 space-y-3">
             <div className="h-8 w-3/4 max-w-xl animate-pulse rounded-lg bg-default-200 sm:h-9" />
             <div className="h-4 w-48 animate-pulse rounded bg-default-200" />
             <div className="h-4 w-56 animate-pulse rounded bg-default-200" />
+            <div className="space-y-2 pt-1">
+              {[90, 75, 55].map((w, i) => (
+                <div
+                  key={i}
+                  className="h-3 animate-pulse rounded bg-default-200"
+                  style={{ width: `${w}%` }}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="mt-5 space-y-2">
-          {[90, 75, 55].map((w, i) => (
-            <div
-              key={i}
-              className="h-3 animate-pulse rounded bg-default-200"
-              style={{ width: `${w}%` }}
-            />
-          ))}
         </div>
         {withSeasonPicker ? (
           <>
