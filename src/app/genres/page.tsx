@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Chip } from '@heroui/react';
 import Header from '@/components/ui/header';
 import { IMDB_GENRES } from '@/lib/imdbGenres';
 import {
@@ -25,7 +24,6 @@ export default function GenresIndexPage() {
   const [error, setError] = useState(false);
 
   const allGenres = useMemo(() => mergeAllGenres(genres), [genres]);
-  const withTitles = allGenres.filter((g) => g.count > 0).length;
 
   useEffect(() => {
     document.title = 'Genres - Teavie';
@@ -60,19 +58,7 @@ export default function GenresIndexPage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Genres" />
-      <div className="w-full space-y-4 px-3 pb-12 pt-2 sm:px-4">
-        <div className="space-y-2 text-left">
-          {!loading ? (
-            <Chip color="success" variant="flat" size="md" radius="sm">
-              {withTitles} of {allGenres.length} genres with titles
-            </Chip>
-          ) : null}
-          <p className="text-sm leading-relaxed text-default-500 sm:text-[15px]">
-            Browse movies and TV by IMDb genre — labels come from each title&apos;s{' '}
-            <span className="text-foreground">imdb_genres</span> catalog field.
-          </p>
-        </div>
-
+      <div className="w-full px-3 pb-12 pt-2 sm:px-4">
         {loading ? (
           <GenreSquareTilesSkeleton />
         ) : error ? (
@@ -80,7 +66,7 @@ export default function GenresIndexPage() {
             Could not load genres. Try again later.
           </p>
         ) : (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
+          <div className="grid grid-cols-7 gap-3">
             {allGenres.map((genre, i) => (
               <GenreSquareTile
                 key={genre.slug}
