@@ -46,10 +46,21 @@ export type EpisodeCardRow = {
 
 export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
-/** Visible episode cards in the horizontal scroller (4 full + ⅓ peek). */
+/** Visible episode cards in the horizontal scroller (4 full + ⅓ peek on lg). */
 const VISIBLE_EPISODE_SLOTS = 5;
-const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)]";
+
+function episodeCarouselItemClass(episodeCount: number) {
+  const mobileBasis =
+    episodeCount > 3
+      ? "basis-[calc(100%/2.5)]"
+      : episodeCount === 2
+        ? "basis-1/2"
+        : episodeCount === 1
+          ? "basis-full"
+          : "basis-1/3";
+
+  return `pl-3 shrink-0 grow-0 ${mobileBasis} sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)]`;
+}
 const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px]";
 const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px]";
 const EPISODE_CARD_TITLE_CLASS =
@@ -615,14 +626,14 @@ export function ShowEpisodePickerControls() {
           >
           Next
         </Button>
-      <span className="text-sm text-default-400" aria-hidden>
+      <span className="hidden text-sm text-default-400 sm:inline" aria-hidden>
         ·
       </span>
       <Button
         size="sm"
         variant="bordered"
         radius="md"
-        className="h-8 min-h-8 text-xs"
+        className="hidden h-8 min-h-8 text-xs sm:inline-flex"
         onPress={scrollToPlayerBottom}
         aria-label="Scroll to bottom of player"
         endContent={
@@ -654,7 +665,7 @@ function ShowEpisodePickerSeasonRow() {
   }
 
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+    <div className="flex w-full min-w-0 flex-col gap-1.5">
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
         <Tabs
           aria-label="Seasons"
@@ -669,9 +680,9 @@ function ShowEpisodePickerSeasonRow() {
           variant="bordered"
           radius="md"
           classNames={{
-            base: "w-full max-w-full min-w-0",
-            tabList: "max-w-full gap-0 overflow-x-auto",
-            tab: "h-8 min-h-8 shrink-0 px-3 text-xs",
+            base: "w-full min-w-0",
+            tabList: "w-full max-w-full gap-0 overflow-x-auto",
+            tab: "h-8 min-h-8 shrink-0 px-3 text-xs sm:flex-1 sm:min-w-0 sm:px-2",
             panel: "hidden",
           }}
         >
@@ -684,16 +695,9 @@ function ShowEpisodePickerSeasonRow() {
         </Tabs>
       ) : null}
       {currentSeasonEpisodeLabel ? (
-        <>
-          {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
-            <span className="text-sm text-default-400" aria-hidden>
-              ·
-            </span>
-          ) : null}
-          <span className="text-xs font-medium text-default-500">
-            {currentSeasonEpisodeLabel}
-          </span>
-        </>
+        <span className="text-xs font-medium text-default-500">
+          {currentSeasonEpisodeLabel}
+        </span>
       ) : null}
     </div>
   );
@@ -721,7 +725,7 @@ export function ShowEpisodePickerList() {
         <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
           <CarouselContent className="-ml-3">
             {Array.from({ length: VISIBLE_EPISODE_SLOTS }).map((_, i) => (
-              <CarouselItem key={i} className={EPISODE_CAROUSEL_ITEM_CLASS}>
+              <CarouselItem key={i} className={episodeCarouselItemClass(4)}>
                 <EpisodeCardSkeleton />
               </CarouselItem>
             ))}
@@ -746,11 +750,12 @@ export function ShowEpisodePickerList() {
               const watched = watchedKeys?.has(watchKey) ?? false;
               const runtime = formatRuntimeLabel(row.runtime);
               const stillUrl = episodeStillUrl(row.still_path);
+              const itemClass = episodeCarouselItemClass(episodes.length);
 
               return (
                 <CarouselItem
                   key={`${row.season}-${row.episode}-${row.displayNumber ?? ""}`}
-                  className={EPISODE_CAROUSEL_ITEM_CLASS}
+                  className={itemClass}
                 >
                   <button
                     type="button"
