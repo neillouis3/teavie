@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { Button, Input } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
-  Clock01Icon,
   PlayIcon,
 } from "@hugeicons/core-free-icons";
 import {
@@ -27,23 +27,58 @@ export type EpisodeCardRow = {
   season: number;
   episode: number;
   name: string;
+  overview?: string | null;
   runtime: number | null;
   still_path?: string | null;
   /** 1-based cumulative index when flatMode */
   displayNumber?: number;
 };
 
-const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/w300";
-/** Visible episode cards in the horizontal scroller (one row). */
-const VISIBLE_EPISODE_SLOTS = 7;
+const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/original";
+/** Visible episode cards in the horizontal scroller (4 full + ⅓ peek). */
+const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[calc(100%/7)]";
+  "pl-3 shrink-0 grow-0 basis-[calc(100%/4.3333333333)]";
+const EPISODE_CARD_HEIGHT = "h-[360px]";
+const EPISODE_CARD_STILL_HEIGHT = "h-[160px]";
+const EPISODE_CARD_TITLE_CLASS =
+  "shrink-0 overflow-hidden text-sm font-semibold leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
+const EPISODE_CARD_DESCRIPTION_CLASS =
+  "h-[3.5rem] shrink-0 overflow-hidden text-sm leading-snug text-default-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]";
+const EPISODE_CARD_BODY_CLASS =
+  "flex min-h-0 flex-1 flex-col overflow-hidden bg-default-100/90 py-3 pr-6 pl-0 dark:bg-default-50/10";
 
 function episodeStillUrl(stillPath: string | null | undefined) {
   const path = String(stillPath ?? "").trim();
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return path;
   return `${TMDB_STILL_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function EpisodeCardSkeleton() {
+  return (
+    <div
+      className={`flex ${EPISODE_CARD_HEIGHT} w-full min-w-0 flex-col overflow-hidden rounded-xl`}
+      aria-hidden
+    >
+      <div
+        className={`${EPISODE_CARD_STILL_HEIGHT} w-full shrink-0 animate-pulse bg-default-200 dark:bg-default-100/20`}
+      />
+      <div className={EPISODE_CARD_BODY_CLASS}>
+        <div className="mb-1 h-4 w-[42%] max-w-[7rem] animate-pulse rounded-md bg-default-200 dark:bg-default-100/20" />
+        <div className="flex flex-col gap-2">
+          <div className="h-3.5 w-full shrink-0 animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
+          <div className="h-[3.5rem] shrink-0">
+            <div className="flex h-full flex-col gap-1">
+              <div className="h-3 w-full animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
+              <div className="h-3 w-full animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
+              <div className="h-3 w-[72%] animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 type ShowEpisodePickerProps = {
@@ -75,6 +110,7 @@ function fallbackEpisodes(
     season: seasonNum,
     episode: i + 1,
     name: `Episode ${i + 1}`,
+    overview: null,
     runtime: null,
   }));
 }
@@ -96,12 +132,14 @@ async function fetchSeasonEpisodes(
     (ep: {
       episode_number: number;
       name: string;
+      overview?: string | null;
       runtime: number | null;
       still_path?: string | null;
     }) => ({
       season: seasonNum,
       episode: ep.episode_number,
       name: ep.name,
+      overview: ep.overview ?? null,
       runtime: ep.runtime,
       still_path: ep.still_path ?? null,
     })
@@ -251,6 +289,22 @@ export default function ShowEpisodePicker({
     onPlayableEpisodeCountChange?.(episodes.length);
   }, [episodes.length, onPlayableEpisodeCountChange]);
 
+  const currentSeasonEpisodeCount = useMemo(() => {
+    const inSeason = flatMode
+      ? episodes.filter((row) => row.season === selectedSeason)
+      : episodes;
+    if (inSeason.length > 0) return inSeason.length;
+    return (
+      releasedSeasons.find((s) => s.season_number === selectedSeason)
+        ?.episode_count ?? 0
+    );
+  }, [flatMode, episodes, selectedSeason, releasedSeasons]);
+
+  const currentSeasonEpisodeLabel =
+    currentSeasonEpisodeCount > 0
+      ? `${currentSeasonEpisodeCount} episode${currentSeasonEpisodeCount === 1 ? "" : "s"}`
+      : null;
+
   const isSelected = useCallback(
     (row: EpisodeCardRow) => {
       if (flatMode && row.displayNumber != null) {
@@ -352,151 +406,188 @@ export default function ShowEpisodePicker({
     onMarkWatched?.(nextSeason.season_number, 1);
   };
 
-  const handleJump = () => {
-    const s = parseInt(jumpSeason, 10);
-    const e = parseInt(jumpEpisode, 10);
-    if (!Number.isFinite(s) || s < 1) return;
+  const applyJumpFromInputs = useCallback(
+    (seasonStr: string, episodeStr: string) => {
+      const s = parseInt(seasonStr, 10);
+      const e = parseInt(episodeStr, 10);
+      if (!Number.isFinite(s) || s < 1 || !Number.isFinite(e) || e < 1) return;
 
-    if (flatMode) {
-      const cap = episodes.length;
-      const abs = Number.isFinite(e) && e >= 1 ? Math.min(e, cap || e) : 1;
-      if (cap < 1) return;
-      const coords = tmdbSeasonEpisodeFromAbsolute(releasedSeasons, abs);
-      onSeasonChange(coords.season);
-      onEpisodeChange(coords.season, coords.episode);
-      onMarkWatched?.(coords.season, coords.episode);
-      return;
-    }
+      if (flatMode) {
+        const cap = episodes.length;
+        const abs = Math.min(e, cap || e);
+        if (cap < 1) return;
+        const coords = tmdbSeasonEpisodeFromAbsolute(releasedSeasons, abs);
+        if (
+          coords.season === selectedSeason &&
+          coords.episode === selectedEpisode
+        ) {
+          return;
+        }
+        onSeasonChange(coords.season);
+        onEpisodeChange(coords.season, coords.episode);
+        onMarkWatched?.(coords.season, coords.episode);
+        return;
+      }
 
-    const seasonObj = releasedSeasons.find((x) => x.season_number === s);
-    if (!seasonObj) return;
-    const max = seasonObj.episode_count ?? 0;
-    const ep = Number.isFinite(e) && e >= 1 ? Math.min(e, max || e) : 1;
-    onSeasonChange(s);
-    onEpisodeChange(s, ep);
-    onMarkWatched?.(s, ep);
+      const seasonObj = releasedSeasons.find((x) => x.season_number === s);
+      if (!seasonObj) return;
+      const max = seasonObj.episode_count ?? 0;
+      const ep = Math.min(e, max || e);
+      if (s === selectedSeason && ep === selectedEpisode) return;
+      onSeasonChange(s);
+      onEpisodeChange(s, ep);
+      onMarkWatched?.(s, ep);
+    },
+    [
+      flatMode,
+      episodes.length,
+      releasedSeasons,
+      selectedSeason,
+      selectedEpisode,
+      onSeasonChange,
+      onEpisodeChange,
+      onMarkWatched,
+    ]
+  );
+
+  const handleJumpSeasonChange = (value: string) => {
+    setJumpSeason(value);
+    applyJumpFromInputs(value, jumpEpisode);
+  };
+
+  const handleJumpEpisodeChange = (value: string) => {
+    setJumpEpisode(value);
+    applyJumpFromInputs(jumpSeason, value);
   };
 
   return (
     <section className="flex w-full flex-col gap-4" aria-label="Episodes">
-      <div className="flex flex-wrap items-end justify-end gap-2">
-        <form
-          className="flex shrink-0 items-end gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleJump();
-          }}
-        >
-          <Input
-            size="sm"
-            type="number"
-            min={1}
-            label="S"
-            labelPlacement="outside-top"
-            variant="bordered"
-            radius="md"
-            aria-label="Season"
-            value={jumpSeason}
-            onValueChange={setJumpSeason}
-            classNames={{
-              base: "w-[72px]",
-              label: "text-xs font-medium text-default-500",
-              input: "text-sm tabular-nums",
-              inputWrapper: "h-9 min-h-9",
-            }}
-          />
-          <Input
-            size="sm"
-            type="number"
-            min={1}
-            label="E"
-            labelPlacement="outside-top"
-            variant="bordered"
-            radius="md"
-            aria-label="Episode"
-            value={jumpEpisode}
-            onValueChange={setJumpEpisode}
-            classNames={{
-              base: "w-[72px]",
-              label: "text-xs font-medium text-default-500",
-              input: "text-sm tabular-nums",
-              inputWrapper: "h-9 min-h-9",
-            }}
-          />
-          <Button
-            type="submit"
-            size="sm"
-            variant="bordered"
-            radius="md"
-            className="h-9 min-w-[52px] flex-col gap-0 px-2"
-          >
-            <HugeiconsIcon icon={ArrowRight01Icon} size={14} className="shrink-0" />
-            <span className="text-[10px] font-medium leading-none">Go</span>
-          </Button>
-        </form>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="sm"
-          variant="bordered"
-          radius="md"
-          isDisabled={!hasPreviousEpisode}
-          onPress={goPreviousEpisode}
-          startContent={
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={16} className="shrink-0" />
-          }
-        >
-          Previous episode
-        </Button>
-        <Button
-          size="sm"
-          variant="bordered"
-          radius="md"
-          isDisabled={!hasNextEpisode}
-          onPress={goNextEpisode}
-          endContent={
-            <HugeiconsIcon icon={ArrowRight01Icon} size={16} className="shrink-0" />
-          }
-        >
-          Next episode
-        </Button>
-      </div>
-
-      {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
-        <div className="flex flex-wrap gap-2">
-          {releasedSeasons.map((s) => {
-            const active = selectedSeason === s.season_number;
-            return (
-              <Button
-                key={s.season_number}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] font-medium text-default-500">S</span>
+              <Input
                 size="sm"
-                radius="lg"
-                variant={active ? "solid" : "bordered"}
-                color="default"
-                className={
-                  active
-                    ? "border-2 border-foreground bg-transparent font-medium text-foreground"
-                    : "font-medium text-default-500"
-                }
-                onPress={() => {
-                  onSeasonChange(s.season_number);
-                  onEpisodeChange(s.season_number, 1);
+                type="number"
+                min={1}
+                aria-label="Season"
+                variant="bordered"
+                radius="md"
+                value={jumpSeason}
+                onValueChange={handleJumpSeasonChange}
+                classNames={{
+                  base: "w-[48px]",
+                  input: "text-xs tabular-nums",
+                  inputWrapper: "h-8 min-h-8 px-2",
                 }}
-              >
-                Season {s.season_number}
-              </Button>
-            );
-          })}
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] font-medium text-default-500">E</span>
+              <Input
+                size="sm"
+                type="number"
+                min={1}
+                aria-label="Episode"
+                variant="bordered"
+                radius="md"
+                value={jumpEpisode}
+                onValueChange={handleJumpEpisodeChange}
+                classNames={{
+                  base: "w-[48px]",
+                  input: "text-xs tabular-nums",
+                  inputWrapper: "h-8 min-h-8 px-2",
+                }}
+              />
+            </div>
+          </div>
+          <span className="text-sm text-default-400" aria-hidden>
+            ·
+          </span>
+          <Button
+            size="sm"
+            variant="bordered"
+            radius="md"
+            className="h-8 min-h-8 text-xs"
+            isDisabled={!hasPreviousEpisode}
+            onPress={goPreviousEpisode}
+            aria-label="Previous episode"
+            startContent={
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={14} className="shrink-0" />
+            }
+          >
+            Prev
+          </Button>
+          <span className="text-sm text-default-400" aria-hidden>
+            ·
+          </span>
+          <Button
+            size="sm"
+            variant="bordered"
+            radius="md"
+            className="h-8 min-h-8 text-xs"
+            isDisabled={!hasNextEpisode}
+            onPress={goNextEpisode}
+            aria-label="Next episode"
+            endContent={
+              <HugeiconsIcon icon={ArrowRight01Icon} size={14} className="shrink-0" />
+            }
+          >
+            Next
+          </Button>
         </div>
-      ) : null}
+
+        {(showSeasonTabs && releasedSeasons.length > 1 && !flatMode) ||
+        currentSeasonEpisodeLabel ? (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            {showSeasonTabs && releasedSeasons.length > 1 && !flatMode
+              ? releasedSeasons.map((s) => {
+                  const active = selectedSeason === s.season_number;
+                  return (
+                    <Button
+                      key={s.season_number}
+                      size="sm"
+                      radius="md"
+                      variant={active ? "solid" : "bordered"}
+                      color="default"
+                      className={
+                        active
+                          ? "h-8 min-h-8 border-2 border-foreground bg-transparent text-xs font-medium text-foreground"
+                          : "h-8 min-h-8 text-xs font-medium text-default-500"
+                      }
+                      onPress={() => {
+                        onSeasonChange(s.season_number);
+                        onEpisodeChange(s.season_number, 1);
+                      }}
+                    >
+                      Season {s.season_number}
+                    </Button>
+                  );
+                })
+              : null}
+            {currentSeasonEpisodeLabel ? (
+              <>
+                {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
+                  <span className="text-sm text-default-400" aria-hidden>
+                    ·
+                  </span>
+                ) : null}
+                <span className="text-xs font-medium text-default-500">
+                  {currentSeasonEpisodeLabel}
+                </span>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       {loading ? (
         <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
           <CarouselContent className="-ml-3">
             {Array.from({ length: VISIBLE_EPISODE_SLOTS }).map((_, i) => (
               <CarouselItem key={i} className={EPISODE_CAROUSEL_ITEM_CLASS}>
-                <div className="h-[168px] w-full animate-pulse rounded-xl bg-default-200" />
+                <EpisodeCardSkeleton />
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -531,25 +622,27 @@ export default function ShowEpisodePicker({
                     onClick={() => handleSelect(row)}
                     aria-label={`Episode ${labelNum}: ${row.name}${watched ? ", watched" : ""}`}
                     aria-current={active ? "true" : undefined}
-                    className={`relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-shadow ${
-                      active
-                        ? "ring-1 ring-default-400/45 dark:ring-default-500/35"
-                        : "ring-1 ring-default-200/50 dark:ring-default-100/20"
-                    }`}
+                    className={`group relative flex ${EPISODE_CARD_HEIGHT} w-full min-w-0 flex-col overflow-hidden rounded-xl text-left`}
                   >
-                    <div className="relative h-[88px] w-full overflow-hidden bg-default-200/80 dark:bg-default-100/15">
+                    <div
+                      className={`relative ${EPISODE_CARD_STILL_HEIGHT} w-full shrink-0 overflow-hidden bg-default-200/80 dark:bg-default-100/15 ${
+                        active ? "ring-2 ring-inset ring-foreground" : ""
+                      }`}
+                    >
                       {stillUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={stillUrl}
                           alt=""
                           aria-hidden
-                          loading="lazy"
-                          className="h-full w-full object-cover"
+                          fill
+                          unoptimized
+                          sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 320px"
+                          quality={85}
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : null}
                       <div
-                        className={`absolute inset-0 flex items-center justify-center ${
+                        className={`absolute inset-0 z-[1] flex items-center justify-center ${
                           stillUrl ? "bg-black/35" : ""
                         }`}
                       >
@@ -563,27 +656,30 @@ export default function ShowEpisodePicker({
                           }
                         />
                       </div>
-                    </div>
-                    <div className="flex flex-col gap-1 bg-default-100/90 p-2.5 dark:bg-default-50/10">
-                      <span className="text-[11px] font-medium text-default-500">
-                        E{padEpisode(labelNum)}
-                      </span>
-                      <span className="line-clamp-2 text-xs font-semibold leading-snug text-foreground">
-                        {row.name}
-                      </span>
-                      {runtime ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-default-500">
-                          <HugeiconsIcon icon={Clock01Icon} size={12} />
-                          {runtime}
-                        </span>
+                      {watched ? (
+                        <span
+                          className="pointer-events-none absolute right-2 top-2 z-[2] h-1.5 w-1.5 rounded-full bg-success ring-2 ring-background"
+                          aria-hidden
+                        />
                       ) : null}
                     </div>
-                    {watched ? (
-                      <span
-                        className="pointer-events-none absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-success ring-2 ring-background"
-                        aria-hidden
-                      />
-                    ) : null}
+                    <div className={EPISODE_CARD_BODY_CLASS}>
+                      <span className="mb-1 shrink-0 text-sm font-medium text-default-500">
+                        E{padEpisode(labelNum)}
+                        {runtime ? (
+                          <>
+                            <span aria-hidden> · </span>
+                            {runtime}
+                          </>
+                        ) : null}
+                      </span>
+                      <div className="flex flex-col gap-2">
+                        <span className={EPISODE_CARD_TITLE_CLASS}>{row.name}</span>
+                        <p className={EPISODE_CARD_DESCRIPTION_CLASS}>
+                          {row.overview ?? ""}
+                        </p>
+                      </div>
+                    </div>
                   </button>
                 </CarouselItem>
               );
