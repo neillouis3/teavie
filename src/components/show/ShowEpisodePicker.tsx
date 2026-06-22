@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Image from "next/image";
-import { Button, Input } from "@heroui/react";
+import { Button, Input, Tab, Tabs } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
@@ -97,6 +104,22 @@ type ShowEpisodePickerProps = {
   onPlayableEpisodeCountChange?: (count: number) => void;
 };
 
+type EpisodePickerContextValue = ReturnType<typeof useEpisodePickerState>;
+
+const EpisodePickerContext = createContext<EpisodePickerContextValue | null>(
+  null
+);
+
+function useEpisodePicker() {
+  const ctx = useContext(EpisodePickerContext);
+  if (!ctx) {
+    throw new Error(
+      "ShowEpisodePicker subcomponents must be used within ShowEpisodePickerProvider"
+    );
+  }
+  return ctx;
+}
+
 function padEpisode(n: number) {
   return String(n).padStart(2, "0");
 }
@@ -146,7 +169,19 @@ async function fetchSeasonEpisodes(
   );
 }
 
-export default function ShowEpisodePicker({
+export function ShowEpisodePickerProvider({
+  children,
+  ...props
+}: ShowEpisodePickerProps & { children: React.ReactNode }) {
+  const value = useEpisodePickerState(props);
+  return (
+    <EpisodePickerContext.Provider value={value}>
+      {children}
+    </EpisodePickerContext.Provider>
+  );
+}
+
+function useEpisodePickerState({
   tmdbTvId,
   seasons,
   selectedSeason,
@@ -460,10 +495,45 @@ export default function ShowEpisodePicker({
     applyJumpFromInputs(jumpSeason, value);
   };
 
+  return {
+    releasedSeasons,
+    episodes,
+    loading,
+    error,
+    jumpSeason,
+    jumpEpisode,
+    showSeasonTabs,
+    flatMode,
+    watchedKeys,
+    selectedSeason,
+    currentSeasonEpisodeLabel,
+    hasPreviousEpisode,
+    hasNextEpisode,
+    goPreviousEpisode,
+    goNextEpisode,
+    handleJumpSeasonChange,
+    handleJumpEpisodeChange,
+    onSeasonChange,
+    onEpisodeChange,
+    isSelected,
+    handleSelect,
+  };
+}
+
+export function ShowEpisodePickerControls() {
+  const {
+    jumpSeason,
+    jumpEpisode,
+    hasPreviousEpisode,
+    hasNextEpisode,
+    goPreviousEpisode,
+    goNextEpisode,
+    handleJumpSeasonChange,
+    handleJumpEpisodeChange,
+  } = useEpisodePicker();
+
   return (
-    <section className="flex w-full flex-col gap-4" aria-label="Episodes">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5" aria-label="Episode controls">
           <div className="flex shrink-0 items-center gap-1.5">
             <div className="flex items-center gap-1">
               <span className="text-[11px] font-medium text-default-500">S</span>
@@ -534,54 +604,90 @@ export default function ShowEpisodePicker({
               <HugeiconsIcon icon={ArrowRight01Icon} size={14} className="shrink-0" />
             }
           >
-            Next
-          </Button>
-        </div>
+          Next
+        </Button>
+    </div>
+  );
+}
 
-        {(showSeasonTabs && releasedSeasons.length > 1 && !flatMode) ||
-        currentSeasonEpisodeLabel ? (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            {showSeasonTabs && releasedSeasons.length > 1 && !flatMode
-              ? releasedSeasons.map((s) => {
-                  const active = selectedSeason === s.season_number;
-                  return (
-                    <Button
-                      key={s.season_number}
-                      size="sm"
-                      radius="md"
-                      variant={active ? "solid" : "bordered"}
-                      color="default"
-                      className={
-                        active
-                          ? "h-8 min-h-8 border-2 border-foreground bg-transparent text-xs font-medium text-foreground"
-                          : "h-8 min-h-8 text-xs font-medium text-default-500"
-                      }
-                      onPress={() => {
-                        onSeasonChange(s.season_number);
-                        onEpisodeChange(s.season_number, 1);
-                      }}
-                    >
-                      Season {s.season_number}
-                    </Button>
-                  );
-                })
-              : null}
-            {currentSeasonEpisodeLabel ? (
-              <>
-                {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
-                  <span className="text-sm text-default-400" aria-hidden>
-                    ·
-                  </span>
-                ) : null}
-                <span className="text-xs font-medium text-default-500">
-                  {currentSeasonEpisodeLabel}
-                </span>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+function ShowEpisodePickerSeasonRow() {
+  const {
+    showSeasonTabs,
+    flatMode,
+    releasedSeasons,
+    selectedSeason,
+    onSeasonChange,
+    onEpisodeChange,
+    currentSeasonEpisodeLabel,
+  } = useEpisodePicker();
 
+  if (
+    !(showSeasonTabs && releasedSeasons.length > 1 && !flatMode) &&
+    !currentSeasonEpisodeLabel
+  ) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
+        <Tabs
+          aria-label="Seasons"
+          selectedKey={String(selectedSeason)}
+          onSelectionChange={(key) => {
+            const s = parseInt(String(key), 10);
+            if (!Number.isFinite(s)) return;
+            onSeasonChange(s);
+            onEpisodeChange(s, 1);
+          }}
+          size="sm"
+          variant="bordered"
+          radius="md"
+          classNames={{
+            base: "w-auto max-w-full",
+            tabList: "gap-0",
+            tab: "h-8 min-h-8 px-3 text-xs",
+            panel: "hidden",
+          }}
+        >
+          {releasedSeasons.map((s) => (
+            <Tab
+              key={String(s.season_number)}
+              title={`Season ${s.season_number}`}
+            />
+          ))}
+        </Tabs>
+      ) : null}
+      {currentSeasonEpisodeLabel ? (
+        <>
+          {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
+            <span className="text-sm text-default-400" aria-hidden>
+              ·
+            </span>
+          ) : null}
+          <span className="text-xs font-medium text-default-500">
+            {currentSeasonEpisodeLabel}
+          </span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export function ShowEpisodePickerList() {
+  const {
+    loading,
+    error,
+    episodes,
+    flatMode,
+    watchedKeys,
+    isSelected,
+    handleSelect,
+  } = useEpisodePicker();
+
+  return (
+    <section className="flex w-full flex-col gap-4" aria-label="Episodes">
+      <ShowEpisodePickerSeasonRow />
       {loading ? (
         <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
           <CarouselContent className="-ml-3">
@@ -642,8 +748,10 @@ export default function ShowEpisodePicker({
                         />
                       ) : null}
                       <div
-                        className={`absolute inset-0 z-[1] flex items-center justify-center ${
-                          stillUrl ? "bg-black/35" : ""
+                        className={`absolute inset-0 z-[1] flex items-center justify-center transition-opacity duration-200 ${
+                          stillUrl
+                            ? "opacity-0 group-hover:bg-black/40 group-hover:opacity-100"
+                            : ""
                         }`}
                       >
                         <HugeiconsIcon
@@ -688,5 +796,16 @@ export default function ShowEpisodePicker({
         </Carousel>
       )}
     </section>
+  );
+}
+
+export default function ShowEpisodePicker(props: ShowEpisodePickerProps) {
+  return (
+    <ShowEpisodePickerProvider {...props}>
+      <section className="flex w-full flex-col gap-4" aria-label="Episodes">
+        <ShowEpisodePickerControls />
+        <ShowEpisodePickerList />
+      </section>
+    </ShowEpisodePickerProvider>
   );
 }

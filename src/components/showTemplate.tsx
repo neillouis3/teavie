@@ -9,7 +9,11 @@ import {
   cumulativeTvEpisode,
   tmdbSeasonEpisodeFromAbsolute,
 } from "@/lib/cumulativeTvEpisode";
-import ShowEpisodePicker from "@/components/show/ShowEpisodePicker";
+import ShowEpisodePicker, {
+  ShowEpisodePickerControls,
+  ShowEpisodePickerList,
+  ShowEpisodePickerProvider,
+} from "@/components/show/ShowEpisodePicker";
 import {
   useStreamingSource,
   type StreamServerId,
@@ -740,6 +744,75 @@ export default function ShowTemplate({ id }: { id: string }) {
     selectedEpisode,
   ]);
 
+  const showDetailsPanel = (
+    <div className="w-full">
+      {loading ? (
+        <CatalogMediaPanelSkeleton />
+      ) : (
+        show && (
+          <CatalogMediaPanel
+            posterUrl={imageUrl}
+            posterAlt={title}
+            title={title}
+            subtitleLine={showSubtitleLine(show)}
+            rating={Number.isFinite(Number(show.vote_average)) ? Number(show.vote_average) : null}
+            certification={usCertificationFromDoc(show)}
+            status={show.status}
+            overview={show.overview}
+            tagline={show.tagline}
+            mediaType="tv"
+            genres={catalogGenresForDisplay({
+              imdb_genres: show.imdb_genres,
+              omdb: show.omdb,
+            })}
+            infoLines={buildShowInfoLines(show)}
+            links={showDetailLinks(show)}
+            genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
+          />
+        )
+      )}
+    </div>
+  );
+
+  const showRelatedSections = (
+    <>
+      {!loading && showAnimeRelated ? (
+        <AnimeRelatedSection key={`related-${idMalForAnilistRails ?? "na"}`} idMal={idMalForAnilistRails ?? undefined} />
+      ) : null}
+
+      {!loading &&
+      ((Boolean(show?.is_anime) && idMalForAnilistRails != null) ||
+        (!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)))) ? (
+        <YouMightLike
+          key={`yml-${resolvedPlayerId}-${idMalForAnilistRails ?? "na"}`}
+          mediaType="tv"
+          id={resolvedPlayerId}
+          isAnime={Boolean(show?.is_anime)}
+          idMal={idMalForAnilistRails ?? undefined}
+        />
+      ) : null}
+    </>
+  );
+
+  const episodePickerProps = {
+    tmdbTvId: playerUsesTmdb ? String(resolvedPlayerId) : null,
+    seasons: show?.seasons ?? [],
+    selectedSeason,
+    selectedEpisode,
+    onSeasonChange: setSelectedSeason,
+    onEpisodeChange: (season: number, episode: number) => {
+      setSelectedSeason(season);
+      setSelectedEpisode(episode);
+    },
+    showSeasonTabs: showSeasonPickerStrip,
+    flatMode: useFlatAllEpisodesPicker,
+    flatEpisodeCap: useFlatAllEpisodesPicker ? flatEpisodesMax : null,
+    watchedKeys: watchedEpisodes,
+    onMarkWatched: markEpisodeWatched,
+    onEpisodesLoadingChange: setPickerEpisodesLoading,
+    onPlayableEpisodeCountChange: setPickerPlayableCount,
+  };
+
   return (
     <div className="flex min-h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
       <div className="w-full flex flex-col gap-6">
@@ -786,70 +859,20 @@ export default function ShowTemplate({ id }: { id: string }) {
         </div>
 
         {!loading && show && !isAnimeMovie ? (
-          <ShowEpisodePicker
-            tmdbTvId={playerUsesTmdb ? String(resolvedPlayerId) : null}
-            seasons={show.seasons ?? []}
-            selectedSeason={selectedSeason}
-            selectedEpisode={selectedEpisode}
-            onSeasonChange={setSelectedSeason}
-            onEpisodeChange={(season, episode) => {
-              setSelectedSeason(season);
-              setSelectedEpisode(episode);
-            }}
-            showSeasonTabs={showSeasonPickerStrip}
-            flatMode={useFlatAllEpisodesPicker}
-            flatEpisodeCap={useFlatAllEpisodesPicker ? flatEpisodesMax : null}
-            watchedKeys={watchedEpisodes}
-            onMarkWatched={markEpisodeWatched}
-            onEpisodesLoadingChange={setPickerEpisodesLoading}
-            onPlayableEpisodeCountChange={setPickerPlayableCount}
-          />
-        ) : null}
-
-        {/* ── Show Details ── */}
-        <div className="w-full">
-          {loading ? (
-            <CatalogMediaPanelSkeleton />
-          ) : (
-            show && (
-              <CatalogMediaPanel
-                posterUrl={imageUrl}
-                posterAlt={title}
-                title={title}
-                subtitleLine={showSubtitleLine(show)}
-                rating={Number.isFinite(Number(show.vote_average)) ? Number(show.vote_average) : null}
-                certification={usCertificationFromDoc(show)}
-                status={show.status}
-                overview={show.overview}
-                tagline={show.tagline}
-                mediaType="tv"
-                genres={catalogGenresForDisplay({
-                  imdb_genres: show.imdb_genres,
-                  omdb: show.omdb,
-                })}
-                infoLines={buildShowInfoLines(show)}
-                links={showDetailLinks(show)}
-                genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
-              />
-            )
-          )}
-        </div>
-
-        {!loading && showAnimeRelated ? (
-          <AnimeRelatedSection key={`related-${idMalForAnilistRails ?? "na"}`} idMal={idMalForAnilistRails ?? undefined} />
-        ) : null}
-
-        {!loading &&
-        ((Boolean(show?.is_anime) && idMalForAnilistRails != null) ||
-          (!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)))) ? (
-          <YouMightLike
-            key={`yml-${resolvedPlayerId}-${idMalForAnilistRails ?? "na"}`}
-            mediaType="tv"
-            id={resolvedPlayerId}
-            isAnime={Boolean(show?.is_anime)}
-            idMal={idMalForAnilistRails ?? undefined}
-          />
-        ) : null}
+          <ShowEpisodePickerProvider {...episodePickerProps}>
+            <div className="flex w-full flex-col gap-6">
+              <ShowEpisodePickerControls />
+              {showDetailsPanel}
+              <ShowEpisodePickerList />
+              {showRelatedSections}
+            </div>
+          </ShowEpisodePickerProvider>
+        ) : (
+          <>
+            {showDetailsPanel}
+            {showRelatedSections}
+          </>
+        )}
       </div>
     </div>
   );
