@@ -25,46 +25,46 @@ type Mode = "movie" | "tv";
 
 const EMPTY: PopularGenresPayload = { movies: [], tv: [] };
 
-/** Color-code each genre. Full class strings so Tailwind keeps them. */
+/** Color-code each genre with a gradient. Full class strings so Tailwind keeps them. */
 const GENRE_COLORS: Record<string, string> = {
-  Action: "bg-red-600",
-  "Action & Adventure": "bg-red-600",
-  Adventure: "bg-orange-500",
-  Animation: "bg-sky-500",
-  Comedy: "bg-amber-500",
-  Crime: "bg-zinc-700",
-  Documentary: "bg-teal-600",
-  Drama: "bg-indigo-600",
-  Family: "bg-green-600",
-  Fantasy: "bg-violet-600",
-  History: "bg-amber-700",
-  Horror: "bg-neutral-800",
-  Music: "bg-pink-500",
-  Mystery: "bg-purple-700",
-  Romance: "bg-rose-500",
-  "Science Fiction": "bg-cyan-600",
-  "Sci-Fi & Fantasy": "bg-cyan-600",
-  "TV Movie": "bg-blue-600",
-  Thriller: "bg-red-800",
-  War: "bg-stone-600",
-  "War & Politics": "bg-stone-600",
-  Western: "bg-orange-800",
-  Kids: "bg-lime-600",
-  News: "bg-blue-700",
-  Reality: "bg-fuchsia-600",
-  Soap: "bg-rose-600",
-  Talk: "bg-emerald-600",
+  Action: "from-red-500 to-rose-700",
+  "Action & Adventure": "from-red-500 to-orange-600",
+  Adventure: "from-orange-400 to-amber-600",
+  Animation: "from-sky-400 to-blue-600",
+  Comedy: "from-amber-400 to-orange-600",
+  Crime: "from-zinc-600 to-slate-800",
+  Documentary: "from-teal-500 to-emerald-700",
+  Drama: "from-indigo-500 to-violet-700",
+  Family: "from-green-500 to-emerald-700",
+  Fantasy: "from-violet-500 to-purple-700",
+  History: "from-amber-600 to-orange-800",
+  Horror: "from-neutral-700 to-zinc-900",
+  Music: "from-pink-400 to-fuchsia-600",
+  Mystery: "from-purple-600 to-indigo-800",
+  Romance: "from-rose-400 to-pink-600",
+  "Science Fiction": "from-cyan-500 to-blue-700",
+  "Sci-Fi & Fantasy": "from-cyan-500 to-blue-700",
+  "TV Movie": "from-blue-500 to-indigo-700",
+  Thriller: "from-red-700 to-rose-900",
+  War: "from-stone-500 to-stone-700",
+  "War & Politics": "from-stone-500 to-stone-700",
+  Western: "from-orange-700 to-amber-900",
+  Kids: "from-lime-500 to-green-700",
+  News: "from-blue-600 to-sky-800",
+  Reality: "from-fuchsia-500 to-pink-700",
+  Soap: "from-rose-500 to-red-700",
+  Talk: "from-emerald-500 to-teal-700",
 };
 
 const FALLBACK_COLORS = [
-  "bg-rose-600",
-  "bg-violet-600",
-  "bg-sky-600",
-  "bg-emerald-600",
-  "bg-amber-600",
-  "bg-fuchsia-600",
-  "bg-cyan-600",
-  "bg-indigo-600",
+  "from-rose-500 to-pink-700",
+  "from-violet-500 to-purple-700",
+  "from-sky-500 to-blue-700",
+  "from-emerald-500 to-teal-700",
+  "from-amber-500 to-orange-700",
+  "from-fuchsia-500 to-pink-700",
+  "from-cyan-500 to-blue-700",
+  "from-indigo-500 to-violet-700",
 ] as const;
 
 function colorFor(name: string, index: number) {
@@ -96,7 +96,7 @@ function GenreTile({
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
-      className={`group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl ${colorClass} p-3 shadow-sm transition-transform duration-200 hover:scale-[1.02]`}
+      className={`group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-br ${colorClass} p-3 shadow-sm transition-transform duration-200 hover:scale-[1.02]`}
     >
       <div className="relative z-20 flex flex-col">
         <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
