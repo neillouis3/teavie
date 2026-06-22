@@ -1,8 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Chip } from "@heroui/react";
 import Header from "@/components/ui/header";
 import CatalogRail, { CatalogRailSkeleton } from "@/components/explore/catalogRail";
+import TrendingHeroViewer from "@/components/explore/trendingHeroViewer";
+import TrendingHeroLoading from "@/components/explore/trendingHeroLoading";
 import GenreDiscover from "@/components/discover/genreDiscover";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
@@ -21,7 +24,9 @@ const EMPTY: TmdbDiscoverPayload = {
   popularTv: [],
 };
 
-function TmdbRailsSkeleton({ horizontal }: { horizontal: boolean }) {
+const TRENDING_SECTION_MIN_H = "min-h-[75vh]";
+
+function PopularRailsSkeleton({ horizontal }: { horizontal: boolean }) {
   return (
     <div className="flex w-full flex-col gap-8">
       {Array.from({ length: 2 }).map((_, section) => (
@@ -70,41 +75,57 @@ export default function DiscoverHub() {
     };
   }, []);
 
-  const hasAny =
+  const hasTrending =
     data &&
-    (data.trendingMovies.length > 0 ||
-      data.trendingTv.length > 0 ||
-      data.popularMovies.length > 0 ||
-      data.popularTv.length > 0);
+    (data.trendingMovies.length > 0 || data.trendingTv.length > 0);
 
-  const showDiscoverBody = loading || hasAny;
+  const hasPopular =
+    data &&
+    (data.popularMovies.length > 0 || data.popularTv.length > 0);
+
+  const showTrendingHero = loading || hasTrending;
+  const showPopularRails = loading || hasPopular;
 
   return (
     <div className="bg-background flex w-full flex-col">
       <Header pageName="Explore" />
 
-      <div className="mt-6 w-full px-3 sm:px-4">
+      {showTrendingHero && (
+        <section
+          className={`mt-6 mb-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
+          aria-label="Trending this week"
+        >
+          <div className="mb-4 px-3 sm:pl-4">
+            <Chip color="success" size="md" radius="sm">
+              Trending this week
+            </Chip>
+          </div>
+          {loading ? (
+            <TrendingHeroLoading />
+          ) : (
+            data && (
+              <TrendingHeroViewer
+                trendingMovies={data.trendingMovies}
+                trendingTv={data.trendingTv}
+                maxItems={sectionMaxItems}
+              />
+            )
+          )}
+        </section>
+      )}
+
+      <div className="mt-2 w-full px-3 sm:px-4">
         <GenreDiscover />
       </div>
 
-      {showDiscoverBody && (
+      {showPopularRails && (
         <div className="mt-6 flex w-full flex-col gap-12 px-3 pb-8 sm:px-4">
           {loading ? (
-            <TmdbRailsSkeleton horizontal={horizontal} />
+            <PopularRailsSkeleton horizontal={horizontal} />
           ) : (
             data &&
-            hasAny && (
+            hasPopular && (
               <div className="flex flex-col gap-10">
-                <CatalogRail
-                  title="Trending movies this week"
-                  items={data.trendingMovies}
-                  maxItems={sectionMaxItems}
-                />
-                <CatalogRail
-                  title="Trending TV this week"
-                  items={data.trendingTv}
-                  maxItems={sectionMaxItems}
-                />
                 <CatalogRail
                   title="Popular movies"
                   items={data.popularMovies}
