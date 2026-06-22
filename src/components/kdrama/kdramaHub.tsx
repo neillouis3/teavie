@@ -12,20 +12,17 @@ import {
 } from "@/components/ui/carousel";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
-import { genrePageHref } from "@/lib/imdbGenres";
-
-type GenreRow = {
-  slug: string;
-  name: string;
-  count: number;
-  posters: string[];
-};
+import {
+  GenreCatalogTile,
+  genreTileColor,
+  type CatalogGenreRow,
+} from "@/components/genre/genreTileShared";
 
 type KdramaDiscoverPayload = {
   popular: ContentItem[];
   romance: ContentItem[];
   drama: ContentItem[];
-  genres: GenreRow[];
+  genres: CatalogGenreRow[];
 };
 
 const EMPTY: KdramaDiscoverPayload = {
@@ -34,74 +31,6 @@ const EMPTY: KdramaDiscoverPayload = {
   drama: [],
   genres: [],
 };
-
-const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
-
-const GENRE_COLORS = [
-  "from-rose-400 to-pink-500",
-  "from-violet-400 to-purple-500",
-  "from-indigo-400 to-violet-500",
-  "from-sky-400 to-blue-500",
-  "from-emerald-400 to-teal-500",
-  "from-amber-400 to-orange-500",
-  "from-fuchsia-400 to-pink-500",
-  "from-cyan-400 to-blue-500",
-] as const;
-
-function posterUrl(path: string) {
-  return /^https?:\/\//i.test(path) ? path : `${TMDB_IMG}${path}`;
-}
-
-function genreBrowseHref(slug: string) {
-  return genrePageHref(slug);
-}
-
-function GenreTile({ genre, colorClass }: { genre: GenreRow; colorClass: string }) {
-  const posters = genre.posters.filter(Boolean).slice(0, 3);
-
-  return (
-    <Link
-      href={genreBrowseHref(genre.slug)}
-      aria-label={`Browse ${genre.name} K-Dramas`}
-      className="group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl p-3"
-    >
-      <span
-        className={`pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br ${colorClass} shadow-sm`}
-        aria-hidden
-      />
-      <div className="relative z-20 flex flex-col pr-[54%] sm:pr-[52%]">
-        <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
-          {genre.name}
-        </span>
-        <span className="mt-0.5 text-[11px] font-medium text-white/80">
-          {genre.count.toLocaleString()} titles
-        </span>
-      </div>
-
-      {posters.length > 0 && (
-        <div className="pointer-events-none absolute bottom-0 right-1 z-10 h-[90%] w-[56%] sm:right-1.5 sm:w-[60%]">
-          {posters.map((path, index) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={`${path}-${index}`}
-              src={posterUrl(path)}
-              alt=""
-              aria-hidden
-              loading="lazy"
-              className="absolute bottom-0 right-0 h-full w-auto max-w-full rounded-lg object-cover shadow-2xl ring-1 ring-black/10"
-              style={{
-                transform: `rotate(${10 - index * 5}deg) translateY(${index * 4}px)`,
-                zIndex: 30 - index * 10,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      <span className="pointer-events-none absolute inset-0 z-[1] rounded-xl bg-gradient-to-br from-white/15 to-black/20" />
-    </Link>
-  );
-}
 
 function GenreTilesSkeleton() {
   return (
@@ -203,9 +132,9 @@ export default function KdramaHub() {
                       key={genre.slug}
                       className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
                     >
-                      <GenreTile
+                      <GenreCatalogTile
                         genre={genre}
-                        colorClass={GENRE_COLORS[i % GENRE_COLORS.length]}
+                        colorClass={genreTileColor(genre.name, i)}
                       />
                     </CarouselItem>
                   ))}
