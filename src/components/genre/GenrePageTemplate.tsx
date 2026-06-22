@@ -4,9 +4,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Chip, Pagination } from '@heroui/react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import Header from '@/components/ui/header';
 import type { ContentItem } from '@/types/content';
-import { genrePageDescription } from '@/lib/genrePageCopy';
+import { genreFeaturedGradient, genrePageDescription } from '@/lib/genrePageCopy';
 import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import SmallCardLoading from '@/components/ui/smallCardLoading';
@@ -35,6 +37,38 @@ const SORT_OPTIONS: { key: GenrePageSort; label: string }[] = [
   { key: 'new', label: 'New' },
 ];
 
+const TMDB_POSTER = 'https://image.tmdb.org/t/p/w500';
+const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w780';
+
+function posterSrc(path: string | null | undefined) {
+  if (!path?.trim()) return null;
+  return /^https?:\/\//i.test(path) ? path : `${TMDB_POSTER}${path}`;
+}
+
+function backdropSrc(path: string | null | undefined, fallbackPoster?: string | null) {
+  const b = path?.trim();
+  if (b) return /^https?:\/\//i.test(b) ? b : `${TMDB_BACKDROP}${b}`;
+  return posterSrc(fallbackPoster);
+}
+
+function itemTitle(item: ContentItem) {
+  return item.title || item.name || 'Untitled';
+}
+
+function itemTypeLabel(item: ContentItem) {
+  return item.type === 'tv' ? 'TV show' : 'Movie';
+}
+
+function itemHref(item: ContentItem) {
+  const id = item.id;
+  return item.type === 'tv' ? `/shows/${id}` : `/movies/${id}`;
+}
+
+function formatRating(v: number | null | undefined) {
+  if (v == null || !Number.isFinite(v) || v <= 0) return null;
+  return v.toFixed(1);
+}
+
 function gridClass(layoutMode: CatalogCardLayoutMode) {
   return layoutMode === 'horizontal'
     ? CATALOG_GRID_HORIZONTAL_SEARCH
@@ -44,6 +78,69 @@ function gridClass(layoutMode: CatalogCardLayoutMode) {
 function itemYear(item: ContentItem) {
   const raw = item.release_date || item.first_air_date || '';
   return raw.length >= 4 ? raw.slice(0, 4) : '—';
+}
+
+function FeaturedCard({
+  item,
+  gradient,
+}: {
+  item: ContentItem;
+  gradient: string;
+}) {
+  const title = itemTitle(item);
+  const year = itemYear(item);
+  const rating = formatRating(item.vote_average);
+  const image = backdropSrc(item.backdrop_path, item.poster_path);
+  const href = itemHref(item);
+
+  return (
+    <Link
+      href={href}
+      className="group relative flex min-h-[220px] flex-1 overflow-hidden rounded-2xl sm:min-h-[260px]"
+    >
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={image}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+        />
+      ) : (
+        <span
+          className={`absolute inset-0 bg-gradient-to-br ${gradient}`}
+          aria-hidden
+        />
+      )}
+      <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
+      {rating ? (
+        <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+          <HugeiconsIcon icon={StarIcon} size={12} className="text-warning" />
+          {rating}
+        </span>
+      ) : null}
+      <div className="relative mt-auto p-5 sm:p-6">
+        <p className="text-xs font-medium text-white/70">
+          {itemTypeLabel(item)} · {year}
+        </p>
+        <h3 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem]">
+          {title}
+        </h3>
+      </div>
+    </Link>
+  );
+}
+
+function FeaturedSkeleton() {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div
+          key={i}
+          className="min-h-[220px] animate-pulse rounded-2xl bg-default-200 sm:min-h-[260px]"
+        />
+      ))}
+    </div>
+  );
 }
 
 function GenreCardGrid({
@@ -222,6 +319,11 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
 
   const countLabel = loading ? '…' : `${total.toLocaleString()} titles`;
 
+  const showFeatured = pageParam === 1 && sort === 'popular';
+  const featured = showFeatured ? items.slice(0, 2) : [];
+  const gridItems =
+    showFeatured && featured.length > 0 ? items.slice(featured.length) : items;
+
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={genreLabel} />
@@ -261,15 +363,40 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           </div>
         </div>
 
-        <section className="mt-6" aria-label="Titles">
+        {(loading || featured.length > 0) && showFeatured ? (
+          <section className="mt-6 space-y-3" aria-label="Featured">
+            <Chip color="success" variant="flat" size="md" radius="sm">
+              Featured
+            </Chip>
+            {loading ? (
+              <FeaturedSkeleton />
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {featured.map((item, i) => (
+                  <FeaturedCard
+                    key={`${item.type}-${item.id}`}
+                    item={item}
+                    gradient={genreFeaturedGradient(genreLabel, i)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        <section className="mt-6 space-y-3" aria-label="All titles">
+          <Chip color="success" variant="flat" size="md" radius="sm">
+            All titles
+          </Chip>
+
           {loading ? (
             <GenreCardGridSkeleton count={28} layoutMode={cardLayout} />
-          ) : items.length === 0 ? (
+          ) : gridItems.length === 0 ? (
             <p className="py-16 text-center text-sm text-default-500">
               No titles found for {genreLabel}. Try another filter.
             </p>
           ) : (
-            <GenreCardGrid items={items} layoutMode={cardLayout} />
+            <GenreCardGrid items={gridItems} layoutMode={cardLayout} />
           )}
 
           {totalPages > 1 && !loading && items.length > 0 && (
