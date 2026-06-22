@@ -8,6 +8,8 @@ import useEmblaCarousel, {
 
 import { cn } from "@/lib/utils"
 import { Button } from "@heroui/react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
@@ -197,7 +199,7 @@ CarouselItem.displayName = "CarouselItem"
 const CarouselPrevious = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
->(({ className, variant = "outline", size = "icon", ...props }, ref) => {
+>(({ className, variant = "outline", size = "icon", children, ...props }, ref) => {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
 
   return (
@@ -216,7 +218,7 @@ const CarouselPrevious = React.forwardRef<
       onPress={scrollPrev}
       {...props}
     >
-      ,
+      {children ?? <HugeiconsIcon icon={ArrowLeft01Icon} size={20} />}
       <span className="sr-only">Previous slide</span>
     </Button>
   )
@@ -226,7 +228,7 @@ CarouselPrevious.displayName = "CarouselPrevious"
 const CarouselNext = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
->(({ className, variant = "outline", size = "icon", ...props }, ref) => {
+>(({ className, variant = "outline", size = "icon", children, ...props }, ref) => {
   const { orientation, scrollNext, canScrollNext } = useCarousel()
 
   return (
@@ -245,7 +247,7 @@ const CarouselNext = React.forwardRef<
       onPress={scrollNext}
       {...props}
     >
-      
+      {children ?? <HugeiconsIcon icon={ArrowRight01Icon} size={20} />}
       <span className="sr-only">Next slide</span>
     </Button>
   )

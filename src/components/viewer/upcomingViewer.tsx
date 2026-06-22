@@ -47,22 +47,33 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
             const year = releaseDate
               ? String(new Date(releaseDate).getFullYear())
               : "TBA";
+            const releaseIso =
+              releaseDate && String(releaseDate).length >= 10
+                ? String(releaseDate).slice(0, 10)
+                : null;
+            const type = item.type ?? "movie";
 
             return (
               <CarouselItem
-                key={item.id}
+                key={`${type}-${item.id}`}
                 className="basis-[88%] pl-3 sm:basis-2/3 sm:pl-4"
               >
                 <LargeCard
+                  richOverlay
+                  releaseDateStyle="phrase"
                   id={item.id}
                   title={title}
                   year={year}
+                  releaseDate={releaseIso}
                   runtimeSeconds={item.runtimeSeconds}
                   seasonAmount={item.season_amount ?? 0}
                   numberOfEpisodes={item.number_of_episodes ?? undefined}
-                  type={item.type ?? "movie"}
+                  type={type}
                   posterPath={item.poster_path}
                   backdropPath={item.backdrop_path}
+                  genres={item.genres}
+                  voteAverage={item.vote_average}
+                  certification={item.certification}
                 />
               </CarouselItem>
             );
