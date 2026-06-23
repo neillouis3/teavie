@@ -21,6 +21,7 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
+  type CarouselApi,
 } from "@/components/ui/carousel";
 import { formatRuntimeLabel } from "@/components/ui/catalogMediaPanel";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
@@ -105,6 +106,8 @@ type ShowEpisodePickerProps = {
   onSeasonChange: (season: number) => void;
   onEpisodeChange: (season: number, episode: number) => void;
   showSeasonTabs?: boolean;
+  /** Anime: build episode list from catalog/anilist counts, not TMDB season API. */
+  preferCatalogEpisodes?: boolean;
   flatMode?: boolean;
   flatEpisodeCap?: number | null;
   watchedKeys?: Set<string>;
@@ -198,6 +201,7 @@ function useEpisodePickerState({
   onSeasonChange,
   onEpisodeChange,
   showSeasonTabs = true,
+  preferCatalogEpisodes = false,
   flatMode = false,
   flatEpisodeCap = null,
   watchedKeys,
@@ -219,6 +223,16 @@ function useEpisodePickerState({
 
   const [jumpSeason, setJumpSeason] = useState(String(selectedSeason));
   const [jumpEpisode, setJumpEpisode] = useState(String(selectedEpisode));
+  const [episodeSortLatestFirst, setEpisodeSortLatestFirst] = useState(false);
+
+  const displayedEpisodes = useMemo(
+    () => (episodeSortLatestFirst ? [...episodes].reverse() : episodes),
+    [episodes, episodeSortLatestFirst]
+  );
+
+  const toggleEpisodeSort = useCallback(() => {
+    setEpisodeSortLatestFirst((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     setJumpSeason(String(selectedSeason));
@@ -235,6 +249,27 @@ function useEpisodePickerState({
       onEpisodesLoadingChange?.(true);
 
       try {
+        if (preferCatalogEpisodes) {
+          const seasonObj =
+            releasedSeasons.find((s) => s.season_number === selectedSeason) ??
+            releasedSeasons[0];
+          let count = seasonObj?.episode_count ?? 0;
+          if (count <= 0) {
+            count = releasedSeasons.reduce(
+              (acc, s) => acc + (s.episode_count ?? 0),
+              0
+            );
+          }
+          if (flatEpisodeCap != null && flatEpisodeCap > 0) {
+            count = Math.min(count, flatEpisodeCap);
+          }
+          const seasonNum = seasonObj?.season_number ?? selectedSeason ?? 1;
+          if (!cancelled) {
+            setEpisodes(fallbackEpisodes(seasonNum, count));
+          }
+          return;
+        }
+
         if (!tmdbTvId || !/^\d+$/.test(tmdbTvId)) {
           if (flatMode) {
             const cap =
@@ -326,6 +361,7 @@ function useEpisodePickerState({
     flatMode,
     flatEpisodeCap,
     releasedSeasons,
+    preferCatalogEpisodes,
     onEpisodesLoadingChange,
   ]);
 
@@ -507,6 +543,9 @@ function useEpisodePickerState({
   return {
     releasedSeasons,
     episodes,
+    displayedEpisodes,
+    episodeSortLatestFirst,
+    toggleEpisodeSort,
     loading,
     error,
     jumpSeason,
@@ -698,16 +737,115 @@ function ShowEpisodePickerSeasonRow() {
   );
 }
 
+type EmblaCarouselApi = NonNullable<CarouselApi>;
+
+function scrollEpisodeCarouselPrev(api: EmblaCarouselApi) {
+  const inView = api.slidesInView();
+  if (inView.length === 0) {
+    api.scrollPrev();
+    return;
+  }
+  const firstInView = Math.min(...inView);
+  const step = Math.max(1, inView.length);
+  api.scrollTo(Math.max(0, firstInView - step));
+}
+
+function scrollEpisodeCarouselNext(api: EmblaCarouselApi) {
+  const inView = api.slidesInView();
+  const snapCount = api.scrollSnapList().length;
+  if (inView.length === 0) {
+    api.scrollNext();
+    return;
+  }
+  const lastInView = Math.max(...inView);
+  const nextIndex = lastInView + 1;
+  if (nextIndex < snapCount) {
+    api.scrollTo(nextIndex);
+    return;
+  }
+  api.scrollNext();
+}
+
+function EpisodeCarouselScrollArrows({ api }: { api: CarouselApi | null }) {
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  useEffect(() => {
+    if (!api) {
+      setCanScrollPrev(false);
+      setCanScrollNext(false);
+      return;
+    }
+    const sync = () => {
+      setCanScrollPrev(api.canScrollPrev());
+      setCanScrollNext(api.canScrollNext());
+    };
+    sync();
+    api.on("reInit", sync);
+    api.on("select", sync);
+    return () => {
+      api.off("reInit", sync);
+      api.off("select", sync);
+    };
+  }, [api]);
+
+  if (!api) return null;
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="bordered"
+        radius="md"
+        isIconOnly
+        className="h-8 w-8 min-w-8"
+        isDisabled={!canScrollPrev}
+        onPress={() => scrollEpisodeCarouselPrev(api)}
+        aria-label="Scroll to earlier episodes"
+      >
+        <HugeiconsIcon icon={ArrowLeft01Icon} size={14} />
+      </Button>
+      <Button
+        size="sm"
+        variant="bordered"
+        radius="md"
+        isIconOnly
+        className="h-8 w-8 min-w-8"
+        isDisabled={!canScrollNext}
+        onPress={() => scrollEpisodeCarouselNext(api)}
+        aria-label="Scroll to later episodes"
+      >
+        <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
+      </Button>
+    </>
+  );
+}
+
 export function ShowEpisodePickerList() {
   const {
     loading,
     error,
     episodes,
+    displayedEpisodes,
+    episodeSortLatestFirst,
+    toggleEpisodeSort,
     flatMode,
     watchedKeys,
     isSelected,
     handleSelect,
   } = useEpisodePicker();
+
+  const [episodeCarouselApi, setEpisodeCarouselApi] = useState<CarouselApi | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (loading) setEpisodeCarouselApi(null);
+  }, [loading]);
+
+  useEffect(() => {
+    episodeCarouselApi?.reInit();
+  }, [displayedEpisodes, episodeCarouselApi]);
 
   return (
     <section
@@ -715,7 +853,35 @@ export function ShowEpisodePickerList() {
       className="flex w-full scroll-mt-6 flex-col gap-4"
       aria-label="Episodes"
     >
-      <ShowEpisodePickerSeasonRow />
+      <div className="flex w-full min-w-0 items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <ShowEpisodePickerSeasonRow />
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {!loading && episodes.length > 1 ? (
+            <Button
+              size="sm"
+              variant={episodeSortLatestFirst ? "solid" : "bordered"}
+              color={episodeSortLatestFirst ? "success" : "default"}
+              radius="md"
+              className="h-8 min-h-8 shrink-0 text-xs"
+              onPress={toggleEpisodeSort}
+              aria-pressed={episodeSortLatestFirst}
+              aria-label={
+                episodeSortLatestFirst
+                  ? "Showing latest episodes first. Sort oldest first."
+                  : "Sort latest episodes first"
+              }
+              startContent={
+                <HugeiconsIcon icon={ArrowDown01Icon} size={14} className="shrink-0" />
+              }
+            >
+              {episodeSortLatestFirst ? "Oldest first" : "Latest first"}
+            </Button>
+          ) : null}
+          <EpisodeCarouselScrollArrows api={episodeCarouselApi} />
+        </div>
+      </div>
       {loading ? (
         <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
           <CarouselContent className="-ml-3">
@@ -733,9 +899,13 @@ export function ShowEpisodePickerList() {
           Nothing to show for this season yet.
         </p>
       ) : (
-        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+        <Carousel
+          opts={{ align: "start", dragFree: true }}
+          setApi={setEpisodeCarouselApi}
+          className="w-full"
+        >
           <CarouselContent className="-ml-3">
-            {episodes.map((row) => {
+            {displayedEpisodes.map((row) => {
               const active = isSelected(row);
               const labelNum =
                 flatMode && row.displayNumber != null
