@@ -12,6 +12,7 @@ import CatalogMediaPanel, {
   CatalogMediaPanelSkeleton,
   movieSubtitleLine,
 } from './ui/catalogMediaPanel';
+import CatalogComingSoon from './ui/catalogComingSoon';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
@@ -138,12 +139,13 @@ export default function MovieTemplate({ id }: { id: string }) {
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {loading ? (
             <div className="h-full w-full animate-pulse rounded-lg bg-default-200" />
-          ) : !movieReleased ? (
-            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-              {movie?.release_date
-                ? `This title is not available yet (releases ${movie.release_date.slice(0, 10)}).`
-                : "Release date is not available; playback is disabled until a date is confirmed."}
-            </div>
+          ) : movie && !movieReleased ? (
+            <CatalogComingSoon
+              title={movie.title}
+              posterUrl={imageUrl}
+              releaseDate={movie.release_date}
+              links={movieDetailLinks(movie)}
+            />
           ) : (
             <MoviePlayer videoId={id} server={server} />
           )}

@@ -129,8 +129,8 @@ export function shouldPruneTvAnimeWithoutAnilist(doc) {
 
 export const SHOW_UNAVAILABLE_MESSAGES = {
   content_policy:
-    "This title isn't available on Teavie because it violates our content policy or includes inappropriate material.",
-  not_found: "This show isn't available on Teavie.",
+    "This content doesn't meet our community guidelines. We work to keep the platform safe and enjoyable for everyone.",
+  not_found: "This show isn't in our catalog right now.",
 };
 
 /** Why a show page could not be loaded (for blocked / missing catalog rows). */

@@ -33,12 +33,13 @@ import CatalogMediaPanel, {
   CatalogMediaPanelSkeleton,
   showSubtitleLine,
 } from "@/components/ui/catalogMediaPanel";
+import CatalogComingSoon from "@/components/ui/catalogComingSoon";
+import CatalogUnavailable from "@/components/ui/catalogUnavailable";
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
 import { imdbGenresFromAnimeSources } from "@/lib/imdbGenres";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
 import {
   shouldPruneTvAnimeWithoutAnilist,
-  SHOW_UNAVAILABLE_MESSAGES,
   showUnavailableReasonForDoc,
 } from "@/lib/tvJpAnimePrune";
 
@@ -895,6 +896,20 @@ export default function ShowTemplate({
     onPlayableEpisodeCountChange: setPickerPlayableCount,
   };
 
+  if (!loading && !show) {
+    return (
+      <CatalogUnavailable
+        reason={
+          showUnavailableReason === "content_policy"
+            ? "content_policy"
+            : showUnavailableReason === "unauthorized"
+              ? "unauthorized"
+              : "not_found"
+        }
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
       {adminPreview && adminBypassActive ? (
@@ -911,18 +926,6 @@ export default function ShowTemplate({
         >
           {loading ? (
             <div className="h-full w-full animate-pulse bg-default-200" />
-          ) : !show ? (
-            <div className="flex h-full w-full items-center justify-center bg-default-100 px-6 text-center dark:bg-default-50/10">
-              <p className="max-w-md text-sm leading-relaxed text-default-600">
-                {showUnavailableReason === "unauthorized"
-                  ? "Invalid admin key. Check TEAVIE_ADMIN_KEY and the ?key= parameter."
-                  : SHOW_UNAVAILABLE_MESSAGES[
-                      showUnavailableReason === "content_policy"
-                        ? "content_policy"
-                        : "not_found"
-                    ]}
-              </p>
-            </div>
           ) : isAnimeMovie ? (
             animeMovieResolving ? (
               <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
@@ -936,11 +939,18 @@ export default function ShowTemplate({
               </div>
             )
           ) : !canPlay ? (
-            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-              {playerUsesTmdb && show && !tmdbShowPremiered
-                ? `This series has not premiered yet (first episode ${String(show.first_air_date).slice(0, 10)}).`
-                : "No playback source available for this page yet. Try again later."}
-            </div>
+            playerUsesTmdb && show && !tmdbShowPremiered ? (
+              <CatalogComingSoon
+                title={title}
+                posterUrl={imageUrl}
+                releaseDate={show.first_air_date}
+                links={showDetailLinks(show)}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+                No playback source available for this page yet. Try again later.
+              </div>
+            )
           ) : useTmdbSeasonAiringCapForPlayer && pickerEpisodesLoading ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               Loading aired episodes…
