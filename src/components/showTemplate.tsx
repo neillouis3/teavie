@@ -397,8 +397,10 @@ function mergeAnilistIntoShow(
 
 async function fetchAnilistAndMerge(
   base: Show,
-  fallback: Show | null
+  fallback: Show | null,
+  routeId?: string
 ): Promise<Show> {
+  const malFromRoute = routeId ? malIdFromAnimeCatalogRouteId(routeId) : null;
   const aid =
     typeof base.anilist_id === "number" && base.anilist_id > 0
       ? base.anilist_id
@@ -410,30 +412,37 @@ async function fetchAnilistAndMerge(
             ? fallback.anilist.id
             : null;
   const malRaw =
-    typeof base.mal_id === "number" && base.mal_id > 0
+    malFromRoute ??
+    (typeof base.mal_id === "number" && base.mal_id > 0
       ? base.mal_id
       : typeof base.external_ids?.mal_id === "number" && base.external_ids.mal_id > 0
         ? base.external_ids.mal_id
         : typeof fallback?.mal_id === "number" && fallback.mal_id > 0
           ? fallback.mal_id
-          : typeof fallback?.external_ids?.mal_id === "number" && fallback.external_ids.mal_id > 0
+          : typeof fallback?.external_ids?.mal_id === "number" &&
+              fallback.external_ids.mal_id > 0
             ? fallback.external_ids.mal_id
-            : null;
+            : null);
 
   let url: string | null = null;
   if (aid != null) url = `/api/anilist/media?anilistId=${aid}`;
   else if (malRaw != null) url = `/api/anilist/media?idMal=${malRaw}`;
-  else return base;
+  else return base.is_anime ? finalizeAnimeShowForUi(base) : base;
 
   try {
     const res = await fetch(url);
-    if (!res.ok) return base;
+    if (!res.ok) return base.is_anime ? finalizeAnimeShowForUi(base) : base;
     const ani = (await res.json()) as AnilistMediaPayload & { error?: string };
-    if (!ani || typeof ani !== "object" || "error" in ani) return base;
-    if (typeof ani.id !== "number") return base;
-    return mergeAnilistIntoShow(base, ani, fallback);
+    if (!ani || typeof ani !== "object" || "error" in ani) {
+      return base.is_anime ? finalizeAnimeShowForUi(base) : base;
+    }
+    if (typeof ani.id !== "number") {
+      return base.is_anime ? finalizeAnimeShowForUi(base) : base;
+    }
+    const merged = mergeAnilistIntoShow(base, ani, fallback);
+    return base.is_anime || merged.is_anime ? finalizeAnimeShowForUi(merged) : merged;
   } catch {
-    return base;
+    return base.is_anime ? finalizeAnimeShowForUi(base) : base;
   }
 }
 
@@ -544,14 +553,13 @@ export default function ShowTemplate({ id }: { id: string }) {
             setShow(null);
             return;
           }
-          const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow);
+          const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow, id);
           const today = catalogTodayYmdUtc();
           if (merged.seasons?.length && !merged.is_anime) {
             merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
           }
-          const forUi = finalizeAnimeShowForUi(merged);
-          setShow(forUi);
-          pickFirstSeason(forUi.seasons);
+          setShow(merged);
+          pickFirstSeason(merged.seasons);
           setSelectedEpisode(1);
           return;
         }
@@ -567,14 +575,13 @@ export default function ShowTemplate({ id }: { id: string }) {
         const res = await fetch(url, options);
         if (!res.ok) {
           if (fallbackShow) {
-            const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow);
+            const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow, id);
             const today = catalogTodayYmdUtc();
             if (merged.seasons?.length && !merged.is_anime) {
               merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
             }
-            const forUi = finalizeAnimeShowForUi(merged);
-            setShow(forUi);
-            pickFirstSeason(forUi.seasons);
+            setShow(merged);
+            pickFirstSeason(merged.seasons);
             setSelectedEpisode(1);
             return;
           }
@@ -620,16 +627,15 @@ export default function ShowTemplate({ id }: { id: string }) {
           mal_id: data.mal_id ?? fallbackShow?.mal_id ?? undefined,
           external_ids: data.external_ids ?? fallbackShow?.external_ids ?? undefined,
         };
-        const merged = await fetchAnilistAndMerge(forAni, fallbackShow);
+        const merged = await fetchAnilistAndMerge(forAni, fallbackShow, id);
         if (merged.seasons?.length && !merged.is_anime) {
           merged.seasons = filterReleasedSeasons(merged.seasons, todayYmd) ?? merged.seasons;
         }
         if (tmdbSeasonsPlayback?.length && data.is_anime) {
           merged.tmdb_playback_seasons = tmdbSeasonsPlayback;
         }
-        const forUi = data.is_anime ? finalizeAnimeShowForUi(merged) : merged;
-        setShow(forUi);
-        pickFirstSeason(forUi.seasons);
+        setShow(merged);
+        pickFirstSeason(merged.seasons);
         setSelectedEpisode(1);
       } catch {
         /* keep prior show on transient errors */

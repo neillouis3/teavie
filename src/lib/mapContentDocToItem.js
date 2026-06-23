@@ -39,10 +39,26 @@ export function runtimeSecondsFromDoc(doc) {
 
 export function tvSeasonCountFromDoc(doc) {
   if (!doc || doc.type !== "tv") return null;
-  for (const c of [doc.season_amount, doc.number_of_seasons]) {
+  const eps =
+    typeof doc.number_of_episodes === "number" && doc.number_of_episodes > 0
+      ? doc.number_of_episodes
+      : null;
+  const amt =
+    typeof doc.season_amount === "number" && doc.season_amount > 0
+      ? doc.season_amount
+      : null;
+  const isAnime =
+    doc.is_anime === true ||
+    (Array.isArray(doc.tags) && doc.tags.includes("anime")) ||
+    String(doc.id ?? "").startsWith("anime_");
+  if (typeof doc.number_of_seasons === "number" && doc.number_of_seasons > 0) {
+    return doc.number_of_seasons;
+  }
+  if (isAnime && amt != null && eps != null && amt === eps) return 1;
+  for (const c of [amt]) {
     if (typeof c === "number" && Number.isFinite(c) && c > 0) return c;
   }
-  return null;
+  return isAnime ? 1 : null;
 }
 
 /** Exported for API mappers (new, etc.). */
@@ -53,8 +69,6 @@ export function tvEpisodeCountFromDoc(doc) {
   if (String(doc.id ?? "").startsWith("anime_")) {
     const ani = doc.anilist?.episodes;
     if (typeof ani === "number" && ani > 0) return ani;
-    const s = doc.season_amount;
-    if (typeof s === "number" && s > 0) return s;
   }
   return null;
 }

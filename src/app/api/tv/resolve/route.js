@@ -5,8 +5,11 @@ import {
   imdbGenresFromOmdbForTmdbId,
   normalizeCatalogResolveFallback,
 } from "@/lib/catalogResolve";
+import { fetchAnilistEnrichmentForCatalogDoc } from "@/lib/anilistCatalogEnrich";
+import { resolveOmdbImdbIdForDoc } from "@/lib/omdbResolve";
 import { resolveTmdbTvFromDoc } from "@/lib/tmdbResolveFromTitle";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
+import { shouldPruneTvAnimeWithoutAnilist } from "@/lib/tvJpAnimePrune";
 
 function pickNumericAnilistId(doc) {
   const raw = doc?.anilist_id ?? doc?.anilist?.id;
@@ -18,8 +21,86 @@ function pickNumericAnilistId(doc) {
   return null;
 }
 
+function catalogTvSeasonCount(doc) {
+  if (typeof doc.number_of_seasons === "number" && doc.number_of_seasons > 0) {
+    return doc.number_of_seasons;
+  }
+  const eps =
+    typeof doc.number_of_episodes === "number" && doc.number_of_episodes > 0
+      ? doc.number_of_episodes
+      : null;
+  const amt =
+    typeof doc.season_amount === "number" && doc.season_amount > 0
+      ? doc.season_amount
+      : null;
+  const isAnime = Boolean(
+    doc.is_anime || (Array.isArray(doc.tags) && doc.tags.includes("anime"))
+  );
+  // Legacy Jikan import stored episode count in `season_amount`.
+  if (isAnime && amt != null && eps != null && amt === eps) return 1;
+  if (amt != null) return amt;
+  return null;
+}
+
+function catalogAnimeEpisodeTotal(doc) {
+  const fromDoc =
+    typeof doc.number_of_episodes === "number" && doc.number_of_episodes > 0
+      ? doc.number_of_episodes
+      : null;
+  if (fromDoc != null) return fromDoc;
+  const fromAni = doc.anilist?.episodes;
+  if (typeof fromAni === "number" && Number.isFinite(fromAni) && fromAni > 0) {
+    return fromAni;
+  }
+  return null;
+}
+
+function animeFallbackSeasons(doc) {
+  const isAnime = Boolean(
+    doc.is_anime || (Array.isArray(doc.tags) && doc.tags.includes("anime"))
+  );
+  if (!isAnime) return [];
+  const eps = catalogAnimeEpisodeTotal(doc);
+  if (eps == null || eps <= 0) return [];
+  return [{ season_number: 1, episode_count: eps }];
+}
+
+/** TMDB summary for numeric ids missing from catalog (block JP animation direct URLs). */
+async function tmdbTvDocForPruneCheck(tmdbId, token) {
+  if (!token || !Number.isFinite(tmdbId) || tmdbId <= 0) return null;
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/tv/${tmdbId}?language=en-US`,
+      {
+        headers: {
+          accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        next: { revalidate: 86400 },
+      }
+    );
+    if (!res.ok) return null;
+    const show = await res.json();
+    if (!show || typeof show !== "object") return null;
+    return {
+      type: "tv",
+      id: tmdbId,
+      origin_country: show.origin_country,
+      original_language: show.original_language,
+      genre_ids: Array.isArray(show.genres)
+        ? show.genres.map((g) => g?.id).filter((n) => typeof n === "number")
+        : [],
+      genres: show.genres,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function normalizeTvFallback(doc) {
   const base = normalizeCatalogResolveFallback(doc, "tv");
+  const seasons = animeFallbackSeasons(doc);
+  const episodeTotal = catalogAnimeEpisodeTotal(doc);
   return {
     ...base,
     genres: [],
@@ -29,15 +110,9 @@ function normalizeTvFallback(doc) {
       : [],
     mal_id: typeof doc.mal_id === "number" ? doc.mal_id : null,
     tagline: null,
-    number_of_seasons:
-      typeof doc.season_amount === "number"
-        ? doc.season_amount
-        : typeof doc.number_of_seasons === "number"
-          ? doc.number_of_seasons
-          : null,
-    number_of_episodes:
-      typeof doc.number_of_episodes === "number" ? doc.number_of_episodes : null,
-    seasons: [],
+    number_of_seasons: seasons.length > 0 ? 1 : catalogTvSeasonCount(doc),
+    number_of_episodes: episodeTotal,
+    seasons,
     is_anime: Boolean(doc.is_anime || (Array.isArray(doc.tags) && doc.tags.includes("anime"))),
     anilist_id: pickNumericAnilistId(doc),
     anilist: doc.anilist && typeof doc.anilist === "object" ? doc.anilist : null,
@@ -63,7 +138,23 @@ export async function GET(req) {
     const isNumericId = Number.isFinite(numeric) && numeric > 0;
 
     if (!doc && isNumericId) {
+      const token = tmdbBearerToken();
+      const tmdbProbe = token ? await tmdbTvDocForPruneCheck(numeric, token) : null;
+      if (tmdbProbe && shouldPruneTvAnimeWithoutAnilist(tmdbProbe)) {
+        return Response.json({ error: "Show not found" }, { status: 404 });
+      }
+
       const imdb_genres = await imdbGenresFromOmdbForTmdbId(numeric, "tv");
+      const probeWithImdb = {
+        type: "tv",
+        id: numeric,
+        ...(tmdbProbe ?? {}),
+        imdb_genres,
+      };
+      if (shouldPruneTvAnimeWithoutAnilist(probeWithImdb)) {
+        return Response.json({ error: "Show not found" }, { status: 404 });
+      }
+
       return Response.json({
         playerId: numeric,
         imdbId: null,
@@ -93,7 +184,55 @@ export async function GET(req) {
     const token = tmdbBearerToken();
     if (!hasPlayer && token && merged._id) {
       try {
-        const hit = await resolveTmdbTvFromDoc(merged, token);
+        const isAnime = Boolean(
+          merged.is_anime || (Array.isArray(merged.tags) && merged.tags.includes("anime"))
+        );
+
+        let extraTitles = [];
+        if (isAnime) {
+          const { anilist, titleCandidates } = await fetchAnilistEnrichmentForCatalogDoc(merged);
+          if (anilist) {
+            merged = {
+              ...merged,
+              anilist: { ...(merged.anilist && typeof merged.anilist === "object" ? merged.anilist : {}), ...anilist },
+              anilist_id: merged.anilist_id ?? anilist.id ?? merged.anilist_id,
+            };
+            if (
+              typeof anilist.episodes === "number" &&
+              anilist.episodes > 0 &&
+              (!merged.number_of_episodes || merged.number_of_episodes <= 0)
+            ) {
+              merged.number_of_episodes = anilist.episodes;
+            }
+          }
+          extraTitles = titleCandidates;
+        }
+
+        let omdbImdbId = null;
+        const hasImdb =
+          (typeof merged.imdb_id === "string" && /^tt/i.test(merged.imdb_id)) ||
+          (typeof merged.external_ids?.imdb_id === "string" &&
+            /^tt/i.test(merged.external_ids.imdb_id));
+        if (!hasImdb) {
+          omdbImdbId = await resolveOmdbImdbIdForDoc(merged, "tv");
+          if (omdbImdbId) {
+            merged = {
+              ...merged,
+              imdb_id: omdbImdbId,
+              external_ids: {
+                ...(merged.external_ids && typeof merged.external_ids === "object"
+                  ? merged.external_ids
+                  : {}),
+                imdb_id: omdbImdbId,
+              },
+            };
+          }
+        }
+
+        const hit = await resolveTmdbTvFromDoc(merged, token, {
+          extraTitles,
+          imdbId: omdbImdbId,
+        });
         if (hit) {
           const setDoc = {
             tmdb_id: hit.tmdbId,
@@ -102,11 +241,19 @@ export async function GET(req) {
           };
           if (hit.poster_path) setDoc.poster_path = hit.poster_path;
           if (hit.backdrop_path) setDoc.backdrop_path = hit.backdrop_path;
+          if (omdbImdbId) {
+            setDoc.external_ids = {
+              ...(merged.external_ids && typeof merged.external_ids === "object"
+                ? merged.external_ids
+                : {}),
+              imdb_id: omdbImdbId,
+            };
+          }
           await collection.updateOne({ _id: merged._id }, { $set: setDoc });
           merged = {
             ...merged,
             tmdb_id: hit.tmdbId,
-            imdb_id: hit.imdbId,
+            imdb_id: hit.imdbId ?? merged.imdb_id,
             poster_path: hit.poster_path || merged.poster_path,
             backdrop_path: hit.backdrop_path || merged.backdrop_path,
           };

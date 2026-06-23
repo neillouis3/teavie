@@ -7,6 +7,7 @@ import {
   imdbGenreLabelFromBrowseParam,
   imdbGenreMatchConditions,
 } from "./imdbGenres.js";
+import { catalogExcludeJpAnimationNumericTvMongoClause } from "./tvJpAnimePrune.js";
 
 /** UTC calendar day YYYY-MM-DD for catalog filters. */
 export function catalogTodayIsoUtc() {
@@ -151,6 +152,7 @@ export function catalogTvBrowseNonAnimeClause() {
     $and: [
       catalogNotAnimeCatalogIdMongoExpr(),
       { $nor: [{ is_anime: true }, { tags: "anime" }] },
+      catalogExcludeJpAnimationNumericTvMongoClause(),
     ],
   };
 }

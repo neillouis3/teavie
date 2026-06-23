@@ -4,6 +4,8 @@
  * that indicate hardcore / legacy X-rated theatrical (when `release_dates` is present).
  */
 
+import { shouldPruneTvAnimeWithoutAnilist } from "./tvJpAnimePrune.js";
+
 /** Production companies excluded from the movie catalog (exact name match, case-insensitive). */
 export const BLOCKED_MOVIE_PRODUCTION_COMPANIES = [
   "Vivamax",
@@ -75,5 +77,6 @@ export function shouldRejectTmdbMovieFromCatalog(movie) {
 export function shouldRejectTmdbTvFromCatalog(show) {
   if (!show || typeof show !== "object") return true;
   const s = /** @type {Record<string, unknown>} */ (show);
-  return s.adult === true;
+  if (s.adult === true) return true;
+  return shouldPruneTvAnimeWithoutAnilist({ ...s, type: "tv" });
 }

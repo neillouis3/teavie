@@ -323,7 +323,7 @@ function mapAnimeToTvDoc(anime, anilist) {
     overview: anime.synopsis || anime.background || null,
     runtimeSeconds,
     number_of_seasons: 1,
-    season_amount: typeof anime.episodes === "number" ? anime.episodes : null,
+    season_amount: 1,
     number_of_episodes: typeof anime.episodes === "number" ? anime.episodes : null,
     popularity: typeof anime.popularity === "number" ? anime.popularity : 0,
     vote_average: coerceVote(anime.score),

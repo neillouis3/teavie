@@ -124,6 +124,7 @@ export async function findCatalogDocByResolveId(collection, mediaType, id) {
         imdb_id: 1,
         title: 1,
         name: 1,
+        title_aliases: 1,
         release_date: 1,
         releaseDate: 1,
         first_air_date: 1,
