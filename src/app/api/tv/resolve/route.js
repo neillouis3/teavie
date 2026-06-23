@@ -9,6 +9,7 @@ import { fetchAnilistEnrichmentForCatalogDoc } from "@/lib/anilistCatalogEnrich"
 import { resolveOmdbImdbIdForDoc } from "@/lib/omdbResolve";
 import { resolveTmdbTvFromDoc } from "@/lib/tmdbResolveFromTitle";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
+import { isValidAdminKey } from "@/lib/adminAccess";
 import { shouldPruneTvAnimeWithoutAnilist, showUnavailableReasonForDoc, SHOW_UNAVAILABLE_MESSAGES } from "@/lib/tvJpAnimePrune";
 
 function pickNumericAnilistId(doc) {
@@ -136,6 +137,17 @@ export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id")?.trim();
+    const adminKey =
+      searchParams.get("adminKey")?.trim() ||
+      searchParams.get("key")?.trim() ||
+      "";
+    const adminBypass = isValidAdminKey(adminKey);
+    if (adminKey && !adminBypass) {
+      return Response.json(
+        { error: "unauthorized", message: "Invalid admin key." },
+        { status: 403 }
+      );
+    }
     if (!id) {
       return Response.json({ error: "Missing id" }, { status: 400 });
     }
@@ -150,6 +162,24 @@ export async function GET(req) {
     const isNumericId = Number.isFinite(numeric) && numeric > 0;
 
     if (!doc && isNumericId) {
+      if (adminBypass) {
+        const imdb_genres = await imdbGenresFromOmdbForTmdbId(numeric, "tv");
+        return Response.json({
+          playerId: numeric,
+          imdbId: null,
+          adminBypass: true,
+          fallback: imdb_genres.length
+            ? {
+                id: String(numeric),
+                imdb_genres,
+                omdb: null,
+                name: `TV ${numeric}`,
+                first_air_date: null,
+              }
+            : null,
+        });
+      }
+
       const token = tmdbBearerToken();
       const tmdbProbe = token ? await tmdbTvDocForPruneCheck(numeric, token) : null;
       if (tmdbProbe && shouldPruneTvAnimeWithoutAnilist(tmdbProbe)) {

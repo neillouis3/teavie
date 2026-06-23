@@ -453,7 +453,15 @@ async function fetchAnilistAndMerge(
 
 export type ShowServerKey = StreamServerId;
 
-export default function ShowTemplate({ id }: { id: string }) {
+export default function ShowTemplate({
+  id,
+  adminKey,
+  adminPreview = false,
+}: {
+  id: string;
+  adminKey?: string;
+  adminPreview?: boolean;
+}) {
   const { server } = useStreamingSource();
   const [show, setShow] = useState<Show | null>(null);
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
@@ -470,15 +478,17 @@ export default function ShowTemplate({ id }: { id: string }) {
   );
   const [progressHydrated, setProgressHydrated] = useState(false);
   const [showUnavailableReason, setShowUnavailableReason] = useState<
-    "content_policy" | "not_found" | null
+    "content_policy" | "not_found" | "unauthorized" | null
   >(null);
+  const [adminBypassActive, setAdminBypassActive] = useState(false);
   const progressAppliedForIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     progressAppliedForIdRef.current = null;
     setProgressHydrated(false);
     setShowUnavailableReason(null);
-  }, [id]);
+    setAdminBypassActive(false);
+  }, [id, adminKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -531,19 +541,25 @@ export default function ShowTemplate({ id }: { id: string }) {
         setLoading(true);
         setShow(null);
         setShowUnavailableReason(null);
+        setAdminBypassActive(false);
         setResolvedPlayerId(id);
 
         let targetTmdbId = id;
         let fallbackShow: Show | null = null;
+        let bypassPolicy = false;
 
-        const resolveRes = await fetch(`/api/tv/resolve?id=${encodeURIComponent(id)}`);
+        const resolveQs = new URLSearchParams({ id });
+        if (adminKey?.trim()) resolveQs.set("adminKey", adminKey.trim());
+        const resolveRes = await fetch(`/api/tv/resolve?${resolveQs.toString()}`);
         if (!resolveRes.ok) {
           try {
             const err = (await resolveRes.json()) as {
               error?: string;
               message?: string;
             };
-            if (err?.error === "content_policy" || err?.error === "not_found") {
+            if (err?.error === "unauthorized") {
+              setShowUnavailableReason("unauthorized");
+            } else if (err?.error === "content_policy" || err?.error === "not_found") {
               setShowUnavailableReason(err.error);
             } else {
               setShowUnavailableReason("not_found");
@@ -556,13 +572,17 @@ export default function ShowTemplate({ id }: { id: string }) {
 
         const resolved = await resolveRes.json();
         if (resolved?.error) {
-          if (resolved.error === "content_policy" || resolved.error === "not_found") {
+          if (resolved.error === "unauthorized") {
+            setShowUnavailableReason("unauthorized");
+          } else if (resolved.error === "content_policy" || resolved.error === "not_found") {
             setShowUnavailableReason(resolved.error);
           } else {
             setShowUnavailableReason("not_found");
           }
           return;
         }
+        bypassPolicy = resolved?.adminBypass === true;
+        if (bypassPolicy) setAdminBypassActive(true);
         if (resolved?.playerId != null) {
           targetTmdbId = String(resolved.playerId);
           setResolvedPlayerId(String(resolved.playerId));
@@ -634,7 +654,7 @@ export default function ShowTemplate({ id }: { id: string }) {
           imdb_genres: fallbackShow?.imdb_genres,
           is_anime: fallbackShow?.is_anime,
         };
-        if (shouldPruneTvAnimeWithoutAnilist(blockedDoc)) {
+        if (shouldPruneTvAnimeWithoutAnilist(blockedDoc) && !bypassPolicy) {
           setShowUnavailableReason(showUnavailableReasonForDoc(blockedDoc));
           return;
         }
@@ -694,7 +714,7 @@ export default function ShowTemplate({ id }: { id: string }) {
       }
     };
     fetchShowDetails();
-  }, [id]);
+  }, [id, adminKey]);
 
   // Anime films (AniList format MOVIE/MUSIC) have no TMDB tv id; resolve a TMDB movie id so they
   // play through the standard movie embed instead of the legacy AniList /anime path.
@@ -877,6 +897,11 @@ export default function ShowTemplate({ id }: { id: string }) {
 
   return (
     <div className="flex min-h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
+      {adminPreview && adminBypassActive ? (
+        <div className="mb-3 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-center text-xs text-warning-800 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">
+          Admin preview — content policy bypass active
+        </div>
+      ) : null}
       <div className="w-full flex flex-col gap-6">
 
         {/* ── Video Player (horizontal inset matches root py-4 / px-4) ── */}
@@ -889,9 +914,13 @@ export default function ShowTemplate({ id }: { id: string }) {
           ) : !show ? (
             <div className="flex h-full w-full items-center justify-center bg-default-100 px-6 text-center dark:bg-default-50/10">
               <p className="max-w-md text-sm leading-relaxed text-default-600">
-                {SHOW_UNAVAILABLE_MESSAGES[
-                  showUnavailableReason ?? "not_found"
-                ]}
+                {showUnavailableReason === "unauthorized"
+                  ? "Invalid admin key. Check TEAVIE_ADMIN_KEY and the ?key= parameter."
+                  : SHOW_UNAVAILABLE_MESSAGES[
+                      showUnavailableReason === "content_policy"
+                        ? "content_policy"
+                        : "not_found"
+                    ]}
               </p>
             </div>
           ) : isAnimeMovie ? (
