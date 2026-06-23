@@ -36,6 +36,18 @@ export default function HomePage() {
           >
             Go Explore The Site
           </Button>
+          <p className="mt-10 text-xs text-default-500">
+            Designed and built by{" "}
+            <a
+              href="https://x.com/neillouis3"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-default-400 underline underline-offset-2 hover:text-default-300"
+            >
+              @neillouis3
+            </a>
+            .
+          </p>
         </div>
       </div>
     </div>
