@@ -84,6 +84,8 @@ async function run() {
         original_language: 1,
         genre_ids: 1,
         genres: 1,
+        imdb_genres: 1,
+        omdb: 1,
         is_anime: 1,
         tags: 1,
         source: 1,

@@ -1,5 +1,6 @@
 const TMDB_SEARCH_URL = "https://api.themoviedb.org/3/search/tv";
 const TMDB_SEARCH_MOVIE_URL = "https://api.themoviedb.org/3/search/movie";
+const TMDB_FIND_URL = "https://api.themoviedb.org/3/find";
 const TMDB_EXTERNAL_IDS_URL = "https://api.themoviedb.org/3/tv";
 const FETCH_TIMEOUT_MS = 12000;
 const MIN_SCORE = 45;
@@ -57,7 +58,7 @@ async function tmdbFetch(url, token) {
   return res.json();
 }
 
-function collectTitleCandidates(doc) {
+function collectTitleCandidates(doc, extraTitles = []) {
   const out = [];
   const push = (s) => {
     const t = typeof s === "string" ? s.trim() : "";
@@ -66,15 +67,104 @@ function collectTitleCandidates(doc) {
     if (!n) return;
     if (!out.some((x) => normalizeText(x) === n)) out.push(t);
   };
-  push(doc.title);
-  push(doc.name);
+  for (const t of extraTitles) push(t);
   const al = doc.anilist?.title;
   if (al && typeof al === "object") {
     push(al.english);
     push(al.romaji);
     push(al.native);
   }
+  if (Array.isArray(doc.title_aliases)) {
+    for (const alias of doc.title_aliases) push(alias);
+  }
+  if (Array.isArray(doc.anilist?.synonyms)) {
+    for (const alias of doc.anilist.synonyms) push(alias);
+  }
+  push(doc.title);
+  push(doc.name);
   return out;
+}
+
+function pickImdbId(doc) {
+  const direct =
+    typeof doc?.imdb_id === "string" && /^tt/i.test(doc.imdb_id)
+      ? doc.imdb_id.trim()
+      : "";
+  if (direct) return direct;
+  const ext = doc?.external_ids?.imdb_id;
+  if (typeof ext === "string" && /^tt/i.test(ext)) return ext.trim();
+  return null;
+}
+
+function pickTvdbId(doc) {
+  const ext = doc?.external_ids?.tvdb_id;
+  if (typeof ext === "number" && Number.isFinite(ext) && ext > 0) return ext;
+  if (typeof ext === "string") {
+    const n = parseInt(ext, 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+async function resolveFromTmdbTvRow(row, token) {
+  const tmdbId = Number(row?.id);
+  if (!Number.isFinite(tmdbId) || tmdbId <= 0) return null;
+
+  let imdbId = null;
+  try {
+    const ext = await tmdbFetch(`${TMDB_EXTERNAL_IDS_URL}/${tmdbId}/external_ids`, token);
+    imdbId = typeof ext?.imdb_id === "string" ? ext.imdb_id : null;
+  } catch {
+    // keep null imdb
+  }
+
+  return {
+    tmdbId,
+    imdbId,
+    poster_path: row.poster_path || null,
+    backdrop_path: row.backdrop_path || row.poster_path || null,
+  };
+}
+
+/**
+ * TMDB TV id from IMDb external id.
+ * @returns {Promise<{ tmdbId: number, imdbId: string|null, poster_path: string|null, backdrop_path: string|null }|null>}
+ */
+export async function resolveTmdbTvByImdbId(imdbId, token) {
+  if (!token || !imdbId || !/^tt/i.test(String(imdbId))) return null;
+  try {
+    const enc = encodeURIComponent(String(imdbId).trim());
+    const payload = await tmdbFetch(
+      `${TMDB_FIND_URL}/${enc}?external_source=imdb_id&language=en-US`,
+      token
+    );
+    const results = Array.isArray(payload?.tv_results) ? payload.tv_results : [];
+    if (!results.length) return null;
+    return resolveFromTmdbTvRow(results[0], token);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * TMDB TV id from TVDB external id (common on anime catalog imports).
+ * @returns {Promise<{ tmdbId: number, imdbId: string|null, poster_path: string|null, backdrop_path: string|null }|null>}
+ */
+export async function resolveTmdbTvByTvdbId(tvdbId, token) {
+  if (!token || tvdbId == null) return null;
+  const id = Number(tvdbId);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  try {
+    const payload = await tmdbFetch(
+      `${TMDB_FIND_URL}/${id}?external_source=tvdb_id&language=en-US`,
+      token
+    );
+    const results = Array.isArray(payload?.tv_results) ? payload.tv_results : [];
+    if (!results.length) return null;
+    return resolveFromTmdbTvRow(results[0], token);
+  } catch {
+    return null;
+  }
 }
 
 async function searchTmdbTvOnce(title, year, useYear, token) {
@@ -91,11 +181,27 @@ async function searchTmdbTvOnce(title, year, useYear, token) {
 
 /**
  * Pick best TMDB TV match for a catalog doc (anime or any TV missing tmdb_id).
- * @returns {{ tmdbId: number, imdbId: string|null, poster_path: string|null, backdrop_path: string|null }|null}
+ * @param {Record<string, unknown>} doc
+ * @param {string} token
+ * @param {{ extraTitles?: string[], imdbId?: string|null }} [options]
+ * @returns {Promise<{ tmdbId: number, imdbId: string|null, poster_path: string|null, backdrop_path: string|null }|null>}
  */
-export async function resolveTmdbTvFromDoc(doc, token) {
+export async function resolveTmdbTvFromDoc(doc, token, options = {}) {
   if (!token) return null;
-  const titles = collectTitleCandidates(doc);
+
+  const imdbId = options.imdbId ?? pickImdbId(doc);
+  if (imdbId) {
+    const byImdb = await resolveTmdbTvByImdbId(imdbId, token);
+    if (byImdb) return byImdb;
+  }
+
+  const tvdbId = pickTvdbId(doc);
+  if (tvdbId != null) {
+    const byTvdb = await resolveTmdbTvByTvdbId(tvdbId, token);
+    if (byTvdb) return byTvdb;
+  }
+
+  const titles = collectTitleCandidates(doc, options.extraTitles ?? []);
   if (!titles.length) return null;
   const year = getYear(doc.first_air_date || doc.release_date || "");
   const nowY = new Date().getFullYear();
@@ -122,23 +228,7 @@ export async function resolveTmdbTvFromDoc(doc, token) {
   }
 
   if (!bestOverall || bestOverall.score < MIN_SCORE) return null;
-  const row = bestOverall.row;
-  const tmdbId = Number(row.id);
-  if (!Number.isFinite(tmdbId) || tmdbId <= 0) return null;
-
-  let imdbId = null;
-  try {
-    const extUrl = `${TMDB_EXTERNAL_IDS_URL}/${tmdbId}/external_ids`;
-    const ext = await tmdbFetch(extUrl, token);
-    imdbId = typeof ext?.imdb_id === "string" ? ext.imdb_id : null;
-  } catch {
-    // keep null imdb
-  }
-
-  const poster_path = row.poster_path || null;
-  const backdrop_path = row.backdrop_path || row.poster_path || null;
-
-  return { tmdbId, imdbId, poster_path, backdrop_path };
+  return resolveFromTmdbTvRow(bestOverall.row, token);
 }
 
 function movieSimilarityScore(docTitle, docYear, candidate) {
