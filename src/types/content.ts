@@ -9,6 +9,8 @@ export interface ContentItem {
   backdrop_path?: string;
   overview?: string;
   type?: 'movie' | 'tv';
+  /** Catalog anime rows (`anime_*` ids). */
+  is_anime?: boolean;
   runtimeSeconds?: number;
   season_amount?: number;
   /** Total episodes when known (TV / anime). */
