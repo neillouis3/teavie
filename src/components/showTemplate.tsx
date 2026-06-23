@@ -36,7 +36,11 @@ import CatalogMediaPanel, {
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
 import { imdbGenresFromAnimeSources } from "@/lib/imdbGenres";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
-import { shouldPruneTvAnimeWithoutAnilist } from "@/lib/tvJpAnimePrune";
+import {
+  shouldPruneTvAnimeWithoutAnilist,
+  SHOW_UNAVAILABLE_MESSAGES,
+  showUnavailableReasonForDoc,
+} from "@/lib/tvJpAnimePrune";
 
 interface Season {
   season_number: number;
@@ -465,11 +469,15 @@ export default function ShowTemplate({ id }: { id: string }) {
     () => new Set()
   );
   const [progressHydrated, setProgressHydrated] = useState(false);
+  const [showUnavailableReason, setShowUnavailableReason] = useState<
+    "content_policy" | "not_found" | null
+  >(null);
   const progressAppliedForIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     progressAppliedForIdRef.current = null;
     setProgressHydrated(false);
+    setShowUnavailableReason(null);
   }, [id]);
 
   useEffect(() => {
@@ -521,6 +529,8 @@ export default function ShowTemplate({ id }: { id: string }) {
     const fetchShowDetails = async () => {
       try {
         setLoading(true);
+        setShow(null);
+        setShowUnavailableReason(null);
         setResolvedPlayerId(id);
 
         let targetTmdbId = id;
@@ -528,13 +538,29 @@ export default function ShowTemplate({ id }: { id: string }) {
 
         const resolveRes = await fetch(`/api/tv/resolve?id=${encodeURIComponent(id)}`);
         if (!resolveRes.ok) {
-          setShow(null);
+          try {
+            const err = (await resolveRes.json()) as {
+              error?: string;
+              message?: string;
+            };
+            if (err?.error === "content_policy" || err?.error === "not_found") {
+              setShowUnavailableReason(err.error);
+            } else {
+              setShowUnavailableReason("not_found");
+            }
+          } catch {
+            setShowUnavailableReason("not_found");
+          }
           return;
         }
 
         const resolved = await resolveRes.json();
         if (resolved?.error) {
-          setShow(null);
+          if (resolved.error === "content_policy" || resolved.error === "not_found") {
+            setShowUnavailableReason(resolved.error);
+          } else {
+            setShowUnavailableReason("not_found");
+          }
           return;
         }
         if (resolved?.playerId != null) {
@@ -596,21 +622,20 @@ export default function ShowTemplate({ id }: { id: string }) {
           throw new Error("Failed to fetch show details");
         }
         const data = (await res.json()) as Show;
-        if (
-          shouldPruneTvAnimeWithoutAnilist({
-            type: "tv",
-            id: Number(targetTmdbId) || targetTmdbId,
-            origin_country: data.origin_country,
-            original_language: data.original_language,
-            genres: data.genres,
-            genre_ids: Array.isArray(data.genres)
-              ? data.genres.map((g) => g?.id).filter((n) => typeof n === "number")
-              : [],
-            imdb_genres: fallbackShow?.imdb_genres,
-            is_anime: fallbackShow?.is_anime,
-          })
-        ) {
-          setShow(null);
+        const blockedDoc = {
+          type: "tv" as const,
+          id: Number(targetTmdbId) || targetTmdbId,
+          origin_country: data.origin_country,
+          original_language: data.original_language,
+          genres: data.genres,
+          genre_ids: Array.isArray(data.genres)
+            ? data.genres.map((g) => g?.id).filter((n) => typeof n === "number")
+            : [],
+          imdb_genres: fallbackShow?.imdb_genres,
+          is_anime: fallbackShow?.is_anime,
+        };
+        if (shouldPruneTvAnimeWithoutAnilist(blockedDoc)) {
+          setShowUnavailableReason(showUnavailableReasonForDoc(blockedDoc));
           return;
         }
         if (fallbackShow?.is_anime) data.is_anime = true;
@@ -862,8 +887,12 @@ export default function ShowTemplate({ id }: { id: string }) {
           {loading ? (
             <div className="h-full w-full animate-pulse bg-default-200" />
           ) : !show ? (
-            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-              This show is not available on Teavie.
+            <div className="flex h-full w-full items-center justify-center bg-default-100 px-6 text-center dark:bg-default-50/10">
+              <p className="max-w-md text-sm leading-relaxed text-default-600">
+                {SHOW_UNAVAILABLE_MESSAGES[
+                  showUnavailableReason ?? "not_found"
+                ]}
+              </p>
             </div>
           ) : isAnimeMovie ? (
             animeMovieResolving ? (

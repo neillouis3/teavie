@@ -127,6 +127,20 @@ export function shouldPruneTvAnimeWithoutAnilist(doc) {
   return isOldCatalogJpAnimationTv(doc);
 }
 
+export const SHOW_UNAVAILABLE_MESSAGES = {
+  content_policy:
+    "This title isn't available on Teavie because it violates our content policy or includes inappropriate material.",
+  not_found: "This show isn't available on Teavie.",
+};
+
+/** Why a show page could not be loaded (for blocked / missing catalog rows). */
+export function showUnavailableReasonForDoc(doc) {
+  if (!doc || typeof doc !== "object") return "not_found";
+  if (doc.adult === true) return "content_policy";
+  if (shouldPruneTvAnimeWithoutAnilist(doc)) return "content_policy";
+  return "not_found";
+}
+
 /** @deprecated */
 export const shouldPruneTvJpAnimeWithoutAnilist = shouldPruneTvAnimeWithoutAnilist;
 

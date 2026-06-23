@@ -9,7 +9,7 @@ import { fetchAnilistEnrichmentForCatalogDoc } from "@/lib/anilistCatalogEnrich"
 import { resolveOmdbImdbIdForDoc } from "@/lib/omdbResolve";
 import { resolveTmdbTvFromDoc } from "@/lib/tmdbResolveFromTitle";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
-import { shouldPruneTvAnimeWithoutAnilist } from "@/lib/tvJpAnimePrune";
+import { shouldPruneTvAnimeWithoutAnilist, showUnavailableReasonForDoc, SHOW_UNAVAILABLE_MESSAGES } from "@/lib/tvJpAnimePrune";
 
 function pickNumericAnilistId(doc) {
   const raw = doc?.anilist_id ?? doc?.anilist?.id;
@@ -85,6 +85,7 @@ async function tmdbTvDocForPruneCheck(tmdbId, token) {
     return {
       type: "tv",
       id: tmdbId,
+      adult: show.adult === true,
       origin_country: show.origin_country,
       original_language: show.original_language,
       genre_ids: Array.isArray(show.genres)
@@ -95,6 +96,17 @@ async function tmdbTvDocForPruneCheck(tmdbId, token) {
   } catch {
     return null;
   }
+}
+
+function blockedShowResponse(doc) {
+  const reason = showUnavailableReasonForDoc(doc);
+  return Response.json(
+    {
+      error: reason,
+      message: SHOW_UNAVAILABLE_MESSAGES[reason] ?? SHOW_UNAVAILABLE_MESSAGES.not_found,
+    },
+    { status: 404 }
+  );
 }
 
 function normalizeTvFallback(doc) {
@@ -141,7 +153,7 @@ export async function GET(req) {
       const token = tmdbBearerToken();
       const tmdbProbe = token ? await tmdbTvDocForPruneCheck(numeric, token) : null;
       if (tmdbProbe && shouldPruneTvAnimeWithoutAnilist(tmdbProbe)) {
-        return Response.json({ error: "Show not found" }, { status: 404 });
+        return blockedShowResponse(tmdbProbe);
       }
 
       const imdb_genres = await imdbGenresFromOmdbForTmdbId(numeric, "tv");
@@ -152,7 +164,7 @@ export async function GET(req) {
         imdb_genres,
       };
       if (shouldPruneTvAnimeWithoutAnilist(probeWithImdb)) {
-        return Response.json({ error: "Show not found" }, { status: 404 });
+        return blockedShowResponse(probeWithImdb);
       }
 
       return Response.json({
