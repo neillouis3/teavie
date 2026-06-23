@@ -9,6 +9,8 @@ import {
 } from "./imdbGenres.js";
 import { catalogExcludeJpAnimationNumericTvMongoClause } from "./tvJpAnimePrune.js";
 
+export { catalogExcludeJpAnimationNumericTvMongoClause };
+
 /** UTC calendar day YYYY-MM-DD for catalog filters. */
 export function catalogTodayIsoUtc() {
   return new Date().toISOString().slice(0, 10);
