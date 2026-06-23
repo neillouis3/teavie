@@ -36,6 +36,7 @@ import CatalogMediaPanel, {
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
 import { imdbGenresFromAnimeSources } from "@/lib/imdbGenres";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
+import { shouldPruneTvAnimeWithoutAnilist } from "@/lib/tvJpAnimePrune";
 
 interface Season {
   season_number: number;
@@ -526,15 +527,22 @@ export default function ShowTemplate({ id }: { id: string }) {
         let fallbackShow: Show | null = null;
 
         const resolveRes = await fetch(`/api/tv/resolve?id=${encodeURIComponent(id)}`);
-        if (resolveRes.ok) {
-          const resolved = await resolveRes.json();
-          if (resolved?.playerId != null) {
-            targetTmdbId = String(resolved.playerId);
-            setResolvedPlayerId(String(resolved.playerId));
-          }
-          if (resolved?.fallback && typeof resolved.fallback === "object") {
-            fallbackShow = resolved.fallback as Show;
-          }
+        if (!resolveRes.ok) {
+          setShow(null);
+          return;
+        }
+
+        const resolved = await resolveRes.json();
+        if (resolved?.error) {
+          setShow(null);
+          return;
+        }
+        if (resolved?.playerId != null) {
+          targetTmdbId = String(resolved.playerId);
+          setResolvedPlayerId(String(resolved.playerId));
+        }
+        if (resolved?.fallback && typeof resolved.fallback === "object") {
+          fallbackShow = resolved.fallback as Show;
         }
 
         const isNumericId = /^\d+$/.test(targetTmdbId);
@@ -588,6 +596,23 @@ export default function ShowTemplate({ id }: { id: string }) {
           throw new Error("Failed to fetch show details");
         }
         const data = (await res.json()) as Show;
+        if (
+          shouldPruneTvAnimeWithoutAnilist({
+            type: "tv",
+            id: Number(targetTmdbId) || targetTmdbId,
+            origin_country: data.origin_country,
+            original_language: data.original_language,
+            genres: data.genres,
+            genre_ids: Array.isArray(data.genres)
+              ? data.genres.map((g) => g?.id).filter((n) => typeof n === "number")
+              : [],
+            imdb_genres: fallbackShow?.imdb_genres,
+            is_anime: fallbackShow?.is_anime,
+          })
+        ) {
+          setShow(null);
+          return;
+        }
         if (fallbackShow?.is_anime) data.is_anime = true;
         const todayYmd = catalogTodayYmdUtc();
         if (!data.is_anime && Array.isArray(data.seasons) && data.seasons.length) {
@@ -836,6 +861,10 @@ export default function ShowTemplate({ id }: { id: string }) {
         >
           {loading ? (
             <div className="h-full w-full animate-pulse bg-default-200" />
+          ) : !show ? (
+            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+              This show is not available on Teavie.
+            </div>
           ) : isAnimeMovie ? (
             animeMovieResolving ? (
               <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
