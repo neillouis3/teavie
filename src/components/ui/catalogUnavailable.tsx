@@ -67,12 +67,12 @@ export default function CatalogUnavailable({
           <p className="mt-4 text-xs text-default-500">
             If you think this should be okay to watch, contact me{" "}
             <a
-              href="https://x.com/neillouisedev"
+              href="https://x.com/neillouis3dev"
               target="_blank"
               rel="noopener noreferrer"
               className="text-default-400 underline underline-offset-2 hover:text-default-300"
             >
-              @neillouisedev
+              @neillouis3dev
             </a>
             .
           </p>

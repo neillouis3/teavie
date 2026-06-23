@@ -39,12 +39,12 @@ export default function HomePage() {
           <p className="mt-10 text-xs text-default-500">
             Designed and built by{" "}
             <a
-              href="https://x.com/neillouisedev"
+              href="https://x.com/neillouis3dev"
               target="_blank"
               rel="noopener noreferrer"
               className="text-default-400 underline underline-offset-2 hover:text-default-300"
             >
-              @neillouisedev
+              @neillouis3dev
             </a>
             .
           </p>
