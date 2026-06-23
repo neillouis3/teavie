@@ -44,22 +44,22 @@ export default function CatalogUnavailable({
   const showAppeal = key === "content_policy";
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col items-center justify-center bg-black px-6 py-12 text-center lg:min-h-[100dvh]">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col items-center justify-center bg-background px-6 py-12 text-center lg:min-h-[100dvh]">
       <div className="flex max-w-md flex-col items-center">
-        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-default-100/10">
+        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-default-100/40 dark:bg-default-100/10">
           <HugeiconsIcon
             icon={ShieldBanIcon}
             size={28}
-            className="text-default-400"
+            className="text-default-500"
             strokeWidth={1.5}
           />
         </div>
 
-        <h1 className="text-xl font-semibold text-white sm:text-2xl">
+        <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
           {copy.heading}
         </h1>
 
-        <p className="mt-3 text-sm leading-relaxed text-default-400 sm:text-[15px]">
+        <p className="mt-3 text-sm leading-relaxed text-default-500 sm:text-[15px]">
           {copy.message}
         </p>
 
@@ -67,12 +67,12 @@ export default function CatalogUnavailable({
           <p className="mt-4 text-xs text-default-500">
             If you think this should be okay to watch, contact me{" "}
             <a
-              href="https://x.com/neillouis3"
+              href="https://x.com/neillouisedev"
               target="_blank"
               rel="noopener noreferrer"
               className="text-default-400 underline underline-offset-2 hover:text-default-300"
             >
-              @neillouis3
+              @neillouisedev
             </a>
             .
           </p>
@@ -80,7 +80,7 @@ export default function CatalogUnavailable({
 
         <Button
           variant="bordered"
-          className="mt-8 border-default-500/60 text-default-200"
+          className="mt-8 border-default-300 text-foreground dark:border-default-500/60"
           onPress={() => router.push("/explore")}
         >
           Continue exploring the site
