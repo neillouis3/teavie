@@ -183,15 +183,15 @@ export function catalogExcludeJpAnimationNumericTvMongoClause() {
       {
         $or: [
           { genre_ids: { $exists: false } },
-          { genre_ids: { $size: 0 } },
           { genre_ids: null },
+          { genre_ids: [] },
         ],
       },
       {
         $or: [
           { genres: { $exists: false } },
-          { genres: { $size: 0 } },
           { genres: null },
+          { genres: [] },
         ],
       },
     ],

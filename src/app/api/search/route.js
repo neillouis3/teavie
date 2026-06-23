@@ -74,6 +74,60 @@ function buildSortFields(sortBy) {
   }
 }
 
+/** Title relevance boosts for catalog + anime alias fields. */
+function titleRelevanceScoreAddends(lowered, safeLower) {
+  const lowerField = (path) => ({ $toLower: { $ifNull: [path, ""] } });
+  const fields = [
+    "$title",
+    "$name",
+    "$anilist.title.english",
+    "$anilist.title.romaji",
+    "$anilist.title.native",
+  ];
+  /** @type {Record<string, unknown>[]} */
+  const out = [];
+  for (const path of fields) {
+    const field = lowerField(path);
+    out.push(
+      { $cond: [{ $eq: [field, lowered] }, 1000, 0] },
+      {
+        $cond: [
+          { $regexMatch: { input: field, regex: `^${safeLower}` } },
+          300,
+          0,
+        ],
+      },
+      { $cond: [{ $regexMatch: { input: field, regex: safeLower } }, 120, 0] }
+    );
+  }
+  out.push({
+    $cond: [
+      {
+        $gt: [
+          {
+            $size: {
+              $filter: {
+                input: { $ifNull: ["$title_aliases", []] },
+                as: "alias",
+                cond: {
+                  $regexMatch: {
+                    input: { $toLower: "$$alias" },
+                    regex: safeLower,
+                  },
+                },
+              },
+            },
+          },
+          0,
+        ],
+      },
+      120,
+      0,
+    ],
+  });
+  return out;
+}
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -302,70 +356,22 @@ export async function GET(req) {
                   ]
                 : []),
               ...(actorBoostIds.length
-                ? [{ $cond: [{ $in: ["$id", actorBoostIds] }, 150, 0] }]
+                ? [
+                    {
+                      $cond: [
+                        {
+                          $in: [
+                            { $toString: "$id" },
+                            actorBoostIds.map(String),
+                          ],
+                        },
+                        150,
+                        0,
+                      ],
+                    },
+                  ]
                 : []),
-              {
-                $cond: [
-                  { $eq: [{ $toLower: { $ifNull: ["$title", ""] } }, lowered] },
-                  1000,
-                  0,
-                ],
-              },
-              {
-                $cond: [
-                  { $eq: [{ $toLower: { $ifNull: ["$name", ""] } }, lowered] },
-                  1000,
-                  0,
-                ],
-              },
-              {
-                $cond: [
-                  {
-                    $regexMatch: {
-                      input: { $toLower: { $ifNull: ["$title", ""] } },
-                      regex: `^${safeLower}`,
-                    },
-                  },
-                  300,
-                  0,
-                ],
-              },
-              {
-                $cond: [
-                  {
-                    $regexMatch: {
-                      input: { $toLower: { $ifNull: ["$name", ""] } },
-                      regex: `^${safeLower}`,
-                    },
-                  },
-                  300,
-                  0,
-                ],
-              },
-              {
-                $cond: [
-                  {
-                    $regexMatch: {
-                      input: { $toLower: { $ifNull: ["$title", ""] } },
-                      regex: safeLower,
-                    },
-                  },
-                  120,
-                  0,
-                ],
-              },
-              {
-                $cond: [
-                  {
-                    $regexMatch: {
-                      input: { $toLower: { $ifNull: ["$name", ""] } },
-                      regex: safeLower,
-                    },
-                  },
-                  120,
-                  0,
-                ],
-              },
+              ...titleRelevanceScoreAddends(lowered, safeLower),
             ],
           },
         },

@@ -135,6 +135,7 @@ export function mapContentDocToItem(doc) {
     id: doc.id.toString(),
     title: doc.title ?? doc.name,
     name: doc.name ?? doc.title,
+    is_anime: isAnimeRow,
     release_date,
     first_air_date: doc.type === "tv" ? doc.first_air_date ?? null : null,
     poster_path: doc.poster_path ?? null,
