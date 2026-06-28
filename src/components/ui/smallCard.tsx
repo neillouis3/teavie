@@ -109,14 +109,14 @@ export default function SmallCard({
   const meta = (
     <div className="mt-2.5 flex min-w-0 flex-col gap-2">
       {metaChips.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
           {metaChips.map((chip, i) => (
             <MetaChip key={`${chip}-${i}`}>{chip}</MetaChip>
           ))}
         </div>
       ) : null}
       <h2
-        className="normal-case text-sm leading-snug text-foreground line-clamp-2 transition-colors duration-300 group-hover:text-success sm:text-[15px]"
+        className="normal-case min-w-0 truncate text-sm leading-snug text-foreground transition-colors duration-300 group-hover:text-success sm:text-[15px]"
         title={displayTitle}
       >
         {displayTitle}
