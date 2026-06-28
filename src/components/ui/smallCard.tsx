@@ -23,7 +23,7 @@ interface SmallCardProps {
 
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex shrink-0 items-center rounded-md bg-default-200/90 px-2 py-0.5 text-[11px] font-medium leading-none text-foreground/75 dark:bg-white/10 dark:text-white/75">
+    <span className="inline-flex shrink-0 items-center rounded-md bg-default-200/90 p-1.5 text-[11px] font-medium leading-none text-foreground/75 dark:bg-white/10 dark:text-white/75">
       {children}
     </span>
   );
