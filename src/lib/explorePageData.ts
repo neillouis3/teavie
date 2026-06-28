@@ -10,7 +10,7 @@ import {
 
 export type { TmdbDiscoverPayload };
 
-const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v1:";
+const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v2:";
 
 export type ExploreHistoryRow = ContentItem & {
   progressLabel: string;
@@ -26,10 +26,33 @@ export type ExplorePagePayload = {
 
 function historyCacheKey(entries: WatchHistoryEntry[]): string {
   const sig = entries
-    .map((e) => `${e.mediaType}:${e.catalogId}`)
+    .map(
+      (e) =>
+        `${e.mediaType}:${e.catalogId}:s${e.lastSeason}e${e.lastEpisode}`
+    )
     .sort()
     .join("|");
   return `${EXPLORE_HISTORY_CACHE_PREFIX}${sig || "empty"}`;
+}
+
+function mergeHistoryRows(
+  cached: ExploreHistoryRow[],
+  entries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string
+): ExploreHistoryRow[] {
+  const entryById = new Map(entries.map((e) => [e.catalogId, e]));
+  return cached
+    .map((row) => {
+      const entry = entryById.get(String(row.id));
+      if (!entry) return null;
+      return {
+        ...row,
+        lastSeason: entry.lastSeason,
+        lastEpisode: entry.lastEpisode,
+        progressLabel: progressLabel(entry),
+      };
+    })
+    .filter((row): row is ExploreHistoryRow => row != null);
 }
 
 export async function fetchExploreHistoryRows(
@@ -40,7 +63,10 @@ export async function fetchExploreHistoryRows(
 
   const cacheKey = historyCacheKey(entries);
   const cached = readClientDayCache<ExploreHistoryRow[]>(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    const merged = mergeHistoryRows(cached, entries, progressLabel);
+    if (merged.length === entries.length) return merged;
+  }
 
   try {
     const res = await fetch("/api/catalog/history", {

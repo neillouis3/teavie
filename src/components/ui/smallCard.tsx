@@ -23,6 +23,8 @@ interface SmallCardProps {
   posterPath: string;
   /** When set, overrides `/shows/{id}` / `/movies/{id}` (e.g. AniList URL). */
   linkHref?: string | null;
+  /** Muted line above the title (e.g. continue-watching S/E). */
+  subtitle?: string;
   /** When set, replaces default MOVIE/TV/year pills (e.g. continue watching S/E). */
   metaChips?: string[];
   /** Top-right dismiss control (e.g. remove from continue watching). */
@@ -85,6 +87,7 @@ export default function SmallCard({
   type,
   posterPath,
   linkHref,
+  subtitle,
   metaChips: metaChipsProp,
   onDismiss,
 }: SmallCardProps) {
@@ -125,7 +128,15 @@ export default function SmallCard({
   );
 
   const meta = (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-1">
+      {subtitle ? (
+        <p
+          className="line-clamp-1 text-[11px] leading-snug text-default-500"
+          title={subtitle}
+        >
+          {subtitle}
+        </p>
+      ) : null}
       {metaChips.length > 0 ? (
         <div className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
           {metaChips.map((chip, i) => (
@@ -156,7 +167,7 @@ export default function SmallCard({
     onDismiss != null ? (
       <button
         type="button"
-        className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+        className="absolute right-1.5 top-1.5 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-[2px] transition-colors hover:bg-black/70"
         aria-label={`Remove ${displayTitle} from continue watching`}
         onClick={(e) => {
           e.preventDefault();
@@ -164,7 +175,7 @@ export default function SmallCard({
           onDismiss();
         }}
       >
-        <HugeiconsIcon icon={Cancel01Icon} size={14} className="shrink-0" />
+        <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} className="shrink-0" />
       </button>
     ) : null;
 

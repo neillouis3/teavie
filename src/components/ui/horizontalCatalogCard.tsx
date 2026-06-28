@@ -33,6 +33,7 @@ export default function HorizontalCatalogCard({
   posterPath = '',
   backdropPath = '',
   href: hrefProp,
+  topNote,
   onDismiss,
 }: HorizontalCatalogCardProps) {
   const typeLower = String(type ?? '').toLowerCase();
@@ -96,6 +97,11 @@ export default function HorizontalCatalogCard({
 
             {src && (
               <div className="absolute bottom-2 left-2 right-2 z-[2] max-w-[92%] sm:bottom-3 sm:left-3 sm:right-4">
+                {topNote ? (
+                  <p className="mb-0.5 text-left text-[11px] font-medium leading-snug text-white/75 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-1">
+                    {topNote}
+                  </p>
+                ) : null}
                 <p className="text-left text-sm font-normal leading-snug tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[15px]">
                   {title}
                 </p>
@@ -115,7 +121,7 @@ export default function HorizontalCatalogCard({
             onDismiss();
           }}
         >
-          <HugeiconsIcon icon={Cancel01Icon} size={14} className="shrink-0" />
+          <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} className="shrink-0" />
         </button>
       ) : null}
     </div>

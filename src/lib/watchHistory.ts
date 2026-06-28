@@ -1,6 +1,7 @@
 /** Client-only index of recently watched titles (newest first). */
 
 import { formatWatchEpKey, loadWatchProgress, saveWatchProgress, clearWatchProgress } from "@/lib/watchProgress";
+import { formatHeroRuntime } from "@/lib/formatRelease";
 
 export const WATCH_HISTORY_VERSION = 1 as const;
 export const WATCH_HISTORY_INDEX_KEY = `teavie.watch-history.v${WATCH_HISTORY_VERSION}`;
@@ -138,15 +139,21 @@ export function watchHistoryProgressLabel(entry: WatchHistoryEntry): string {
   return `S${entry.lastSeason} · E${entry.lastEpisode}`;
 }
 
-/** Meta chips for continue-watching cards (replaces catalog MOVIE/TV/year pills). */
+/** Meta chips for continue-watching cards (pill row above title). */
 export function watchHistoryMetaChips(
   entry: Pick<WatchHistoryEntry, "mediaType" | "lastSeason" | "lastEpisode">,
-  seasonAmount: number
+  seasonAmount: number,
+  runtimeSeconds?: number
 ): string[] {
-  if (entry.mediaType === "movie") return [];
+  if (entry.mediaType === "movie") {
+    const runtime = formatHeroRuntime(runtimeSeconds);
+    return runtime ? [runtime] : [];
+  }
+  const season = Math.max(1, Math.floor(Number(entry.lastSeason)) || 1);
+  const episode = Math.max(1, Math.floor(Number(entry.lastEpisode)) || 1);
   const seasons = seasonAmount > 0 ? seasonAmount : 1;
   if (seasons > 1) {
-    return [`S${entry.lastSeason}`, `E${entry.lastEpisode}`];
+    return [`S${season}`, `E${episode}`];
   }
-  return [`Episode ${entry.lastEpisode}`];
+  return [`Episode ${episode}`];
 }

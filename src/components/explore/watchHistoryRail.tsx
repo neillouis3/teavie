@@ -10,7 +10,7 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
-import { removeFromWatchHistory, watchHistoryMetaChips } from "@/lib/watchHistory";
+import { removeFromWatchHistory, listWatchHistory, watchHistoryMetaChips } from "@/lib/watchHistory";
 import type { ExploreHistoryRow } from "@/lib/explorePageData";
 
 const CAROUSEL_ITEM_VERTICAL =
@@ -26,6 +26,13 @@ export default function WatchHistoryRail({ items }: WatchHistoryRailProps) {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === "horizontal";
   const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
+
+  const progressById = React.useMemo(() => {
+    const map = new Map(
+      listWatchHistory().map((e) => [e.catalogId, e] as const)
+    );
+    return map;
+  }, [items]);
 
   if (items.length === 0) {
     return null;
@@ -48,14 +55,17 @@ export default function WatchHistoryRail({ items }: WatchHistoryRailProps) {
             const mediaType = item.type === "movie" ? "movie" : "tv";
             const key = `${mediaType}-${item.id}`;
             const dismiss = () => removeFromWatchHistory(String(item.id));
+            const progress = progressById.get(String(item.id));
+            if (!progress) return null;
             const historyEntry = {
-              mediaType: mediaType as "movie" | "tv",
-              lastSeason: item.lastSeason,
-              lastEpisode: item.lastEpisode,
+              mediaType: progress.mediaType,
+              lastSeason: progress.lastSeason,
+              lastEpisode: progress.lastEpisode,
             };
             const continueMetaChips = watchHistoryMetaChips(
               historyEntry,
-              item.season_amount ?? 0
+              item.season_amount ?? 0,
+              item.runtimeSeconds ?? undefined
             );
 
             return (
@@ -68,6 +78,7 @@ export default function WatchHistoryRail({ items }: WatchHistoryRailProps) {
                     type={mediaType}
                     posterPath={item.poster_path || ""}
                     backdropPath={item.backdrop_path || ""}
+                    topNote={continueMetaChips?.join(" · ")}
                     onDismiss={dismiss}
                   />
                 ) : (
@@ -76,7 +87,9 @@ export default function WatchHistoryRail({ items }: WatchHistoryRailProps) {
                     title={titleText}
                     year={year}
                     type={mediaType}
+                    runtimeSeconds={item.runtimeSeconds ?? undefined}
                     seasonAmount={item.season_amount ?? 0}
+                    numberOfEpisodes={item.number_of_episodes ?? undefined}
                     posterPath={item.poster_path || ""}
                     metaChips={continueMetaChips}
                     onDismiss={dismiss}
