@@ -72,9 +72,7 @@ export default function SideBar() {
               ? "kdrama"
               : pathname.startsWith("/shows")
                 ? "shows"
-                : pathname.startsWith("/genres") || pathname.startsWith("/genre/")
-                  ? "genres"
-                  : null;
+                : null;
 
   const settingsActive = pathname.startsWith("/settings");
 

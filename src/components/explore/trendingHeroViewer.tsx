@@ -118,6 +118,7 @@ export default function TrendingHeroViewer({
                   genres={item.genres}
                   voteAverage={item.vote_average}
                   certification={item.certification}
+                  overview={item.overview}
                 />
               </CarouselItem>
             );

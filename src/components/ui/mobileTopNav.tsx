@@ -61,9 +61,7 @@ export default function MobileTopNav() {
               ? 'kdrama'
               : pathname.startsWith('/shows')
                 ? 'shows'
-                : pathname.startsWith('/genres') || pathname.startsWith('/genre/')
-                  ? 'genres'
-                  : null;
+                : null;
 
   const settingsActive = pathname.startsWith('/settings');
   const searchActive = pathname.startsWith('/search');

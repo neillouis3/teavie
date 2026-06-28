@@ -20,6 +20,7 @@ type LargeCardProps = {
   genres?: string[];
   voteAverage?: number | null;
   certification?: string | null;
+  overview?: string | null;
   /** Fill parent height (Explore trending hero carousel). */
   hero?: boolean;
   /** Smaller hero overlay type (category featured row). */
@@ -80,6 +81,7 @@ function HeroCardOverlay({
   genres = [],
   voteAverage,
   certification,
+  overview,
   compact = false,
   releaseDateStyle = "short",
 }: {
@@ -92,6 +94,7 @@ function HeroCardOverlay({
   genres?: string[];
   voteAverage?: number | null;
   certification?: string | null;
+  overview?: string | null;
   compact?: boolean;
   releaseDateStyle?: "short" | "phrase";
 }) {
@@ -120,6 +123,7 @@ function HeroCardOverlay({
     typeof voteAverage === "number" && Number.isFinite(voteAverage)
       ? `${voteAverage.toFixed(1)} / 10`
       : null;
+  const overviewText = overview?.trim() ?? "";
 
   return (
     <div
@@ -152,6 +156,12 @@ function HeroCardOverlay({
         >
           {title}
         </h1>
+
+        {!compact && overviewText ? (
+          <p className="w-[40%] min-w-0 text-sm leading-snug text-white/75 line-clamp-2 sm:line-clamp-3">
+            {overviewText}
+          </p>
+        ) : null}
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/70 sm:text-sm">
           {dateLabel && (
@@ -195,6 +205,7 @@ export default function LargeCard({
   genres,
   voteAverage,
   certification,
+  overview,
   hero = false,
   heroCompact = false,
   richOverlay = false,
@@ -262,6 +273,7 @@ export default function LargeCard({
             genres={genres}
             voteAverage={voteAverage}
             certification={certification}
+            overview={overview}
             compact={!hero || heroCompact}
             releaseDateStyle={releaseDateStyle}
           />

@@ -15,6 +15,7 @@ import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  ArrowUpDownIcon,
   PlayIcon,
 } from "@hugeicons/core-free-icons";
 import {
@@ -145,6 +146,21 @@ function useEpisodePicker() {
 
 function padEpisode(n: number) {
   return String(n).padStart(2, "0");
+}
+
+function episodeNavNumber(
+  row: EpisodeCardRow,
+  flatMode: boolean,
+  catalogAbsoluteEpisodes: boolean
+): number {
+  if (flatMode && row.displayNumber != null && !catalogAbsoluteEpisodes) {
+    return row.displayNumber;
+  }
+  return row.episode;
+}
+
+function formatEpNavLabel(episodeNumber: number): string {
+  return `Ep ${episodeNumber}`;
 }
 
 function fallbackEpisodes(
@@ -284,7 +300,7 @@ function useEpisodePickerState({
 
   const [jumpSeason, setJumpSeason] = useState(String(selectedSeason));
   const [jumpEpisode, setJumpEpisode] = useState(String(selectedEpisode));
-  const [episodeSortLatestFirst, setEpisodeSortLatestFirst] = useState(false);
+  const [episodeSortLatestFirst, setEpisodeSortLatestFirst] = useState(true);
 
   const displayedEpisodes = useMemo(
     () => (episodeSortLatestFirst ? [...episodes].reverse() : episodes),
@@ -548,6 +564,57 @@ function useEpisodePickerState({
     selectedSeason,
   ]);
 
+  const previousEpisodeLabel = useMemo(() => {
+    if (!hasPreviousEpisode) return null;
+    if (currentEpisodeIndex > 0) {
+      const row = episodes[currentEpisodeIndex - 1];
+      return formatEpNavLabel(
+        episodeNavNumber(row, flatMode, catalogAbsoluteEpisodes)
+      );
+    }
+    const seasonIdx = releasedSeasons.findIndex(
+      (s) => s.season_number === selectedSeason
+    );
+    if (seasonIdx <= 0) return null;
+    const prevSeason = releasedSeasons[seasonIdx - 1];
+    const lastEp = Math.max(1, prevSeason.episode_count ?? 1);
+    return formatEpNavLabel(lastEp);
+  }, [
+    hasPreviousEpisode,
+    currentEpisodeIndex,
+    episodes,
+    flatMode,
+    catalogAbsoluteEpisodes,
+    releasedSeasons,
+    selectedSeason,
+  ]);
+
+  const nextEpisodeLabel = useMemo(() => {
+    if (!hasNextEpisode) return null;
+    if (
+      currentEpisodeIndex >= 0 &&
+      currentEpisodeIndex < episodes.length - 1
+    ) {
+      const row = episodes[currentEpisodeIndex + 1];
+      return formatEpNavLabel(
+        episodeNavNumber(row, flatMode, catalogAbsoluteEpisodes)
+      );
+    }
+    const seasonIdx = releasedSeasons.findIndex(
+      (s) => s.season_number === selectedSeason
+    );
+    if (seasonIdx < 0 || seasonIdx >= releasedSeasons.length - 1) return null;
+    return formatEpNavLabel(1);
+  }, [
+    hasNextEpisode,
+    currentEpisodeIndex,
+    episodes,
+    flatMode,
+    catalogAbsoluteEpisodes,
+    releasedSeasons,
+    selectedSeason,
+  ]);
+
   const goPreviousEpisode = () => {
     if (!hasPreviousEpisode) return;
     if (currentEpisodeIndex > 0) {
@@ -657,6 +724,8 @@ function useEpisodePickerState({
     currentSeasonEpisodeLabel,
     hasPreviousEpisode,
     hasNextEpisode,
+    previousEpisodeLabel,
+    nextEpisodeLabel,
     goPreviousEpisode,
     goNextEpisode,
     handleJumpSeasonChange,
@@ -707,6 +776,8 @@ export function ShowEpisodePickerControls() {
     jumpEpisode,
     hasPreviousEpisode,
     hasNextEpisode,
+    previousEpisodeLabel,
+    nextEpisodeLabel,
     goPreviousEpisode,
     goNextEpisode,
     handleJumpSeasonChange,
@@ -772,12 +843,16 @@ export function ShowEpisodePickerControls() {
             className="h-8 min-h-8 text-xs"
             isDisabled={!hasPreviousEpisode}
             onPress={goPreviousEpisode}
-            aria-label="Previous episode"
+            aria-label={
+              previousEpisodeLabel
+                ? `Go to ${previousEpisodeLabel}`
+                : "Previous episode"
+            }
             startContent={
               <HugeiconsIcon icon={ArrowLeft01Icon} size={14} className="shrink-0" />
             }
           >
-            Prev
+            {previousEpisodeLabel ?? "Prev"}
           </Button>
           <span className="text-sm text-default-400" aria-hidden>
             ·
@@ -789,13 +864,15 @@ export function ShowEpisodePickerControls() {
             className="h-8 min-h-8 text-xs"
             isDisabled={!hasNextEpisode}
             onPress={goNextEpisode}
-            aria-label="Next episode"
+            aria-label={
+              nextEpisodeLabel ? `Go to ${nextEpisodeLabel}` : "Next episode"
+            }
             endContent={
               <HugeiconsIcon icon={ArrowRight01Icon} size={14} className="shrink-0" />
             }
           >
-          Next
-        </Button>
+            {nextEpisodeLabel ?? "Next"}
+          </Button>
       <span className="hidden text-sm text-default-400 sm:inline" aria-hidden>
         ·
       </span>
@@ -1008,19 +1085,17 @@ export function ShowEpisodePickerList() {
               variant={episodeSortLatestFirst ? "solid" : "bordered"}
               color={episodeSortLatestFirst ? "success" : "default"}
               radius="md"
-              className="h-8 min-h-8 shrink-0 text-xs"
+              isIconOnly
+              className="h-8 w-8 min-w-8 shrink-0"
               onPress={toggleEpisodeSort}
               aria-pressed={episodeSortLatestFirst}
               aria-label={
                 episodeSortLatestFirst
                   ? "Showing latest episodes first. Sort oldest first."
-                  : "Sort latest episodes first"
-              }
-              startContent={
-                <HugeiconsIcon icon={ArrowDown01Icon} size={14} className="shrink-0" />
+                  : "Showing oldest episodes first. Sort latest first."
               }
             >
-              {episodeSortLatestFirst ? "Oldest first" : "Latest first"}
+              <HugeiconsIcon icon={ArrowUpDownIcon} size={14} className="shrink-0" />
             </Button>
           ) : null}
           <EpisodeCarouselScrollArrows api={episodeCarouselApi} />
