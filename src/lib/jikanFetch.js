@@ -279,6 +279,7 @@ async function jikanTransitiveEdgeChainOrdered(rootMal, edgeNorm, opts = {}) {
 
   const rootJson = opts.rootRelationsJson;
   const hadNetwork = opts.hadNetwork ?? { v: false };
+  const relationsCache = opts.relationsCache ?? null;
 
   /** @type {Array<{ malId: number; malKind: "anime" | "movie"; topNote: string }>} */
   const ordered = [];
@@ -289,22 +290,24 @@ async function jikanTransitiveEdgeChainOrdered(rootMal, edgeNorm, opts = {}) {
 
   const topNote = edgeNorm === "prequel" ? "Prequel" : "Sequel";
 
+  const relationsJsonForMal = async (mal) => {
+    if (mal === root && rootJson != null) return rootJson;
+    if (relationsCache?.has(mal)) return relationsCache.get(mal);
+    if (hadNetwork.v) await sleep(staggerMs);
+    hadNetwork.v = true;
+    const res = await jikanGet(`anime/${mal}/relations`);
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => null);
+    if (json && relationsCache) relationsCache.set(mal, json);
+    return json;
+  };
+
   while (frontier.length && hops < maxHops && ordered.length < maxNodes) {
     hops++;
     /** @type {number[]} */
     const nextFrontier = [];
     for (const mal of frontier) {
-      /** @type {unknown | null} */
-      let json = null;
-      if (mal === root && rootJson != null) {
-        json = rootJson;
-      } else {
-        if (hadNetwork.v) await sleep(staggerMs);
-        hadNetwork.v = true;
-        const res = await jikanGet(`anime/${mal}/relations`);
-        if (!res.ok) continue;
-        json = await res.json().catch(() => null);
-      }
+      const json = await relationsJsonForMal(mal);
       if (!json) continue;
       const pairs = edgeEntriesFromRelationsJson(json, edgeNorm);
       for (const { malId, malKind } of pairs) {
@@ -345,16 +348,21 @@ export async function jikanFranchiseRailOrderedSteps(rootMal, opts = {}) {
     hadNetwork.v = true;
   }
 
-  const sequel = await jikanTransitiveEdgeChainOrdered(root, "sequel", {
+  /** @type {Map<number, unknown>} */
+  const relationsCache = opts.relationsCache ?? new Map();
+  if (rootJson != null) relationsCache.set(root, rootJson);
+
+  const chainOpts = {
     ...opts,
     rootRelationsJson: rootJson,
     hadNetwork,
-  });
-  const prequelRaw = await jikanTransitiveEdgeChainOrdered(root, "prequel", {
-    ...opts,
-    rootRelationsJson: rootJson,
-    hadNetwork,
-  });
+    relationsCache,
+  };
+
+  const [sequel, prequelRaw] = await Promise.all([
+    jikanTransitiveEdgeChainOrdered(root, "sequel", chainOpts),
+    jikanTransitiveEdgeChainOrdered(root, "prequel", chainOpts),
+  ]);
   const prequel = [...prequelRaw].reverse();
   const sideStories = sideStoryStepsFromRootJson(rootJson, root);
   const movies = relatedMovieStepsFromRootJson(rootJson, root);

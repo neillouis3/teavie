@@ -17,8 +17,17 @@ export async function GET(req) {
       );
     }
 
-    const items = await loadAnimeRelatedItems(idMal);
-    return Response.json({ items });
+    const items = await loadAnimeRelatedItems(idMal, {
+      includeChain: searchParams.get("chain") !== "0",
+    });
+    return Response.json(
+      { items },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+        },
+      }
+    );
   } catch (err) {
     console.error("[anilist/related]", err);
     return Response.json({ error: "related failed", items: [] }, { status: 200 });

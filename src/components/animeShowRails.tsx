@@ -8,7 +8,11 @@ import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
 } from "@/lib/catalogGrid";
-import { clearLegacyAnimeShowRailsCache } from "@/lib/clientDayCache";
+import {
+  clearLegacyAnimeShowRailsCache,
+  readClientDayCache,
+  writeClientDayCache,
+} from "@/lib/clientDayCache";
 
 type RelatedItem = {
   catalogId: string;
@@ -39,8 +43,15 @@ type YmlItem = {
   numberOfEpisodes?: number | null;
 };
 
-async function fetchRelatedAnime(idMal: number): Promise<RelatedItem[]> {
+const RELATED_CACHE_PREFIX = "teavie.cache.anime-related.v1:";
+const YML_CACHE_PREFIX = "teavie.cache.anime-yml.v1:";
+
+async function fetchRelatedAnime(
+  idMal: number,
+  includeChain: boolean
+): Promise<RelatedItem[]> {
   const qs = new URLSearchParams({ idMal: String(idMal) });
+  if (!includeChain) qs.set("chain", "0");
   const res = await fetch(`/api/anilist/related?${qs.toString()}`, {
     cache: "no-store",
   });
@@ -77,7 +88,8 @@ export default function AnimeShowRails({
 }) {
   const [related, setRelated] = useState<RelatedItem[]>([]);
   const [youMightLike, setYouMightLike] = useState<YmlItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [relatedLoading, setRelatedLoading] = useState(true);
+  const [ymlLoading, setYmlLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === "horizontal";
   const ymlMax = horizontal ? 8 : 14;
@@ -88,24 +100,76 @@ export default function AnimeShowRails({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    void Promise.all([
-      fetchRelatedAnime(idMal),
-      fetchYouMightLike(idMal, ymlMax),
-    ])
-      .then(([relatedItems, ymlItems]) => {
+    const relatedCacheKey = `${RELATED_CACHE_PREFIX}${idMal}`;
+    const ymlCacheKey = `${YML_CACHE_PREFIX}${idMal}:${ymlMax}`;
+
+    const cachedRelated = readClientDayCache<RelatedItem[]>(relatedCacheKey);
+    const cachedYml = readClientDayCache<YmlItem[]>(ymlCacheKey);
+
+    if (cachedRelated?.length) {
+      setRelated(cachedRelated);
+      setRelatedLoading(false);
+    } else {
+      setRelated([]);
+      setRelatedLoading(true);
+    }
+
+    if (cachedYml?.length) {
+      setYouMightLike(cachedYml);
+      setYmlLoading(false);
+    } else {
+      setYouMightLike([]);
+      setYmlLoading(true);
+    }
+
+    void fetchYouMightLike(idMal, ymlMax)
+      .then((items) => {
         if (cancelled) return;
-        setRelated(relatedItems);
-        setYouMightLike(ymlItems);
+        setYouMightLike(items);
+        if (items.length > 0) writeClientDayCache(ymlCacheKey, items);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setYouMightLike([]);
+      })
+      .finally(() => {
+        if (!cancelled) setYmlLoading(false);
+      });
+
+    if (cachedRelated?.length) {
+      void fetchRelatedAnime(idMal, true)
+        .then((items) => {
+          if (cancelled || items.length === 0) return;
+          setRelated(items);
+          writeClientDayCache(relatedCacheKey, items);
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void fetchRelatedAnime(idMal, false)
+      .then((fastItems) => {
+        if (cancelled) return;
+        if (fastItems.length > 0) setRelated(fastItems);
+      })
+      .catch(() => {});
+
+    void fetchRelatedAnime(idMal, true)
+      .then((items) => {
+        if (cancelled) return;
+        setRelated(items);
+        if (items.length > 0) writeClientDayCache(relatedCacheKey, items);
       })
       .catch(() => {
         if (cancelled) return;
         setRelated([]);
-        setYouMightLike([]);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setRelatedLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
@@ -115,87 +179,117 @@ export default function AnimeShowRails({
     ? CATALOG_GRID_HORIZONTAL_SEARCH
     : CATALOG_GRID_VERTICAL_SEARCH;
 
-  if (loading) {
-    return null;
-  }
+  const showRelated = related.length > 0 || relatedLoading;
+  const showYml = youMightLike.length > 0 || ymlLoading;
 
-  if (related.length === 0 && youMightLike.length === 0) {
+  if (
+    !relatedLoading &&
+    !ymlLoading &&
+    related.length === 0 &&
+    youMightLike.length === 0
+  ) {
     return null;
   }
 
   return (
     <>
-      {related.length > 0 ? (
+      {showRelated ? (
         <section className="w-full pt-6">
           <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
-          <ul className={`${gridClass} items-start`}>
-            {related.map((item) => {
-              const catalogKind =
-                item.catalogType === "movie" ? "movie" : "tv";
-              return (
-                <li
-                  key={`${item.catalogId}-${item.anilistId ?? "na"}-${item.topNote}`}
-                  className="min-w-0"
-                >
+          {related.length > 0 ? (
+            <ul className={`${gridClass} items-start`}>
+              {related.map((item) => {
+                const catalogKind =
+                  item.catalogType === "movie" ? "movie" : "tv";
+                return (
+                  <li
+                    key={`${item.catalogId}-${item.anilistId ?? "na"}-${item.topNote}`}
+                    className="min-w-0"
+                  >
+                    {horizontal ? (
+                      <HorizontalCatalogCard
+                        id={item.catalogId}
+                        title={item.title}
+                        year={item.year}
+                        type={catalogKind}
+                        posterPath={item.posterPath || ""}
+                        backdropPath={item.backdropPath || ""}
+                        topNote={item.topNote}
+                      />
+                    ) : (
+                      <SmallCard
+                        id={item.catalogId}
+                        title={item.title}
+                        year={item.year}
+                        type={catalogKind}
+                        seasonAmount={item.seasonAmount ?? 0}
+                        numberOfEpisodes={item.numberOfEpisodes ?? undefined}
+                        posterPath={item.posterPath || ""}
+                        releaseNote={item.topNote}
+                      />
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="flex gap-3 overflow-hidden opacity-60">
+              {Array.from({ length: horizontal ? 4 : 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`shrink-0 animate-pulse rounded-lg bg-muted ${
+                    horizontal ? "h-24 w-44" : "h-52 w-36"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {showYml ? (
+        <section className={`${related.length > 0 || relatedLoading ? "mt-10" : ""} w-full pt-8`}>
+          <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
+          {youMightLike.length > 0 ? (
+            <ul className={`${gridClass} items-start`}>
+              {youMightLike.map((item) => (
+                <li key={`${item.catalogId}-${item.malId ?? "na"}`} className="min-w-0">
                   {horizontal ? (
                     <HorizontalCatalogCard
                       id={item.catalogId}
                       title={item.title}
                       year={item.year}
-                      type={catalogKind}
+                      type="tv"
                       posterPath={item.posterPath || ""}
                       backdropPath={item.backdropPath || ""}
-                      topNote={item.topNote}
                     />
                   ) : (
                     <SmallCard
                       id={item.catalogId}
                       title={item.title}
                       year={item.year}
-                      type={catalogKind}
+                      type="tv"
+                      runtimeSeconds={item.runtimeSeconds ?? undefined}
                       seasonAmount={item.seasonAmount ?? 0}
                       numberOfEpisodes={item.numberOfEpisodes ?? undefined}
                       posterPath={item.posterPath || ""}
-                      releaseNote={item.topNote}
                     />
                   )}
                 </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
-      {youMightLike.length > 0 ? (
-        <section className="mt-10 w-full pt-8">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
-          <ul className={`${gridClass} items-start`}>
-            {youMightLike.map((item) => (
-              <li key={`${item.catalogId}-${item.malId ?? "na"}`} className="min-w-0">
-                {horizontal ? (
-                  <HorizontalCatalogCard
-                    id={item.catalogId}
-                    title={item.title}
-                    year={item.year}
-                    type="tv"
-                    posterPath={item.posterPath || ""}
-                    backdropPath={item.backdropPath || ""}
-                  />
-                ) : (
-                  <SmallCard
-                    id={item.catalogId}
-                    title={item.title}
-                    year={item.year}
-                    type="tv"
-                    runtimeSeconds={item.runtimeSeconds ?? undefined}
-                    seasonAmount={item.seasonAmount ?? 0}
-                    numberOfEpisodes={item.numberOfEpisodes ?? undefined}
-                    posterPath={item.posterPath || ""}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex gap-3 overflow-hidden opacity-60">
+              {Array.from({ length: horizontal ? 4 : 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`shrink-0 animate-pulse rounded-lg bg-muted ${
+                    horizontal ? "h-24 w-44" : "h-52 w-36"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </section>
       ) : null}
     </>

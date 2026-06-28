@@ -2,6 +2,7 @@
  * Batched anime show rails: related franchise + you-might-like with one Jikan fetch.
  */
 
+import { unstable_cache } from "next/cache";
 import clientPromise from "@/lib/mongo";
 import {
   jikanFetchRelationsAndRecommendations,
@@ -25,7 +26,8 @@ import {
   yearFromCatalogDoc,
 } from "@/lib/animeRelatedCatalog.js";
 
-async function buildRelatedItems(rootMal, relationsJson) {
+async function buildRelatedItems(rootMal, relationsJson, opts = {}) {
+  const includeChain = opts.includeChain !== false;
   let relJson = relationsJson;
   if (!relJson) {
     try {
@@ -50,11 +52,18 @@ async function buildRelatedItems(rootMal, relationsJson) {
     candidates.push({ ...step, malId: mal });
   };
 
-  // Full sequel/prequel chain (oldest prequels → sequels) plus root side stories & movies.
+  // Root relations when chain is skipped (fast path).
+  if (!includeChain) {
+    for (const step of pickAllRelationCandidates(rootMal, relJson)) {
+      pushCandidate(step);
+    }
+    return buildAnimeRelatedCatalogItems(candidates);
+  }
+
   try {
     const chain = await jikanFranchiseRailOrderedSteps(rootMal, {
       rootRelationsJson: relJson,
-      staggerMs: 450,
+      staggerMs: 280,
       maxHops: 40,
       maxNodes: 80,
     });
@@ -63,7 +72,6 @@ async function buildRelatedItems(rootMal, relationsJson) {
     console.error("[anime related franchise chain]", err);
   }
 
-  // All other root relation types (Summary, Other, Character, …) — catalog filter below.
   for (const step of pickAllRelationCandidates(rootMal, relJson)) {
     pushCandidate(step);
   }
@@ -183,10 +191,23 @@ export async function loadAnimeShowRails(idMal, ymlLimit = 14) {
   return { related, youMightLike };
 }
 
-export async function loadAnimeRelatedItems(idMal) {
+export async function loadAnimeRelatedItems(idMal, opts = {}) {
   const rootMal = Math.floor(Number(idMal));
   if (!Number.isFinite(rootMal) || rootMal <= 0) return [];
 
+  const includeChain = opts.includeChain !== false;
+  if (!includeChain) {
+    return fetchAnimeRelatedItemsUncached(rootMal, false);
+  }
+
+  return unstable_cache(
+    () => fetchAnimeRelatedItemsUncached(rootMal, true),
+    ["anime-related-items", String(rootMal)],
+    { revalidate: 86_400 }
+  )();
+}
+
+async function fetchAnimeRelatedItemsUncached(rootMal, includeChain) {
   let relationsJson = null;
   try {
     const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
@@ -199,7 +220,7 @@ export async function loadAnimeRelatedItems(idMal) {
     console.error("[anime related jikan fetch]", err);
   }
 
-  return buildRelatedItems(rootMal, relationsJson).catch((err) => {
+  return buildRelatedItems(rootMal, relationsJson, { includeChain }).catch((err) => {
     console.error("[anime related items]", err);
     return [];
   });
