@@ -122,7 +122,7 @@ export default function SmallCard({
         </div>
       ) : null}
       <h2
-        className="normal-case min-w-0 truncate text-sm leading-snug text-foreground transition-colors duration-300 group-hover:text-success sm:text-[15px]"
+        className="normal-case min-w-0 line-clamp-2 text-sm leading-snug text-foreground transition-colors duration-300 group-hover:text-success sm:text-[15px]"
         title={displayTitle}
       >
         {displayTitle}

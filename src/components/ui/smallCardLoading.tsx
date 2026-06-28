@@ -11,7 +11,7 @@ export default function SmallCardLoading() {
           <div className="h-5 w-8 animate-pulse rounded-md bg-default-200" />
           <div className="h-5 w-11 animate-pulse rounded-md bg-default-200" />
         </div>
-        <div className="h-4 w-full max-w-[92%] animate-pulse rounded bg-default-200" />
+        <div className="h-9 w-full max-w-[92%] animate-pulse rounded bg-default-200" />
       </div>
     </div>
   );
