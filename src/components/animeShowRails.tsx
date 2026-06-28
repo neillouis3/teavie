@@ -19,6 +19,9 @@ type RelatedItem = {
   title: string;
   year: string;
   posterPath: string;
+  backdropPath?: string;
+  seasonAmount?: number;
+  numberOfEpisodes?: number | null;
   topNote: string;
   externalUrl?: string | null;
 };
@@ -30,6 +33,7 @@ type YmlItem = {
   title: string;
   year: string;
   posterPath?: string;
+  backdropPath?: string;
   runtimeSeconds?: number | null;
   seasonAmount?: number;
   numberOfEpisodes?: number | null;
@@ -40,7 +44,7 @@ type RailsPayload = {
   youMightLike: YmlItem[];
 };
 
-const CACHE_PREFIX = "teavie.cache.anime-show-rails.v1:";
+const CACHE_PREFIX = "teavie.cache.anime-show-rails.v2:";
 
 async function fetchAnimeShowRails(
   idMal: number,
@@ -122,7 +126,7 @@ export default function AnimeShowRails({
                       year={item.year}
                       type={catalogKind}
                       posterPath={item.posterPath || ""}
-                      backdropPath=""
+                      backdropPath={item.backdropPath || ""}
                       topNote={item.topNote}
                     />
                   ) : (
@@ -131,7 +135,8 @@ export default function AnimeShowRails({
                       title={item.title}
                       year={item.year}
                       type={catalogKind}
-                      seasonAmount={0}
+                      seasonAmount={item.seasonAmount ?? 0}
+                      numberOfEpisodes={item.numberOfEpisodes ?? undefined}
                       posterPath={item.posterPath || ""}
                       releaseNote={item.topNote}
                     />
@@ -156,7 +161,7 @@ export default function AnimeShowRails({
                     year={item.year}
                     type="tv"
                     posterPath={item.posterPath || ""}
-                    backdropPath=""
+                    backdropPath={item.backdropPath || ""}
                   />
                 ) : (
                   <SmallCard

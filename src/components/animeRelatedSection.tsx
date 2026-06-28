@@ -16,11 +16,13 @@ type RelatedItem = {
   catalogType?: "movie" | "tv" | string | null;
   anilistId: number | null;
   malId?: number;
-  /** From Jikan when not in Teavie catalog (MAL `movie` vs `anime`). */
   malKind?: "anime" | "movie";
   title: string;
   year: string;
   posterPath: string;
+  backdropPath?: string;
+  seasonAmount?: number;
+  numberOfEpisodes?: number | null;
   topNote: string;
   externalUrl?: string | null;
 };
@@ -122,7 +124,7 @@ export default function AnimeRelatedSection({
                   year={item.year}
                   type={catalogKind}
                   posterPath={item.posterPath || ""}
-                  backdropPath=""
+                  backdropPath={item.backdropPath || ""}
                   topNote={item.topNote}
                   href={outHref}
                 />
@@ -132,7 +134,8 @@ export default function AnimeRelatedSection({
                   title={item.title}
                   year={item.year}
                   type={catalogKind}
-                  seasonAmount={0}
+                  seasonAmount={item.seasonAmount ?? 0}
+                  numberOfEpisodes={item.numberOfEpisodes ?? undefined}
                   posterPath={item.posterPath || ""}
                   linkHref={outHref}
                   releaseNote={item.topNote}
