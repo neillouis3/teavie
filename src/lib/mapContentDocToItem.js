@@ -2,6 +2,7 @@
  * Map a `content` collection document to a ContentItem-style payload for rails/cards.
  */
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
+import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster.js";
 import { genreNamesFromDoc, imdbGenresForDoc } from "@/lib/imdbGenres";
 
 /** YYYY-MM-DD or null from mixed TMDB / catalog date fields. */
@@ -117,8 +118,8 @@ export function mapCatalogListDoc(doc) {
       doc,
       isAnimeRow ? { anime: true } : undefined
     ),
-    poster_path: doc.poster_path ?? null,
-    backdrop_path: doc.backdrop_path ?? null,
+    poster_path: isAnimeRow ? animePosterFromDoc(doc) : doc.poster_path ?? null,
+    backdrop_path: isAnimeRow ? animeBackdropFromDoc(doc) : doc.backdrop_path ?? null,
     type: doc.type,
     genres: genreNamesFromDoc(doc),
     imdb_genres: imdbGenresForDoc(doc),
@@ -138,8 +139,8 @@ export function mapContentDocToItem(doc) {
     is_anime: isAnimeRow,
     release_date,
     first_air_date: doc.type === "tv" ? doc.first_air_date ?? null : null,
-    poster_path: doc.poster_path ?? null,
-    backdrop_path: doc.backdrop_path ?? null,
+    poster_path: isAnimeRow ? animePosterFromDoc(doc) : doc.poster_path ?? null,
+    backdrop_path: isAnimeRow ? animeBackdropFromDoc(doc) : doc.backdrop_path ?? null,
     overview: doc.overview ?? null,
     type: doc.type,
     runtimeSeconds: runtimeSecondsFromDoc(doc),

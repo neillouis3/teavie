@@ -46,6 +46,7 @@ import {
   shouldPruneTvAnimeWithoutAnilist,
   showUnavailableReasonForDoc,
 } from "@/lib/tvJpAnimePrune";
+import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster.js";
 
 interface Season {
   season_number: number;
@@ -258,6 +259,25 @@ function tmdbSeasonsWithEpisodes(seasons: Season[] | undefined): Season[] {
   return (seasons ?? []).filter(
     (s) => s.season_number >= 1 && typeof s.episode_count === "number" && s.episode_count > 0
   );
+}
+
+function animeTmdbStillsTarget(
+  show: Show | null | undefined
+): { tvId: string; season: number } | null {
+  if (!show?.is_anime) return null;
+  const candidates = [show.tmdb_id, show.external_ids?.tmdb_id, show.id];
+  let n: number | null = null;
+  for (const raw of candidates) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      n = parsed;
+      break;
+    }
+  }
+  if (n == null) return null;
+  const playback = tmdbSeasonsWithEpisodes(show.tmdb_playback_seasons);
+  const season = playback.length === 1 ? playback[0].season_number : 1;
+  return { tvId: String(n), season };
 }
 
 function showDetailLinks(show: Show): CatalogDetailLink[] {
@@ -862,7 +882,9 @@ export default function ShowTemplate({
     tmdbShowPremiered;
   const canPlayTv = !show?.is_anime && playerUsesTmdb && tmdbShowPremiered;
   const canPlay = canPlayAnime || canPlayTv;
-  const imageUrl = tmdbImageUrl(show?.poster_path);
+  const imageUrl = tmdbImageUrl(
+    show?.is_anime && show ? animePosterFromDoc(show) : show?.poster_path
+  );
   const title = show ? showDisplayTitle(show) : "";
 
   const animeHideSeasonRow =
@@ -941,6 +963,8 @@ export default function ShowTemplate({
       ? (animeEpisodeCap ?? catalogAnimeEpisodeCount(show))
       : null;
 
+  const animeTmdbStills = animeTmdbStillsTarget(show);
+
   const episodePickerProps = {
     tmdbTvId: show?.is_anime ? null : playerUsesTmdb ? String(resolvedPlayerId) : null,
     seasons: pickerSeasons,
@@ -954,8 +978,12 @@ export default function ShowTemplate({
     showSeasonTabs: showSeasonPickerStrip,
     preferCatalogEpisodes: Boolean(show?.is_anime),
     malId: Boolean(show?.is_anime) ? idMalForAnilistRails : null,
+    tmdbTvIdForStills: animeTmdbStills?.tvId ?? null,
+    tmdbStillsSeason: animeTmdbStills?.season ?? 1,
     fallbackStillPath:
-      show?.is_anime ? show.backdrop_path ?? show.poster_path ?? null : null,
+      show?.is_anime && show
+        ? animeBackdropFromDoc(show) ?? show.poster_path ?? null
+        : null,
     flatMode: false,
     catalogAbsoluteEpisodes: false,
     flatEpisodeCap: animePickerEpisodeCap,

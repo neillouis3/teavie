@@ -14,6 +14,7 @@ import {
   tvEpisodeCountFromDoc,
   tvSeasonCountFromDoc,
 } from "@/lib/mapContentDocToItem";
+import { animePosterFromDoc } from "@/lib/animePoster.js";
 
 function docAnilistKey(d) {
   const a = d?.anilist_id;
@@ -105,7 +106,7 @@ async function buildRelatedItems(rootMal, relationsJson) {
       malKind: step.malKind,
       title: d.title ?? d.name ?? "Untitled",
       year: yearFromDoc(d),
-      posterPath: typeof d.poster_path === "string" ? d.poster_path : "",
+      posterPath: animePosterFromDoc(d) ?? "",
       topNote: step.topNote,
       externalUrl: null,
     });
@@ -170,7 +171,7 @@ async function buildYouMightLikeItems(rootMal, recsJson, limit) {
       anilistId: docAnilistKey(doc),
       title: doc.title ?? doc.name ?? c.title,
       year: yearFromDoc(doc),
-      posterPath: doc.poster_path || c.posterPath,
+      posterPath: animePosterFromDoc(doc) || c.posterPath,
       runtimeSeconds: runtimeSecondsFromDoc(doc),
       seasonAmount: tvSeasonCountFromDoc(doc) ?? 0,
       numberOfEpisodes: tvEpisodeCountFromDoc(doc),

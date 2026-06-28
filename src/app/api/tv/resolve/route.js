@@ -130,6 +130,14 @@ function normalizeTvFallback(doc) {
     anilist_id: pickNumericAnilistId(doc),
     anilist: doc.anilist && typeof doc.anilist === "object" ? doc.anilist : null,
     external_ids: doc.external_ids && typeof doc.external_ids === "object" ? doc.external_ids : null,
+    tmdb_id:
+      typeof doc.tmdb_id === "number" && doc.tmdb_id > 0
+        ? doc.tmdb_id
+        : typeof doc.tmdb_id === "string" && /^\d+$/.test(doc.tmdb_id)
+          ? Number(doc.tmdb_id)
+          : typeof doc.external_ids?.tmdb_id === "number" && doc.external_ids.tmdb_id > 0
+            ? doc.external_ids.tmdb_id
+            : null,
   };
 }
 

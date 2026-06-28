@@ -124,6 +124,17 @@ export default function BrowseCatalogFilters({
   );
 
   useEffect(() => {
+    const trimmed = searchDraft.trim();
+    if (trimmed === qUrl.trim()) return;
+
+    const timer = window.setTimeout(() => {
+      mergeParams({ q: trimmed || null, page: '1' });
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [searchDraft, qUrl, mergeParams]);
+
+  useEffect(() => {
     if (!rawGenre) return;
     const normalized = imdbGenreSlugFromBrowseParam(rawGenre);
     if (normalized && normalized !== rawGenre) {

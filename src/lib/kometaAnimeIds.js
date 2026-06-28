@@ -153,3 +153,40 @@ export async function kometaImdbSeasonForMal(malId) {
   const season = hit?.tvdbSeason;
   return season != null && season >= 1 ? season : null;
 }
+
+/**
+ * MAL ids that belong to a multi-cour / multi-season franchise (same TVDb series, 2+ MAL entries).
+ * @param {{ byMal: Map<string, object[]>; byTvdb: Map<string, object[]> }} index
+ */
+export function buildMultiSeasonFranchiseMalSet(index) {
+  /** @type {Map<string, Set<string>>} */
+  const tvdbToMals = new Map();
+  for (const [mal, rows] of index.byMal) {
+    const tvdb = rows[0]?.tvdb_id;
+    if (tvdb == null || !Number.isFinite(Number(tvdb))) continue;
+    const key = String(tvdb);
+    if (!tvdbToMals.has(key)) tvdbToMals.set(key, new Set());
+    tvdbToMals.get(key).add(mal);
+  }
+  const out = new Set();
+  for (const mals of tvdbToMals.values()) {
+    if (mals.size > 1) {
+      for (const mal of mals) out.add(mal);
+    }
+  }
+  return out;
+}
+
+export async function loadMultiSeasonFranchiseMalSet() {
+  const index = await loadKometaAnimeIndex();
+  return buildMultiSeasonFranchiseMalSet(index);
+}
+
+/**
+ * @param {number | string | null | undefined} malId
+ * @param {Set<string>} franchiseMals
+ */
+export function isMultiSeasonFranchiseMal(malId, franchiseMals) {
+  const mal = String(Math.floor(Number(malId)));
+  return /^\d+$/.test(mal) && mal !== "0" && franchiseMals.has(mal);
+}

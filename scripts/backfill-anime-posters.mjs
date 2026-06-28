@@ -5,7 +5,12 @@
  *   node scripts/backfill-anime-posters.mjs --dry-run
  *   node scripts/backfill-anime-posters.mjs
  *   node scripts/backfill-anime-posters.mjs --concurrency=3
- *   node scripts/backfill-anime-posters.mjs --cap=100
+ *   node scripts/backfill-anime-posters.mjs --multi-season  # split-cour franchises only
+ *   node scripts/backfill-anime-posters.mjs --multi-season --jikan-only
+ *   node scripts/backfill-anime-posters.mjs --anilist-per-min=25
+ *
+ * AniList is rate-limited (degraded ~30/min, normal 90/min). AniList is tried first per MAL id
+ * for per-season artwork; Jikan is fallback when AniList misses. Default AniList cap: 25 req/min.
  *
  * Env: MONGODB_URI, optional ANILIST_UA
  */
@@ -14,8 +19,9 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { MongoClient } from "mongodb";
 import { anilistPost } from "../src/lib/anilistFetch.js";
+import { isSharedOmdbAnimePoster } from "../src/lib/animePoster.js";
 import { jikanGet, jikanPosterFromEntry } from "../src/lib/jikanFetch.js";
-import { lookupKometaByMalId } from "../src/lib/kometaAnimeIds.js";
+import { lookupKometaByMalId, loadMultiSeasonFranchiseMalSet } from "../src/lib/kometaAnimeIds.js";
 
 const require = createRequire(import.meta.url);
 const { loadMongoEnv, mongoHostHint } = require(path.join(
@@ -25,17 +31,20 @@ const { loadMongoEnv, mongoHostHint } = require(path.join(
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";
-const DEFAULT_CONCURRENCY = 3;
-const DEFAULT_RATE_PER_SEC = 3;
-const DEFAULT_MAX_RETRIES = 6;
+const DEFAULT_CONCURRENCY = 1;
+/** AniList degraded state ~30/min — stay safely under. */
+const DEFAULT_ANILIST_PER_MIN = 25;
+/** Jikan ~60/min unauthenticated. */
+const DEFAULT_JIKAN_PER_MIN = 55;
+const DEFAULT_MAX_RETRIES = 8;
 const BULK_WRITE_BATCH = 200;
-const PROGRESS_EVERY = 250;
+const PROGRESS_EVERY = 50;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Sliding-window limiter shared across workers (~Jikan: 3/sec). */
-function createRateLimiter(maxPerSec) {
-  const windowMs = 1000;
+/** Sliding-window limiter: max N requests per 60s window. */
+function createRateLimiterPerMin(maxPerMin) {
+  const windowMs = 60_000;
   const times = [];
   let gate = Promise.resolve();
 
@@ -44,11 +53,11 @@ function createRateLimiter(maxPerSec) {
       while (true) {
         const now = Date.now();
         while (times.length && times[0] <= now - windowMs) times.shift();
-        if (times.length < maxPerSec) {
+        if (times.length < maxPerMin) {
           times.push(Date.now());
           return;
         }
-        const wait = times[0] + windowMs - now;
+        const wait = times[0] + windowMs - now + 50;
         await sleep(Math.max(wait, 1));
       }
     });
@@ -58,7 +67,8 @@ function createRateLimiter(maxPerSec) {
   return acquireSlot;
 }
 
-let acquireAnilistSlot = createRateLimiter(DEFAULT_RATE_PER_SEC);
+let acquireAnilistSlot = createRateLimiterPerMin(DEFAULT_ANILIST_PER_MIN);
+let acquireJikanSlot = createRateLimiterPerMin(DEFAULT_JIKAN_PER_MIN);
 let retryCount = 0;
 
 function isRateLimitStatus(status) {
@@ -85,7 +95,7 @@ async function anilistPostWithRetry(body, { maxRetries = DEFAULT_MAX_RETRIES } =
       const backoff =
         retryAfter > 0
           ? retryAfter * 1000
-          : Math.min(60_000, 1000 * 2 ** attempt + Math.floor(Math.random() * 400));
+          : Math.min(120_000, 15_000 * 2 ** attempt + Math.floor(Math.random() * 2000));
       if (retryCount <= 5 || retryCount % 25 === 0) {
         console.warn(`anilist rate_limit retry ${attempt + 1}/${maxRetries} wait=${backoff}ms`);
       }
@@ -257,20 +267,28 @@ function buildUpdatePayload(doc, media, malId, anilistId) {
   };
 }
 
-async function fetchJikanArt(malId) {
-  await acquireAnilistSlot();
-  const res = await jikanGet(`anime/${malId}`);
-  if (!res.ok) return null;
-  const json = await res.json();
-  const data = json?.data;
-  if (!data) return null;
-  const poster = jikanPosterFromEntry(data);
-  if (!poster) return null;
-  const backdrop =
-    pickString(data?.trailer?.images?.maximum_image_url) ||
-    pickString(data?.trailer?.images?.large_image_url) ||
-    poster;
-  return { poster, backdrop };
+async function fetchJikanArt(malId, { maxRetries = 5 } = {}) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    await acquireJikanSlot();
+    const res = await jikanGet(`anime/${malId}`);
+    if (res.status === 429 && attempt < maxRetries) {
+      const retryAfter = parseInt(res.headers.get("retry-after") || "", 10);
+      await sleep(retryAfter > 0 ? retryAfter * 1000 : 5000 * 2 ** attempt);
+      continue;
+    }
+    if (!res.ok) return null;
+    const json = await res.json();
+    const data = json?.data;
+    if (!data) return null;
+    const poster = jikanPosterFromEntry(data);
+    if (!poster) return null;
+    const backdrop =
+      pickString(data?.trailer?.images?.maximum_image_url) ||
+      pickString(data?.trailer?.images?.large_image_url) ||
+      poster;
+    return { poster, backdrop };
+  }
+  return null;
 }
 
 function buildUpdateFromJikan(doc, art, malId) {
@@ -302,27 +320,73 @@ function buildUpdateFromJikan(doc, art, malId) {
   };
 }
 
-async function resolveDoc(doc) {
+function hasOmdbPoster(doc) {
+  return (
+    doc?.last_poster_source === "omdb" || isSharedOmdbAnimePoster(doc?.poster_path)
+  );
+}
+
+function buildUpdateFromEmbeddedAnilist(doc, malId) {
+  const poster = posterFromAnilist(doc?.anilist);
+  if (!poster) return { status: "skipped", reason: "no_embedded_poster" };
+  const backdrop = backdropFromAnilist(doc?.anilist, poster);
+  if (doc.poster_path === poster && doc.backdrop_path === backdrop) {
+    return { status: "unchanged" };
+  }
+  const resolvedAnilistId = anilistFromDoc(doc);
+  return {
+    status: "pending_update",
+    id: doc.id,
+    title: doc.title ?? doc.name ?? "",
+    filter: { _id: doc._id },
+    $set: {
+      poster_path: poster,
+      backdrop_path: backdrop,
+      updated_at: new Date().toISOString(),
+      last_poster_source: "anilist",
+      ...(resolvedAnilistId != null
+        ? {
+            anilist_id: resolvedAnilistId,
+            external_ids: {
+              ...(doc.external_ids && typeof doc.external_ids === "object" ? doc.external_ids : {}),
+              anilist_id: resolvedAnilistId,
+              mal_id: malId ?? doc.mal_id ?? null,
+            },
+          }
+        : {}),
+    },
+  };
+}
+
+async function resolveDoc(doc, { jikanOnly = false } = {}) {
   const malId = malFromDoc(doc);
   let anilistId = anilistFromDoc(doc);
   if (malId == null && anilistId == null) {
     return { status: "skipped", reason: "no_ids" };
   }
 
-  if (anilistId == null && malId != null) {
-    const kometa = await lookupKometaByMalId(malId);
-    if (kometa?.anilistId) anilistId = kometa.anilistId;
+  if (!jikanOnly && hasOmdbPoster(doc) && doc?.anilist?.coverImage) {
+    const embedded = buildUpdateFromEmbeddedAnilist(doc, malId);
+    if (embedded.status !== "skipped") return embedded;
   }
 
-  const media = await fetchAnilistArt(anilistId, malId);
-  if (media) return buildUpdatePayload(doc, media, malId, anilistId);
+  if (!jikanOnly) {
+    if (anilistId == null && malId != null) {
+      const kometa = await lookupKometaByMalId(malId);
+      if (kometa?.anilistId) anilistId = kometa.anilistId;
+    }
+
+    const media = await fetchAnilistArt(anilistId, malId);
+    if (media) return buildUpdatePayload(doc, media, malId, anilistId);
+  }
 
   if (malId != null) {
     const jikan = await fetchJikanArt(malId);
     if (jikan) return buildUpdateFromJikan(doc, jikan, malId);
+    if (jikanOnly) return { status: "skipped", reason: "jikan_miss" };
   }
 
-  return { status: "skipped", reason: "anilist_miss" };
+  return { status: "skipped", reason: malId != null ? "jikan_anilist_miss" : "anilist_miss" };
 }
 
 async function runPool(items, concurrency, worker) {
@@ -369,10 +433,22 @@ async function main() {
 
   const dryRun = hasFlag("--dry-run");
   const cap = intFlag("--cap", 0);
-  const concurrency = Math.min(16, Math.max(1, intFlag("--concurrency", DEFAULT_CONCURRENCY)));
-  const ratePerSec = Math.min(10, Math.max(1, intFlag("--rate", DEFAULT_RATE_PER_SEC)));
-  acquireAnilistSlot = createRateLimiter(ratePerSec);
+  const concurrency = Math.min(4, Math.max(1, intFlag("--concurrency", DEFAULT_CONCURRENCY)));
+  const anilistPerMin = Math.min(
+    90,
+    Math.max(1, intFlag("--anilist-per-min", DEFAULT_ANILIST_PER_MIN))
+  );
+  const jikanPerMin = Math.min(60, Math.max(1, intFlag("--jikan-per-min", DEFAULT_JIKAN_PER_MIN)));
+  const replaceOmdbOnly = hasFlag("--replace-omdb");
+  const multiSeasonOnly = hasFlag("--multi-season");
+  const jikanOnly = hasFlag("--jikan-only") || multiSeasonOnly;
+  acquireAnilistSlot = createRateLimiterPerMin(anilistPerMin);
+  acquireJikanSlot = createRateLimiterPerMin(jikanPerMin);
   retryCount = 0;
+
+  // Warm Kometa index once (used for anilist_id fallback per MAL).
+  const franchiseMals = multiSeasonOnly ? await loadMultiSeasonFranchiseMalSet() : null;
+  await lookupKometaByMalId(1).catch(() => null);
 
   const client = new MongoClient(uri);
   await client.connect();
@@ -383,6 +459,16 @@ async function main() {
       type: "tv",
       $or: [{ is_anime: true }, { id: { $regex: /^anime_/ } }],
     };
+    if (replaceOmdbOnly) {
+      filter.$and = [
+        {
+          $or: [
+            { last_poster_source: "omdb" },
+            { poster_path: { $regex: /^https?:\/\/m\.media-amazon\.com/i } },
+          ],
+        },
+      ];
+    }
 
     let query = col.find(filter, {
       projection: {
@@ -402,12 +488,21 @@ async function main() {
     if (cap > 0) query = query.limit(cap);
 
     const docs = await query.toArray();
+    const scoped = multiSeasonOnly
+      ? docs.filter((doc) => {
+          const mal = malFromDoc(doc);
+          return mal != null && franchiseMals.has(String(mal));
+        })
+      : docs;
+
     console.log(
-      `mongo=${mongoHostHint(uri)} anime_rows=${docs.length} dry_run=${dryRun} cap=${cap || "none"} concurrency=${concurrency} rate=${ratePerSec}/s`
+      `mongo=${mongoHostHint(uri)} anime_rows=${scoped.length}${multiSeasonOnly ? ` (multi_season of ${docs.length})` : ""} dry_run=${dryRun} cap=${cap || "none"} concurrency=${concurrency} jikan=${jikanPerMin}/min anilist=${anilistPerMin}/min replace_omdb_only=${replaceOmdbOnly} multi_season=${multiSeasonOnly} jikan_only=${jikanOnly}`
     );
 
     const started = Date.now();
-    const results = await runPool(docs, concurrency, (doc) => resolveDoc(doc));
+    const results = await runPool(scoped, concurrency, (doc) =>
+      resolveDoc(doc, { jikanOnly })
+    );
 
     const counts = {
       updated: 0,
@@ -440,7 +535,7 @@ async function main() {
 
     const elapsedSec = ((Date.now() - started) / 1000).toFixed(1);
     console.log(
-      `done: scanned=${docs.length} updated=${counts.updated ?? 0} would_update=${counts.would_update ?? 0} unchanged=${counts.unchanged ?? 0} skipped=${counts.skipped ?? 0} retries=${retryCount} elapsed_s=${elapsedSec}`
+      `done: scanned=${scoped.length} updated=${counts.updated ?? 0} would_update=${counts.would_update ?? 0} unchanged=${counts.unchanged ?? 0} skipped=${counts.skipped ?? 0} retries=${retryCount} elapsed_s=${elapsedSec}`
     );
     if (Object.keys(skipReasons).length) {
       console.log("skip_reasons:", skipReasons);
