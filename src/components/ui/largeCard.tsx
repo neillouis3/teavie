@@ -95,7 +95,6 @@ function HeroCardOverlay({
   compact?: boolean;
   releaseDateStyle?: "short" | "phrase";
 }) {
-  const typeLabel = type === "tv" ? "TV show" : "Movie";
   const dateLabel =
     releaseDateStyle === "phrase"
       ? (() => {
@@ -131,26 +130,18 @@ function HeroCardOverlay({
       }`}
     >
       <div className="flex max-w-3xl flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-          <span className="font-medium text-white/55">
-            {typeLabel}
-          </span>
-          {genres.length > 0 && (
-            <>
-              <MetaDot />
-              <div className="flex flex-wrap items-center gap-1.5">
-                {genres.slice(0, 2).map((genre) => (
-                  <span
-                    key={genre}
-                    className="rounded-md bg-white/10 px-2 py-0.5 text-white/95 backdrop-blur-sm"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        {genres.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm">
+            {genres.slice(0, 2).map((genre) => (
+              <span
+                key={genre}
+                className="rounded-md bg-white/10 px-2 py-0.5 text-white/95 backdrop-blur-sm"
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
+        ) : null}
 
         <h1
           className={`line-clamp-2 font-bold leading-tight text-white ${

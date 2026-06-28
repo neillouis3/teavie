@@ -2,15 +2,19 @@
 
 import { useMemo } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
+import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
+import StreamQualityBadge from '@/components/ui/streamQualityBadge';
+import {
+  VIDEASY_PLAYER_BASE,
+  VIDEASY_TV_QUERY,
+} from '@/lib/videasyPlayer';
 
-const VIDEASY_TV_QUERY =
-  '?color=22c55e&nextEpisode=true&episodeSelector=true&overlay=true';
 /** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
 const VIDCORE_TV_QUERY = '?theme=22c55e&autoPlay=true';
 
 export const SHOW_SERVERS = {
   videasy: {
-    base: 'https://player.videasy.to',
+    base: VIDEASY_PLAYER_BASE,
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
     suffix: () => VIDEASY_TV_QUERY,
   },
@@ -77,6 +81,7 @@ export default function ShowPlayer({
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+      <StreamQualityBadge quality="hd" />
       {url ? (
         <VideoEmbedFrame
           key={url}
@@ -85,9 +90,7 @@ export default function ShowPlayer({
           className="absolute inset-0 h-full w-full border-0"
         />
       ) : (
-        <p className="absolute inset-0 flex items-center justify-center p-4 text-sm text-white/70">
-          Loading player…
-        </p>
+        <PlayerEmbedSkeleton />
       )}
     </div>
   );

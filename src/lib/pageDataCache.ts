@@ -187,23 +187,23 @@ export async function fetchBrowseCatalogPayload(
 ): Promise<BrowseCatalogPayload> {
   const cacheKey = `${PREFIX}.browse.v1:${namespace}:${queryString}`;
   return withDayCache(cacheKey, async () => {
-    const fetches: Promise<Response>[] = [fetch(`${apiPath}?${queryString}`)];
-    if (genreApiPath) {
-      fetches.push(fetch(genreApiPath));
-    }
-
     try {
-      const [listRes, genreRes] = await Promise.all(fetches);
+      const listRes = await fetch(`${apiPath}?${queryString}`);
       const listJson = listRes.ok
         ? await listRes.json()
         : { results: [], totalPages: 1, total: 0 };
 
       let genreSlugs: string[] | undefined;
-      if (genreRes) {
-        const genreJson = genreRes.ok ? await genreRes.json() : { genres: [] };
-        genreSlugs = (genreJson.genres ?? [])
-          .filter((g: { count?: number }) => (g.count ?? 0) > 0)
-          .map((g: { slug: string }) => g.slug);
+      if (genreApiPath) {
+        try {
+          const genreRes = await fetch(genreApiPath);
+          const genreJson = genreRes.ok ? await genreRes.json() : { genres: [] };
+          genreSlugs = (genreJson.genres ?? [])
+            .filter((g: { count?: number }) => (g.count ?? 0) > 0)
+            .map((g: { slug: string }) => g.slug);
+        } catch {
+          genreSlugs = undefined;
+        }
       }
 
       return {

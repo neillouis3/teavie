@@ -11,12 +11,13 @@ import {
 import CatalogMediaPanel, {
   movieSubtitleLine,
 } from './ui/catalogMediaPanel';
-import PageSplash from '@/components/ui/pageSplash';
+import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { recordMovieInWatchHistory } from '@/lib/watchHistory';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
+import { inferMovieStreamQuality } from '@/lib/streamQuality';
 
 interface Movie {
   id: number;
@@ -141,7 +142,7 @@ export default function MovieTemplate({ id }: { id: string }) {
   const imageUrl = tmdbImageUrl(movie?.poster_path);
 
   if (loading) {
-    return <PageSplash ariaLabel="Loading movie" />;
+    return <WatchPageSkeleton />;
   }
 
   return (
@@ -156,7 +157,14 @@ export default function MovieTemplate({ id }: { id: string }) {
               links={movieDetailLinks(movie)}
             />
           ) : (
-            <MoviePlayer videoId={id} server={server} />
+            <MoviePlayer
+              videoId={id}
+              server={server}
+              streamQuality={inferMovieStreamQuality(
+                movie.release_dates,
+                movie.release_date
+              )}
+            />
           )}
         </div>
 

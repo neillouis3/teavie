@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
+import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
+import StreamQualityBadge from "@/components/ui/streamQualityBadge";
 import { Button } from "@heroui/react";
 
 const PRIMARY_PROBE_MS = 8000;
@@ -143,6 +145,7 @@ export default function AnimePlayer({ anilistId, episode, audio = "sub" }) {
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+      <StreamQualityBadge quality="hd" />
       {fallbackUrl && primaryUrl ? (
         <div className="absolute right-2 top-2 z-10 flex gap-1">
           <Button
@@ -177,9 +180,7 @@ export default function AnimePlayer({ anilistId, episode, audio = "sub" }) {
 
       <div className="relative min-h-0 flex-1">
         {loading ? (
-          <p className="absolute inset-0 flex items-center justify-center p-4 text-sm text-white/70">
-            Loading player…
-          </p>
+          <PlayerEmbedSkeleton />
         ) : activeUrl ? (
           <VideoEmbedFrame
             key={activeUrl}

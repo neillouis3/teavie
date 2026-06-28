@@ -35,7 +35,8 @@ import {
 import CatalogMediaPanel, {
   showSubtitleLine,
 } from "@/components/ui/catalogMediaPanel";
-import PageSplash from "@/components/ui/pageSplash";
+import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
+import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
 import CatalogComingSoon from "@/components/ui/catalogComingSoon";
 import CatalogUnavailable from "@/components/ui/catalogUnavailable";
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
@@ -950,7 +951,7 @@ export default function ShowTemplate({
   };
 
   if (loading) {
-    return <PageSplash ariaLabel="Loading show" />;
+    return <WatchPageSkeleton withSeasonPicker />;
   }
 
   if (!show) {
@@ -965,10 +966,6 @@ export default function ShowTemplate({
         }
       />
     );
-  }
-
-  if (!isAnimeMovie && pickerEpisodesLoading) {
-    return <PageSplash ariaLabel="Loading show" />;
   }
 
   return (
@@ -987,9 +984,7 @@ export default function ShowTemplate({
         >
           {isAnimeMovie ? (
             animeMovieResolving ? (
-              <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-                Loading player…
-              </div>
+              <PlayerEmbedSkeleton rounded="rounded-xl" />
             ) : animeMovieTmdbId ? (
               <MoviePlayer key={`movie-${id}`} videoId={animeMovieTmdbId} server={server} />
             ) : (
@@ -1011,9 +1006,7 @@ export default function ShowTemplate({
               </div>
             )
           ) : useTmdbSeasonAiringCapForPlayer && pickerEpisodesLoading ? (
-            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-              Loading aired episodes…
-            </div>
+            <PlayerEmbedSkeleton />
           ) : useTmdbSeasonAiringCapForPlayer && pickerPlayableCount < 1 ? (
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               No released episodes to play in this season yet.

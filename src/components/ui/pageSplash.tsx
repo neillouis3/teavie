@@ -5,12 +5,10 @@ import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
 
 type PageSplashProps = {
-  message?: string;
   ariaLabel?: string;
 };
 
 export default function PageSplash({
-  message = "Loading your catalog…",
   ariaLabel = "Loading page",
 }: PageSplashProps) {
   const { resolvedTheme } = useTheme();
@@ -46,7 +44,6 @@ export default function PageSplash({
         alt="Teavie"
         className="h-16 w-auto max-w-[12rem] animate-pulse sm:h-20"
       />
-      <p className="mt-5 text-sm text-default-500">{message}</p>
     </div>,
     document.body
   );

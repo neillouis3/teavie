@@ -10,6 +10,7 @@ export default function VideoEmbedFrame({ src, title, className = '' }) {
       title={title}
       src={src}
       allow={EMBED_IFRAME_ALLOW}
+      allowFullScreen
       referrerPolicy="no-referrer-when-downgrade"
       className={className}
     />

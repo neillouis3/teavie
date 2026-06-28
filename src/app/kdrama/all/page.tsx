@@ -1,5 +1,7 @@
 import BrowseCatalogPage from '@/components/browse/BrowseCatalogPage';
 
+export const dynamic = 'force-dynamic';
+
 export default function AllKdramaPage() {
   return (
     <BrowseCatalogPage

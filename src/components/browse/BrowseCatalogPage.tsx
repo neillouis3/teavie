@@ -4,9 +4,9 @@ import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/ui/header";
-import PageSplash from "@/components/ui/pageSplash";
 import AllMovieViewer from "@/components/viewer/allMoviesViewer";
 import AllShowsViewer from "@/components/viewer/allShowsViewer";
+import AllMoviesViewerLoading from "@/components/viewer/skeleton/allMoviesViewerLoading";
 import BrowseCatalogFilters from "@/components/browse/BrowseCatalogFilters";
 import { Pagination } from "@heroui/react";
 import type { ContentItem } from "@/types/content";
@@ -61,7 +61,7 @@ function BrowseCatalogPageContent({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [genreSlugs, setGenreSlugs] = useState<string[] | undefined>();
-  const [ready, setReady] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.title = documentTitle;
@@ -69,21 +69,25 @@ function BrowseCatalogPageContent({
 
   useEffect(() => {
     let cancelled = false;
-    setReady(false);
+    setLoading(true);
 
-    void fetchBrowseCatalogPayload(
-      namespace,
-      apiPath,
-      queryString,
-      genreApiPath
-    ).then((data) => {
-      if (cancelled) return;
-      setItems(data.results);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-      if (data.genreSlugs) setGenreSlugs(data.genreSlugs);
-      setReady(true);
-    });
+    void fetchBrowseCatalogPayload(namespace, apiPath, queryString, genreApiPath)
+      .then((data) => {
+        if (cancelled) return;
+        setItems(data.results);
+        setTotalPages(data.totalPages);
+        setTotal(data.total);
+        if (data.genreSlugs) setGenreSlugs(data.genreSlugs);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setItems([]);
+        setTotalPages(1);
+        setTotal(0);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -96,10 +100,6 @@ function BrowseCatalogPageContent({
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  if (!ready) {
-    return <PageSplash ariaLabel={`Loading ${pageName}`} />;
-  }
-
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={pageName} />
@@ -107,7 +107,7 @@ function BrowseCatalogPageContent({
         <BrowseCatalogFilters
           mode={filterMode}
           total={total}
-          loading={false}
+          loading={loading}
           genreSlugs={genreSlugs}
         />
 
@@ -119,7 +119,9 @@ function BrowseCatalogPageContent({
           </p>
         ) : null}
 
-        {items.length === 0 ? (
+        {loading ? (
+          <AllMoviesViewerLoading />
+        ) : items.length === 0 ? (
           <p className="py-16 text-center text-sm text-default-500">
             No titles match these filters. Try adjusting your search.
           </p>
@@ -129,7 +131,7 @@ function BrowseCatalogPageContent({
           <AllShowsViewer allContentData={items} />
         )}
 
-        {totalPages > 1 && items.length > 0 ? (
+        {totalPages > 1 && !loading && items.length > 0 ? (
           <div className="flex justify-center pt-2">
             <Pagination
               total={totalPages}
@@ -147,9 +149,20 @@ function BrowseCatalogPageContent({
   );
 }
 
+function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
+  return (
+    <div className="bg-main min-h-screen w-full">
+      <Header pageName={pageName} />
+      <div className="px-3 pb-8 pt-2 sm:px-4">
+        <AllMoviesViewerLoading />
+      </div>
+    </div>
+  );
+}
+
 export default function BrowseCatalogPage(props: BrowseCatalogPageProps) {
   return (
-    <Suspense fallback={<PageSplash ariaLabel={`Loading ${props.pageName}`} />}>
+    <Suspense fallback={<BrowseCatalogPageFallback pageName={props.pageName} />}>
       <BrowseCatalogPageContent {...props} />
     </Suspense>
   );
