@@ -165,6 +165,12 @@ async function run() {
           doc.anilist.id = fallback;
         }
       }
+      const aniScore = Number(doc.anilist?.averageScore);
+      if (Number.isFinite(aniScore) && aniScore > 0) {
+        doc.vote_average = Math.round((aniScore / 10) * 10) / 10;
+      } else if (typeof doc.vote_average === "number" && Number.isFinite(doc.vote_average)) {
+        doc.vote_average = Math.round(doc.vote_average * 10) / 10;
+      }
     }
 
     const missingAnilist = docs.filter((d) => !d.anilist_id);

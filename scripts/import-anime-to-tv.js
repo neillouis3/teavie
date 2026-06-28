@@ -42,9 +42,13 @@ function firstDate(aired) {
   return d.slice(0, 10);
 }
 
-function coerceVote(score) {
+function coerceVote(score, anilistAverageScore) {
+  const ani = Number(anilistAverageScore);
+  if (Number.isFinite(ani) && ani > 0) {
+    return Math.round((ani / 10) * 10) / 10;
+  }
   if (typeof score !== "number" || Number.isNaN(score)) return null;
-  return score;
+  return Math.round(score * 10) / 10;
 }
 
 function pickString(value) {
@@ -318,7 +322,7 @@ function mapAnimeToTvDoc(anime, anilist) {
     season_amount: 1,
     number_of_episodes: typeof anime.episodes === "number" ? anime.episodes : null,
     popularity: typeof anime.popularity === "number" ? anime.popularity : 0,
-    vote_average: coerceVote(anime.score),
+    vote_average: coerceVote(anime.score, anilist?.averageScore),
     rating: pickString(anime.rating),
     status: pickString(anime.status),
     original_language: pickLanguage(anime),

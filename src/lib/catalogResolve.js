@@ -1,6 +1,7 @@
 import { imdbGenresForDoc } from "@/lib/imdbGenres";
 import { fetchOmdbGenreRaw } from "@/lib/omdbGenre";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
+import { catalogDisplayVoteAverage } from "@/lib/catalogPopularity";
 
 function normalizeDate(dateValue) {
   if (dateValue == null) return null;
@@ -83,7 +84,7 @@ export function normalizeCatalogResolveFallback(doc, mediaType) {
     overview: doc.overview ?? "",
     poster_path: doc.poster_path ?? null,
     backdrop_path: doc.backdrop_path ?? null,
-    vote_average: typeof doc.vote_average === "number" ? doc.vote_average : 0,
+    vote_average: catalogDisplayVoteAverage(doc) ?? 0,
     status: typeof doc.status === "string" && doc.status ? doc.status : "Released",
     imdb_genres,
     omdb:
