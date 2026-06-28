@@ -7,12 +7,13 @@
  */
 import clientPromise from "@/lib/mongo";
 import {
-  fetchOmdbAllAnimeEpisodes,
+  fetchOmdbAnimeEpisodesForCatalog,
   fetchOmdbSeasonEpisodes,
   pickImdbIdFromDoc,
 } from "@/lib/omdbEpisodes";
 import { fetchJikanAnimeEpisodes } from "@/lib/jikanEpisodes";
 import { resolveOmdbImdbIdForDoc } from "@/lib/omdbResolve";
+import { kometaImdbIdForMal, kometaImdbSeasonForMal } from "@/lib/kometaAnimeIds";
 
 async function catalogDocForMalId(malId) {
   const client = await clientPromise;
@@ -38,6 +39,9 @@ async function catalogDocForMalId(malId) {
 }
 
 async function imdbIdForMalId(malId) {
+  const fromKometa = await kometaImdbIdForMal(malId);
+  if (fromKometa) return fromKometa;
+
   const doc = await catalogDocForMalId(malId);
   if (!doc) return null;
 
@@ -68,14 +72,32 @@ export async function GET(req) {
     const hasMal = Number.isFinite(malId) && malId > 0;
 
     let imdbId = /^tt\d+$/i.test(imdbRaw) ? imdbRaw : null;
+    let imdbSeason = null;
+    if (hasMal) {
+      if (!imdbId) {
+        imdbId = await kometaImdbIdForMal(malId);
+      }
+      imdbSeason = await kometaImdbSeasonForMal(malId);
+    }
     if (!imdbId && hasMal) {
       imdbId = await imdbIdForMalId(malId);
     }
 
     if (imdbId) {
       const allSeasons = searchParams.get("allSeasons") !== "0";
+      const seasonParam = parseInt(searchParams.get("imdbSeason") ?? "", 10);
+      const seasonHint =
+        Number.isFinite(seasonParam) && seasonParam >= 1
+          ? seasonParam
+          : imdbSeason != null && imdbSeason > 1
+            ? imdbSeason
+            : null;
       const episodes = allSeasons
-        ? await fetchOmdbAllAnimeEpisodes(imdbId, { limit, enrichPlots: true })
+        ? await fetchOmdbAnimeEpisodesForCatalog(imdbId, {
+            limit,
+            enrichPlots: true,
+            imdbSeason: seasonHint,
+          })
         : await fetchOmdbSeasonEpisodes(imdbId, season);
       if (episodes.length > 0) {
         const capped = capEpisodes(episodes, limit);
@@ -90,7 +112,8 @@ export async function GET(req) {
       }
     }
 
-    if (hasMal) {
+    // Only fall back to Jikan when OMDb cannot resolve this title at all.
+    if (hasMal && !imdbId) {
       const episodes = await fetchJikanAnimeEpisodes(malId, limit);
       if (episodes.length > 0) {
         return Response.json({

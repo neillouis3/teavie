@@ -22,6 +22,7 @@ import { MongoClient } from "mongodb";
 import { hasTmdbAuth, tmdbAuth, tmdbFetchJson } from "../src/lib/tmdbAuth.js";
 import { omdbApiKey } from "../src/lib/omdbAuth.js";
 import { resolveOmdbImdbIdForDoc } from "../src/lib/omdbResolve.js";
+import { kometaImdbIdForMal } from "../src/lib/kometaAnimeIds.js";
 import { resolveTmdbTvFromDoc } from "../src/lib/tmdbResolveFromTitle.js";
 
 const require = createRequire(import.meta.url);
@@ -122,6 +123,18 @@ async function resolveImdbForDoc(doc, auth, { delayMs = 0, tmdbOnly = false } = 
         tmdbId: Number.isFinite(Number(hit.tmdbId)) ? Number(hit.tmdbId) : null,
       };
     }
+  }
+
+  const malId =
+    typeof doc.mal_id === "number" && doc.mal_id > 0
+      ? doc.mal_id
+      : (() => {
+          const m = /^anime_(\d+)$/i.exec(String(doc?.id ?? "").trim());
+          return m ? parseInt(m[1], 10) : null;
+        })();
+  if (malId != null) {
+    const imdbId = await kometaImdbIdForMal(malId);
+    if (imdbId) return { imdbId, source: "kometa", tmdbId: null };
   }
 
   if (!tmdbOnly && omdbApiKey()) {

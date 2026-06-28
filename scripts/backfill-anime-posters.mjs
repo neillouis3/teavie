@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { MongoClient } from "mongodb";
 import { anilistPost } from "../src/lib/anilistFetch.js";
+import { jikanGet, jikanPosterFromEntry } from "../src/lib/jikanFetch.js";
+import { lookupKometaByMalId } from "../src/lib/kometaAnimeIds.js";
 
 const require = createRequire(import.meta.url);
 const { loadMongoEnv, mongoHostHint } = require(path.join(
@@ -228,6 +230,7 @@ function buildUpdatePayload(doc, media, malId, anilistId) {
     poster_path: poster,
     backdrop_path: backdrop,
     updated_at: new Date().toISOString(),
+    last_poster_source: "anilist",
   };
   if (resolvedAnilistId != null) {
     $set.anilist_id = resolvedAnilistId;
@@ -254,17 +257,72 @@ function buildUpdatePayload(doc, media, malId, anilistId) {
   };
 }
 
+async function fetchJikanArt(malId) {
+  await acquireAnilistSlot();
+  const res = await jikanGet(`anime/${malId}`);
+  if (!res.ok) return null;
+  const json = await res.json();
+  const data = json?.data;
+  if (!data) return null;
+  const poster = jikanPosterFromEntry(data);
+  if (!poster) return null;
+  const backdrop =
+    pickString(data?.trailer?.images?.maximum_image_url) ||
+    pickString(data?.trailer?.images?.large_image_url) ||
+    poster;
+  return { poster, backdrop };
+}
+
+function buildUpdateFromJikan(doc, art, malId) {
+  const { poster, backdrop } = art;
+  if (!poster) return { status: "skipped", reason: "no_poster" };
+  if (doc.poster_path === poster && doc.backdrop_path === backdrop) {
+    return { status: "unchanged" };
+  }
+  return {
+    status: "pending_update",
+    id: doc.id,
+    title: doc.title ?? doc.name ?? "",
+    filter: { _id: doc._id },
+    $set: {
+      poster_path: poster,
+      backdrop_path: backdrop,
+      updated_at: new Date().toISOString(),
+      last_poster_source: "jikan",
+      ...(malId != null
+        ? {
+            mal_id: malId,
+            external_ids: {
+              ...(doc.external_ids && typeof doc.external_ids === "object" ? doc.external_ids : {}),
+              mal_id: malId,
+            },
+          }
+        : {}),
+    },
+  };
+}
+
 async function resolveDoc(doc) {
   const malId = malFromDoc(doc);
-  const anilistId = anilistFromDoc(doc);
+  let anilistId = anilistFromDoc(doc);
   if (malId == null && anilistId == null) {
     return { status: "skipped", reason: "no_ids" };
   }
 
-  const media = await fetchAnilistArt(anilistId, malId);
-  if (!media) return { status: "skipped", reason: "anilist_miss" };
+  if (anilistId == null && malId != null) {
+    const kometa = await lookupKometaByMalId(malId);
+    if (kometa?.anilistId) anilistId = kometa.anilistId;
+  }
 
-  return buildUpdatePayload(doc, media, malId, anilistId);
+  const media = await fetchAnilistArt(anilistId, malId);
+  if (media) return buildUpdatePayload(doc, media, malId, anilistId);
+
+  if (malId != null) {
+    const jikan = await fetchJikanArt(malId);
+    if (jikan) return buildUpdateFromJikan(doc, jikan, malId);
+  }
+
+  return { status: "skipped", reason: "anilist_miss" };
 }
 
 async function runPool(items, concurrency, worker) {

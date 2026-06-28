@@ -85,31 +85,53 @@ export async function fetchOmdbSeasonEpisodes(imdbId, season = 1) {
 
 /**
  * @param {string} imdbEpisodeId
+ * @param {number} [maxRetries]
  */
-async function fetchOmdbEpisodeDetail(imdbEpisodeId) {
-  const data = await omdbJson({ i: imdbEpisodeId });
-  if (!data) return null;
-  const plot =
-    typeof data.Plot === "string" && data.Plot.trim() && data.Plot !== "N/A"
-      ? data.Plot.trim()
-      : null;
-  const runtime = parseOmdbRuntimeMinutes(data.Runtime);
-  return { overview: plot, runtime };
+async function fetchOmdbEpisodeDetail(imdbEpisodeId, maxRetries = 4) {
+  const id = String(imdbEpisodeId ?? "").trim();
+  if (!/^tt\d+$/i.test(id)) return null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const data = await omdbJson({ i: id });
+      if (!data) {
+        if (attempt < maxRetries) {
+          await sleep(300 * 2 ** attempt);
+          continue;
+        }
+        return null;
+      }
+      const plot =
+        typeof data.Plot === "string" && data.Plot.trim() && data.Plot !== "N/A"
+          ? data.Plot.trim()
+          : null;
+      const runtime = parseOmdbRuntimeMinutes(data.Runtime);
+      return { overview: plot, runtime };
+    } catch (err) {
+      if (err?.code === "OMDB_RATE_LIMIT" && attempt < maxRetries) {
+        await sleep(500 * 2 ** attempt);
+        continue;
+      }
+      throw err;
+    }
+  }
+  return null;
 }
 
 /**
  * Enrich episode rows with IMDb plot + runtime via per-episode OMDb lookups.
  * @param {Array<{ overview?: string | null; runtime?: number | null; imdb_episode_id?: string | null }>} episodes
- * @param {{ concurrency?: number; delayMs?: number }} [opts]
+ * @param {{ concurrency?: number }} [opts]
  */
-async function enrichOmdbEpisodePlots(episodes, { concurrency = 6, delayMs = 80 } = {}) {
+async function enrichOmdbEpisodePlots(episodes, { concurrency = 24 } = {}) {
   const queue = episodes.filter((ep) => ep.imdb_episode_id && !ep.overview);
   if (!queue.length) return;
 
   let idx = 0;
   const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
-    while (idx < queue.length) {
+    while (true) {
       const i = idx++;
+      if (i >= queue.length) return;
       const ep = queue[i];
       try {
         const detail = await fetchOmdbEpisodeDetail(ep.imdb_episode_id);
@@ -118,41 +140,95 @@ async function enrichOmdbEpisodePlots(episodes, { concurrency = 6, delayMs = 80 
       } catch {
         /* skip failed enrichment */
       }
-      if (delayMs > 0 && i < queue.length - 1) await sleep(delayMs);
     }
   });
   await Promise.all(workers);
 }
 
+function pushFlattenedEpisode(episodes, row) {
+  episodes.push({
+    episode_number: episodes.length + 1,
+    name: row.name,
+    overview: row.overview,
+    runtime: row.runtime,
+    still_path: null,
+    imdb_episode_id: row.imdb_episode_id,
+  });
+}
+
 /**
- * Flatten all IMDb/OMDb seasons into absolute episode numbers (S1E1 → 1, S2E1 → n+1, …).
+ * Pick the right IMDb season(s) for a catalog row.
+ * Single-cour entries (e.g. JJK S2, 23 eps) must not be sliced from season 1 of a multi-season show.
  * @param {string} imdbId
- * @param {{ limit?: number; enrichPlots?: boolean }} [opts]
+ * @param {{ limit?: number; enrichPlots?: boolean; imdbSeason?: number | null }} [opts]
  */
-export async function fetchOmdbAllAnimeEpisodes(
+export async function fetchOmdbAnimeEpisodesForCatalog(
   imdbId,
-  { limit = 500, enrichPlots = true } = {}
+  { limit = 500, enrichPlots = true, imdbSeason = null } = {}
 ) {
   const id = String(imdbId ?? "").trim();
   if (!/^tt\d+$/i.test(id)) return [];
 
   const cap = Math.min(500, Math.max(1, Math.floor(Number(limit)) || 500));
+  const seasonHint = Math.floor(Number(imdbSeason));
+
+  if (Number.isFinite(seasonHint) && seasonHint >= 1) {
+    const rows = await fetchOmdbSeasonEpisodes(id, seasonHint);
+    const episodes = rows.slice(0, cap).map((row) => ({
+      episode_number: row.episode_number,
+      name: row.name,
+      overview: row.overview,
+      runtime: row.runtime,
+      still_path: null,
+      imdb_episode_id: row.imdb_episode_id,
+    }));
+    if (enrichPlots && episodes.length > 0) {
+      await enrichOmdbEpisodePlots(episodes);
+    }
+    return episodes.map(({ imdb_episode_id: _imdb, ...ep }) => ep);
+  }
+
   const series = await omdbJson({ i: id });
   const totalSeasons = Math.max(
     1,
     Math.min(30, parseInt(String(series?.totalSeasons ?? "1"), 10) || 1)
   );
 
+  const seasons = [];
+  for (let season = 1; season <= totalSeasons; season++) {
+    const rows = await fetchOmdbSeasonEpisodes(id, season);
+    if (rows.length) seasons.push({ season, rows });
+  }
+  if (!seasons.length) return [];
+
+  const totalEps = seasons.reduce((n, s) => n + s.rows.length, 0);
   const episodes = [];
-  for (let season = 1; season <= totalSeasons && episodes.length < cap; season++) {
-    const seasonRows = await fetchOmdbSeasonEpisodes(id, season);
-    if (!seasonRows.length) {
-      if (season === 1) break;
-      continue;
+
+  const useFullSeries = cap >= totalEps || seasons.length === 1;
+  if (useFullSeries) {
+    for (const { rows } of seasons) {
+      for (const row of rows) {
+        pushFlattenedEpisode(episodes, row);
+        if (episodes.length >= cap) break;
+      }
+      if (episodes.length >= cap) break;
     }
-    for (const row of seasonRows) {
+  } else {
+    const exactMatches = seasons.filter((s) => s.rows.length === cap);
+    const pick =
+      exactMatches.length > 0
+        ? exactMatches[exactMatches.length - 1]
+        : seasons.reduce((best, s) => {
+            if (!best) return s;
+            const dbest = Math.abs(best.rows.length - cap);
+            const dcur = Math.abs(s.rows.length - cap);
+            return dcur < dbest ? s : best;
+          }, null);
+
+    const target = pick ?? seasons[seasons.length - 1];
+    for (const row of target.rows) {
       episodes.push({
-        episode_number: episodes.length + 1,
+        episode_number: row.episode_number,
         name: row.name,
         overview: row.overview,
         runtime: row.runtime,
@@ -168,6 +244,18 @@ export async function fetchOmdbAllAnimeEpisodes(
   }
 
   return episodes.map(({ imdb_episode_id: _imdb, ...ep }) => ep);
+}
+
+/**
+ * Flatten all IMDb/OMDb seasons into absolute episode numbers (S1E1 → 1, S2E1 → n+1, …).
+ * @param {string} imdbId
+ * @param {{ limit?: number; enrichPlots?: boolean }} [opts]
+ */
+export async function fetchOmdbAllAnimeEpisodes(
+  imdbId,
+  { limit = 500, enrichPlots = true } = {}
+) {
+  return fetchOmdbAnimeEpisodesForCatalog(imdbId, { limit, enrichPlots });
 }
 
 export function pickImdbIdFromDoc(doc) {

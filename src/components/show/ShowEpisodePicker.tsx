@@ -180,7 +180,7 @@ function fallbackEpisodes(
 }
 
 const TV_SEASON_CACHE_PREFIX = "teavie.cache.tv-season.v1:";
-const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v1:";
+const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v2:";
 /** OMDb season listings — fetch full season for count + titles. */
 const OMDB_ANIME_EPISODE_LIMIT = 500;
 
@@ -196,13 +196,14 @@ async function fetchAnimeEpisodes(
   const hasMal = Number.isFinite(mal) && mal > 0;
   if (!imdb && !hasMal) throw new Error("missing anime episode ids");
 
-  const cacheKey = `${ANIME_EPISODES_CACHE_PREFIX}${imdb || `mal:${mal}`}:all:omdb`;
+  const cap = Math.max(1, limit || OMDB_ANIME_EPISODE_LIMIT);
+  const cacheKey = `${ANIME_EPISODES_CACHE_PREFIX}${imdb || `mal:${mal}`}:${cap}:omdb`;
   const cached = readClientDayCache<EpisodeCardRow[]>(cacheKey);
   if (cached) return cached;
 
   const qs = new URLSearchParams({
     allSeasons: "1",
-    limit: String(Math.max(1, limit || OMDB_ANIME_EPISODE_LIMIT)),
+    limit: String(cap),
   });
   if (imdb) qs.set("imdbId", imdb);
   if (hasMal) qs.set("malId", String(mal));
@@ -210,6 +211,7 @@ async function fetchAnimeEpisodes(
   const res = await fetch(`/api/anime/episodes?${qs.toString()}`, { signal });
   if (!res.ok) throw new Error("anime episodes fetch failed");
   const json = await res.json();
+  const source = typeof json?.source === "string" ? json.source : "unknown";
   const rows = Array.isArray(json.episodes) ? json.episodes : [];
   const mapped = rows.map(
     (ep: {
@@ -227,7 +229,9 @@ async function fetchAnimeEpisodes(
       still_path: ep.still_path ?? null,
     })
   );
-  writeClientDayCache(cacheKey, mapped);
+  if (source === "omdb") {
+    writeClientDayCache(cacheKey, mapped);
+  }
   return mapped;
 }
 
