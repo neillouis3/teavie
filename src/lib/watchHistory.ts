@@ -1,6 +1,6 @@
 /** Client-only index of recently watched titles (newest first). */
 
-import { loadWatchProgress } from "@/lib/watchProgress";
+import { formatWatchEpKey, loadWatchProgress, saveWatchProgress } from "@/lib/watchProgress";
 
 export const WATCH_HISTORY_VERSION = 1 as const;
 export const WATCH_HISTORY_INDEX_KEY = `teavie.watch-history.v${WATCH_HISTORY_VERSION}`;
@@ -82,6 +82,22 @@ export function touchWatchHistory(
 
   const prev = readIndex().filter((e) => e.catalogId !== id);
   writeIndex([next, ...prev].slice(0, WATCH_HISTORY_MAX));
+}
+
+/** Mark a movie as recently watched (continue-watching rail). */
+export function recordMovieInWatchHistory(catalogId: string): void {
+  const id = String(catalogId ?? "").trim();
+  if (!id) return;
+  saveWatchProgress(id, {
+    lastSeason: 1,
+    lastEpisode: 1,
+    watched: [formatWatchEpKey(1, 1)],
+  });
+  touchWatchHistory(id, {
+    mediaType: "movie",
+    lastSeason: 1,
+    lastEpisode: 1,
+  });
 }
 
 /** Newest-first watch history; drops rows whose progress blob was removed. */

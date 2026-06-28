@@ -14,6 +14,7 @@ import CatalogMediaPanel, {
 } from './ui/catalogMediaPanel';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
+import { recordMovieInWatchHistory } from '@/lib/watchHistory';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 
@@ -130,8 +131,14 @@ export default function MovieTemplate({ id }: { id: string }) {
     }
   }, [movie]);
 
-  const imageUrl = tmdbImageUrl(movie?.poster_path);
   const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
+
+  useEffect(() => {
+    if (!movie || loading || !movieReleased) return;
+    recordMovieInWatchHistory(String(id));
+  }, [id, movie, loading, movieReleased]);
+
+  const imageUrl = tmdbImageUrl(movie?.poster_path);
 
   return (
     <div className="flex h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">

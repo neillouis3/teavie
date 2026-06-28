@@ -26,7 +26,7 @@ import {
   loadWatchProgress,
   saveWatchProgress,
 } from "@/lib/watchProgress";
-import { touchWatchHistory } from "@/lib/watchHistory";
+import { recordMovieInWatchHistory, touchWatchHistory } from "@/lib/watchHistory";
 import {
   buildShowInfoLines,
   catalogGenresForDisplay,
@@ -770,6 +770,15 @@ export default function ShowTemplate({
       cancelled = true;
     };
   }, [show, loading, id]);
+
+  useEffect(() => {
+    if (!show || loading) return;
+    const isMovie =
+      Boolean(show.is_anime) &&
+      (show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC");
+    if (!isMovie || !animeMovieTmdbId) return;
+    recordMovieInWatchHistory(String(id));
+  }, [show, loading, id, animeMovieTmdbId]);
 
   useEffect(() => {
     const displayName = showDisplayTitle(show);
