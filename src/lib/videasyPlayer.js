@@ -1,5 +1,5 @@
 /** Videasy embed host — https://www.videasy.net/docs */
-export const VIDEASY_PLAYER_BASE = 'https://player.videasy.net';
+export const VIDEASY_PLAYER_BASE = 'https://player.videasy.to';
 
 /** Brand accent + Netflix-style pause overlay */
 export const VIDEASY_MOVIE_QUERY = '?color=22c55e&overlay=true';
