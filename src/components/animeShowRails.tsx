@@ -8,7 +8,7 @@ import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
 } from "@/lib/catalogGrid";
-import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
+import { clearLegacyAnimeShowRailsCache } from "@/lib/clientDayCache";
 
 type RelatedItem = {
   catalogId: string;
@@ -44,30 +44,26 @@ type RailsPayload = {
   youMightLike: YmlItem[];
 };
 
-const CACHE_PREFIX = "teavie.cache.anime-show-rails.v2:";
+const CACHE_PREFIX = "teavie.cache.anime-show-rails.v3:";
 
 async function fetchAnimeShowRails(
   idMal: number,
   maxItems: number
 ): Promise<RailsPayload> {
-  const cacheKey = `${CACHE_PREFIX}${idMal}:${maxItems}`;
-  const cached = readClientDayCache<RailsPayload>(cacheKey);
-  if (cached) return cached;
-
   const qs = new URLSearchParams({
     idMal: String(idMal),
     limit: String(maxItems),
   });
-  const res = await fetch(`/api/anilist/show-rails?${qs.toString()}`);
+  const res = await fetch(`/api/anilist/show-rails?${qs.toString()}`, {
+    cache: "no-store",
+  });
   const data = res.ok
     ? await res.json()
     : { related: [], youMightLike: [] };
-  const payload: RailsPayload = {
+  return {
     related: Array.isArray(data.related) ? data.related : [],
     youMightLike: Array.isArray(data.youMightLike) ? data.youMightLike : [],
   };
-  writeClientDayCache(cacheKey, payload);
-  return payload;
 }
 
 export default function AnimeShowRails({
@@ -77,21 +73,36 @@ export default function AnimeShowRails({
 }) {
   const [related, setRelated] = useState<RelatedItem[]>([]);
   const [youMightLike, setYouMightLike] = useState<YmlItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === "horizontal";
   const ymlMax = horizontal ? 8 : 14;
 
   useEffect(() => {
+    clearLegacyAnimeShowRailsCache();
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
-    void fetchAnimeShowRails(idMal, ymlMax).then((data) => {
-      if (cancelled) return;
-      setRelated(
-        data.related.filter(
-          (it) => typeof it.catalogId === "string" && it.catalogId.trim().length > 0
-        )
-      );
-      setYouMightLike(data.youMightLike);
-    });
+    setLoading(true);
+    void fetchAnimeShowRails(idMal, ymlMax)
+      .then((data) => {
+        if (cancelled) return;
+        setRelated(
+          data.related.filter(
+            (it) => typeof it.catalogId === "string" && it.catalogId.trim().length > 0
+          )
+        );
+        setYouMightLike(data.youMightLike);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setRelated([]);
+        setYouMightLike([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -100,6 +111,10 @@ export default function AnimeShowRails({
   const gridClass = horizontal
     ? CATALOG_GRID_HORIZONTAL_SEARCH
     : CATALOG_GRID_VERTICAL_SEARCH;
+
+  if (loading) {
+    return null;
+  }
 
   if (related.length === 0 && youMightLike.length === 0) {
     return null;

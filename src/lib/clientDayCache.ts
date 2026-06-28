@@ -41,6 +41,20 @@ export function writeClientDayCache<T>(storageKey: string, data: T): void {
   }
 }
 
+/** Drop stale anime show rail payloads cached while the API was failing. */
+export function clearLegacyAnimeShowRailsCache(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const prefix = "teavie.cache.anime-show-rails.";
+    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(prefix)) localStorage.removeItem(key);
+    }
+  } catch {
+    /* private mode */
+  }
+}
+
 /** Drop stale search payloads cached while the API was failing. */
 export function clearLegacySearchResultCache(): void {
   if (typeof window === "undefined") return;

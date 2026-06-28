@@ -24,28 +24,41 @@ import {
 } from "@/lib/animeRelatedCatalog.js";
 
 async function buildRelatedItems(rootMal, relationsJson) {
-  const direct = pickFranchiseRelationCandidates(rootMal, relationsJson);
-  const chain = await jikanFranchiseRailOrderedSteps(rootMal, {
-    rootRelationsJson: relationsJson,
-    staggerMs: 350,
-    maxNodes: 56,
-  });
+  let relJson = relationsJson;
+  if (!relJson) {
+    const res = await jikanGet(`anime/${rootMal}/relations`);
+    if (res.ok) relJson = await res.json().catch(() => null);
+  }
 
-  const seenMal = new Set([normalizeRelatedMalId(rootMal)]);
+  const direct = pickFranchiseRelationCandidates(rootMal, relJson);
+  let chain = [];
+  try {
+    chain = await jikanFranchiseRailOrderedSteps(rootMal, {
+      rootRelationsJson: relJson,
+      staggerMs: 200,
+      maxNodes: 32,
+    });
+  } catch (err) {
+    console.error("[anime related franchise chain]", err);
+  }
+
+  const rootNorm = normalizeRelatedMalId(rootMal);
+  const seenMal = new Set([rootNorm]);
   /** @type {Array<{ malId: number; malKind?: string; topNote: string }>} */
   const candidates = [];
-  for (const s of chain) {
-    const mal = normalizeRelatedMalId(s.malId);
-    if (!Number.isFinite(mal) || mal <= 0 || seenMal.has(mal)) continue;
+
+  const pushCandidate = (step) => {
+    const mal = normalizeRelatedMalId(step.malId);
+    if (!Number.isFinite(mal) || mal <= 0 || mal === rootNorm || seenMal.has(mal)) {
+      return;
+    }
     seenMal.add(mal);
-    candidates.push(s);
-  }
-  for (const s of direct) {
-    const mal = normalizeRelatedMalId(s.malId);
-    if (!Number.isFinite(mal) || mal <= 0 || seenMal.has(mal)) continue;
-    seenMal.add(mal);
-    candidates.push(s);
-  }
+    candidates.push({ ...step, malId: mal });
+  };
+
+  // Direct MAL relations are cheap and reliable when the transitive chain is rate-limited.
+  for (const step of direct) pushCandidate(step);
+  for (const step of chain) pushCandidate(step);
 
   return buildAnimeRelatedCatalogItems(candidates);
 }
@@ -131,7 +144,7 @@ export async function loadAnimeShowRails(idMal, ymlLimit = 14) {
   const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
     includeRelations: true,
     includeRecommendations: true,
-    staggerMs: 350,
+    staggerMs: 200,
   });
 
   const [related, youMightLike] = await Promise.all([
@@ -146,7 +159,10 @@ export async function loadAnimeRelatedItems(idMal) {
   const rootMal = Math.floor(Number(idMal));
   if (!Number.isFinite(rootMal) || rootMal <= 0) return [];
 
-  const relRes = await jikanGet(`anime/${rootMal}/relations`);
-  const relationsJson = relRes.ok ? await relRes.json().catch(() => null) : null;
-  return buildRelatedItems(rootMal, relationsJson);
+  const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
+    includeRelations: true,
+    includeRecommendations: false,
+    staggerMs: 200,
+  });
+  return buildRelatedItems(rootMal, jk.relationsJson);
 }

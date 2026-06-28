@@ -159,7 +159,11 @@ export async function buildAnimeRelatedCatalogItems(candidates) {
   for (const step of normalized) {
     const doc = docByMal.get(step.malId);
     if (!doc) continue;
-    items.push(mapAnimeRelatedCatalogItem(step, doc));
+    try {
+      items.push(mapAnimeRelatedCatalogItem(step, doc));
+    } catch (err) {
+      console.error("[anime related map]", step.malId, err);
+    }
   }
   return items;
 }
