@@ -185,7 +185,7 @@ export async function fetchBrowseCatalogPayload(
   queryString: string,
   genreApiPath?: string
 ): Promise<BrowseCatalogPayload> {
-  const cacheKey = `${PREFIX}.browse.v2:${namespace}:${queryString}`;
+  const cacheKey = `${PREFIX}.browse.v3:${namespace}:${queryString}`;
   return withDayCache(cacheKey, async () => {
     try {
       const listRes = await fetch(`${apiPath}?${queryString}`);

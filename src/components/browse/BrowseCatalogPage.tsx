@@ -21,6 +21,8 @@ type BrowseCatalogPageProps = {
   filterMode: "movie" | "tv" | "anime" | "kdrama";
   viewer: "movie" | "show";
   backLink?: { href: string; label: string };
+  /** When the URL has no `sort_by`, use this (e.g. anime → most popular). */
+  defaultSort?: string;
 };
 
 function BrowseCatalogPageContent({
@@ -32,6 +34,7 @@ function BrowseCatalogPageContent({
   filterMode,
   viewer,
   backLink,
+  defaultSort = "title",
 }: BrowseCatalogPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -39,7 +42,7 @@ function BrowseCatalogPageContent({
 
   const rawPage = parseInt(searchParams.get("page") || "1", 10);
   const pageParam = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
-  const sortParam = searchParams.get("sort_by") || "title";
+  const sortParam = searchParams.get("sort_by") || defaultSort;
   const genreParam = searchParams.get("genre") ?? "";
   const yearMinParam = searchParams.get("year_min") ?? "";
   const yearMaxParam = searchParams.get("year_max") ?? "";
@@ -109,6 +112,7 @@ function BrowseCatalogPageContent({
           total={total}
           loading={loading}
           genreSlugs={genreSlugs}
+          defaultSort={defaultSort}
         />
 
         {backLink ? (

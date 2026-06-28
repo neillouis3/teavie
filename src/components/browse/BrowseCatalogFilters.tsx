@@ -64,6 +64,7 @@ type BrowseCatalogFiltersProps = {
   loading: boolean;
   /** When set, genre filter only lists these slugs (e.g. category-scoped browse). */
   genreSlugs?: string[];
+  defaultSort?: string;
 };
 
 export default function BrowseCatalogFilters({
@@ -71,12 +72,13 @@ export default function BrowseCatalogFilters({
   total,
   loading,
   genreSlugs,
+  defaultSort = 'title',
 }: BrowseCatalogFiltersProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const rawSort = searchParams.get('sort_by') || 'title';
+  const rawSort = searchParams.get('sort_by') || defaultSort;
   const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort) ? rawSort : 'title';
   const rawGenre = searchParams.get('genre') || '';
   const genre = imdbGenreSlugFromBrowseParam(rawGenre) ?? rawGenre;

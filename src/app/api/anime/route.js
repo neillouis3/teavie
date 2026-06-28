@@ -45,7 +45,7 @@ export async function GET(req) {
     );
     const skip = (page - 1) * limit;
 
-    const sortBy = searchParams.get("sort_by") || "title";
+    const sortBy = searchParams.get("sort_by") || "popularity";
     const sort = catalogSort(sortBy, {
       titleAsc: { name: 1, _id: -1 },
       titleDesc: { name: -1, _id: -1 },

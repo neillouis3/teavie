@@ -12,6 +12,7 @@ export default function AllAnimePage() {
       genreApiPath="/api/category/anime/genres"
       filterMode="anime"
       viewer="show"
+      defaultSort="popularity"
     />
   );
 }

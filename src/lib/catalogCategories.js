@@ -16,7 +16,7 @@ export const CATALOG_CATEGORIES = {
     slug: "anime",
     label: "Anime",
     href: "/anime",
-    browseAllHref: "/anime/all",
+    browseAllHref: "/anime/all?sort_by=popularity",
     browseAllLabel: "Browse all Anime",
     browseAllCardText: "Check out all anime here:",
     aboutImage: null,
