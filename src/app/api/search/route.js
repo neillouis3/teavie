@@ -15,7 +15,6 @@ import clientPromise from "@/lib/mongo";
 import {
   animeTitleSearchConditions,
   catalogAnimeIdMongoExpr,
-  catalogAnimeSplitCourHiddenClause,
   catalogExcludeJpAnimationNumericTvMongoClause,
   catalogImdbGenreMatchClause,
   catalogKdramaClause,
@@ -25,6 +24,7 @@ import {
   releasedAnimeFirstAirClause,
   releasedCatalogClause,
 } from "@/lib/catalogQuery";
+import { catalogAnimeSplitCourHiddenClause } from "@/lib/animeSplitCour";
 import { detectGenres, fetchActorCreditIds } from "@/lib/catalogSearch";
 import { imdbGenreMatchConditions } from "@/lib/imdbGenres";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
