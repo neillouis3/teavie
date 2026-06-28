@@ -158,7 +158,7 @@ function HeroCardOverlay({
         </h1>
 
         {!compact && overviewText ? (
-          <p className="w-[40%] min-w-0 text-sm leading-snug text-white/75 line-clamp-2 sm:line-clamp-3">
+          <p className="w-full min-w-0 text-sm leading-snug text-white/75 line-clamp-2 sm:line-clamp-3">
             {overviewText}
           </p>
         ) : null}
