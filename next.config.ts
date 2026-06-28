@@ -8,6 +8,9 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig: NextConfig = {
   // Avoid wrong workspace root + broken `.next` when a lockfile exists outside this repo (e.g. in `$HOME`).
   outputFileTracingRoot: projectRoot,
+  async redirects() {
+    return [{ source: "/discover", destination: "/explore", permanent: true }];
+  },
   /**
    * Next 15.5.x dev: segment explorer can trigger RSC client-manifest / missing-chunk corruption
    * (`segment-explorer-node.js#SegmentViewNode`, `Cannot find module './NNN.js'`). Disable locally.

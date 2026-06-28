@@ -4,9 +4,9 @@ import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/ui/header";
-import AllMovieViewer from "@/components/viewer/allMoviesViewer";
-import AllShowsViewer from "@/components/viewer/allShowsViewer";
-import AllMoviesViewerLoading from "@/components/viewer/skeleton/allMoviesViewerLoading";
+import MovieCatalogGrid from "@/components/browse/movieCatalogGrid";
+import ShowCatalogGrid from "@/components/browse/showCatalogGrid";
+import MovieCatalogGridLoading from "@/components/browse/skeleton/movieCatalogGridLoading";
 import BrowseCatalogFilters from "@/components/browse/BrowseCatalogFilters";
 import { Pagination } from "@heroui/react";
 import type { ContentItem } from "@/types/content";
@@ -120,15 +120,15 @@ function BrowseCatalogPageContent({
         ) : null}
 
         {loading ? (
-          <AllMoviesViewerLoading />
+          <MovieCatalogGridLoading />
         ) : items.length === 0 ? (
           <p className="py-16 text-center text-sm text-default-500">
             No titles match these filters. Try adjusting your search.
           </p>
         ) : viewer === "movie" ? (
-          <AllMovieViewer allContentData={items} />
+          <MovieCatalogGrid items={items} />
         ) : (
-          <AllShowsViewer allContentData={items} />
+          <ShowCatalogGrid items={items} />
         )}
 
         {totalPages > 1 && !loading && items.length > 0 ? (
@@ -154,7 +154,7 @@ function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
     <div className="bg-main min-h-screen w-full">
       <Header pageName={pageName} />
       <div className="px-3 pb-8 pt-2 sm:px-4">
-        <AllMoviesViewerLoading />
+        <MovieCatalogGridLoading />
       </div>
     </div>
   );

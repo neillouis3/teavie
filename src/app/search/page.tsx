@@ -9,7 +9,7 @@ import Header from '@/components/ui/header';
 import PageSplash from '@/components/ui/pageSplash';
 import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
-import CatalogRail from '@/components/explore/catalogRail';
+import CatalogRail from '@/components/catalog/catalogRail';
 import {
   useCatalogCardStyle,
 } from '@/contexts/catalogCardStyleContext';

@@ -36,7 +36,7 @@ function interleaveTrending(
   return out;
 }
 
-interface TrendingHeroViewerProps {
+interface TrendingHeroProps {
   trendingMovies: ContentItem[];
   trendingTv: ContentItem[];
   maxItems?: number;
@@ -46,13 +46,13 @@ interface TrendingHeroViewerProps {
   showDots?: boolean;
 }
 
-export default function TrendingHeroViewer({
+export default function TrendingHero({
   trendingMovies,
   trendingTv,
   maxItems = 24,
   rounded = false,
   showDots = true,
-}: TrendingHeroViewerProps) {
+}: TrendingHeroProps) {
   const items = React.useMemo(
     () => interleaveTrending(trendingMovies, trendingTv, maxItems),
     [trendingMovies, trendingTv, maxItems]

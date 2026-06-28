@@ -136,6 +136,29 @@ export function GenreCatalogTile({
   );
 }
 
+/** Explore rail capstone — links to full genres index. */
+export function GenreBrowseAllTile() {
+  return (
+    <Link
+      href="/genres"
+      aria-label="Browse all genres"
+      className="group relative flex aspect-[40/21] w-full overflow-hidden rounded-xl p-3"
+    >
+      <span
+        className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-500/90 to-teal-600 shadow-sm"
+        aria-hidden
+      />
+      <div className="relative z-20 flex h-full w-full flex-col items-center justify-center text-center px-2">
+        <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
+          Browse genres
+        </span>
+        <span className="mt-0.5 text-[11px] font-medium text-white/80">View all</span>
+      </div>
+      <span className="pointer-events-none absolute inset-0 z-[1] rounded-xl bg-gradient-to-br from-white/15 to-black/20 transition-opacity group-hover:opacity-90" />
+    </Link>
+  );
+}
+
 export function GenreSquareTile({
   genre,
   colorClass,

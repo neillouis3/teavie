@@ -36,6 +36,23 @@ export const IMDB_GENRES = [
   { slug: "talk-show", label: "Talk-Show" },
 ];
 
+/** Curated genre rail on Explore (order preserved). */
+export const EXPLORE_GENRE_SLUGS = [
+  "drama",
+  "comedy",
+  "animation",
+  "action",
+  "adventure",
+  "romance",
+  "crime",
+  "fantasy",
+  "thriller",
+  "horror",
+  "mystery",
+  "sci-fi",
+  "family",
+];
+
 /** @type {{ slug: string; label: string; href: string }[]} */
 export const IMDB_CATEGORIES = [
   { slug: "kdrama", label: "Korean Drama", href: "/kdrama" },
@@ -45,6 +62,21 @@ const IMDB_SLUG_TO_LABEL = new Map(IMDB_GENRES.map((g) => [g.slug, g.label]));
 const IMDB_LABEL_TO_SLUG = new Map(
   IMDB_GENRES.map((g) => [g.label.toLowerCase(), g.slug])
 );
+
+/**
+ * @param {{ slug: string; name: string; count: number; posters: string[] }[]} rows
+ * @returns {{ slug: string; name: string; count: number; posters: string[] }[]}
+ */
+export function exploreGenreRailRows(rows) {
+  const bySlug = new Map(rows.map((g) => [g.slug, g]));
+  return EXPLORE_GENRE_SLUGS.map((slug) => {
+    const row = bySlug.get(slug);
+    if (row) return row;
+    const label = IMDB_SLUG_TO_LABEL.get(slug);
+    if (!label) return null;
+    return { slug, name: label, count: 0, posters: [] };
+  }).filter(Boolean);
+}
 
 /** AniList / MAL genre strings → IMDb label (null = skip). Not TMDB. */
 const ANIME_GENRE_TO_IMDB = {

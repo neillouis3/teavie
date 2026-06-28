@@ -4,6 +4,7 @@ import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import type { WatchHistoryEntry } from "@/lib/watchHistory";
 import {
   fetchExploreBundle,
+  fetchDiscoverFeed,
   type TmdbDiscoverPayload,
   type ExploreBundle,
 } from "@/lib/pageDataCache";
@@ -22,6 +23,8 @@ export type ExplorePagePayload = {
   discover: TmdbDiscoverPayload;
   genres: CatalogGenreRow[];
   historyRows: ExploreHistoryRow[];
+  newContent: ContentItem[];
+  upcomingContent: ContentItem[];
 };
 
 function historyCacheKey(entries: WatchHistoryEntry[]): string {
@@ -125,14 +128,17 @@ export async function loadExplorePagePayload(
   historyEntries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
 ): Promise<ExplorePagePayload> {
-  const [bundle, historyRows] = await Promise.all([
+  const [bundle, historyRows, feed] = await Promise.all([
     fetchExploreBundle(),
     fetchExploreHistoryRows(historyEntries, progressLabel),
+    fetchDiscoverFeed(),
   ]);
   return {
     discover: bundle.discover,
     genres: bundle.genres,
     historyRows,
+    newContent: feed.newContent,
+    upcomingContent: feed.upcomingContent,
   };
 }
 

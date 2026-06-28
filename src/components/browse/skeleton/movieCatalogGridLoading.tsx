@@ -9,7 +9,7 @@ import {
   CATALOG_GRID_VERTICAL,
 } from '@/lib/catalogGrid';
 
-export default function AllMoviesViewerLoading() {
+export default function MovieCatalogGridLoading() {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === 'horizontal';
   const gridClass = horizontal ? CATALOG_GRID_HORIZONTAL : CATALOG_GRID_VERTICAL;

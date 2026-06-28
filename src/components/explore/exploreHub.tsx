@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Chip } from "@heroui/react";
 import Header from "@/components/ui/header";
-import CatalogRail from "@/components/explore/catalogRail";
-import TrendingHeroViewer from "@/components/explore/trendingHeroViewer";
-import GenreDiscover from "@/components/discover/genreDiscover";
+import PageSplash from "@/components/ui/pageSplash";
+import CatalogRail from "@/components/catalog/catalogRail";
+import TrendingHero from "@/components/catalog/trendingHero";
+import GenreRail from "@/components/explore/genreRail";
 import WatchHistoryRail from "@/components/explore/watchHistoryRail";
-import ExplorePageSplash from "@/components/explore/explorePageSplash";
+import UpcomingRail from "@/components/explore/upcomingRail";
+import NewContentRail from "@/components/explore/newContentRail";
 import {
   loadExplorePagePayload,
   fetchExploreHistoryRows,
@@ -25,7 +28,7 @@ export type { TmdbDiscoverPayload };
 const TRENDING_SECTION_MIN_H = "min-h-[52vh] sm:min-h-[62vh] lg:min-h-[80vh]";
 const SECTION_MAX_ITEMS = 24;
 
-export default function DiscoverHub() {
+export default function ExploreHub() {
   const [payload, setPayload] = useState<ExplorePagePayload | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -84,14 +87,16 @@ export default function DiscoverHub() {
   }, []);
 
   if (!ready || !payload) {
-    return <ExplorePageSplash />;
+    return <PageSplash ariaLabel="Loading Explore" />;
   }
 
-  const { discover, genres, historyRows } = payload;
+  const { discover, genres, historyRows, newContent, upcomingContent } = payload;
   const hasTrending =
     discover.trendingMovies.length > 0 || discover.trendingTv.length > 0;
   const hasPopular =
     discover.popularMovies.length > 0 || discover.popularTv.length > 0;
+  const hasUpcoming = upcomingContent.length > 0;
+  const hasNew = newContent.length > 0;
 
   return (
     <div className="bg-background flex w-full flex-col">
@@ -102,7 +107,7 @@ export default function DiscoverHub() {
           className={`mb-4 mt-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
           aria-label="Trending"
         >
-          <TrendingHeroViewer
+          <TrendingHero
             trendingMovies={discover.trendingMovies}
             trendingTv={discover.trendingTv}
             maxItems={SECTION_MAX_ITEMS}
@@ -112,11 +117,11 @@ export default function DiscoverHub() {
 
       <div className="mt-2 w-full px-3 sm:px-4">
         <WatchHistoryRail items={historyRows} />
-        <GenreDiscover genres={genres} />
+        <GenreRail genres={genres} />
       </div>
 
       {hasPopular && (
-        <div className="mt-6 flex w-full flex-col gap-12 px-3 pb-8 sm:px-4">
+        <div className="mt-6 flex w-full flex-col gap-12 px-3 sm:px-4">
           <div className="flex flex-col gap-10">
             <CatalogRail
               title="Popular movies"
@@ -129,6 +134,27 @@ export default function DiscoverHub() {
               maxItems={SECTION_MAX_ITEMS}
             />
           </div>
+        </div>
+      )}
+
+      {(hasUpcoming || hasNew) && (
+        <div className="mt-6 flex w-full flex-col gap-10 px-3 pb-8 sm:px-4">
+          {hasUpcoming && (
+            <section className="flex w-full flex-col gap-3" aria-label="New and upcoming">
+              <Chip color="success" variant="flat" size="md" radius="sm">
+                New &amp; Upcoming
+              </Chip>
+              <UpcomingRail items={upcomingContent} />
+            </section>
+          )}
+          {hasNew && (
+            <section className="flex w-full flex-col gap-3" aria-label="New on Teavie">
+              <Chip color="success" variant="flat" size="md" radius="sm">
+                New on Teavie
+              </Chip>
+              <NewContentRail items={newContent} />
+            </section>
+          )}
         </div>
       )}
     </div>

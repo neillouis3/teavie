@@ -6,8 +6,8 @@ import { Chip, Button } from "@heroui/react";
 import Header from "@/components/ui/header";
 import PageSplash from "@/components/ui/pageSplash";
 import LargeCard from "@/components/ui/largeCard";
-import CatalogRail from "@/components/explore/catalogRail";
-import TrendingHeroViewer from "@/components/explore/trendingHeroViewer";
+import CatalogRail from "@/components/catalog/catalogRail";
+import TrendingHero from "@/components/catalog/trendingHero";
 import {
   Carousel,
   CarouselContent,
@@ -113,7 +113,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           className={`mb-4 mt-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
           aria-label="Trending"
         >
-          <TrendingHeroViewer
+          <TrendingHero
             trendingMovies={[]}
             trendingTv={data.trending}
             maxItems={16}

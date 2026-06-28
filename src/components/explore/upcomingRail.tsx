@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React from "react";
 import {
@@ -7,14 +7,14 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import LargeCard from "../ui/largeCard";
+import LargeCard from "@/components/ui/largeCard";
 import type { ContentItem } from "@/types/content";
 
-interface UpcomingViewerProps {
-  upcomingContentData: ContentItem[];
-}
+type UpcomingRailProps = {
+  items: ContentItem[];
+};
 
-export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerProps) {
+export default function UpcomingRail({ items }: UpcomingRailProps) {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
   const [count, setCount] = React.useState(0);
@@ -31,7 +31,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
   }, [api]);
 
   return (
-    <div className="w-full flex flex-col items-center">
+    <div className="flex w-full flex-col items-center">
       <Carousel
         opts={{
           align: "center",
@@ -41,7 +41,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
         setApi={setApi}
       >
         <CarouselContent className="-ml-4">
-          {upcomingContentData.map((item) => {
+          {items.map((item) => {
             const title = item.title ?? item.name ?? "Untitled";
             const releaseDate = item.release_date ?? item.first_air_date ?? "";
             const year = releaseDate
@@ -81,8 +81,7 @@ export default function UpcomingViewer({ upcomingContentData }: UpcomingViewerPr
         </CarouselContent>
       </Carousel>
 
-      {/* Carousel indicators */}
-      <div className="flex justify-center items-center space-x-2 mt-4">
+      <div className="mt-4 flex items-center justify-center space-x-2">
         {Array.from({ length: count }).map((_, index) => (
           <div
             key={index}

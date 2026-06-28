@@ -7,7 +7,7 @@ import { Button, Chip } from '@heroui/react';
 import Header from '@/components/ui/header';
 import PageSplash from '@/components/ui/pageSplash';
 import LargeCard from '@/components/ui/largeCard';
-import CatalogRail from '@/components/explore/catalogRail';
+import CatalogRail from '@/components/catalog/catalogRail';
 import type { ContentItem } from '@/types/content';
 import {
   fetchGenrePagePayload,

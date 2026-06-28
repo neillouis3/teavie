@@ -51,9 +51,7 @@ export default function MobileTopNav() {
   const selectedKey =
     pathname.startsWith('/explore')
       ? 'explore'
-      : pathname.startsWith('/discover')
-        ? 'discover'
-        : pathname.startsWith('/movies')
+      : pathname.startsWith('/movies')
           ? 'movies'
           : pathname.startsWith('/anime')
             ? 'anime'
