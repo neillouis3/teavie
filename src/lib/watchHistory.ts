@@ -5,6 +5,8 @@ import { formatWatchEpKey, loadWatchProgress, saveWatchProgress } from "@/lib/wa
 export const WATCH_HISTORY_VERSION = 1 as const;
 export const WATCH_HISTORY_INDEX_KEY = `teavie.watch-history.v${WATCH_HISTORY_VERSION}`;
 export const WATCH_HISTORY_MAX = 24;
+/** Remove continue-watching rows not opened in this window. */
+export const WATCH_HISTORY_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 
 export type WatchHistoryMediaType = "movie" | "tv";
 
@@ -100,11 +102,13 @@ export function recordMovieInWatchHistory(catalogId: string): void {
   });
 }
 
-/** Newest-first watch history; drops rows whose progress blob was removed. */
+/** Newest-first watch history; drops stale, expired, or progress-less rows. */
 export function listWatchHistory(): WatchHistoryEntry[] {
+  const now = Date.now();
   const index = readIndex();
   const kept: WatchHistoryEntry[] = [];
   for (const entry of index) {
+    if (now - entry.lastWatchedAt >= WATCH_HISTORY_TTL_MS) continue;
     const progress = loadWatchProgress(entry.catalogId);
     if (!progress) continue;
     kept.push({

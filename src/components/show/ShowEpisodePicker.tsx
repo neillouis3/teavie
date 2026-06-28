@@ -29,6 +29,7 @@ import { formatWatchEpKey } from "@/lib/watchProgress";
 import { tmdbSeasonEpisodeFromAbsolute } from "@/lib/cumulativeTvEpisode";
 import { useAnimeAudio } from "@/contexts/animeAudioContext";
 import { animeAudioLabel, ANIME_AUDIO_OPTIONS } from "@/lib/animePlayEmbed";
+import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 
 export type ShowEpisodePickerSeason = {
   season_number: number;
@@ -160,11 +161,18 @@ function fallbackEpisodes(
   }));
 }
 
+const TV_SEASON_CACHE_PREFIX = "teavie.cache.tv-season.v1:";
+const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v1:";
+
 async function fetchAnimeEpisodes(
   malId: number,
   limit: number,
   signal?: AbortSignal
 ): Promise<EpisodeCardRow[]> {
+  const cacheKey = `${ANIME_EPISODES_CACHE_PREFIX}${malId}:${limit}`;
+  const cached = readClientDayCache<EpisodeCardRow[]>(cacheKey);
+  if (cached) return cached;
+
   const qs = new URLSearchParams({
     malId: String(malId),
     limit: String(Math.max(1, limit)),
@@ -173,7 +181,7 @@ async function fetchAnimeEpisodes(
   if (!res.ok) throw new Error("anime episodes fetch failed");
   const json = await res.json();
   const rows = Array.isArray(json.episodes) ? json.episodes : [];
-  return rows.map(
+  const mapped = rows.map(
     (ep: {
       episode_number: number;
       name: string;
@@ -189,6 +197,8 @@ async function fetchAnimeEpisodes(
       still_path: ep.still_path ?? null,
     })
   );
+  writeClientDayCache(cacheKey, mapped);
+  return mapped;
 }
 
 async function fetchSeasonEpisodes(
@@ -196,6 +206,10 @@ async function fetchSeasonEpisodes(
   seasonNum: number,
   signal?: AbortSignal
 ): Promise<EpisodeCardRow[]> {
+  const cacheKey = `${TV_SEASON_CACHE_PREFIX}${tvId}:${seasonNum}`;
+  const cached = readClientDayCache<EpisodeCardRow[]>(cacheKey);
+  if (cached) return cached;
+
   const qs = new URLSearchParams({
     tvId,
     season: String(seasonNum),
@@ -204,7 +218,7 @@ async function fetchSeasonEpisodes(
   if (!res.ok) throw new Error("season fetch failed");
   const json = await res.json();
   const rows = Array.isArray(json.episodes) ? json.episodes : [];
-  return rows.map(
+  const mapped = rows.map(
     (ep: {
       episode_number: number;
       name: string;
@@ -220,6 +234,8 @@ async function fetchSeasonEpisodes(
       still_path: ep.still_path ?? null,
     })
   );
+  writeClientDayCache(cacheKey, mapped);
+  return mapped;
 }
 
 export function ShowEpisodePickerProvider({

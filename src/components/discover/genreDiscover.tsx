@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Chip } from "@heroui/react";
 import {
   Carousel,
@@ -9,36 +9,16 @@ import {
 } from "@/components/ui/carousel";
 import {
   GenreCatalogTile,
-  GenreTilesSkeleton,
   genreTileColor,
   type CatalogGenreRow,
 } from "@/components/genre/genreTileShared";
 
-export default function GenreDiscover() {
-  const [genres, setGenres] = useState<CatalogGenreRow[]>([]);
-  const [loading, setLoading] = useState(true);
+type GenreDiscoverProps = {
+  genres: CatalogGenreRow[];
+};
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    fetch("/api/genres/popular")
-      .then((res) => res.json())
-      .then((json) => {
-        if (cancelled) return;
-        setGenres(json.genres ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setGenres([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!loading && genres.length === 0) {
+export default function GenreDiscover({ genres }: GenreDiscoverProps) {
+  if (genres.length === 0) {
     return null;
   }
 
@@ -48,25 +28,21 @@ export default function GenreDiscover() {
         Browse by genre
       </Chip>
 
-      {loading ? (
-        <GenreTilesSkeleton count={8} />
-      ) : (
-        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-          <CarouselContent className="-ml-3">
-            {genres.map((genre, i) => (
-              <CarouselItem
-                key={genre.slug}
-                className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
-              >
-                <GenreCatalogTile
-                  genre={genre}
-                  colorClass={genreTileColor(genre.name, i)}
-                />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-      )}
+      <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+        <CarouselContent className="-ml-3">
+          {genres.map((genre, i) => (
+            <CarouselItem
+              key={genre.slug}
+              className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
+            >
+              <GenreCatalogTile
+                genre={genre}
+                colorClass={genreTileColor(genre.name, i)}
+              />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
     </section>
   );
 }
