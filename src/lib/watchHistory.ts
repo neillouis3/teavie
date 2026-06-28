@@ -1,6 +1,6 @@
 /** Client-only index of recently watched titles (newest first). */
 
-import { formatWatchEpKey, loadWatchProgress, saveWatchProgress } from "@/lib/watchProgress";
+import { formatWatchEpKey, loadWatchProgress, saveWatchProgress, clearWatchProgress } from "@/lib/watchProgress";
 
 export const WATCH_HISTORY_VERSION = 1 as const;
 export const WATCH_HISTORY_INDEX_KEY = `teavie.watch-history.v${WATCH_HISTORY_VERSION}`;
@@ -123,8 +123,30 @@ export function listWatchHistory(): WatchHistoryEntry[] {
   return kept;
 }
 
+/** Remove a title from continue watching and clear saved progress. */
+export function removeFromWatchHistory(catalogId: string): void {
+  const id = String(catalogId ?? "").trim();
+  if (!id) return;
+  const next = readIndex().filter((e) => e.catalogId !== id);
+  writeIndex(next);
+  clearWatchProgress(id);
+}
+
 export function watchHistoryProgressLabel(entry: WatchHistoryEntry): string {
   if (entry.mediaType === "movie") return "Continue watching";
   if (entry.lastSeason <= 1) return `Episode ${entry.lastEpisode}`;
   return `S${entry.lastSeason} · E${entry.lastEpisode}`;
+}
+
+/** Meta chips for continue-watching cards (replaces catalog MOVIE/TV/year pills). */
+export function watchHistoryMetaChips(
+  entry: Pick<WatchHistoryEntry, "mediaType" | "lastSeason" | "lastEpisode">,
+  seasonAmount: number
+): string[] {
+  if (entry.mediaType === "movie") return [];
+  const seasons = seasonAmount > 0 ? seasonAmount : 1;
+  if (seasons > 1) {
+    return [`S${entry.lastSeason}`, `E${entry.lastEpisode}`];
+  }
+  return [`Episode ${entry.lastEpisode}`];
 }

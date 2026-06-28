@@ -12,7 +12,11 @@ export type { TmdbDiscoverPayload };
 
 const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v1:";
 
-export type ExploreHistoryRow = ContentItem & { progressLabel: string };
+export type ExploreHistoryRow = ContentItem & {
+  progressLabel: string;
+  lastSeason: number;
+  lastEpisode: number;
+};
 
 export type ExplorePagePayload = {
   discover: TmdbDiscoverPayload;
@@ -60,6 +64,8 @@ export async function fetchExploreHistoryRows(
         ...item,
         id: entry.catalogId,
         progressLabel: progressLabel(entry),
+        lastSeason: entry.lastSeason,
+        lastEpisode: entry.lastEpisode,
       });
     }
     writeClientDayCache(cacheKey, rows);

@@ -1,6 +1,10 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { formatHeroRuntime } from '@/lib/formatRelease';
 import { catalogDisplayTitle } from '@/lib/catalogDisplayTitle';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
@@ -19,6 +23,10 @@ interface SmallCardProps {
   posterPath: string;
   /** When set, overrides `/shows/{id}` / `/movies/{id}` (e.g. AniList URL). */
   linkHref?: string | null;
+  /** When set, replaces default MOVIE/TV/year pills (e.g. continue watching S/E). */
+  metaChips?: string[];
+  /** Top-right dismiss control (e.g. remove from continue watching). */
+  onDismiss?: () => void;
 }
 
 function MetaChip({ children }: { children: React.ReactNode }) {
@@ -55,7 +63,7 @@ function buildMetaChips(
   } else if (typeLower === 'movie') {
     const runtime = formatHeroRuntime(runtimeSeconds);
     if (runtime) chips.push(runtime);
-    chips.push('Movie');
+    chips.push('MOVIE');
   } else {
     chips.push(typeLower.toUpperCase());
   }
@@ -77,6 +85,8 @@ export default function SmallCard({
   type,
   posterPath,
   linkHref,
+  metaChips: metaChipsProp,
+  onDismiss,
 }: SmallCardProps) {
   const typeLower = (type ?? '').toLowerCase();
   const hasPoster = Boolean(posterPath?.trim());
@@ -84,13 +94,15 @@ export default function SmallCard({
   const defaultHref = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
   const resolvedHref = String(linkHref ?? '').trim() || defaultHref;
   const external = /^https?:\/\//i.test(resolvedHref);
-  const metaChips = buildMetaChips(
-    typeLower,
-    year,
-    seasonAmount,
-    numberOfEpisodes,
-    runtimeSeconds
-  );
+  const metaChips =
+    metaChipsProp ??
+    buildMetaChips(
+      typeLower,
+      year,
+      seasonAmount,
+      numberOfEpisodes,
+      runtimeSeconds
+    );
   const displayTitle = catalogDisplayTitle(title);
 
   const poster = (
@@ -138,27 +150,58 @@ export default function SmallCard({
     </div>
   );
 
-  const shellClass = 'group flex min-w-0 w-full flex-col gap-1.5 rounded-xl';
+  const shellClass = 'group relative flex min-w-0 w-full flex-col gap-1.5 rounded-xl';
+
+  const dismissButton =
+    onDismiss != null ? (
+      <button
+        type="button"
+        className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+        aria-label={`Remove ${displayTitle} from continue watching`}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDismiss();
+        }}
+      >
+        <HugeiconsIcon icon={Cancel01Icon} size={14} className="shrink-0" />
+      </button>
+    ) : null;
+
+  const cardBody = (
+    <>
+      {poster}
+      {meta}
+    </>
+  );
 
   if (external) {
     return (
-      <a
-        href={resolvedHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`${shellClass} block`}
-        aria-label={`${title}, ${year}`}
-      >
-        {poster}
-        {meta}
-      </a>
+      <div className={shellClass}>
+        <a
+          href={resolvedHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-w-0 flex-col gap-1.5"
+          aria-label={`${title}, ${year}`}
+        >
+          {cardBody}
+        </a>
+        {dismissButton}
+      </div>
     );
   }
 
   return (
-    <Link href={resolvedHref} className={`${shellClass} block`} aria-label={`${title}, ${year}`}>
-      {poster}
-      {meta}
-    </Link>
+    <div className={shellClass}>
+      <Link
+        href={resolvedHref}
+        className="flex min-w-0 flex-col gap-1.5"
+        aria-label={`${title}, ${year}`}
+      >
+        {cardBody}
+      </Link>
+      {dismissButton}
+    </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
+import { removeFromWatchHistory, watchHistoryMetaChips } from "@/lib/watchHistory";
 import type { ExploreHistoryRow } from "@/lib/explorePageData";
 
 const CAROUSEL_ITEM_VERTICAL =
@@ -46,6 +47,16 @@ export default function WatchHistoryRail({ items }: WatchHistoryRailProps) {
               "—";
             const mediaType = item.type === "movie" ? "movie" : "tv";
             const key = `${mediaType}-${item.id}`;
+            const dismiss = () => removeFromWatchHistory(String(item.id));
+            const historyEntry = {
+              mediaType: mediaType as "movie" | "tv",
+              lastSeason: item.lastSeason,
+              lastEpisode: item.lastEpisode,
+            };
+            const continueMetaChips = watchHistoryMetaChips(
+              historyEntry,
+              item.season_amount ?? 0
+            );
 
             return (
               <CarouselItem key={key} className={itemClass}>
@@ -57,18 +68,18 @@ export default function WatchHistoryRail({ items }: WatchHistoryRailProps) {
                     type={mediaType}
                     posterPath={item.poster_path || ""}
                     backdropPath={item.backdrop_path || ""}
+                    onDismiss={dismiss}
                   />
                 ) : (
                   <SmallCard
                     id={item.id}
                     title={titleText}
                     year={year}
-                    releaseNote={item.progressLabel}
                     type={mediaType}
-                    runtimeSeconds={item.runtimeSeconds ?? undefined}
                     seasonAmount={item.season_amount ?? 0}
-                    numberOfEpisodes={item.number_of_episodes ?? undefined}
                     posterPath={item.poster_path || ""}
+                    metaChips={continueMetaChips}
+                    onDismiss={dismiss}
                   />
                 )}
               </CarouselItem>

@@ -59,3 +59,12 @@ export function saveWatchProgress(
     /* quota / private mode */
   }
 }
+
+export function clearWatchProgress(catalogId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(watchProgressStorageKey(catalogId));
+  } catch {
+    /* quota / private mode */
+  }
+}

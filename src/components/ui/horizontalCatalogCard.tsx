@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardBody, Chip } from '@heroui/react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 
 export type HorizontalCatalogCardProps = {
@@ -17,6 +19,7 @@ export type HorizontalCatalogCardProps = {
   topNote?: string;
   /** When set (e.g. external AniList URL), used instead of `/shows/` or `/movies/` */
   href?: string;
+  onDismiss?: () => void;
 };
 
 /**
@@ -30,6 +33,7 @@ export default function HorizontalCatalogCard({
   posterPath = '',
   backdropPath = '',
   href: hrefProp,
+  onDismiss,
 }: HorizontalCatalogCardProps) {
   const typeLower = String(type ?? '').toLowerCase();
   const isTv = typeLower === 'tv';
@@ -44,60 +48,76 @@ export default function HorizontalCatalogCard({
   const src = tmdbImageUrl(backdrop) || tmdbImageUrl(poster) || null;
 
   return (
-    <Link
-      href={href}
-      className="block min-w-0 w-full outline-none"
-      aria-label={`${title}, ${label}, ${year}`}
-      {...(isExternal
-        ? { target: "_blank", rel: "noopener noreferrer" }
-        : {})}
-    >
-      <Card
-        shadow="none"
-        radius="lg"
-        classNames={{
-          base:
-            'border border-default-200/45 bg-default-50/90 dark:border-default-100/15 dark:bg-default-50/10',
-        }}
+    <div className="relative min-w-0 w-full">
+      <Link
+        href={href}
+        className="block min-w-0 w-full outline-none"
+        aria-label={`${title}, ${label}, ${year}`}
+        {...(isExternal
+          ? { target: "_blank", rel: "noopener noreferrer" }
+          : {})}
       >
-        <CardBody className="relative aspect-[16/10] w-full overflow-hidden p-0">
-          <div className="absolute inset-0 overflow-hidden rounded-lg">
-            <div className="absolute inset-0 bg-default-100 dark:bg-default-100/20" aria-hidden />
-            {src ? (
-              <Image
-                src={src}
-                alt=""
-                aria-hidden
-                fill
-                unoptimized
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                className="object-cover"
-              />
-            ) : (
-              <div className="relative z-[1] flex h-full flex-col items-center justify-center gap-1.5 p-4 text-center">
-                <p className="line-clamp-2 text-sm font-normal text-foreground">{title}</p>
-                <Chip size="sm" variant="flat" color="success">
-                  No image
-                </Chip>
+        <Card
+          shadow="none"
+          radius="lg"
+          classNames={{
+            base:
+              'border border-default-200/45 bg-default-50/90 dark:border-default-100/15 dark:bg-default-50/10',
+          }}
+        >
+          <CardBody className="relative aspect-[16/10] w-full overflow-hidden p-0">
+            <div className="absolute inset-0 overflow-hidden rounded-lg">
+              <div className="absolute inset-0 bg-default-100 dark:bg-default-100/20" aria-hidden />
+              {src ? (
+                <Image
+                  src={src}
+                  alt=""
+                  aria-hidden
+                  fill
+                  unoptimized
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="relative z-[1] flex h-full flex-col items-center justify-center gap-1.5 p-4 text-center">
+                  <p className="line-clamp-2 text-sm font-normal text-foreground">{title}</p>
+                  <Chip size="sm" variant="flat" color="success">
+                    No image
+                  </Chip>
+                </div>
+              )}
+              {src && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] bg-gradient-to-t from-black/82 via-black/35 to-transparent"
+                  aria-hidden
+                />
+              )}
+            </div>
+
+            {src && (
+              <div className="absolute bottom-2 left-2 right-2 z-[2] max-w-[92%] sm:bottom-3 sm:left-3 sm:right-4">
+                <p className="text-left text-sm font-normal leading-snug tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[15px]">
+                  {title}
+                </p>
               </div>
             )}
-            {src && (
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] bg-gradient-to-t from-black/82 via-black/35 to-transparent"
-                aria-hidden
-              />
-            )}
-          </div>
-
-          {src && (
-            <div className="absolute bottom-2 left-2 right-2 z-[2] max-w-[92%] sm:bottom-3 sm:left-3 sm:right-4">
-              <p className="text-left text-sm font-normal leading-snug tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[15px]">
-                {title}
-              </p>
-            </div>
-          )}
-        </CardBody>
-      </Card>
-    </Link>
+          </CardBody>
+        </Card>
+      </Link>
+      {onDismiss != null ? (
+        <button
+          type="button"
+          className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+          aria-label={`Remove ${title} from continue watching`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDismiss();
+          }}
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={14} className="shrink-0" />
+        </button>
+      ) : null}
+    </div>
   );
 }
