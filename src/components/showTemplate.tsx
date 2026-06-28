@@ -939,11 +939,6 @@ export default function ShowTemplate({
       ? show.tmdb_playback_seasons
       : show?.seasons ?? [];
 
-  const animeCatalogEpisodeCap =
-    Boolean(show?.is_anime)
-      ? (animeEpisodeCap ?? catalogAnimeEpisodeCount(show))
-      : null;
-
   const episodePickerProps = {
     tmdbTvId: playerUsesTmdb ? String(resolvedPlayerId) : null,
     seasons: pickerSeasons,
@@ -955,15 +950,14 @@ export default function ShowTemplate({
       setSelectedEpisode(episode);
     },
     showSeasonTabs: showSeasonPickerStrip,
-    preferCatalogEpisodes: Boolean(show?.is_anime),
-    malId: Boolean(show?.is_anime) ? idMalForAnilistRails : null,
-    imdbId: Boolean(show?.is_anime) ? catalogImdbId(show) : null,
+    preferCatalogEpisodes: Boolean(show?.is_anime) && !playerUsesTmdb,
+    malId: Boolean(show?.is_anime) && !playerUsesTmdb ? idMalForAnilistRails : null,
     fallbackStillPath:
       show?.is_anime ? show.backdrop_path ?? show.poster_path ?? null : null,
     flatMode:
       animeUseTmdbEpisodes && Boolean(show?.tmdb_playback_seasons?.length),
     catalogAbsoluteEpisodes: animeUseTmdbEpisodes,
-    flatEpisodeCap: animeCatalogEpisodeCap,
+    flatEpisodeCap: animeEpisodeCap,
     watchedKeys: watchedEpisodes,
     onMarkWatched: markEpisodeWatched,
     onEpisodesLoadingChange: setPickerEpisodesLoading,

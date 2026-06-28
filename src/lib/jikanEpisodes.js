@@ -32,7 +32,7 @@ async function enrichJikanEpisodeDetail(malId, episodeNumber) {
 }
 
 /**
- * Episode list from Jikan when OMDb / IMDb id is unavailable.
+ * Episode list from Jikan (MAL).
  * @param {number} malId
  * @param {number} [limit]
  */
