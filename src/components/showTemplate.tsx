@@ -618,7 +618,8 @@ export default function ShowTemplate({
         }
         bypassPolicy = resolved?.adminBypass === true;
         if (bypassPolicy) setAdminBypassActive(true);
-        if (resolved?.playerId != null) {
+        const isAnimeCatalogRoute = /^anime_/i.test(String(id).trim());
+        if (resolved?.playerId != null && !isAnimeCatalogRoute) {
           targetTmdbId = String(resolved.playerId);
           setResolvedPlayerId(String(resolved.playerId));
         }
@@ -933,14 +934,15 @@ export default function ShowTemplate({
     </>
   );
 
-  const animeUseTmdbEpisodes = Boolean(show?.is_anime) && playerUsesTmdb;
-  const pickerSeasons =
-    animeUseTmdbEpisodes && show?.tmdb_playback_seasons?.length
-      ? show.tmdb_playback_seasons
-      : show?.seasons ?? [];
+  const pickerSeasons = show?.seasons ?? [];
+
+  const animePickerEpisodeCap =
+    Boolean(show?.is_anime)
+      ? (animeEpisodeCap ?? catalogAnimeEpisodeCount(show))
+      : null;
 
   const episodePickerProps = {
-    tmdbTvId: playerUsesTmdb ? String(resolvedPlayerId) : null,
+    tmdbTvId: show?.is_anime ? null : playerUsesTmdb ? String(resolvedPlayerId) : null,
     seasons: pickerSeasons,
     selectedSeason,
     selectedEpisode,
@@ -950,14 +952,13 @@ export default function ShowTemplate({
       setSelectedEpisode(episode);
     },
     showSeasonTabs: showSeasonPickerStrip,
-    preferCatalogEpisodes: Boolean(show?.is_anime) && !playerUsesTmdb,
-    malId: Boolean(show?.is_anime) && !playerUsesTmdb ? idMalForAnilistRails : null,
+    preferCatalogEpisodes: Boolean(show?.is_anime),
+    malId: Boolean(show?.is_anime) ? idMalForAnilistRails : null,
     fallbackStillPath:
       show?.is_anime ? show.backdrop_path ?? show.poster_path ?? null : null,
-    flatMode:
-      animeUseTmdbEpisodes && Boolean(show?.tmdb_playback_seasons?.length),
-    catalogAbsoluteEpisodes: animeUseTmdbEpisodes,
-    flatEpisodeCap: animeEpisodeCap,
+    flatMode: false,
+    catalogAbsoluteEpisodes: false,
+    flatEpisodeCap: animePickerEpisodeCap,
     watchedKeys: watchedEpisodes,
     onMarkWatched: markEpisodeWatched,
     onEpisodesLoadingChange: setPickerEpisodesLoading,
