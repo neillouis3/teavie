@@ -45,7 +45,7 @@ function embeddedAnilistBackdrop(doc, posterFallback) {
 }
 
 /**
- * @param {Record<string, unknown>} doc
+ * @param {unknown} doc
  * @returns {string | null}
  */
 export function animePosterFromDoc(doc) {
@@ -65,7 +65,7 @@ export function animePosterFromDoc(doc) {
 }
 
 /**
- * @param {Record<string, unknown>} doc
+ * @param {unknown} doc
  * @returns {string | null}
  */
 export function animeBackdropFromDoc(doc) {
