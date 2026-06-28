@@ -6,10 +6,11 @@ import { Input, Pagination } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon } from '@hugeicons/core-free-icons';
 import Header from '@/components/ui/header';
-import PageSplash from '@/components/ui/pageSplash';
 import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
-import CatalogRail from '@/components/catalog/catalogRail';
+import CatalogRail, { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
+import SearchCatalogGridLoading from '@/components/browse/skeleton/searchCatalogGridLoading';
+import SearchPageSkeleton from '@/components/browse/skeleton/searchPageSkeleton';
 import {
   useCatalogCardStyle,
 } from '@/contexts/catalogCardStyleContext';
@@ -189,7 +190,65 @@ function SearchContent() {
   );
 
   if (!ready) {
-    return <PageSplash ariaLabel="Loading search" />;
+    return (
+      <div className="bg-main min-h-screen w-full">
+        <Header pageName="Search" />
+
+        <div className="space-y-6 px-3 pb-6 pt-6 sm:px-4 sm:pt-8">
+          <form onSubmit={submitSearch} className="w-full">
+            <Input
+              aria-label="Search query"
+              placeholder="Search titles…"
+              value={inputValue}
+              onValueChange={setInputValue}
+              size="sm"
+              variant="flat"
+              radius="sm"
+              className="w-full"
+              startContent={
+                <HugeiconsIcon
+                  icon={Search01Icon}
+                  size={16}
+                  className="shrink-0 text-default-400"
+                />
+              }
+              classNames={{
+                base: 'w-full',
+                input: 'text-sm',
+                inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
+              }}
+            />
+          </form>
+
+          <SearchCatalogFilters
+            total={0}
+            loading
+            hasQuery={hasQuery}
+          />
+
+          {hasQuery ? (
+            <SearchCatalogGridLoading />
+          ) : (
+            <div className="space-y-8">
+              <section className="space-y-3">
+                <div className="h-6 w-36 animate-pulse rounded-md bg-default-200" />
+                <CatalogRailSkeleton
+                  horizontal={horizontal}
+                  count={popularSectionMax}
+                />
+              </section>
+              <section className="space-y-3">
+                <div className="h-6 w-28 animate-pulse rounded-md bg-default-200" />
+                <CatalogRailSkeleton
+                  horizontal={horizontal}
+                  count={popularSectionMax}
+                />
+              </section>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -290,7 +349,7 @@ function SearchContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<PageSplash ariaLabel="Loading search" />}>
+    <Suspense fallback={<SearchPageSkeleton />}>
       <SearchContent />
     </Suspense>
   );
