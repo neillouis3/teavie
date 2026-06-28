@@ -196,12 +196,12 @@ async function fetchAnimeEpisodes(
   const hasMal = Number.isFinite(mal) && mal > 0;
   if (!imdb && !hasMal) throw new Error("missing anime episode ids");
 
-  const cacheKey = `${ANIME_EPISODES_CACHE_PREFIX}${imdb || `mal:${mal}`}:${season}:omdb`;
+  const cacheKey = `${ANIME_EPISODES_CACHE_PREFIX}${imdb || `mal:${mal}`}:all:omdb`;
   const cached = readClientDayCache<EpisodeCardRow[]>(cacheKey);
   if (cached) return cached;
 
   const qs = new URLSearchParams({
-    season: String(Math.max(1, season)),
+    allSeasons: "1",
     limit: String(Math.max(1, limit || OMDB_ANIME_EPISODE_LIMIT)),
   });
   if (imdb) qs.set("imdbId", imdb);
@@ -219,7 +219,7 @@ async function fetchAnimeEpisodes(
       runtime: number | null;
       still_path?: string | null;
     }) => ({
-      season,
+      season: 1,
       episode: ep.episode_number,
       name: ep.name,
       overview: ep.overview ?? null,
@@ -346,29 +346,6 @@ function useEpisodePickerState({
             releasedSeasons.find((s) => s.season_number === selectedSeason) ??
             releasedSeasons[0];
           const seasonNum = seasonObj?.season_number ?? selectedSeason ?? 1;
-          const mal = Math.floor(Number(malId));
-          const hasMal = Number.isFinite(mal) && mal > 0;
-          const imdb =
-            typeof imdbId === "string" && /^tt\d+$/i.test(imdbId.trim())
-              ? imdbId.trim()
-              : "";
-          if (imdb || hasMal) {
-            try {
-              const rows = await fetchAnimeEpisodes(
-                imdb || null,
-                hasMal ? mal : null,
-                seasonNum,
-                OMDB_ANIME_EPISODE_LIMIT,
-                controller.signal
-              );
-              if (!cancelled && rows.length > 0) {
-                setEpisodes(rows);
-                return;
-              }
-            } catch {
-              /* fall through to placeholders */
-            }
-          }
           let count = seasonObj?.episode_count ?? 0;
           if (count <= 0) {
             count = releasedSeasons.reduce(
@@ -376,8 +353,49 @@ function useEpisodePickerState({
               0
             );
           }
+          if (flatEpisodeCap != null && flatEpisodeCap > 0) {
+            count = Math.min(count, flatEpisodeCap);
+          }
+          const mal = Math.floor(Number(malId));
+          const hasMal = Number.isFinite(mal) && mal > 0;
+          const imdb =
+            typeof imdbId === "string" && /^tt\d+$/i.test(imdbId.trim())
+              ? imdbId.trim()
+              : "";
+          if ((imdb || hasMal) && count > 0) {
+            try {
+              const rows = await fetchAnimeEpisodes(
+                imdb || null,
+                hasMal ? mal : null,
+                seasonNum,
+                count || OMDB_ANIME_EPISODE_LIMIT,
+                controller.signal
+              );
+              if (!cancelled && rows.length > 0) {
+                const byEp = new Map(rows.map((r) => [r.episode, r]));
+                const merged = Array.from({ length: count }, (_, i) => {
+                  const ep = i + 1;
+                  const hit = byEp.get(ep);
+                  return (
+                    hit ?? {
+                      season: 1,
+                      episode: ep,
+                      name: `Episode ${ep}`,
+                      overview: null,
+                      runtime: null,
+                      still_path: null,
+                    }
+                  );
+                });
+                setEpisodes(merged);
+                return;
+              }
+            } catch {
+              /* fall through to placeholders */
+            }
+          }
           if (!cancelled) {
-            setEpisodes(fallbackEpisodes(seasonNum, count));
+            setEpisodes(fallbackEpisodes(1, count));
           }
           return;
         }
@@ -483,6 +501,7 @@ function useEpisodePickerState({
     preferCatalogEpisodes,
     malId,
     imdbId,
+    flatEpisodeCap,
     catalogAbsoluteEpisodes,
     onEpisodesLoadingChange,
   ]);

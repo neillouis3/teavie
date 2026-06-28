@@ -6,7 +6,11 @@
  * Falls back to Jikan (MAL) when anime has no IMDb id — common for catalog-only rows.
  */
 import clientPromise from "@/lib/mongo";
-import { fetchOmdbSeasonEpisodes, pickImdbIdFromDoc } from "@/lib/omdbEpisodes";
+import {
+  fetchOmdbAllAnimeEpisodes,
+  fetchOmdbSeasonEpisodes,
+  pickImdbIdFromDoc,
+} from "@/lib/omdbEpisodes";
 import { fetchJikanAnimeEpisodes } from "@/lib/jikanEpisodes";
 import { resolveOmdbImdbIdForDoc } from "@/lib/omdbResolve";
 
@@ -69,13 +73,16 @@ export async function GET(req) {
     }
 
     if (imdbId) {
-      const episodes = await fetchOmdbSeasonEpisodes(imdbId, season);
+      const allSeasons = searchParams.get("allSeasons") !== "0";
+      const episodes = allSeasons
+        ? await fetchOmdbAllAnimeEpisodes(imdbId, { limit, enrichPlots: true })
+        : await fetchOmdbSeasonEpisodes(imdbId, season);
       if (episodes.length > 0) {
         const capped = capEpisodes(episodes, limit);
         return Response.json({
           source: "omdb",
           imdbId,
-          season,
+          season: allSeasons ? null : season,
           malId: hasMal ? malId : null,
           episodeCount: episodes.length,
           episodes: capped,

@@ -2,25 +2,28 @@ import { omdbQueryWithKey } from "./omdbAuth.js";
 
 const OMDB_BASE = "https://www.omdbapi.com/";
 
-/**
- * OMDb season episode list: `?i=tt…&Season=1`
- * @param {string} imdbId
- * @param {number} [season]
- * @returns {Promise<Array<{ episode_number: number; name: string; overview: string | null; runtime: number | null; still_path: null; released: string | null }>>}
- */
-export async function fetchOmdbSeasonEpisodes(imdbId, season = 1) {
-  const id = String(imdbId ?? "").trim();
-  if (!/^tt\d+$/i.test(id)) return [];
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
-  const seasonNum = Math.max(1, Math.floor(Number(season)) || 1);
-  const qs = omdbQueryWithKey({ i: id, Season: String(seasonNum), r: "json" });
-  if (!qs.includes("apikey=")) return [];
+function parseOmdbRuntimeMinutes(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s || s === "N/A") return null;
+  const m = /(\d+)\s*min/i.exec(s);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+async function omdbJson(params) {
+  const qs = omdbQueryWithKey({ ...params, r: "json" });
+  if (!qs.includes("apikey=")) return null;
 
   const res = await fetch(`${OMDB_BASE}?${qs}`, {
     headers: { Accept: "application/json" },
     next: { revalidate: 86400 },
   });
-  if (!res.ok) return [];
+  if (!res.ok) return null;
 
   const data = await res.json();
   if (data?.Response !== "True") {
@@ -30,8 +33,24 @@ export async function fetchOmdbSeasonEpisodes(imdbId, season = 1) {
       e.code = "OMDB_RATE_LIMIT";
       throw e;
     }
-    return [];
+    return null;
   }
+  return data;
+}
+
+/**
+ * OMDb season episode list: `?i=tt…&Season=1`
+ * @param {string} imdbId
+ * @param {number} [season]
+ * @returns {Promise<Array<{ episode_number: number; name: string; overview: string | null; runtime: number | null; still_path: null; released: string | null; imdb_episode_id: string | null }>>}
+ */
+export async function fetchOmdbSeasonEpisodes(imdbId, season = 1) {
+  const id = String(imdbId ?? "").trim();
+  if (!/^tt\d+$/i.test(id)) return [];
+
+  const seasonNum = Math.max(1, Math.floor(Number(season)) || 1);
+  const data = await omdbJson({ i: id, Season: String(seasonNum) });
+  if (!data) return [];
 
   const rows = Array.isArray(data?.Episodes) ? data.Episodes : [];
   return rows
@@ -46,6 +65,10 @@ export async function fetchOmdbSeasonEpisodes(imdbId, season = 1) {
         typeof row?.Released === "string" && row.Released.trim() && row.Released !== "N/A"
           ? row.Released.trim()
           : null;
+      const imdbEpisodeId =
+        typeof row?.imdbID === "string" && /^tt\d+$/i.test(row.imdbID.trim())
+          ? row.imdbID.trim()
+          : null;
       return {
         episode_number: epNum,
         name: title,
@@ -53,10 +76,98 @@ export async function fetchOmdbSeasonEpisodes(imdbId, season = 1) {
         runtime: null,
         still_path: null,
         released,
+        imdb_episode_id: imdbEpisodeId,
       };
     })
     .filter(Boolean)
     .sort((a, b) => a.episode_number - b.episode_number);
+}
+
+/**
+ * @param {string} imdbEpisodeId
+ */
+async function fetchOmdbEpisodeDetail(imdbEpisodeId) {
+  const data = await omdbJson({ i: imdbEpisodeId });
+  if (!data) return null;
+  const plot =
+    typeof data.Plot === "string" && data.Plot.trim() && data.Plot !== "N/A"
+      ? data.Plot.trim()
+      : null;
+  const runtime = parseOmdbRuntimeMinutes(data.Runtime);
+  return { overview: plot, runtime };
+}
+
+/**
+ * Enrich episode rows with IMDb plot + runtime via per-episode OMDb lookups.
+ * @param {Array<{ overview?: string | null; runtime?: number | null; imdb_episode_id?: string | null }>} episodes
+ * @param {{ concurrency?: number; delayMs?: number }} [opts]
+ */
+async function enrichOmdbEpisodePlots(episodes, { concurrency = 6, delayMs = 80 } = {}) {
+  const queue = episodes.filter((ep) => ep.imdb_episode_id && !ep.overview);
+  if (!queue.length) return;
+
+  let idx = 0;
+  const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
+    while (idx < queue.length) {
+      const i = idx++;
+      const ep = queue[i];
+      try {
+        const detail = await fetchOmdbEpisodeDetail(ep.imdb_episode_id);
+        if (detail?.overview) ep.overview = detail.overview;
+        if (detail?.runtime != null) ep.runtime = detail.runtime;
+      } catch {
+        /* skip failed enrichment */
+      }
+      if (delayMs > 0 && i < queue.length - 1) await sleep(delayMs);
+    }
+  });
+  await Promise.all(workers);
+}
+
+/**
+ * Flatten all IMDb/OMDb seasons into absolute episode numbers (S1E1 → 1, S2E1 → n+1, …).
+ * @param {string} imdbId
+ * @param {{ limit?: number; enrichPlots?: boolean }} [opts]
+ */
+export async function fetchOmdbAllAnimeEpisodes(
+  imdbId,
+  { limit = 500, enrichPlots = true } = {}
+) {
+  const id = String(imdbId ?? "").trim();
+  if (!/^tt\d+$/i.test(id)) return [];
+
+  const cap = Math.min(500, Math.max(1, Math.floor(Number(limit)) || 500));
+  const series = await omdbJson({ i: id });
+  const totalSeasons = Math.max(
+    1,
+    Math.min(30, parseInt(String(series?.totalSeasons ?? "1"), 10) || 1)
+  );
+
+  const episodes = [];
+  for (let season = 1; season <= totalSeasons && episodes.length < cap; season++) {
+    const seasonRows = await fetchOmdbSeasonEpisodes(id, season);
+    if (!seasonRows.length) {
+      if (season === 1) break;
+      continue;
+    }
+    for (const row of seasonRows) {
+      episodes.push({
+        episode_number: episodes.length + 1,
+        name: row.name,
+        overview: row.overview,
+        runtime: row.runtime,
+        still_path: null,
+        imdb_episode_id: row.imdb_episode_id,
+      });
+      if (episodes.length >= cap) break;
+    }
+  }
+
+  if (enrichPlots && episodes.length > 0) {
+    await enrichOmdbEpisodePlots(episodes);
+  }
+
+  return episodes.map(({ imdb_episode_id: _imdb, ...ep }) => ep);
 }
 
 export function pickImdbIdFromDoc(doc) {
