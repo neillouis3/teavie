@@ -1,3 +1,5 @@
+import { tmdbAuth, tmdbFetchJson } from "./tmdbAuth.js";
+
 const TMDB_SEARCH_URL = "https://api.themoviedb.org/3/search/tv";
 const TMDB_SEARCH_MOVIE_URL = "https://api.themoviedb.org/3/search/movie";
 const TMDB_FIND_URL = "https://api.themoviedb.org/3/find";
@@ -41,21 +43,8 @@ function similarityScore(docTitle, docYear, candidate) {
   return score;
 }
 
-async function tmdbFetch(url, token) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  const res = await fetch(url, {
-    signal: controller.signal,
-    headers: {
-      accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  }).finally(() => clearTimeout(timer));
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`TMDB ${res.status}: ${t.slice(0, 160)}`);
-  }
-  return res.json();
+async function tmdbFetch(url, authOrBearer) {
+  return tmdbFetchJson(url, authOrBearer, { timeoutMs: FETCH_TIMEOUT_MS });
 }
 
 function collectTitleCandidates(doc, extraTitles = []) {
@@ -186,18 +175,24 @@ async function searchTmdbTvOnce(title, year, useYear, token) {
  * @param {{ extraTitles?: string[], imdbId?: string|null }} [options]
  * @returns {Promise<{ tmdbId: number, imdbId: string|null, poster_path: string|null, backdrop_path: string|null }|null>}
  */
-export async function resolveTmdbTvFromDoc(doc, token, options = {}) {
-  if (!token) return null;
+export async function resolveTmdbTvFromDoc(doc, authOrBearer, options = {}) {
+  const auth =
+    authOrBearer && typeof authOrBearer === "object" && authOrBearer.kind
+      ? authOrBearer
+      : typeof authOrBearer === "string" && authOrBearer.trim()
+        ? authOrBearer
+        : tmdbAuth();
+  if (!auth) return null;
 
   const imdbId = options.imdbId ?? pickImdbId(doc);
   if (imdbId) {
-    const byImdb = await resolveTmdbTvByImdbId(imdbId, token);
+    const byImdb = await resolveTmdbTvByImdbId(imdbId, auth);
     if (byImdb) return byImdb;
   }
 
   const tvdbId = pickTvdbId(doc);
   if (tvdbId != null) {
-    const byTvdb = await resolveTmdbTvByTvdbId(tvdbId, token);
+    const byTvdb = await resolveTmdbTvByTvdbId(tvdbId, auth);
     if (byTvdb) return byTvdb;
   }
 
@@ -213,7 +208,7 @@ export async function resolveTmdbTvFromDoc(doc, token, options = {}) {
       if (useYear && year == null) continue;
       let results = [];
       try {
-        results = await searchTmdbTvOnce(primaryTitle, year, useYear, token);
+        results = await searchTmdbTvOnce(primaryTitle, year, useYear, auth);
       } catch {
         continue;
       }
@@ -228,7 +223,7 @@ export async function resolveTmdbTvFromDoc(doc, token, options = {}) {
   }
 
   if (!bestOverall || bestOverall.score < MIN_SCORE) return null;
-  return resolveFromTmdbTvRow(bestOverall.row, token);
+  return resolveFromTmdbTvRow(bestOverall.row, auth);
 }
 
 function movieSimilarityScore(docTitle, docYear, candidate) {

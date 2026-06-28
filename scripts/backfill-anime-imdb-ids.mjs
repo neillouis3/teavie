@@ -11,13 +11,15 @@
  *   node scripts/backfill-anime-imdb-ids.mjs --concurrency=12
  *   node scripts/backfill-anime-imdb-ids.mjs --cap=100 --delay=50
  *
- * Env: MONGODB_URI, TMDB_BEARER (or NEXT_PUBLIC_TMDB_BEARER), OMDB_API_KEY
+ *   node scripts/backfill-anime-imdb-ids.mjs --tmdb-only
+ *
+ * Env: MONGODB_URI, TMDB_BEARER or TMDB_API_KEY, OMDB_API_KEY
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { MongoClient } from "mongodb";
-import { tmdbBearerToken } from "../src/lib/tmdbAuth.js";
+import { hasTmdbAuth, tmdbAuth, tmdbFetchJson } from "../src/lib/tmdbAuth.js";
 import { omdbApiKey } from "../src/lib/omdbAuth.js";
 import { resolveOmdbImdbIdForDoc } from "../src/lib/omdbResolve.js";
 import { resolveTmdbTvFromDoc } from "../src/lib/tmdbResolveFromTitle.js";
@@ -82,20 +84,18 @@ function missingImdbFilter() {
   };
 }
 
-async function tmdbExternalImdbId(tmdbId, token) {
-  const res = await fetch(`${TMDB_BASE}/tv/${tmdbId}/external_ids`, {
-    headers: {
-      accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  const imdbId = data?.imdb_id;
-  return typeof imdbId === "string" && /^tt/i.test(imdbId) ? imdbId.trim() : null;
+async function tmdbExternalImdbId(tmdbId, auth) {
+  if (!auth) return null;
+  try {
+    const data = await tmdbFetchJson(`${TMDB_BASE}/tv/${tmdbId}/external_ids`, auth);
+    const imdbId = data?.imdb_id;
+    return typeof imdbId === "string" && /^tt/i.test(imdbId) ? imdbId.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
-async function resolveImdbForDoc(doc, token, { delayMs = 0 } = {}) {
+async function resolveImdbForDoc(doc, auth, { delayMs = 0, tmdbOnly = false } = {}) {
   const topLevel =
     typeof doc?.imdb_id === "string" && /^tt/i.test(doc.imdb_id) ? doc.imdb_id.trim() : "";
   if (topLevel) return { imdbId: topLevel, source: "existing", tmdbId: null };
@@ -106,14 +106,14 @@ async function resolveImdbForDoc(doc, token, { delayMs = 0 } = {}) {
   }
 
   const tmdbId = tmdbIdFromDoc(doc);
-  if (tmdbId != null && token) {
-    const imdbId = await tmdbExternalImdbId(tmdbId, token);
+  if (tmdbId != null && auth) {
+    const imdbId = await tmdbExternalImdbId(tmdbId, auth);
     if (delayMs > 0) await sleep(delayMs);
     if (imdbId) return { imdbId, source: "tmdb_ext", tmdbId };
   }
 
-  if (token) {
-    const hit = await resolveTmdbTvFromDoc(doc, token);
+  if (auth) {
+    const hit = await resolveTmdbTvFromDoc(doc, auth);
     if (delayMs > 0) await sleep(delayMs);
     if (hit?.imdbId && /^tt/i.test(hit.imdbId)) {
       return {
@@ -124,7 +124,7 @@ async function resolveImdbForDoc(doc, token, { delayMs = 0 } = {}) {
     }
   }
 
-  if (omdbApiKey()) {
+  if (!tmdbOnly && omdbApiKey()) {
     const imdbId = await resolveOmdbImdbIdForDoc(doc, "tv");
     if (delayMs > 0) await sleep(delayMs);
     if (imdbId) return { imdbId, source: "omdb", tmdbId: null };
@@ -213,10 +213,16 @@ async function main() {
     process.exit(1);
   }
 
-  const token = tmdbBearerToken().trim();
+  const auth = tmdbAuth();
+  const hasTmdb = hasTmdbAuth();
   const hasOmdb = Boolean(omdbApiKey());
-  if (!token && !hasOmdb) {
-    console.error("Need TMDB_BEARER and/or OMDB_API_KEY");
+  const tmdbOnly = hasFlag("--tmdb-only");
+  if (!hasTmdb && !hasOmdb) {
+    console.error("Need TMDB_BEARER/TMDB_API_KEY and/or OMDB_API_KEY");
+    process.exit(1);
+  }
+  if (tmdbOnly && !hasTmdb) {
+    console.error("--tmdb-only requires TMDB_BEARER or TMDB_API_KEY");
     process.exit(1);
   }
 
@@ -257,12 +263,14 @@ async function main() {
 
     const docs = await query.toArray();
     console.log(
-      `mongo=${mongoHostHint(uri)} anime_rows=${animeTotal} missing_imdb=${queueTotal} scan=${docs.length} dry_run=${dryRun} cap=${cap || "none"} concurrency=${concurrency} delay_ms=${delayMs} tmdb=${Boolean(token)} omdb=${hasOmdb}`
+      `mongo=${mongoHostHint(uri)} anime_rows=${animeTotal} missing_imdb=${queueTotal} scan=${docs.length} dry_run=${dryRun} cap=${cap || "none"} concurrency=${concurrency} delay_ms=${delayMs} tmdb=${hasTmdb} omdb=${hasOmdb && !tmdbOnly} tmdb_only=${tmdbOnly}`
     );
 
     const started = Date.now();
     const results = await runPool(docs, concurrency, (doc) =>
-      resolveImdbForDoc(doc, token, { delayMs }).then((resolved) => buildUpdate(doc, resolved))
+      resolveImdbForDoc(doc, auth, { delayMs, tmdbOnly }).then((resolved) =>
+        buildUpdate(doc, resolved)
+      )
     );
 
     const counts = {

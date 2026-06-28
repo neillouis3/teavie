@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAnimeSource } from "@/contexts/animeSourceContext";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
 import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
 import StreamQualityBadge from "@/components/ui/streamQualityBadge";
