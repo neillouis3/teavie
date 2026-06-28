@@ -1,12 +1,8 @@
 /**
- * GET /api/anime/episodes?malId=21&limit=200&tmdbTvId=1429&tmdbSeason=1
- * Jikan episode list (title + air date) with optional TMDB still_path merge.
+ * GET /api/anime/episodes?malId=35760&limit=12
+ * TMDB episode metadata for an anime catalog row (resolves show id + season via Kometa).
  */
-import { fetchJikanAnimeEpisodes } from "@/lib/jikanEpisodes";
-import {
-  fetchTmdbSeasonEpisodes,
-  tmdbStillPathByEpisode,
-} from "@/lib/tmdbSeasonEpisodes";
+import { fetchAnimeTmdbEpisodes } from "@/lib/animeTmdbEpisodes";
 
 export async function GET(req) {
   try {
@@ -16,42 +12,24 @@ export async function GET(req) {
       500,
       Math.max(1, parseInt(searchParams.get("limit") || "200", 10))
     );
-    const tmdbTvId = searchParams.get("tmdbTvId")?.trim() ?? "";
-    const tmdbSeason = Math.max(
-      1,
-      parseInt(searchParams.get("tmdbSeason") || "1", 10) || 1
-    );
 
     if (!Number.isFinite(malId) || malId <= 0) {
       return Response.json({ error: "Invalid malId" }, { status: 400 });
     }
 
-    const [episodes, tmdbRows] = await Promise.all([
-      fetchJikanAnimeEpisodes(malId, limit),
-      /^\d+$/.test(tmdbTvId)
-        ? fetchTmdbSeasonEpisodes(tmdbTvId, tmdbSeason)
-        : Promise.resolve([]),
-    ]);
-
+    const { episodes, target } = await fetchAnimeTmdbEpisodes(malId, limit);
     if (!episodes.length) {
-      return Response.json({ error: "No episodes found" }, { status: 404 });
-    }
-
-    if (tmdbRows.length) {
-      const stills = tmdbStillPathByEpisode(tmdbRows);
-      for (const ep of episodes) {
-        const still = stills.get(ep.episode_number);
-        if (still) ep.still_path = still;
-      }
+      return Response.json(
+        { error: target ? "No episodes found" : "TMDB target not resolved" },
+        { status: 404 }
+      );
     }
 
     return Response.json({
-      source: "jikan",
+      source: "tmdb",
       malId,
       episodeCount: episodes.length,
-      tmdbStills: /^\d+$/.test(tmdbTvId)
-        ? { tvId: tmdbTvId, season: tmdbSeason, matched: episodes.filter((e) => e.still_path).length }
-        : null,
+      tmdb: target,
       episodes,
     });
   } catch (err) {

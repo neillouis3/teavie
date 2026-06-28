@@ -110,13 +110,9 @@ type ShowEpisodePickerProps = {
   onSeasonChange: (season: number) => void;
   onEpisodeChange: (season: number, episode: number) => void;
   showSeasonTabs?: boolean;
-  /** Anime: episode list from catalog counts; metadata from TMDB when `animeTmdbTvId` is set. */
+  /** Anime: episode list from catalog counts; metadata from /api/anime/episodes (TMDB). */
   preferCatalogEpisodes?: boolean;
   malId?: number | null;
-  /** Anime: TMDB TV id for episode list (name, overview, still, runtime). */
-  animeTmdbTvId?: string | null;
-  /** TMDB season for anime episode fetch (default 1 per catalog row). */
-  animeTmdbSeason?: number;
   /** Show backdrop/poster used when episode stills are missing (anime). */
   fallbackStillPath?: string | null;
   /** After TMDB flat fetch, remap to season 1 + absolute episode (anime UI). */
@@ -181,6 +177,44 @@ function fallbackEpisodes(
 }
 
 const TV_SEASON_CACHE_PREFIX = "teavie.cache.tv-season.v1:";
+const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v4:";
+
+async function fetchAnimeEpisodes(
+  malId: number,
+  limit: number,
+  signal?: AbortSignal
+): Promise<EpisodeCardRow[]> {
+  const cacheKey = `${ANIME_EPISODES_CACHE_PREFIX}${malId}:${limit}`;
+  const cached = readClientDayCache<EpisodeCardRow[]>(cacheKey);
+  if (cached) return cached;
+
+  const qs = new URLSearchParams({
+    malId: String(malId),
+    limit: String(Math.max(1, limit)),
+  });
+  const res = await fetch(`/api/anime/episodes?${qs.toString()}`, { signal });
+  if (!res.ok) throw new Error("anime episodes fetch failed");
+  const json = await res.json();
+  const rows = Array.isArray(json.episodes) ? json.episodes : [];
+  const mapped = rows.map(
+    (ep: {
+      episode_number: number;
+      name: string;
+      overview?: string | null;
+      runtime: number | null;
+      still_path?: string | null;
+    }) => ({
+      season: 1,
+      episode: ep.episode_number,
+      name: ep.name,
+      overview: ep.overview ?? null,
+      runtime: ep.runtime,
+      still_path: ep.still_path ?? null,
+    })
+  );
+  writeClientDayCache(cacheKey, mapped);
+  return mapped;
+}
 
 async function fetchSeasonEpisodes(
   tvId: string,
@@ -241,8 +275,6 @@ function useEpisodePickerState({
   showSeasonTabs = true,
   preferCatalogEpisodes = false,
   malId = null,
-  animeTmdbTvId = null,
-  animeTmdbSeason = 1,
   fallbackStillPath = null,
   catalogAbsoluteEpisodes = false,
   flatMode = false,
@@ -308,14 +340,10 @@ function useEpisodePickerState({
             count = Math.min(count, flatEpisodeCap);
           }
           const seasonNum = seasonObj?.season_number ?? selectedSeason ?? 1;
-          const tmdbTv = animeTmdbTvId?.trim() ?? "";
-          if (/^\d+$/.test(tmdbTv) && count > 0) {
+          const mal = Math.floor(Number(malId));
+          if (Number.isFinite(mal) && mal > 0 && count > 0) {
             try {
-              const rows = await fetchSeasonEpisodes(
-                tmdbTv,
-                animeTmdbSeason,
-                controller.signal
-              );
+              const rows = await fetchAnimeEpisodes(mal, count, controller.signal);
               const byEp = new Map(rows.map((r) => [r.episode, r]));
               const merged = Array.from({ length: count }, (_, i) => {
                 const ep = i + 1;
@@ -442,8 +470,7 @@ function useEpisodePickerState({
     flatEpisodeCap,
     releasedSeasons,
     preferCatalogEpisodes,
-    animeTmdbTvId,
-    animeTmdbSeason,
+    malId,
     catalogAbsoluteEpisodes,
     onEpisodesLoadingChange,
   ]);

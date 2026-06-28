@@ -261,25 +261,6 @@ function tmdbSeasonsWithEpisodes(seasons: Season[] | undefined): Season[] {
   );
 }
 
-function animeTmdbStillsTarget(
-  show: Show | null | undefined
-): { tvId: string; season: number } | null {
-  if (!show?.is_anime) return null;
-  const candidates = [show.tmdb_id, show.external_ids?.tmdb_id, show.id];
-  let n: number | null = null;
-  for (const raw of candidates) {
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      n = parsed;
-      break;
-    }
-  }
-  if (n == null) return null;
-  const playback = tmdbSeasonsWithEpisodes(show.tmdb_playback_seasons);
-  const season = playback.length === 1 ? playback[0].season_number : 1;
-  return { tvId: String(n), season };
-}
-
 function showDetailLinks(show: Show): CatalogDetailLink[] {
   const links: CatalogDetailLink[] = [];
   const imdbId = show.external_ids?.imdb_id;
@@ -963,8 +944,6 @@ export default function ShowTemplate({
       ? (animeEpisodeCap ?? catalogAnimeEpisodeCount(show))
       : null;
 
-  const animeTmdbStills = animeTmdbStillsTarget(show);
-
   const episodePickerProps = {
     tmdbTvId: show?.is_anime ? null : playerUsesTmdb ? String(resolvedPlayerId) : null,
     seasons: pickerSeasons,
@@ -978,8 +957,6 @@ export default function ShowTemplate({
     showSeasonTabs: showSeasonPickerStrip,
     preferCatalogEpisodes: Boolean(show?.is_anime),
     malId: Boolean(show?.is_anime) ? idMalForAnilistRails : null,
-    animeTmdbTvId: animeTmdbStills?.tvId ?? null,
-    animeTmdbSeason: animeTmdbStills?.season ?? 1,
     fallbackStillPath:
       show?.is_anime && show
         ? animeBackdropFromDoc(show) ?? show.poster_path ?? null
