@@ -8,12 +8,13 @@ function pickString(value) {
 
 /** @param {unknown} doc */
 export function isAnimeCatalogDoc(doc) {
-  return (
-    doc?.type === "tv" &&
-    (doc?.is_anime === true ||
-      (Array.isArray(doc?.tags) && doc.tags.includes("anime")) ||
-      String(doc?.id ?? "").startsWith("anime_"))
-  );
+  const isAnime =
+    doc?.is_anime === true ||
+    (Array.isArray(doc?.tags) && doc.tags.includes("anime")) ||
+    String(doc?.id ?? "").startsWith("anime_");
+  if (!isAnime) return false;
+  // Mongo rows are `type: "tv"`; client Show payloads from resolve often omit `type`.
+  return doc?.type == null || doc?.type === "tv";
 }
 
 /** @param {unknown} url */

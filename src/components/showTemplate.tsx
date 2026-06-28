@@ -691,6 +691,10 @@ export default function ShowTemplate({
             return;
           }
           const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow, id);
+          const poster = animePosterFromDoc(merged);
+          if (poster) merged.poster_path = poster;
+          const backdrop = animeBackdropFromDoc(merged);
+          if (backdrop) merged.backdrop_path = backdrop;
           const today = catalogTodayYmdUtc();
           if (merged.seasons?.length && !merged.is_anime) {
             merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
@@ -713,6 +717,10 @@ export default function ShowTemplate({
         if (!res.ok) {
           if (fallbackShow) {
             const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow, id);
+            const poster = animePosterFromDoc(merged);
+            if (poster) merged.poster_path = poster;
+            const backdrop = animeBackdropFromDoc(merged);
+            if (backdrop) merged.backdrop_path = backdrop;
             const today = catalogTodayYmdUtc();
             if (merged.seasons?.length && !merged.is_anime) {
               merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
@@ -754,11 +762,18 @@ export default function ShowTemplate({
           const rel = filterReleasedSeasons(data.seasons as Season[], todayYmd);
           if (rel?.length) data.seasons = rel as Show["seasons"];
         }
-        if (fallbackShow && !data?.poster_path && fallbackShow.poster_path) {
-          data.poster_path = fallbackShow.poster_path;
-        }
-        if (fallbackShow && !data?.backdrop_path && fallbackShow.backdrop_path) {
-          data.backdrop_path = fallbackShow.backdrop_path;
+        if (fallbackShow?.is_anime) {
+          const poster = animePosterFromDoc(fallbackShow);
+          if (poster) data.poster_path = poster;
+          const backdrop = animeBackdropFromDoc(fallbackShow);
+          if (backdrop) data.backdrop_path = backdrop;
+        } else {
+          if (fallbackShow && !data?.poster_path && fallbackShow.poster_path) {
+            data.poster_path = fallbackShow.poster_path;
+          }
+          if (fallbackShow && !data?.backdrop_path && fallbackShow.backdrop_path) {
+            data.backdrop_path = fallbackShow.backdrop_path;
+          }
         }
         const fallbackAniId = catalogAnilistId(fallbackShow);
         if (fallbackAniId != null && data.anilist_id == null) {
@@ -788,6 +803,10 @@ export default function ShowTemplate({
           external_ids: data.external_ids ?? fallbackShow?.external_ids ?? undefined,
         };
         const merged = await fetchAnilistAndMerge(forAni, fallbackShow, id);
+        const poster = animePosterFromDoc(merged);
+        if (poster) merged.poster_path = poster;
+        const backdrop = animeBackdropFromDoc(merged);
+        if (backdrop) merged.backdrop_path = backdrop;
         if (merged.seasons?.length && !merged.is_anime) {
           merged.seasons = filterReleasedSeasons(merged.seasons, todayYmd) ?? merged.seasons;
         }
