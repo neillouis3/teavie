@@ -21,16 +21,8 @@ function argValue(flag, fallback = null) {
 }
 
 function loadEnvLocal() {
-  const envPath = path.join(__dirname, "..", ".env.local");
-  if (!fs.existsSync(envPath)) return;
-  const content = fs.readFileSync(envPath, "utf8");
-  for (const line of content.split("\n")) {
-    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (!m) continue;
-    const k = m[1].trim();
-    const v = m[2].trim().replace(/^["']|["']$/g, "");
-    if (!process.env[k]) process.env[k] = v;
-  }
+  const { loadMongoEnv } = require("./lib/mongoEnv.cjs");
+  loadMongoEnv();
 }
 
 function parseRuntimeSeconds(duration) {
@@ -399,8 +391,61 @@ async function fetchJikanPage(page) {
   });
 }
 
+async function buildDocFromMalId(malId, anilistCache, includeAniList = true) {
+  const id = Number(malId);
+  if (!Number.isFinite(id) || id <= 0) {
+    throw new Error(`Invalid mal_id: ${malId}`);
+  }
+  const payload = await fetchJsonWithTimeout(`${JIKAN_BASE}/${id}/full`, {
+    headers: { Accept: "application/json" },
+  });
+  const anime = payload?.data;
+  if (!anime) throw new Error(`Jikan returned no data for mal_id ${id}`);
+  let anilist = includeAniList ? await fetchAniListByMalId(id, anilistCache) : null;
+  if (!anilist && includeAniList) {
+    anilist = await fetchAniListBySearch(anime, anilistCache);
+  }
+  const { applyImdbGenresToCatalogDoc } = await import("../src/lib/imdbGenres.js");
+  return applyImdbGenresToCatalogDoc(mapAnimeToTvDoc(anime, anilist));
+}
+
+async function importMalIdsToJsonl(malIds, outputFile = OUTPUT_FILE) {
+  const anilistCache = new Map();
+  const includeAniList = !process.argv.includes("--no-anilist");
+  const anilistDelayMs = Math.max(
+    0,
+    Number(argValue("--anilist-delay", String(ANILIST_DELAY_MS))) || 0
+  );
+  const lines = [];
+  for (const raw of malIds) {
+    const malId = Number(raw);
+    if (!Number.isFinite(malId) || malId <= 0) continue;
+    if (anilistDelayMs > 0) await sleep(anilistDelayMs);
+    const doc = await buildDocFromMalId(malId, anilistCache, includeAniList);
+    lines.push(JSON.stringify(doc));
+    console.log(
+      `mal ${malId}: id=${doc.id} anilist_id=${doc.anilist_id ?? "null"} title=${doc.title}`
+    );
+    await sleep(PAGE_DELAY_MS);
+  }
+  fs.writeFileSync(outputFile, lines.length ? `${lines.join("\n")}\n` : "");
+  return lines.length;
+}
+
 async function run() {
   loadEnvLocal();
+  const malIdsArg = argValue("--mal-ids");
+  if (malIdsArg) {
+    const malIds = malIdsArg
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const outputFile = argValue("--output", OUTPUT_FILE);
+    const count = await importMalIdsToJsonl(malIds, outputFile);
+    console.log(`done: mal_ids=${count}, output=${outputFile}`);
+    return;
+  }
+
   const { applyImdbGenresToCatalogDoc } = await import("../src/lib/imdbGenres.js");
   const startPage = Math.max(1, parseInt(process.argv[2] || "1", 10));
   const maxPages = Math.max(1, parseInt(process.argv[3] || String(MAX_PAGES), 10));
@@ -495,8 +540,16 @@ async function run() {
   );
 }
 
-run().catch((err) => {
-  console.error("import-anime-to-tv failed:", err.message);
-  process.exit(1);
-});
+module.exports = {
+  buildDocFromMalId,
+  importMalIdsToJsonl,
+  mapAnimeToTvDoc,
+};
+
+if (require.main === module) {
+  run().catch((err) => {
+    console.error("import-anime-to-tv failed:", err.message);
+    process.exit(1);
+  });
+}
 

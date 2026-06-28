@@ -1,100 +1,115 @@
 /**
- * GET /api/anime/episodes?malId=21&limit=200
- * Jikan episode list for anime without a TMDB season mapping.
+ * GET /api/anime/episodes?imdbId=tt2560140&season=1&limit=200
+ * GET /api/anime/episodes?malId=25777&season=1&limit=200
+ *
+ * Prefers OMDb season listings when an IMDb id is known (catalog or title search).
+ * Falls back to Jikan (MAL) when anime has no IMDb id — common for catalog-only rows.
  */
-import { jikanGet } from "@/lib/jikanFetch";
+import clientPromise from "@/lib/mongo";
+import { fetchOmdbSeasonEpisodes, pickImdbIdFromDoc } from "@/lib/omdbEpisodes";
+import { fetchJikanAnimeEpisodes } from "@/lib/jikanEpisodes";
+import { resolveOmdbImdbIdForDoc } from "@/lib/omdbResolve";
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
+async function catalogDocForMalId(malId) {
+  const client = await clientPromise;
+  const col = client.db("teavie").collection("content");
+  return col.findOne(
+    {
+      type: "tv",
+      $or: [{ mal_id: malId }, { id: `anime_${malId}` }],
+    },
+    {
+      projection: {
+        id: 1,
+        title: 1,
+        name: 1,
+        first_air_date: 1,
+        release_date: 1,
+        imdb_id: 1,
+        external_ids: 1,
+        anilist: 1,
+      },
+    }
+  );
 }
 
-function episodeNumberFromRow(row, fallbackIndex) {
-  const url = typeof row?.url === "string" ? row.url : "";
-  const m = /\/episode\/(\d+)\s*$/i.exec(url);
-  if (m) {
-    const n = parseInt(m[1], 10);
-    if (Number.isFinite(n) && n > 0) return n;
+async function imdbIdForMalId(malId) {
+  const doc = await catalogDocForMalId(malId);
+  if (!doc) return null;
+
+  const fromDoc = pickImdbIdFromDoc(doc);
+  if (fromDoc) return fromDoc;
+
+  return resolveOmdbImdbIdForDoc(doc, "tv");
+}
+
+function capEpisodes(episodes, limit) {
+  if (!Array.isArray(episodes)) return [];
+  if (Number.isFinite(limit) && limit > 0 && limit < episodes.length) {
+    return episodes.slice(0, limit);
   }
-  return fallbackIndex;
-}
-
-async function enrichJikanEpisodeDetail(malId, episodeNumber) {
-  const res = await jikanGet(`anime/${malId}/episodes/${episodeNumber}`);
-  if (!res.ok) return null;
-  const json = await res.json();
-  const data = json?.data;
-  if (!data || typeof data !== "object") return null;
-  const synopsis =
-    typeof data.synopsis === "string" && data.synopsis.trim()
-      ? data.synopsis.trim()
-      : null;
-  const duration =
-    typeof data.duration === "number" && data.duration > 0
-      ? Math.max(1, Math.round(data.duration / 60))
-      : null;
-  return { synopsis, runtime: duration };
+  return episodes;
 }
 
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
+    const imdbRaw = String(searchParams.get("imdbId") ?? "").trim();
     const malId = parseInt(searchParams.get("malId") ?? "", 10);
+    const season = Math.max(1, parseInt(searchParams.get("season") ?? "1", 10) || 1);
     const limit = Math.min(
       500,
       Math.max(1, parseInt(searchParams.get("limit") || "200", 10))
     );
+    const hasMal = Number.isFinite(malId) && malId > 0;
 
-    if (!Number.isFinite(malId) || malId <= 0) {
-      return Response.json({ error: "Invalid malId" }, { status: 400 });
+    let imdbId = /^tt\d+$/i.test(imdbRaw) ? imdbRaw : null;
+    if (!imdbId && hasMal) {
+      imdbId = await imdbIdForMalId(malId);
     }
 
-    /** @type {Array<{ episode_number: number; name: string; overview: string | null; runtime: number | null; still_path: null }>} */
-    const episodes = [];
-    let page = 1;
-
-    while (episodes.length < limit) {
-      const res = await jikanGet(`anime/${malId}/episodes?page=${page}`);
-      if (!res.ok) break;
-      const json = await res.json();
-      const rows = Array.isArray(json?.data) ? json.data : [];
-      if (!rows.length) break;
-
-      for (let i = 0; i < rows.length && episodes.length < limit; i++) {
-        const row = rows[i];
-        const epNum = episodeNumberFromRow(row, (page - 1) * 100 + i + 1);
-        const title =
-          typeof row?.title === "string" && row.title.trim()
-            ? row.title.trim()
-            : `Episode ${epNum}`;
-        episodes.push({
-          episode_number: epNum,
-          name: title,
-          overview: null,
-          runtime: null,
-          still_path: null,
+    if (imdbId) {
+      const episodes = await fetchOmdbSeasonEpisodes(imdbId, season);
+      if (episodes.length > 0) {
+        const capped = capEpisodes(episodes, limit);
+        return Response.json({
+          source: "omdb",
+          imdbId,
+          season,
+          malId: hasMal ? malId : null,
+          episodeCount: episodes.length,
+          episodes: capped,
         });
       }
-
-      if (!json?.pagination?.has_next_page) break;
-      page += 1;
-      if (page > 20) break;
-      await sleep(350);
     }
 
-    episodes.sort((a, b) => a.episode_number - b.episode_number);
-
-    const enrichCap = Math.min(episodes.length, 30);
-    for (let i = 0; i < enrichCap; i++) {
-      const ep = episodes[i];
-      const detail = await enrichJikanEpisodeDetail(malId, ep.episode_number);
-      if (detail?.synopsis) ep.overview = detail.synopsis;
-      if (detail?.runtime != null) ep.runtime = detail.runtime;
-      if (i < enrichCap - 1) await sleep(350);
+    if (hasMal) {
+      const episodes = await fetchJikanAnimeEpisodes(malId, limit);
+      if (episodes.length > 0) {
+        return Response.json({
+          source: "jikan",
+          imdbId: imdbId ?? null,
+          season,
+          malId,
+          episodeCount: episodes.length,
+          episodes,
+        });
+      }
     }
 
-    return Response.json({ malId, episodes });
+    return Response.json(
+      {
+        error: hasMal
+          ? "No episodes found (OMDb and Jikan)"
+          : "Provide imdbId or malId",
+      },
+      { status: 404 }
+    );
   } catch (err) {
     console.error("[anime/episodes]", err);
+    if (err?.code === "OMDB_RATE_LIMIT") {
+      return Response.json({ error: "OMDb rate limit reached" }, { status: 429 });
+    }
     return Response.json({ error: "Failed to fetch anime episodes" }, { status: 500 });
   }
 }

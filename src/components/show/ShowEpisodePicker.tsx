@@ -112,8 +112,10 @@ type ShowEpisodePickerProps = {
   showSeasonTabs?: boolean;
   /** Anime: build episode list from catalog/anilist counts, not TMDB season API. */
   preferCatalogEpisodes?: boolean;
-  /** MAL id for Jikan episode metadata when preferCatalogEpisodes is set. */
+  /** MAL id — used to resolve IMDb on the server when `imdbId` is missing. */
   malId?: number | null;
+  /** IMDb id for OMDb season episode list. */
+  imdbId?: string | null;
   /** Show backdrop/poster used when episode stills are missing (anime). */
   fallbackStillPath?: string | null;
   /** After TMDB flat fetch, remap to season 1 + absolute episode (anime UI). */
@@ -179,20 +181,32 @@ function fallbackEpisodes(
 
 const TV_SEASON_CACHE_PREFIX = "teavie.cache.tv-season.v1:";
 const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v1:";
+/** OMDb season listings — fetch full season for count + titles. */
+const OMDB_ANIME_EPISODE_LIMIT = 500;
 
 async function fetchAnimeEpisodes(
-  malId: number,
+  imdbId: string | null | undefined,
+  malId: number | null | undefined,
+  season: number,
   limit: number,
   signal?: AbortSignal
 ): Promise<EpisodeCardRow[]> {
-  const cacheKey = `${ANIME_EPISODES_CACHE_PREFIX}${malId}:${limit}`;
+  const imdb = typeof imdbId === "string" && /^tt\d+$/i.test(imdbId.trim()) ? imdbId.trim() : "";
+  const mal = Math.floor(Number(malId));
+  const hasMal = Number.isFinite(mal) && mal > 0;
+  if (!imdb && !hasMal) throw new Error("missing anime episode ids");
+
+  const cacheKey = `${ANIME_EPISODES_CACHE_PREFIX}${imdb || `mal:${mal}`}:${season}:omdb`;
   const cached = readClientDayCache<EpisodeCardRow[]>(cacheKey);
   if (cached) return cached;
 
   const qs = new URLSearchParams({
-    malId: String(malId),
-    limit: String(Math.max(1, limit)),
+    season: String(Math.max(1, season)),
+    limit: String(Math.max(1, limit || OMDB_ANIME_EPISODE_LIMIT)),
   });
+  if (imdb) qs.set("imdbId", imdb);
+  if (hasMal) qs.set("malId", String(mal));
+
   const res = await fetch(`/api/anime/episodes?${qs.toString()}`, { signal });
   if (!res.ok) throw new Error("anime episodes fetch failed");
   const json = await res.json();
@@ -205,7 +219,7 @@ async function fetchAnimeEpisodes(
       runtime: number | null;
       still_path?: string | null;
     }) => ({
-      season: 1,
+      season,
       episode: ep.episode_number,
       name: ep.name,
       overview: ep.overview ?? null,
@@ -276,6 +290,7 @@ function useEpisodePickerState({
   showSeasonTabs = true,
   preferCatalogEpisodes = false,
   malId = null,
+  imdbId = null,
   fallbackStillPath = null,
   catalogAbsoluteEpisodes = false,
   flatMode = false,
@@ -330,41 +345,36 @@ function useEpisodePickerState({
           const seasonObj =
             releasedSeasons.find((s) => s.season_number === selectedSeason) ??
             releasedSeasons[0];
+          const seasonNum = seasonObj?.season_number ?? selectedSeason ?? 1;
+          const mal = Math.floor(Number(malId));
+          const hasMal = Number.isFinite(mal) && mal > 0;
+          const imdb =
+            typeof imdbId === "string" && /^tt\d+$/i.test(imdbId.trim())
+              ? imdbId.trim()
+              : "";
+          if (imdb || hasMal) {
+            try {
+              const rows = await fetchAnimeEpisodes(
+                imdb || null,
+                hasMal ? mal : null,
+                seasonNum,
+                OMDB_ANIME_EPISODE_LIMIT,
+                controller.signal
+              );
+              if (!cancelled && rows.length > 0) {
+                setEpisodes(rows);
+                return;
+              }
+            } catch {
+              /* fall through to placeholders */
+            }
+          }
           let count = seasonObj?.episode_count ?? 0;
           if (count <= 0) {
             count = releasedSeasons.reduce(
               (acc, s) => acc + (s.episode_count ?? 0),
               0
             );
-          }
-          if (flatEpisodeCap != null && flatEpisodeCap > 0) {
-            count = Math.min(count, flatEpisodeCap);
-          }
-          const seasonNum = seasonObj?.season_number ?? selectedSeason ?? 1;
-          const mal = Math.floor(Number(malId));
-          if (Number.isFinite(mal) && mal > 0 && count > 0) {
-            try {
-              const rows = await fetchAnimeEpisodes(mal, count, controller.signal);
-              const byEp = new Map(rows.map((r) => [r.episode, r]));
-              const merged = Array.from({ length: count }, (_, i) => {
-                const ep = i + 1;
-                const hit = byEp.get(ep);
-                return (
-                  hit ?? {
-                    season: seasonNum,
-                    episode: ep,
-                    name: `Episode ${ep}`,
-                    overview: null,
-                    runtime: null,
-                    still_path: null,
-                  }
-                );
-              });
-              if (!cancelled) setEpisodes(merged);
-              return;
-            } catch {
-              /* fall through to placeholders */
-            }
           }
           if (!cancelled) {
             setEpisodes(fallbackEpisodes(seasonNum, count));
@@ -472,6 +482,7 @@ function useEpisodePickerState({
     releasedSeasons,
     preferCatalogEpisodes,
     malId,
+    imdbId,
     catalogAbsoluteEpisodes,
     onEpisodesLoadingChange,
   ]);

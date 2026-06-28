@@ -12,7 +12,7 @@ import React, {
 export type AnimeSourceId = "anikoto" | "megaplay";
 
 const STORAGE_KEY = "teavie-anime-source";
-const DEFAULT_SOURCE: AnimeSourceId = "anikoto";
+const DEFAULT_SOURCE: AnimeSourceId = "megaplay";
 
 const ORDER: AnimeSourceId[] = ["anikoto", "megaplay"];
 

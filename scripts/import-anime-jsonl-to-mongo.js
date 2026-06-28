@@ -5,21 +5,13 @@ const { MongoClient } = require("mongodb");
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";
-const INPUT_FILE = path.join(__dirname, "anime-tv-import.jsonl");
+const DEFAULT_INPUT_FILE = path.join(__dirname, "anime-tv-import.jsonl");
 const DEFAULT_KOMETA_FILE = path.join(__dirname, "anime-ids.json");
 const DEFAULT_BULK_BATCH = 200;
 
 function loadEnvLocal() {
-  const envPath = path.join(__dirname, "..", ".env.local");
-  if (!fs.existsSync(envPath)) return;
-  const content = fs.readFileSync(envPath, "utf8");
-  for (const line of content.split("\n")) {
-    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (!m) continue;
-    const k = m[1].trim();
-    const v = m[2].trim().replace(/^["']|["']$/g, "");
-    if (!process.env[k]) process.env[k] = v;
-  }
+  const { loadMongoEnv } = require("./lib/mongoEnv.cjs");
+  loadMongoEnv();
 }
 
 function argValue(flag, fallback = null) {
@@ -171,11 +163,12 @@ async function run() {
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGODB_URI is missing in .env.local");
   const kometaFile = argValue("--kometa-file", DEFAULT_KOMETA_FILE);
+  const inputFile = argValue("--input", DEFAULT_INPUT_FILE);
   const batchSize = parseIntArg("--batch", DEFAULT_BULK_BATCH);
   const kometaMap = loadKometaMap(kometaFile);
   const kometaIndexes = buildKometaIndexes(kometaMap || {});
 
-  const incomingRaw = readJsonl(INPUT_FILE);
+  const incomingRaw = readJsonl(inputFile);
   if (!incomingRaw.length) {
     console.log("No records found in JSONL.");
     return;

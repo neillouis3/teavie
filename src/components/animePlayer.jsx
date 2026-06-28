@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
 import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
 import StreamQualityBadge from "@/components/ui/streamQualityBadge";
-import { useAnimeSource } from "@/contexts/animeSourceContext";
+import { sanitizeAnimeEmbedUrl } from "@/lib/animePlayEmbed";
 
 /**
  * @param {object} props
- * @param {number} props.anilistId
+ * @param {number} props.malId MAL anime id (`anime_{malId}` catalog routes)
  * @param {number} props.episode 1-based absolute episode index
  * @param {"sub" | "dub"} props.audio
  */
-export default function AnimePlayer({ anilistId, episode, audio = "sub" }) {
+export default function AnimePlayer({ malId, episode, audio = "sub" }) {
   const { source: animeSource } = useAnimeSource();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,16 +26,17 @@ export default function AnimePlayer({ anilistId, episode, audio = "sub" }) {
     setPrimaryUrl("");
     setFallbackUrl("");
 
-    const id = Math.floor(Number(anilistId));
+    const mal = Math.floor(Number(malId));
     const ep = Math.max(1, Math.floor(Number(episode)) || 1);
-    if (!Number.isFinite(id) || id <= 0) {
-      setError("Missing AniList id");
+
+    if (!Number.isFinite(mal) || mal <= 0) {
+      setError("Missing MAL id");
       setLoading(false);
       return;
     }
 
     const qs = new URLSearchParams({
-      anilistId: String(id),
+      malId: String(mal),
       episode: String(ep),
       audio: audio === "dub" ? "dub" : "sub",
     });
@@ -69,11 +70,14 @@ export default function AnimePlayer({ anilistId, episode, audio = "sub" }) {
     return () => {
       cancelled = true;
     };
-  }, [anilistId, episode, audio]);
+  }, [malId, episode, audio]);
 
-  const preferredUrl = animeSource === "anikoto" ? fallbackUrl : primaryUrl;
-  const alternateUrl = animeSource === "anikoto" ? primaryUrl : fallbackUrl;
-  const activeUrl = preferredUrl || alternateUrl;
+  const preferredRaw = animeSource === "anikoto" ? fallbackUrl : primaryUrl;
+  const alternateRaw = animeSource === "anikoto" ? primaryUrl : fallbackUrl;
+  const preferredUrl = sanitizeAnimeEmbedUrl(preferredRaw);
+  const alternateUrl = sanitizeAnimeEmbedUrl(alternateRaw);
+  const activeUrl = preferredUrl || alternateUrl || primaryUrl;
+  const playerKey = `${animeSource}-${malId}-${activeUrl}`;
 
   if (error) {
     return (
@@ -91,7 +95,7 @@ export default function AnimePlayer({ anilistId, episode, audio = "sub" }) {
           <PlayerEmbedSkeleton />
         ) : activeUrl ? (
           <VideoEmbedFrame
-            key={`${animeSource}-${activeUrl}`}
+            key={playerKey}
             title="Anime player"
             src={activeUrl}
             className="absolute inset-0 h-full w-full border-0"

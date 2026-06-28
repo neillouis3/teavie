@@ -150,6 +150,21 @@ function catalogMalIdForAnilistApi(
   return null;
 }
 
+function catalogImdbId(
+  doc: Pick<Show, "external_ids"> & { imdb_id?: string | null } | null | undefined
+): string | null {
+  if (!doc) return null;
+  const candidates = [
+    typeof doc.imdb_id === "string" ? doc.imdb_id : null,
+    doc.external_ids?.imdb_id,
+  ];
+  for (const raw of candidates) {
+    const id = String(raw ?? "").trim();
+    if (/^tt\d+$/i.test(id)) return id;
+  }
+  return null;
+}
+
 /** AniList-reported total episodes (null while unknown / airing). */
 function anilistEpisodeCap(show: Show | null | undefined): number | null {
   const e = show?.anilist?.episodes;
@@ -830,7 +845,7 @@ export default function ShowTemplate({
     !show.first_air_date ||
     String(show.first_air_date).trim().length < 10 ||
     String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
-  const anilistIdForPlayer = catalogAnilistId(show);
+  const malIdForPlayer = catalogMalIdForAnilistApi(show, id);
   const animeAbsoluteEpisode = (() => {
     if (!show?.is_anime) return Math.max(1, selectedEpisode);
     const uiSeasons = tmdbSeasonsWithEpisodes(show.seasons);
@@ -842,7 +857,7 @@ export default function ShowTemplate({
   const canPlayAnime =
     Boolean(show?.is_anime) &&
     !isAnimeMovie &&
-    anilistIdForPlayer != null &&
+    malIdForPlayer != null &&
     tmdbShowPremiered;
   const canPlayTv = !show?.is_anime && playerUsesTmdb && tmdbShowPremiered;
   const canPlay = canPlayAnime || canPlayTv;
@@ -937,12 +952,13 @@ export default function ShowTemplate({
     showSeasonTabs: showSeasonPickerStrip,
     preferCatalogEpisodes: Boolean(show?.is_anime) && !playerUsesTmdb,
     malId: Boolean(show?.is_anime) && !playerUsesTmdb ? idMalForAnilistRails : null,
+    imdbId: Boolean(show?.is_anime) && !playerUsesTmdb ? catalogImdbId(show) : null,
     fallbackStillPath:
       show?.is_anime ? show.backdrop_path ?? show.poster_path ?? null : null,
     flatMode:
       animeUseTmdbEpisodes && Boolean(show?.tmdb_playback_seasons?.length),
     catalogAbsoluteEpisodes: animeUseTmdbEpisodes,
-    flatEpisodeCap: animeEpisodeCap,
+    flatEpisodeCap: animeUseTmdbEpisodes ? animeEpisodeCap : null,
     watchedKeys: watchedEpisodes,
     onMarkWatched: markEpisodeWatched,
     onEpisodesLoadingChange: setPickerEpisodesLoading,
@@ -1011,10 +1027,10 @@ export default function ShowTemplate({
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               No released episodes to play in this season yet.
             </div>
-          ) : canPlayAnime && anilistIdForPlayer != null ? (
+          ) : canPlayAnime && malIdForPlayer != null ? (
             <AnimePlayer
-              key={`${anilistIdForPlayer}-${animeAbsoluteEpisode}-${animeAudio}`}
-              anilistId={anilistIdForPlayer}
+              key={`${malIdForPlayer}-${animeAbsoluteEpisode}-${animeAudio}`}
+              malId={malIdForPlayer}
               episode={animeAbsoluteEpisode}
               audio={animeAudio}
             />
