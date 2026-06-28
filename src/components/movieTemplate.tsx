@@ -160,10 +160,14 @@ export default function MovieTemplate({ id }: { id: string }) {
             <MoviePlayer
               videoId={id}
               server={server}
-              streamQuality={inferMovieStreamQuality(
-                movie.release_dates,
-                movie.release_date
-              )}
+              streamQuality={
+                movie
+                  ? inferMovieStreamQuality(
+                      movie.release_dates,
+                      movie.release_date
+                    )
+                  : undefined
+              }
             />
           )}
         </div>

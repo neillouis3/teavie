@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import StreamQualityBadge from '@/components/ui/streamQualityBadge';
-import type { StreamQualityLabel } from '@/lib/streamQuality';
 import {
   VIDEASY_MOVIE_QUERY,
   VIDEASY_PLAYER_BASE,
@@ -25,6 +24,12 @@ export const MOVIE_SERVERS = {
   },
 };
 
+/**
+ * @param {object} props
+ * @param {string | number} props.videoId
+ * @param {string} [props.server]
+ * @param {'cam' | 'hd'} [props.streamQuality]
+ */
 const MoviePlayer = ({ videoId, server = 'videasy', streamQuality: streamQualityProp }) => {
   const [playerUrl, setPlayerUrl] = useState('');
   const [streamQuality, setStreamQuality] = useState(streamQualityProp ?? null);
@@ -56,7 +61,7 @@ const MoviePlayer = ({ videoId, server = 'videasy', streamQuality: streamQuality
       .then((data) => {
         if (cancelled) return;
         const q = data?.quality === 'cam' ? 'cam' : 'hd';
-        setStreamQuality(/** @type {StreamQualityLabel} */ (q));
+        setStreamQuality(q);
       })
       .catch(() => {
         if (!cancelled) setStreamQuality('hd');
