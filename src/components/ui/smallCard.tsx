@@ -39,12 +39,18 @@ function buildMetaChips(
   const chips: string[] = [];
 
   if (typeLower === 'tv') {
-    if (seasonAmount > 0) chips.push(`${seasonAmount} SS`);
+    const seasons = seasonAmount > 0 ? seasonAmount : 0;
     const eps =
       typeof numberOfEpisodes === 'number' && numberOfEpisodes > 0
         ? numberOfEpisodes
         : null;
-    if (eps != null) chips.push(`${eps} EP`);
+
+    if (seasons > 1) {
+      chips.push(`${seasons} SS`);
+    } else if (eps != null) {
+      chips.push(`${eps} EP`);
+    }
+
     chips.push('TV');
   } else if (typeLower === 'movie') {
     const runtime = formatHeroRuntime(runtimeSeconds);
