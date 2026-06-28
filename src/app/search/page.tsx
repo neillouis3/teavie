@@ -6,45 +6,28 @@ import { Input, Pagination } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon } from '@hugeicons/core-free-icons';
 import Header from '@/components/ui/header';
+import PageSplash from '@/components/ui/pageSplash';
 import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import CatalogRail from '@/components/explore/catalogRail';
-import SmallCardLoading from '@/components/ui/smallCardLoading';
-import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
 import {
   useCatalogCardStyle,
-  type CatalogCardLayoutMode,
 } from '@/contexts/catalogCardStyleContext';
-import AllMoviesViewerLoading from '@/components/viewer/skeleton/allMoviesViewerLoading';
 import SearchCatalogFilters from '@/components/browse/SearchCatalogFilters';
 import { ContentItem } from '@/types/content';
+import {
+  fetchSearchPopular,
+  fetchSearchResults,
+} from '@/lib/pageDataCache';
 import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
 } from '@/lib/catalogGrid';
 
-function gridClassSearch(layoutMode: CatalogCardLayoutMode) {
-  return layoutMode === 'horizontal'
+function gridClassSearch(horizontal: boolean) {
+  return horizontal
     ? CATALOG_GRID_HORIZONTAL_SEARCH
     : CATALOG_GRID_VERTICAL_SEARCH;
-}
-
-function CardGridSkeleton({
-  count,
-  layoutMode,
-}: {
-  count: number;
-  layoutMode: CatalogCardLayoutMode;
-}) {
-  const horizontal = layoutMode === 'horizontal';
-  const S = horizontal ? HorizontalCatalogCardLoading : SmallCardLoading;
-  return (
-    <div className={gridClassSearch(layoutMode)}>
-      {Array.from({ length: count }).map((_, i) => (
-        <S key={i} />
-      ))}
-    </div>
-  );
 }
 
 function SearchContent() {
@@ -64,12 +47,10 @@ function SearchContent() {
   const [results, setResults] = useState<ContentItem[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [popularMovies, setPopularMovies] = useState<ContentItem[]>([]);
   const [popularTv, setPopularTv] = useState<ContentItem[]>([]);
-  const [popularLoading, setPopularLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const { mode: cardLayoutMode } = useCatalogCardStyle();
   const horizontal = cardLayoutMode === 'horizontal';
   const popularSectionMax = horizontal ? 8 : 14;
@@ -83,32 +64,24 @@ function SearchContent() {
   const hasQuery = qParam.trim().length > 0;
 
   useEffect(() => {
-    if (hasQuery) return;
-    const controller = new AbortController();
-    setPopularLoading(true);
-
-    fetch('/api/tmdb/popular?limit=20', { signal: controller.signal })
-      .then((res) => res.json())
-      .then((data) => {
-        setPopularMovies(data.movies ?? []);
-        setPopularTv(data.tv ?? []);
-      })
-      .catch(() => {})
-      .finally(() => setPopularLoading(false));
-
-    return () => controller.abort();
-  }, [hasQuery]);
-
-  useEffect(() => {
-    const q = qParam.trim();
-    if (!q) { setResults([]); setTotal(0); setTotalPages(0); setError(null); return; }
-
-    const controller = new AbortController();
-    setLoading(true);
+    let cancelled = false;
+    setReady(false);
     setError(null);
 
+    if (!hasQuery) {
+      void fetchSearchPopular(20).then((data) => {
+        if (cancelled) return;
+        setPopularMovies(data.popularMovies);
+        setPopularTv(data.popularTv);
+        setReady(true);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const qs = new URLSearchParams();
-    qs.set('q', q);
+    qs.set('q', qParam.trim());
     qs.set('page', String(pageParam));
     qs.set('limit', '28');
     if (typeParam && typeParam !== 'all') qs.set('type', typeParam);
@@ -117,23 +90,36 @@ function SearchContent() {
     if (yearMaxParam) qs.set('year_max', yearMaxParam);
     if (sortParam && sortParam !== 'relevance') qs.set('sort_by', sortParam);
 
-    fetch(`/api/search?${qs.toString()}`, { signal: controller.signal })
-      .then((res) => res.json())
+    void fetchSearchResults(qs.toString())
       .then((data) => {
-        setResults(data.results ?? []);
-        setTotal(data.total ?? 0);
-        setTotalPages(data.totalPages ?? 0);
+        if (cancelled) return;
+        setResults(data.results);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+        setReady(true);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setResults([]); setTotal(0); setTotalPages(0);
-          setError(err instanceof Error ? err.message : 'Something went wrong');
-        }
-      })
-      .finally(() => setLoading(false));
+        if (cancelled) return;
+        setResults([]);
+        setTotal(0);
+        setTotalPages(0);
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+        setReady(true);
+      });
 
-    return () => controller.abort();
-  }, [qParam, pageParam, typeParam, genreParam, yearMinParam, yearMaxParam, sortParam]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hasQuery,
+    qParam,
+    pageParam,
+    typeParam,
+    genreParam,
+    yearMinParam,
+    yearMaxParam,
+    sortParam,
+  ]);
 
   const submitSearch = useCallback(
     (e: React.FormEvent) => {
@@ -156,7 +142,7 @@ function SearchContent() {
   };
 
   const renderCards = (items: ContentItem[], keyPrefix: string) => (
-    <div className={gridClassSearch(cardLayoutMode)}>
+    <div className={gridClassSearch(horizontal)}>
       {items.map((item, index) => {
         const title = item.title || item.name || 'Untitled';
         const release = item.release_date || item.first_air_date || '';
@@ -202,6 +188,10 @@ function SearchContent() {
     </div>
   );
 
+  if (!ready) {
+    return <PageSplash ariaLabel="Loading search" />;
+  }
+
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Search" />
@@ -234,58 +224,40 @@ function SearchContent() {
 
         <SearchCatalogFilters
           total={total}
-          loading={loading}
+          loading={false}
           hasQuery={hasQuery}
         />
 
-        {/* Popular (no query) */}
         {!hasQuery && (
           <div className="space-y-8">
-            {popularLoading ? (
-              <>
-                <CardGridSkeleton count={popularSectionMax} layoutMode={cardLayoutMode} />
-                <CardGridSkeleton count={popularSectionMax} layoutMode={cardLayoutMode} />
-              </>
-            ) : (
-              <>
-                <section className="space-y-3">
-                  <CatalogRail
-                    title="Popular Movies"
-                    items={popularMovies}
-                    maxItems={popularSectionMax}
-                  />
-                </section>
-
-                <section className="space-y-3">
-                  <CatalogRail
-                    title="Popular TV"
-                    items={popularTv}
-                    maxItems={popularSectionMax}
-                  />
-                </section>
-              </>
-            )}
+            <section className="space-y-3">
+              <CatalogRail
+                title="Popular Movies"
+                items={popularMovies}
+                maxItems={popularSectionMax}
+              />
+            </section>
+            <section className="space-y-3">
+              <CatalogRail
+                title="Popular TV"
+                items={popularTv}
+                maxItems={popularSectionMax}
+              />
+            </section>
           </div>
         )}
 
-        {/* Search results */}
         {hasQuery && (
           <div className="space-y-4">
-            {!loading && (
-              <span className="text-xs text-default-500">
-                for &ldquo;{qParam}&rdquo;{totalPages > 1 && ` · page ${pageParam} of ${totalPages}`}
-              </span>
-            )}
+            <span className="text-xs text-default-500">
+              for &ldquo;{qParam}&rdquo;{totalPages > 1 && ` · page ${pageParam} of ${totalPages}`}
+            </span>
 
             {error && (
               <p className="text-sm text-danger">{error}</p>
             )}
 
-            {loading && (
-              <CardGridSkeleton count={28} layoutMode={cardLayoutMode} />
-            )}
-
-            {!loading && !error && results.length > 0 && (
+            {!error && results.length > 0 && (
               <>
                 {renderCards(results, 'q')}
                 {totalPages > 1 && (
@@ -304,7 +276,7 @@ function SearchContent() {
               </>
             )}
 
-            {!loading && !error && results.length === 0 && (
+            {!error && results.length === 0 && (
               <p className="py-12 text-center text-sm text-default-500">
                 No matches for &ldquo;{qParam}&rdquo;. Try another title.
               </p>
@@ -318,16 +290,7 @@ function SearchContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="bg-main min-h-screen w-full">
-          <Header pageName="Search" />
-          <div className="px-3 pb-6 pt-6 sm:px-4 sm:pt-8">
-            <AllMoviesViewerLoading />
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<PageSplash ariaLabel="Loading search" />}>
       <SearchContent />
     </Suspense>
   );

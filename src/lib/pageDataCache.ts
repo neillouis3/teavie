@@ -64,25 +64,60 @@ const EMPTY_GENRE_RAILS: GenrePageRails = {
 export async function fetchDiscoverFeed(): Promise<DiscoverFeedPayload> {
   return withDayCache(`${PREFIX}.discover-feed.v1`, async () => {
     try {
-      const [newRes, updatedRes, upcomingRes] = await Promise.all([
-        fetch("/api/new"),
-        fetch("/api/updated"),
-        fetch("/api/upcoming?type=movie"),
-      ]);
-
-      const [newData, updatedData, upcomingData] = await Promise.all([
-        newRes.ok ? newRes.json() : { results: [] },
-        updatedRes.ok ? updatedRes.json() : { results: [] },
-        upcomingRes.ok ? upcomingRes.json() : { results: [] },
-      ]);
-
+      const res = await fetch("/api/discover/feed");
+      if (!res.ok) {
+        return { newContent: [], updatedContent: [], upcomingContent: [] };
+      }
+      const data = await res.json();
       return {
-        newContent: newData.results ?? [],
-        updatedContent: updatedData.results ?? [],
-        upcomingContent: upcomingData.results ?? [],
+        newContent: data.newContent ?? [],
+        updatedContent: data.updatedContent ?? [],
+        upcomingContent: data.upcomingContent ?? [],
       };
     } catch {
       return { newContent: [], updatedContent: [], upcomingContent: [] };
+    }
+  });
+}
+
+export type TmdbDiscoverPayload = {
+  trendingMovies: ContentItem[];
+  trendingTv: ContentItem[];
+  popularMovies: ContentItem[];
+  popularTv: ContentItem[];
+};
+
+export type ExploreBundle = {
+  discover: TmdbDiscoverPayload;
+  genres: CatalogGenreRow[];
+};
+
+const EMPTY_DISCOVER: TmdbDiscoverPayload = {
+  trendingMovies: [],
+  trendingTv: [],
+  popularMovies: [],
+  popularTv: [],
+};
+
+export async function fetchExploreBundle(): Promise<ExploreBundle> {
+  return withDayCache(`${PREFIX}.explore.bundle.v1`, async () => {
+    try {
+      const res = await fetch("/api/explore");
+      if (!res.ok) {
+        return { discover: EMPTY_DISCOVER, genres: [] };
+      }
+      const data = await res.json();
+      return {
+        discover: {
+          trendingMovies: data.discover?.trendingMovies ?? [],
+          trendingTv: data.discover?.trendingTv ?? [],
+          popularMovies: data.discover?.popularMovies ?? [],
+          popularTv: data.discover?.popularTv ?? [],
+        },
+        genres: Array.isArray(data.genres) ? data.genres : [],
+      };
+    } catch {
+      return { discover: EMPTY_DISCOVER, genres: [] };
     }
   });
 }
@@ -111,14 +146,8 @@ export async function fetchCategoryDiscover(
 
 export async function fetchGenresIndex(): Promise<CatalogGenreRow[]> {
   return withDayCache(`${PREFIX}.genres-index.v1:name`, async () => {
-    try {
-      const res = await fetch("/api/genres/popular?sort=name");
-      if (!res.ok) return [];
-      const json = await res.json();
-      return Array.isArray(json.genres) ? json.genres : [];
-    } catch {
-      return [];
-    }
+    const bundle = await fetchExploreBundle();
+    return [...bundle.genres].sort((a, b) => a.name.localeCompare(b.name));
   });
 }
 
@@ -127,44 +156,21 @@ export async function fetchGenrePagePayload(
   type: "all" | "movie" | "tv"
 ): Promise<GenrePagePayload> {
   return withDayCache(`${PREFIX}.genre-page.v1:${slug}:${type}`, async () => {
-    const buildQs = (sort: string) => {
-      const qs = new URLSearchParams();
-      qs.set("slug", slug);
-      qs.set("sort", sort);
-      qs.set("limit", "24");
-      qs.set("page", "1");
-      if (type !== "all") qs.set("type", type);
-      return qs.toString();
-    };
-
     try {
-      const [popularJson, topRatedJson, newJson] = await Promise.all(
-        (["popular", "top_rated", "new"] as const).map((sort) =>
-          fetch(`/api/genre?${buildQs(sort)}`).then((res) =>
-            res.ok ? res.json() : { results: [], featured: [], total: 0 }
-          )
-        )
-      );
-
-      const featured = Array.isArray(popularJson.featured) ? popularJson.featured : [];
-      const featuredKeys = new Set(
-        featured.map((item: ContentItem) => `${item.type ?? "movie"}-${item.id}`)
-      );
-
-      const dedupe = (rail: ContentItem[]) =>
-        featured.length === 0
-          ? rail
-          : rail.filter(
-              (item) => !featuredKeys.has(`${item.type ?? "movie"}-${item.id}`)
-            );
-
+      const qs = new URLSearchParams({ slug, limit: "24" });
+      if (type !== "all") qs.set("type", type);
+      const res = await fetch(`/api/genre/page?${qs.toString()}`);
+      if (!res.ok) {
+        return { featured: [], total: 0, rails: EMPTY_GENRE_RAILS };
+      }
+      const data = await res.json();
       return {
-        featured,
-        total: typeof popularJson.total === "number" ? popularJson.total : 0,
+        featured: data.featured ?? [],
+        total: typeof data.total === "number" ? data.total : 0,
         rails: {
-          popular: dedupe(popularJson.results ?? []),
-          top_rated: topRatedJson.results ?? [],
-          new: newJson.results ?? [],
+          popular: data.rails?.popular ?? [],
+          top_rated: data.rails?.top_rated ?? [],
+          new: data.rails?.new ?? [],
         },
       };
     } catch {
@@ -208,6 +214,48 @@ export async function fetchBrowseCatalogPayload(
       };
     } catch {
       return { results: [], totalPages: 1, total: 0, genreSlugs: undefined };
+    }
+  });
+}
+
+export type SearchPopularPayload = {
+  popularMovies: ContentItem[];
+  popularTv: ContentItem[];
+};
+
+export type SearchResultsPayload = {
+  results: ContentItem[];
+  total: number;
+  totalPages: number;
+};
+
+export async function fetchSearchPopular(
+  limit = 20
+): Promise<SearchPopularPayload> {
+  return withDayCache(`${PREFIX}.search-popular.v1:${limit}`, async () => {
+    const bundle = await fetchExploreBundle();
+    return {
+      popularMovies: bundle.discover.popularMovies.slice(0, limit),
+      popularTv: bundle.discover.popularTv.slice(0, limit),
+    };
+  });
+}
+
+export async function fetchSearchResults(
+  queryString: string
+): Promise<SearchResultsPayload> {
+  return withDayCache(`${PREFIX}.search-results.v1:${queryString}`, async () => {
+    try {
+      const res = await fetch(`/api/search?${queryString}`);
+      if (!res.ok) return { results: [], total: 0, totalPages: 0 };
+      const data = await res.json();
+      return {
+        results: data.results ?? [],
+        total: typeof data.total === "number" ? data.total : 0,
+        totalPages: typeof data.totalPages === "number" ? data.totalPages : 0,
+      };
+    } catch {
+      return { results: [], total: 0, totalPages: 0 };
     }
   });
 }

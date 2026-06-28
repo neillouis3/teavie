@@ -3,6 +3,7 @@
 import React, { Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import ShowTemplate from '@/components/showTemplate';
+import PageSplash from '@/components/ui/pageSplash';
 
 function AdminShowPageInner() {
   const params = useParams();
@@ -41,11 +42,7 @@ function AdminShowPageInner() {
 
 export default function AdminShowPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="py-12 text-center text-sm text-default-500">Loading…</div>
-      }
-    >
+    <Suspense fallback={<PageSplash ariaLabel="Loading show" />}>
       <AdminShowPageInner />
     </Suspense>
   );

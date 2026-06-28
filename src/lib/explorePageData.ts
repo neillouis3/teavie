@@ -2,32 +2,15 @@ import type { ContentItem } from "@/types/content";
 import type { CatalogGenreRow } from "@/components/genre/genreTileShared";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import type { WatchHistoryEntry } from "@/lib/watchHistory";
+import {
+  fetchExploreBundle,
+  type TmdbDiscoverPayload,
+  type ExploreBundle,
+} from "@/lib/pageDataCache";
 
-export type TmdbDiscoverPayload = {
-  trendingMovies: ContentItem[];
-  trendingTv: ContentItem[];
-  popularMovies: ContentItem[];
-  popularTv: ContentItem[];
-};
+export type { TmdbDiscoverPayload };
 
-export const EXPLORE_DISCOVER_CACHE_KEY = "teavie.cache.explore.discover.v1";
-export const EXPLORE_GENRES_CACHE_KEY = "teavie.cache.explore.genres.v1";
 const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v1:";
-
-const EMPTY_DISCOVER: TmdbDiscoverPayload = {
-  trendingMovies: [],
-  trendingTv: [],
-  popularMovies: [],
-  popularTv: [],
-};
-
-function historyCacheKey(entries: WatchHistoryEntry[]): string {
-  const sig = entries
-    .map((e) => `${e.mediaType}:${e.catalogId}`)
-    .sort()
-    .join("|");
-  return `${EXPLORE_HISTORY_CACHE_PREFIX}${sig || "empty"}`;
-}
 
 export type ExploreHistoryRow = ContentItem & { progressLabel: string };
 
@@ -37,41 +20,12 @@ export type ExplorePagePayload = {
   historyRows: ExploreHistoryRow[];
 };
 
-export async function fetchExploreDiscover(): Promise<TmdbDiscoverPayload> {
-  const cached = readClientDayCache<TmdbDiscoverPayload>(EXPLORE_DISCOVER_CACHE_KEY);
-  if (cached) return cached;
-
-  try {
-    const res = await fetch("/api/tmdb/discover");
-    if (!res.ok) return EMPTY_DISCOVER;
-    const json = await res.json();
-    const data: TmdbDiscoverPayload = {
-      trendingMovies: json.trendingMovies ?? [],
-      trendingTv: json.trendingTv ?? [],
-      popularMovies: json.popularMovies ?? [],
-      popularTv: json.popularTv ?? [],
-    };
-    writeClientDayCache(EXPLORE_DISCOVER_CACHE_KEY, data);
-    return data;
-  } catch {
-    return EMPTY_DISCOVER;
-  }
-}
-
-export async function fetchExploreGenres(): Promise<CatalogGenreRow[]> {
-  const cached = readClientDayCache<CatalogGenreRow[]>(EXPLORE_GENRES_CACHE_KEY);
-  if (cached) return cached;
-
-  try {
-    const res = await fetch("/api/genres/popular");
-    if (!res.ok) return [];
-    const json = await res.json();
-    const genres = Array.isArray(json.genres) ? json.genres : [];
-    writeClientDayCache(EXPLORE_GENRES_CACHE_KEY, genres);
-    return genres;
-  } catch {
-    return [];
-  }
+function historyCacheKey(entries: WatchHistoryEntry[]): string {
+  const sig = entries
+    .map((e) => `${e.mediaType}:${e.catalogId}`)
+    .sort()
+    .join("|");
+  return `${EXPLORE_HISTORY_CACHE_PREFIX}${sig || "empty"}`;
 }
 
 export async function fetchExploreHistoryRows(
@@ -119,10 +73,15 @@ export async function loadExplorePagePayload(
   historyEntries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
 ): Promise<ExplorePagePayload> {
-  const [discover, genres, historyRows] = await Promise.all([
-    fetchExploreDiscover(),
-    fetchExploreGenres(),
+  const [bundle, historyRows] = await Promise.all([
+    fetchExploreBundle(),
     fetchExploreHistoryRows(historyEntries, progressLabel),
   ]);
-  return { discover, genres, historyRows };
+  return {
+    discover: bundle.discover,
+    genres: bundle.genres,
+    historyRows,
+  };
 }
+
+export { fetchExploreBundle, type ExploreBundle };

@@ -57,58 +57,6 @@ async function fetchCatalogCardMeta(
   });
 }
 
-async function fetchTmdbCardMeta(
-  items: RecItem[],
-  mediaType: 'movie' | 'tv',
-  token: string,
-  signal?: AbortSignal
-): Promise<RecItem[]> {
-  const headers = { accept: 'application/json', Authorization: `Bearer ${token}` } as const;
-  const out = await Promise.all(
-    items.map(async (item) => {
-      const needsMovieRuntime =
-        mediaType === 'movie' && (item.runtimeSeconds == null || item.runtimeSeconds <= 0);
-      const needsTvMeta =
-        mediaType === 'tv' &&
-        (item.seasonAmount == null || item.seasonAmount <= 0) &&
-        (item.numberOfEpisodes == null || item.numberOfEpisodes <= 0);
-      if (!needsMovieRuntime && !needsTvMeta) return item;
-      if (!/^\d+$/.test(item.linkId)) return item;
-
-      try {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/${mediaType}/${item.linkId}?language=en-US`,
-          { signal, headers }
-        );
-        if (!res.ok) return item;
-        const data = await res.json();
-        if (mediaType === 'movie') {
-          const mins = typeof data.runtime === 'number' ? data.runtime : null;
-          return mins != null && mins > 0
-            ? { ...item, runtimeSeconds: mins * 60 }
-            : item;
-        }
-        const seasons =
-          typeof data.number_of_seasons === 'number' && data.number_of_seasons > 0
-            ? data.number_of_seasons
-            : 0;
-        const episodes =
-          typeof data.number_of_episodes === 'number' && data.number_of_episodes > 0
-            ? data.number_of_episodes
-            : null;
-        return {
-          ...item,
-          seasonAmount: seasons,
-          numberOfEpisodes: episodes ?? item.numberOfEpisodes,
-        };
-      } catch {
-        return item;
-      }
-    })
-  );
-  return out;
-}
-
 type TmdbRecRow = {
   id: number;
   title?: string;
@@ -153,49 +101,44 @@ export default function YouMightLike({
         });
         const data = res.ok ? await res.json() : { items: [] };
         const rows = Array.isArray(data.items) ? data.items : [];
-        const catalogRows = rows.filter(
-          (r: { catalogId?: string | null }) =>
-            typeof r.catalogId === 'string' && r.catalogId.trim().length > 0
-        );
         setItems(
-          (
-            await fetchCatalogCardMeta(
-              catalogRows.slice(0, maxItems).map(
-            (r: {
-              catalogId: string;
-              anilistId: number | null;
-              malId?: number;
-              title: string;
-              year: string;
-              posterPath?: string;
-              runtimeSeconds?: number | null;
-              seasonAmount?: number;
-              numberOfEpisodes?: number | null;
-            }) => {
-              const al =
-                typeof r.anilistId === 'number' && Number.isFinite(r.anilistId) && r.anilistId > 0
-                  ? r.anilistId
-                  : null;
-              const mal =
-                typeof r.malId === 'number' && Number.isFinite(r.malId) && r.malId > 0 ? r.malId : 0;
-              const keyId = al ?? mal;
-              return {
-                keyId,
-                linkId: r.catalogId,
-                title: r.title ?? 'Untitled',
-                poster_path: r.posterPath ?? null,
-                backdrop_path: null,
-                year: r.year ?? '—',
-                runtimeSeconds: r.runtimeSeconds ?? null,
-                seasonAmount: r.seasonAmount ?? 0,
-                numberOfEpisodes: r.numberOfEpisodes ?? null,
-              };
-            }
-          ),
-              'tv',
-              controller.signal
+          rows
+            .filter(
+              (r: { catalogId?: string | null }) =>
+                typeof r.catalogId === 'string' && r.catalogId.trim().length > 0
             )
-          )
+            .slice(0, maxItems)
+            .map(
+              (r: {
+                catalogId: string;
+                anilistId: number | null;
+                malId?: number;
+                title: string;
+                year: string;
+                posterPath?: string;
+                runtimeSeconds?: number | null;
+                seasonAmount?: number;
+                numberOfEpisodes?: number | null;
+              }) => {
+                const al =
+                  typeof r.anilistId === 'number' && Number.isFinite(r.anilistId) && r.anilistId > 0
+                    ? r.anilistId
+                    : null;
+                const mal =
+                  typeof r.malId === 'number' && Number.isFinite(r.malId) && r.malId > 0 ? r.malId : 0;
+                return {
+                  keyId: al ?? mal,
+                  linkId: r.catalogId,
+                  title: r.title ?? 'Untitled',
+                  poster_path: r.posterPath ?? null,
+                  backdrop_path: null,
+                  year: r.year ?? '—',
+                  runtimeSeconds: r.runtimeSeconds ?? null,
+                  seasonAmount: r.seasonAmount ?? 0,
+                  numberOfEpisodes: r.numberOfEpisodes ?? null,
+                };
+              }
+            )
         );
       } catch {
         setItems([]);
@@ -245,36 +188,40 @@ export default function YouMightLike({
         const out: RecItem[] = [];
         const seen = new Set<number>();
 
-        // 1) recommendations
-        const recRes = await fetch(
-          `https://api.themoviedb.org/3/${mediaType}/${id}/recommendations?language=en-US&page=1`,
-          { signal: controller.signal, headers }
-        );
-        const recJson = recRes.ok ? await recRes.json() : { results: [] };
-        mergeRows(seen, out, takeRows(recJson.results));
-
-        // 2) similar
-        if (out.length < maxItems) {
-          const simRes = await fetch(
+        const [recRes, simRes, popRes] = await Promise.all([
+          fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${id}/recommendations?language=en-US&page=1`,
+            { signal: controller.signal, headers }
+          ),
+          fetch(
             `https://api.themoviedb.org/3/${mediaType}/${id}/similar?language=en-US&page=1`,
             { signal: controller.signal, headers }
-          );
-          const simJson = simRes.ok ? await simRes.json() : { results: [] };
-          mergeRows(seen, out, takeRows(simJson.results));
-        }
-
-        // 3) popular fallback
-        if (out.length < maxItems) {
-          const popRes = await fetch(
+          ),
+          fetch(
             `https://api.themoviedb.org/3/${mediaType}/popular?language=en-US&page=1`,
             { signal: controller.signal, headers }
-          );
-          const popJson = popRes.ok ? await popRes.json() : { results: [] };
+          ),
+        ]);
+
+        const [recJson, simJson, popJson] = await Promise.all([
+          recRes.ok ? recRes.json() : { results: [] },
+          simRes.ok ? simRes.json() : { results: [] },
+          popRes.ok ? popRes.json() : { results: [] },
+        ]);
+
+        mergeRows(seen, out, takeRows(recJson.results));
+        if (out.length < maxItems) {
+          mergeRows(seen, out, takeRows(simJson.results));
+        }
+        if (out.length < maxItems) {
           mergeRows(seen, out, takeRows(popJson.results));
         }
 
-        let enriched = await fetchCatalogCardMeta(out.slice(0, maxItems), mediaType, controller.signal);
-        enriched = await fetchTmdbCardMeta(enriched, mediaType, token, controller.signal);
+        const enriched = await fetchCatalogCardMeta(
+          out.slice(0, maxItems),
+          mediaType,
+          controller.signal
+        );
         setItems(enriched);
       } catch {
         setItems([]);

@@ -5,7 +5,7 @@ import ShowPlayer from "./showPlayer";
 import AnimePlayer from "./animePlayer";
 import MoviePlayer from "./moviePlayer";
 import YouMightLike from "./youMightLike";
-import AnimeRelatedSection from "./animeRelatedSection";
+import AnimeShowRails from "./animeShowRails";
 import {
   cumulativeTvEpisode,
   tmdbSeasonEpisodeFromAbsolute,
@@ -476,7 +476,7 @@ export default function ShowTemplate({
   const [animeMovieResolving, setAnimeMovieResolving] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
-  const [pickerEpisodesLoading, setPickerEpisodesLoading] = useState(false);
+  const [pickerEpisodesLoading, setPickerEpisodesLoading] = useState(true);
   const [pickerPlayableCount, setPickerPlayableCount] = useState(0);
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(
     () => new Set()
@@ -493,7 +493,16 @@ export default function ShowTemplate({
     setProgressHydrated(false);
     setShowUnavailableReason(null);
     setAdminBypassActive(false);
+    setPickerEpisodesLoading(true);
   }, [id, adminKey]);
+
+  useEffect(() => {
+    if (!show) return;
+    const animeFilm =
+      Boolean(show.is_anime) &&
+      (show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC");
+    if (animeFilm) setPickerEpisodesLoading(false);
+  }, [show]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -894,18 +903,15 @@ export default function ShowTemplate({
 
   const showRelatedSections = (
     <>
-      {showAnimeRelated ? (
-        <AnimeRelatedSection key={`related-${idMalForAnilistRails ?? "na"}`} idMal={idMalForAnilistRails ?? undefined} />
+      {showAnimeRelated && idMalForAnilistRails != null ? (
+        <AnimeShowRails idMal={idMalForAnilistRails} />
       ) : null}
 
-      {((Boolean(show?.is_anime) && idMalForAnilistRails != null) ||
-        (!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)))) ? (
+      {!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)) ? (
         <YouMightLike
-          key={`yml-${resolvedPlayerId}-${idMalForAnilistRails ?? "na"}`}
+          key={`yml-${resolvedPlayerId}`}
           mediaType="tv"
           id={resolvedPlayerId}
-          isAnime={Boolean(show?.is_anime)}
-          idMal={idMalForAnilistRails ?? undefined}
         />
       ) : null}
     </>
@@ -959,6 +965,10 @@ export default function ShowTemplate({
         }
       />
     );
+  }
+
+  if (!isAnimeMovie && pickerEpisodesLoading) {
+    return <PageSplash ariaLabel="Loading show" />;
   }
 
   return (
