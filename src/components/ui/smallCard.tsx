@@ -113,7 +113,7 @@ export default function SmallCard({
   );
 
   const meta = (
-    <div className="mt-2.5 flex min-w-0 flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
       {metaChips.length > 0 ? (
         <div className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
           {metaChips.map((chip, i) => (
@@ -138,7 +138,7 @@ export default function SmallCard({
     </div>
   );
 
-  const shellClass = 'group flex min-w-0 w-full flex-col rounded-xl';
+  const shellClass = 'group flex min-w-0 w-full flex-col gap-1.5 rounded-xl';
 
   if (external) {
     return (
