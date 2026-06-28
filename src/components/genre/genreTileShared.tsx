@@ -100,7 +100,7 @@ export function GenreCatalogTile({
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
-      className="group relative flex aspect-[4/3] w-full overflow-hidden rounded-xl p-3"
+      className="group relative flex aspect-[40/21] w-full overflow-hidden rounded-xl p-3"
     >
       <span
         className={`pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br ${colorClass} shadow-sm`}
@@ -176,7 +176,7 @@ export function GenreTilesSkeleton({ count = 12 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="aspect-[4/3] w-full animate-pulse rounded-xl bg-default-200"
+          className="aspect-[40/21] w-full animate-pulse rounded-xl bg-default-200"
         />
       ))}
     </div>
