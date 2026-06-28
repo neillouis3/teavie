@@ -39,31 +39,35 @@ type YmlItem = {
   numberOfEpisodes?: number | null;
 };
 
-type RailsPayload = {
-  related: RelatedItem[];
-  youMightLike: YmlItem[];
-};
-
-const CACHE_PREFIX = "teavie.cache.anime-show-rails.v3:";
-
-async function fetchAnimeShowRails(
-  idMal: number,
-  maxItems: number
-): Promise<RailsPayload> {
-  const qs = new URLSearchParams({
-    idMal: String(idMal),
-    limit: String(maxItems),
-  });
-  const res = await fetch(`/api/anilist/show-rails?${qs.toString()}`, {
+async function fetchRelatedAnime(idMal: number): Promise<RelatedItem[]> {
+  const qs = new URLSearchParams({ idMal: String(idMal) });
+  const res = await fetch(`/api/anilist/related?${qs.toString()}`, {
     cache: "no-store",
   });
-  const data = res.ok
-    ? await res.json()
-    : { related: [], youMightLike: [] };
-  return {
-    related: Array.isArray(data.related) ? data.related : [],
-    youMightLike: Array.isArray(data.youMightLike) ? data.youMightLike : [],
-  };
+  if (!res.ok) return [];
+  const data = await res.json();
+  const items = Array.isArray(data.items) ? data.items : [];
+  return items.filter(
+    (it: RelatedItem) =>
+      typeof it.catalogId === "string" && it.catalogId.trim().length > 0
+  );
+}
+
+async function fetchYouMightLike(idMal: number, limit: number): Promise<YmlItem[]> {
+  const qs = new URLSearchParams({
+    idMal: String(idMal),
+    limit: String(limit),
+  });
+  const res = await fetch(`/api/anilist/you-might-like?${qs.toString()}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const items = Array.isArray(data.items) ? data.items : [];
+  return items.filter(
+    (it: YmlItem) =>
+      typeof it.catalogId === "string" && it.catalogId.trim().length > 0
+  );
 }
 
 export default function AnimeShowRails({
@@ -85,15 +89,14 @@ export default function AnimeShowRails({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void fetchAnimeShowRails(idMal, ymlMax)
-      .then((data) => {
+    void Promise.all([
+      fetchRelatedAnime(idMal),
+      fetchYouMightLike(idMal, ymlMax),
+    ])
+      .then(([relatedItems, ymlItems]) => {
         if (cancelled) return;
-        setRelated(
-          data.related.filter(
-            (it) => typeof it.catalogId === "string" && it.catalogId.trim().length > 0
-          )
-        );
-        setYouMightLike(data.youMightLike);
+        setRelated(relatedItems);
+        setYouMightLike(ymlItems);
       })
       .catch(() => {
         if (cancelled) return;

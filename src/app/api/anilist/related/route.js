@@ -21,6 +21,6 @@ export async function GET(req) {
     return Response.json({ items });
   } catch (err) {
     console.error("[anilist/related]", err);
-    return Response.json({ error: "related failed", items: [] }, { status: 500 });
+    return Response.json({ error: "related failed", items: [] }, { status: 200 });
   }
 }

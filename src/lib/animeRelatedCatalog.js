@@ -34,6 +34,23 @@ export const ANIME_RELATED_CATALOG_PROJECTION = {
   vote_average: 1,
 };
 
+/** @param {unknown} doc */
+export function malIdFromCatalogDoc(doc) {
+  const raw = doc?.mal_id ?? String(doc?.id ?? "").replace(/^anime_/i, "");
+  if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+  if (typeof raw === "string") {
+    const n = parseInt(raw, 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+/** Mongo `$in` list matching numeric + string MAL ids. */
+export function malIdsMongoIn(malIds) {
+  const nums = [...new Set(malIds.map((m) => Math.floor(Number(m))).filter((m) => m > 0))];
+  return [...nums, ...nums.map(String)];
+}
+
 export function docAnilistKey(d) {
   const a = d?.anilist_id;
   if (typeof a === "number" && Number.isFinite(a) && a > 0) return a;
@@ -82,10 +99,10 @@ export function normalizeRelatedCandidates(candidates) {
  * @param {number[]} malIds
  */
 export async function fetchCatalogDocsByMalIds(malIds) {
-  const ids = [...new Set(malIds.map((m) => Math.floor(Number(m)))).filter((m) => m > 0)];
+  const ids = [...new Set(malIds.map((m) => Math.floor(Number(m))).filter((m) => m > 0))];
   if (!ids.length) return new Map();
 
-  const idKeys = ids.flatMap((m) => [m, String(m), `anime_${m}`]);
+  const idKeys = malIdsMongoIn(ids);
   const client = await clientPromise;
   const docs = await client
     .db("teavie")
@@ -93,7 +110,7 @@ export async function fetchCatalogDocsByMalIds(malIds) {
     .find(
       {
         type: { $in: ["tv", "movie"] },
-        $or: [{ mal_id: { $in: idKeys } }, { id: { $in: idKeys } }],
+        $or: [{ mal_id: { $in: idKeys } }, { id: { $in: ids.map((m) => `anime_${m}`) } }],
       },
       { projection: ANIME_RELATED_CATALOG_PROJECTION }
     )

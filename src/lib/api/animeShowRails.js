@@ -5,7 +5,6 @@
 import clientPromise from "@/lib/mongo";
 import {
   jikanFetchRelationsAndRecommendations,
-  jikanFranchiseRailOrderedSteps,
   jikanGet,
   pickFranchiseRelationCandidates,
   jikanPayloadsToCandidates,
@@ -19,6 +18,8 @@ import { animePosterFromDoc, animeBackdropFromDoc } from "@/lib/animePoster.js";
 import {
   buildAnimeRelatedCatalogItems,
   docAnilistKey,
+  malIdFromCatalogDoc,
+  malIdsMongoIn,
   normalizeRelatedMalId,
   yearFromCatalogDoc,
 } from "@/lib/animeRelatedCatalog.js";
@@ -26,39 +27,26 @@ import {
 async function buildRelatedItems(rootMal, relationsJson) {
   let relJson = relationsJson;
   if (!relJson) {
-    const res = await jikanGet(`anime/${rootMal}/relations`);
-    if (res.ok) relJson = await res.json().catch(() => null);
+    try {
+      const res = await jikanGet(`anime/${rootMal}/relations`);
+      if (res.ok) relJson = await res.json().catch(() => null);
+    } catch (err) {
+      console.error("[anime related jikan]", err);
+    }
   }
 
   const direct = pickFranchiseRelationCandidates(rootMal, relJson);
-  let chain = [];
-  try {
-    chain = await jikanFranchiseRailOrderedSteps(rootMal, {
-      rootRelationsJson: relJson,
-      staggerMs: 200,
-      maxNodes: 32,
-    });
-  } catch (err) {
-    console.error("[anime related franchise chain]", err);
-  }
-
   const rootNorm = normalizeRelatedMalId(rootMal);
   const seenMal = new Set([rootNorm]);
   /** @type {Array<{ malId: number; malKind?: string; topNote: string }>} */
   const candidates = [];
 
-  const pushCandidate = (step) => {
+  for (const step of direct) {
     const mal = normalizeRelatedMalId(step.malId);
-    if (!Number.isFinite(mal) || mal <= 0 || mal === rootNorm || seenMal.has(mal)) {
-      return;
-    }
+    if (!Number.isFinite(mal) || mal <= 0 || mal === rootNorm || seenMal.has(mal)) continue;
     seenMal.add(mal);
     candidates.push({ ...step, malId: mal });
-  };
-
-  // Direct MAL relations are cheap and reliable when the transitive chain is rate-limited.
-  for (const step of direct) pushCandidate(step);
-  for (const step of chain) pushCandidate(step);
+  }
 
   return buildAnimeRelatedCatalogItems(candidates);
 }
@@ -76,7 +64,7 @@ async function buildYouMightLikeItems(rootMal, recsJson, limit) {
       {
         type: "tv",
         id: { $regex: "^anime_" },
-        mal_id: { $in: [...malIds, ...malIds.map(String)] },
+        mal_id: { $in: malIdsMongoIn(malIds) },
       },
       {
         projection: {
@@ -108,7 +96,7 @@ async function buildYouMightLikeItems(rootMal, recsJson, limit) {
   for (const d of docs) {
     const cid = String(d.id);
     if (!cid.startsWith("anime_")) continue;
-    const m = typeof d.mal_id === "number" ? d.mal_id : null;
+    const m = malIdFromCatalogDoc(d);
     if (m == null || !malIds.includes(m)) continue;
     if (!byMal.has(m)) byMal.set(m, { catalogId: cid, doc: d });
   }
@@ -141,16 +129,36 @@ export async function loadAnimeShowRails(idMal, ymlLimit = 14) {
     return { related: [], youMightLike: [] };
   }
 
-  const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
-    includeRelations: true,
-    includeRecommendations: true,
-    staggerMs: 200,
-  });
+  let relationsJson = null;
+  let recsJson = null;
+  try {
+    const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
+      includeRelations: true,
+      includeRecommendations: true,
+      staggerMs: 200,
+    });
+    relationsJson = jk.relationsJson;
+    recsJson = jk.recsJson;
+  } catch (err) {
+    console.error("[anime show rails jikan fetch]", err);
+  }
 
-  const [related, youMightLike] = await Promise.all([
-    buildRelatedItems(rootMal, jk.relationsJson),
-    buildYouMightLikeItems(rootMal, jk.recsJson, ymlLimit),
+  const [relatedResult, ymlResult] = await Promise.allSettled([
+    buildRelatedItems(rootMal, relationsJson),
+    buildYouMightLikeItems(rootMal, recsJson, ymlLimit),
   ]);
+
+  const related =
+    relatedResult.status === "fulfilled" ? relatedResult.value : [];
+  const youMightLike =
+    ymlResult.status === "fulfilled" ? ymlResult.value : [];
+
+  if (relatedResult.status === "rejected") {
+    console.error("[anime show rails related]", relatedResult.reason);
+  }
+  if (ymlResult.status === "rejected") {
+    console.error("[anime show rails yml]", ymlResult.reason);
+  }
 
   return { related, youMightLike };
 }
@@ -159,10 +167,20 @@ export async function loadAnimeRelatedItems(idMal) {
   const rootMal = Math.floor(Number(idMal));
   if (!Number.isFinite(rootMal) || rootMal <= 0) return [];
 
-  const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
-    includeRelations: true,
-    includeRecommendations: false,
-    staggerMs: 200,
+  let relationsJson = null;
+  try {
+    const jk = await jikanFetchRelationsAndRecommendations(rootMal, {
+      includeRelations: true,
+      includeRecommendations: false,
+      staggerMs: 200,
+    });
+    relationsJson = jk.relationsJson;
+  } catch (err) {
+    console.error("[anime related jikan fetch]", err);
+  }
+
+  return buildRelatedItems(rootMal, relationsJson).catch((err) => {
+    console.error("[anime related items]", err);
+    return [];
   });
-  return buildRelatedItems(rootMal, jk.relationsJson);
 }
