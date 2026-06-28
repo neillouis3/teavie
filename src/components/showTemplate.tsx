@@ -28,6 +28,7 @@ import {
   loadWatchProgress,
   saveWatchProgress,
 } from "@/lib/watchProgress";
+import { touchWatchHistory } from "@/lib/watchHistory";
 import {
   buildShowInfoLines,
   catalogGenresForDisplay,
@@ -530,6 +531,11 @@ export default function ShowTemplate({
       lastSeason: selectedSeason,
       lastEpisode: selectedEpisode,
       watched: Array.from(watchedEpisodes),
+    });
+    touchWatchHistory(String(id), {
+      mediaType: "tv",
+      lastSeason: selectedSeason,
+      lastEpisode: selectedEpisode,
     });
   }, [
     id,

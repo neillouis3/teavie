@@ -6,6 +6,7 @@ import CatalogRail, { CatalogRailSkeleton } from "@/components/explore/catalogRa
 import TrendingHeroViewer from "@/components/explore/trendingHeroViewer";
 import TrendingHeroLoading from "@/components/explore/trendingHeroLoading";
 import GenreDiscover from "@/components/discover/genreDiscover";
+import WatchHistoryRail from "@/components/explore/watchHistoryRail";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 
@@ -109,6 +110,7 @@ export default function DiscoverHub() {
       )}
 
       <div className="mt-2 w-full px-3 sm:px-4">
+        <WatchHistoryRail />
         <GenreDiscover />
       </div>
 
