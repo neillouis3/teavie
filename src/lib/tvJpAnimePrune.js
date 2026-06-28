@@ -113,18 +113,11 @@ export function isJapaneseOriginWithNoGenreData(doc) {
  * @param {Record<string, unknown>} doc - TV row or Mongo doc (must include type: "tv" when from DB)
  */
 export function shouldPruneTvAnimeWithoutAnilist(doc) {
-  if (!doc || doc.type !== "tv") return false;
-  if (isCatalogAnimeId(doc)) return false;
-  if (isJikanAnimeImport(doc)) return false;
-
-  if (isTmdbNumericTvId(doc)) {
-    if (isOldCatalogJpAnimationTv(doc)) return true;
-    if (isJapaneseOriginWithNoGenreData(doc)) return true;
-    if (isJapaneseOrigin(doc) && isAnimeLike(doc)) return true;
-    return false;
-  }
-
-  return isOldCatalogJpAnimationTv(doc);
+  // Anime is allowed. We no longer block Japanese-origin animated TV that comes
+  // from TMDB (numeric ids) — it used to trip the "community guidelines" screen.
+  // Genuinely adult content is still gated via `adult === true` in
+  // showUnavailableReasonForDoc, independent of this function.
+  return false;
 }
 
 export const SHOW_UNAVAILABLE_MESSAGES = {
