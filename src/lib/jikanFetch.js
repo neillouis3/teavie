@@ -12,9 +12,31 @@ const USER_AGENT =
 
 /**
  * @param {string} path e.g. `anime/21/relations` (no leading slash)
+ * @param {{ maxAttempts?: number }} [opts]
  */
-export async function jikanGet(path) {
+export async function jikanGet(path, opts = {}) {
+  const maxAttempts =
+    typeof opts.maxAttempts === "number" && opts.maxAttempts > 0
+      ? opts.maxAttempts
+      : 4;
   const url = `${JIKAN_BASE}/${path.replace(/^\//, "")}`;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent": USER_AGENT,
+      },
+    });
+    if (res.status !== 429 && res.status !== 503) return res;
+    if (attempt >= maxAttempts) return res;
+    const retryAfter = res.headers.get("Retry-After");
+    const parsed = retryAfter ? parseInt(retryAfter, 10) : NaN;
+    const waitMs = Number.isFinite(parsed)
+      ? Math.min(15000, parsed * 1000)
+      : Math.min(15000, 500 * attempt * attempt);
+    await sleep(waitMs);
+  }
   return fetch(url, {
     method: "GET",
     headers: {
@@ -125,6 +147,14 @@ export function pickFranchiseRelationCandidates(rootMal, relationsJson) {
   return all.filter((c) =>
     FRANCHISE_RELATION_LABELS_LOOSE.has(normRelationLabel(c.topNote))
   );
+}
+
+/** Every anime/movie row from Jikan relations (all relation types, no recommendations). */
+export function pickAllRelationCandidates(rootMal, relationsJson) {
+  return jikanPayloadsToCandidates(rootMal, relationsJson, null, {
+    franchiseOnly: false,
+    includeRecommendations: false,
+  });
 }
 
 /**

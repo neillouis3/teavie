@@ -5,8 +5,9 @@
 import clientPromise from "@/lib/mongo";
 import {
   jikanFetchRelationsAndRecommendations,
+  jikanFranchiseRailOrderedSteps,
   jikanGet,
-  pickFranchiseRelationCandidates,
+  pickAllRelationCandidates,
   jikanPayloadsToCandidates,
 } from "@/lib/jikanFetch";
 import {
@@ -35,17 +36,36 @@ async function buildRelatedItems(rootMal, relationsJson) {
     }
   }
 
-  const direct = pickFranchiseRelationCandidates(rootMal, relJson);
   const rootNorm = normalizeRelatedMalId(rootMal);
   const seenMal = new Set([rootNorm]);
   /** @type {Array<{ malId: number; malKind?: string; topNote: string }>} */
   const candidates = [];
 
-  for (const step of direct) {
+  const pushCandidate = (step) => {
     const mal = normalizeRelatedMalId(step.malId);
-    if (!Number.isFinite(mal) || mal <= 0 || mal === rootNorm || seenMal.has(mal)) continue;
+    if (!Number.isFinite(mal) || mal <= 0 || mal === rootNorm || seenMal.has(mal)) {
+      return;
+    }
     seenMal.add(mal);
     candidates.push({ ...step, malId: mal });
+  };
+
+  // Full sequel/prequel chain (oldest prequels → sequels) plus root side stories & movies.
+  try {
+    const chain = await jikanFranchiseRailOrderedSteps(rootMal, {
+      rootRelationsJson: relJson,
+      staggerMs: 450,
+      maxHops: 40,
+      maxNodes: 80,
+    });
+    for (const step of chain) pushCandidate(step);
+  } catch (err) {
+    console.error("[anime related franchise chain]", err);
+  }
+
+  // All other root relation types (Summary, Other, Character, …) — catalog filter below.
+  for (const step of pickAllRelationCandidates(rootMal, relJson)) {
+    pushCandidate(step);
   }
 
   return buildAnimeRelatedCatalogItems(candidates);
