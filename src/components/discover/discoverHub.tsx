@@ -10,6 +10,7 @@ import ExplorePageSplash from "@/components/explore/explorePageSplash";
 import {
   loadExplorePagePayload,
   fetchExploreHistoryRows,
+  projectExploreHistoryRows,
   type ExplorePagePayload,
   type TmdbDiscoverPayload,
 } from "@/lib/explorePageData";
@@ -52,13 +53,26 @@ export default function DiscoverHub() {
   useEffect(() => {
     const onHistoryChange = () => {
       const historyEntries = listWatchHistory();
-      void fetchExploreHistoryRows(
-        historyEntries,
-        watchHistoryProgressLabel
-      ).then((historyRows) => {
-        setPayload((prev) =>
-          prev ? { ...prev, historyRows } : prev
+      setPayload((prev) => {
+        if (!prev) return prev;
+        if (historyEntries.length === 0) {
+          return { ...prev, historyRows: [] };
+        }
+        const projected = projectExploreHistoryRows(
+          prev.historyRows,
+          historyEntries,
+          watchHistoryProgressLabel
         );
+        if (projected) {
+          return { ...prev, historyRows: projected };
+        }
+        void fetchExploreHistoryRows(
+          historyEntries,
+          watchHistoryProgressLabel
+        ).then((historyRows) => {
+          setPayload((p) => (p ? { ...p, historyRows } : p));
+        });
+        return prev;
       });
     };
     window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);

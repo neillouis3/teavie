@@ -101,6 +101,26 @@ export async function fetchExploreHistoryRows(
   }
 }
 
+/** Rebuild history rows from existing rail data (no network). Returns null if a new title needs fetch. */
+export function projectExploreHistoryRows(
+  existingRows: ExploreHistoryRow[],
+  entries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string
+): ExploreHistoryRow[] | null {
+  if (entries.length === 0) return [];
+  const byId = new Map(existingRows.map((r) => [String(r.id), r]));
+  if (!entries.every((e) => byId.has(e.catalogId))) return null;
+  return entries.map((entry) => {
+    const row = byId.get(entry.catalogId)!;
+    return {
+      ...row,
+      lastSeason: entry.lastSeason,
+      lastEpisode: entry.lastEpisode,
+      progressLabel: progressLabel(entry),
+    };
+  });
+}
+
 export async function loadExplorePagePayload(
   historyEntries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
