@@ -21,8 +21,6 @@ import {
   type StreamServerId,
 } from "@/contexts/streamingSourceContext";
 import { useAnimeAudio } from "@/contexts/animeAudioContext";
-import { animeAudioLabel } from "@/lib/animePlayEmbed";
-import { Button } from "@heroui/react";
 import {
   formatWatchEpKey,
   loadWatchProgress,
@@ -469,7 +467,7 @@ export default function ShowTemplate({
   adminPreview?: boolean;
 }) {
   const { server } = useStreamingSource();
-  const { audio: animeAudio, setAudio: setAnimeAudio } = useAnimeAudio();
+  const { audio: animeAudio } = useAnimeAudio();
   const [show, setShow] = useState<Show | null>(null);
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
   const [loading, setLoading] = useState(true);
@@ -909,9 +907,15 @@ export default function ShowTemplate({
     </>
   );
 
+  const animeUseTmdbEpisodes = Boolean(show?.is_anime) && playerUsesTmdb;
+  const pickerSeasons =
+    animeUseTmdbEpisodes && show?.tmdb_playback_seasons?.length
+      ? show.tmdb_playback_seasons
+      : show?.seasons ?? [];
+
   const episodePickerProps = {
-    tmdbTvId: playerUsesTmdb && !show?.is_anime ? String(resolvedPlayerId) : null,
-    seasons: show?.seasons ?? [],
+    tmdbTvId: playerUsesTmdb ? String(resolvedPlayerId) : null,
+    seasons: pickerSeasons,
     selectedSeason,
     selectedEpisode,
     onSeasonChange: setSelectedSeason,
@@ -920,13 +924,19 @@ export default function ShowTemplate({
       setSelectedEpisode(episode);
     },
     showSeasonTabs: showSeasonPickerStrip,
-    preferCatalogEpisodes: Boolean(show?.is_anime),
-    flatMode: useFlatAllEpisodesPicker,
+    preferCatalogEpisodes: Boolean(show?.is_anime) && !playerUsesTmdb,
+    malId: Boolean(show?.is_anime) && !playerUsesTmdb ? idMalForAnilistRails : null,
+    fallbackStillPath:
+      show?.is_anime ? show.backdrop_path ?? show.poster_path ?? null : null,
+    flatMode:
+      animeUseTmdbEpisodes && Boolean(show?.tmdb_playback_seasons?.length),
+    catalogAbsoluteEpisodes: animeUseTmdbEpisodes,
     flatEpisodeCap: animeEpisodeCap,
     watchedKeys: watchedEpisodes,
     onMarkWatched: markEpisodeWatched,
     onEpisodesLoadingChange: setPickerEpisodesLoading,
     onPlayableEpisodeCountChange: setPickerPlayableCount,
+    showAnimeAudio: Boolean(show?.is_anime) && canPlayAnime,
   };
 
   if (!loading && !show) {
@@ -1009,23 +1019,6 @@ export default function ShowTemplate({
             />
           )}
         </div>
-
-        {!loading && show?.is_anime && !isAnimeMovie && canPlayAnime ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 px-1">
-            <span className="text-xs text-default-500">Audio</span>
-            {(["sub", "dub"] as const).map((lang) => (
-              <Button
-                key={lang}
-                size="sm"
-                variant={animeAudio === lang ? "solid" : "flat"}
-                color={animeAudio === lang ? "success" : "default"}
-                onPress={() => setAnimeAudio(lang)}
-              >
-                {animeAudioLabel(lang)}
-              </Button>
-            ))}
-          </div>
-        ) : null}
 
         {!loading && show && !isAnimeMovie ? (
           <ShowEpisodePickerProvider {...episodePickerProps}>

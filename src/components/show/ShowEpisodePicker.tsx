@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import { Button, Input, Tab, Tabs } from "@heroui/react";
+import { Button, Input, Select, SelectItem, Tab, Tabs } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
@@ -27,6 +27,8 @@ import { formatRuntimeLabel } from "@/components/ui/catalogMediaPanel";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
 import { formatWatchEpKey } from "@/lib/watchProgress";
 import { tmdbSeasonEpisodeFromAbsolute } from "@/lib/cumulativeTvEpisode";
+import { useAnimeAudio } from "@/contexts/animeAudioContext";
+import { animeAudioLabel, ANIME_AUDIO_OPTIONS } from "@/lib/animePlayEmbed";
 
 export type ShowEpisodePickerSeason = {
   season_number: number;
@@ -108,12 +110,20 @@ type ShowEpisodePickerProps = {
   showSeasonTabs?: boolean;
   /** Anime: build episode list from catalog/anilist counts, not TMDB season API. */
   preferCatalogEpisodes?: boolean;
+  /** MAL id for Jikan episode metadata when preferCatalogEpisodes is set. */
+  malId?: number | null;
+  /** Show backdrop/poster used when episode stills are missing (anime). */
+  fallbackStillPath?: string | null;
+  /** After TMDB flat fetch, remap to season 1 + absolute episode (anime UI). */
+  catalogAbsoluteEpisodes?: boolean;
   flatMode?: boolean;
   flatEpisodeCap?: number | null;
   watchedKeys?: Set<string>;
   onMarkWatched?: (season: number, episode: number) => void;
   onEpisodesLoadingChange?: (loading: boolean) => void;
   onPlayableEpisodeCountChange?: (count: number) => void;
+  /** Anime: Sub/Dub selector at the start of episode controls. */
+  showAnimeAudio?: boolean;
 };
 
 type EpisodePickerContextValue = ReturnType<typeof useEpisodePickerState>;
@@ -148,6 +158,37 @@ function fallbackEpisodes(
     overview: null,
     runtime: null,
   }));
+}
+
+async function fetchAnimeEpisodes(
+  malId: number,
+  limit: number,
+  signal?: AbortSignal
+): Promise<EpisodeCardRow[]> {
+  const qs = new URLSearchParams({
+    malId: String(malId),
+    limit: String(Math.max(1, limit)),
+  });
+  const res = await fetch(`/api/anime/episodes?${qs.toString()}`, { signal });
+  if (!res.ok) throw new Error("anime episodes fetch failed");
+  const json = await res.json();
+  const rows = Array.isArray(json.episodes) ? json.episodes : [];
+  return rows.map(
+    (ep: {
+      episode_number: number;
+      name: string;
+      overview?: string | null;
+      runtime: number | null;
+      still_path?: string | null;
+    }) => ({
+      season: 1,
+      episode: ep.episode_number,
+      name: ep.name,
+      overview: ep.overview ?? null,
+      runtime: ep.runtime,
+      still_path: ep.still_path ?? null,
+    })
+  );
 }
 
 async function fetchSeasonEpisodes(
@@ -202,12 +243,16 @@ function useEpisodePickerState({
   onEpisodeChange,
   showSeasonTabs = true,
   preferCatalogEpisodes = false,
+  malId = null,
+  fallbackStillPath = null,
+  catalogAbsoluteEpisodes = false,
   flatMode = false,
   flatEpisodeCap = null,
   watchedKeys,
   onMarkWatched,
   onEpisodesLoadingChange,
   onPlayableEpisodeCountChange,
+  showAnimeAudio = false,
 }: ShowEpisodePickerProps) {
   const releasedSeasons = useMemo(
     () =>
@@ -264,6 +309,31 @@ function useEpisodePickerState({
             count = Math.min(count, flatEpisodeCap);
           }
           const seasonNum = seasonObj?.season_number ?? selectedSeason ?? 1;
+          const mal = Math.floor(Number(malId));
+          if (Number.isFinite(mal) && mal > 0 && count > 0) {
+            try {
+              const rows = await fetchAnimeEpisodes(mal, count, controller.signal);
+              const byEp = new Map(rows.map((r) => [r.episode, r]));
+              const merged = Array.from({ length: count }, (_, i) => {
+                const ep = i + 1;
+                const hit = byEp.get(ep);
+                return (
+                  hit ?? {
+                    season: seasonNum,
+                    episode: ep,
+                    name: `Episode ${ep}`,
+                    overview: null,
+                    runtime: null,
+                    still_path: null,
+                  }
+                );
+              });
+              if (!cancelled) setEpisodes(merged);
+              return;
+            } catch {
+              /* fall through to placeholders */
+            }
+          }
           if (!cancelled) {
             setEpisodes(fallbackEpisodes(seasonNum, count));
           }
@@ -321,7 +391,14 @@ function useEpisodePickerState({
             flatEpisodeCap != null && flatEpisodeCap > 0
               ? flat.slice(0, flatEpisodeCap)
               : flat;
-          if (!cancelled) setEpisodes(capped);
+          const finalRows = catalogAbsoluteEpisodes
+            ? capped.map((ep) => ({
+                ...ep,
+                season: 1,
+                episode: ep.displayNumber ?? ep.episode,
+              }))
+            : capped;
+          if (!cancelled) setEpisodes(finalRows);
           return;
         }
 
@@ -362,6 +439,8 @@ function useEpisodePickerState({
     flatEpisodeCap,
     releasedSeasons,
     preferCatalogEpisodes,
+    malId,
+    catalogAbsoluteEpisodes,
     onEpisodesLoadingChange,
   ]);
 
@@ -387,6 +466,9 @@ function useEpisodePickerState({
 
   const isSelected = useCallback(
     (row: EpisodeCardRow) => {
+      if (catalogAbsoluteEpisodes) {
+        return row.season === selectedSeason && row.episode === selectedEpisode;
+      }
       if (flatMode && row.displayNumber != null) {
         const coords = tmdbSeasonEpisodeFromAbsolute(
           releasedSeasons,
@@ -398,7 +480,7 @@ function useEpisodePickerState({
       }
       return row.season === selectedSeason && row.episode === selectedEpisode;
     },
-    [flatMode, releasedSeasons, selectedSeason, selectedEpisode]
+    [catalogAbsoluteEpisodes, flatMode, releasedSeasons, selectedSeason, selectedEpisode]
   );
 
   const handleSelect = (row: EpisodeCardRow) => {
@@ -552,6 +634,8 @@ function useEpisodePickerState({
     jumpEpisode,
     showSeasonTabs,
     flatMode,
+    catalogAbsoluteEpisodes,
+    fallbackStillPath,
     watchedKeys,
     selectedSeason,
     currentSeasonEpisodeLabel,
@@ -565,7 +649,40 @@ function useEpisodePickerState({
     onEpisodeChange,
     isSelected,
     handleSelect,
+    showAnimeAudio,
   };
+}
+
+function AnimeAudioSelect() {
+  const { audio, setAudio } = useAnimeAudio();
+
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <span className="text-[11px] font-medium text-default-500">Audio</span>
+      <Select
+        size="sm"
+        aria-label="Audio"
+        variant="bordered"
+        radius="md"
+        selectedKeys={new Set([audio])}
+        onSelectionChange={(keys) => {
+          const next = Array.from(keys)[0];
+          if (next === "sub" || next === "dub") setAudio(next);
+        }}
+        classNames={{
+          base: "w-[76px]",
+          trigger: "h-8 min-h-8 border-default-300 px-2 dark:border-default-500/60",
+          value: "text-xs font-normal text-foreground",
+          selectorIcon: "text-default-400",
+        }}
+        popoverProps={{ classNames: { content: "min-w-[76px]" } }}
+      >
+        {ANIME_AUDIO_OPTIONS.map((lang) => (
+          <SelectItem key={lang}>{animeAudioLabel(lang)}</SelectItem>
+        ))}
+      </Select>
+    </div>
+  );
 }
 
 export function ShowEpisodePickerControls() {
@@ -578,10 +695,19 @@ export function ShowEpisodePickerControls() {
     goNextEpisode,
     handleJumpSeasonChange,
     handleJumpEpisodeChange,
+    showAnimeAudio,
   } = useEpisodePicker();
 
   return (
     <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5" aria-label="Episode controls">
+          {showAnimeAudio ? (
+            <>
+              <AnimeAudioSelect />
+              <span className="text-sm text-default-400" aria-hidden>
+                ·
+              </span>
+            </>
+          ) : null}
           <div className="flex shrink-0 items-center gap-1.5">
             <div className="flex items-center gap-1">
               <span className="text-[11px] font-medium text-default-500">S</span>
@@ -830,7 +956,9 @@ export function ShowEpisodePickerList() {
     episodeSortLatestFirst,
     toggleEpisodeSort,
     flatMode,
+    catalogAbsoluteEpisodes,
     watchedKeys,
+    fallbackStillPath,
     isSelected,
     handleSelect,
   } = useEpisodePicker();
@@ -908,13 +1036,15 @@ export function ShowEpisodePickerList() {
             {displayedEpisodes.map((row) => {
               const active = isSelected(row);
               const labelNum =
-                flatMode && row.displayNumber != null
+                flatMode && row.displayNumber != null && !catalogAbsoluteEpisodes
                   ? row.displayNumber
                   : row.episode;
               const watchKey = formatWatchEpKey(row.season, row.episode);
               const watched = watchedKeys?.has(watchKey) ?? false;
               const runtime = formatRuntimeLabel(row.runtime);
-              const stillUrl = episodeStillUrl(row.still_path);
+              const stillUrl =
+                episodeStillUrl(row.still_path) ??
+                episodeStillUrl(fallbackStillPath);
 
               return (
                 <CarouselItem
