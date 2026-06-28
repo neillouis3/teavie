@@ -13,6 +13,12 @@ import {
   useAnimeAudio,
 } from '@/contexts/animeAudioContext';
 import {
+  ANIME_SOURCE_OPTIONS,
+  animeSourceLabel,
+  useAnimeSource,
+  type AnimeSourceId,
+} from '@/contexts/animeSourceContext';
+import {
   STREAM_SERVER_OPTIONS,
   streamServerLabel,
   useStreamingSource,
@@ -25,6 +31,7 @@ export default function SettingsPage() {
   const { mode: cardLayout, setMode: setCardLayout } = useCatalogCardStyle();
   const { server: streamServer, setServer: setStreamServer } = useStreamingSource();
   const { audio: animeAudio, setAudio: setAnimeAudio } = useAnimeAudio();
+  const { source: animeSource, setSource: setAnimeSource } = useAnimeSource();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -74,10 +81,31 @@ export default function SettingsPage() {
         </section>
 
         <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Anime player</h2>
+          <p className="text-xs text-default-500">
+            Third-party embed used for anime episodes. We can&apos;t control ads or playback from
+            these sources.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {ANIME_SOURCE_OPTIONS.map((id: AnimeSourceId) => (
+              <Button
+                key={id}
+                size="sm"
+                variant={animeSource === id ? 'solid' : 'flat'}
+                color={animeSource === id ? 'success' : 'default'}
+                onPress={() => setAnimeSource(id)}
+              >
+                {animeSourceLabel(id)}
+              </Button>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Anime audio</h2>
           <p className="text-xs text-default-500">
-            Default subtitle or dub track for anime episodes (MegaPlay embed). You can also switch
-            on any anime show page.
+            Default subtitle or dub track for anime episodes. You can also switch on any anime show
+            page.
           </p>
           <div className="flex flex-wrap gap-2">
             {ANIME_AUDIO_OPTIONS.map((lang) => (
@@ -97,8 +125,8 @@ export default function SettingsPage() {
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Streaming source</h2>
           <p className="text-xs text-default-500">
-            Third-party player used for movies and live-action TV. Anime uses MegaPlay separately.
-            We can&apos;t control ads or playback from these sources.
+            Third-party player used for movies and live-action TV. We can&apos;t control ads or
+            playback from these sources.
           </p>
           <div className="flex flex-wrap gap-2">
             {STREAM_SERVER_OPTIONS.map((id: StreamServerId) => (
