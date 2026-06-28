@@ -55,7 +55,7 @@ function buildMetaChips(
   } else if (typeLower === 'movie') {
     const runtime = formatHeroRuntime(runtimeSeconds);
     if (runtime) chips.push(runtime);
-    chips.push('MOVIE');
+    chips.push('Movie');
   } else {
     chips.push(typeLower.toUpperCase());
   }
