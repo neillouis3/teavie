@@ -4,17 +4,16 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Chip, Button } from "@heroui/react";
 import Header from "@/components/ui/header";
+import PageSplash from "@/components/ui/pageSplash";
 import LargeCard from "@/components/ui/largeCard";
-import CatalogRail, { CatalogRailSkeleton } from "@/components/explore/catalogRail";
+import CatalogRail from "@/components/explore/catalogRail";
 import TrendingHeroViewer from "@/components/explore/trendingHeroViewer";
-import TrendingHeroLoading from "@/components/explore/trendingHeroLoading";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
 import type { ContentItem } from "@/types/content";
-import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import {
   GenreCatalogTile,
   genreTileColor,
@@ -24,24 +23,10 @@ import {
   categoryGenreBrowseHref,
   getCatalogCategory,
 } from "@/lib/catalogCategories";
-
-type CategoryDiscoverPayload = {
-  featured: ContentItem[];
-  trending: ContentItem[];
-  popular: ContentItem[];
-  topRated: ContentItem[];
-  new: ContentItem[];
-  genres: CatalogGenreRow[];
-};
-
-const EMPTY: CategoryDiscoverPayload = {
-  featured: [],
-  trending: [],
-  popular: [],
-  topRated: [],
-  new: [],
-  genres: [],
-};
+import {
+  fetchCategoryDiscover,
+  type CategoryDiscoverPayload,
+} from "@/lib/pageDataCache";
 
 /** Match Explore trending hero overlay; tuned for two-up featured row. */
 const FEATURED_CARD_HEIGHT =
@@ -63,32 +48,6 @@ function itemKey(item: ContentItem) {
   return `${item.type ?? "tv"}-${item.id}`;
 }
 
-function FeaturedSkeleton() {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div
-          key={i}
-          className={`${FEATURED_CARD_HEIGHT} animate-pulse rounded-2xl bg-default-200`}
-        />
-      ))}
-    </div>
-  );
-}
-
-function GenreTilesSkeleton() {
-  return (
-    <div className="flex gap-3 overflow-hidden">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="aspect-[4/3] w-[42%] shrink-0 animate-pulse rounded-xl bg-default-200 sm:w-[30%] md:w-1/4 lg:w-1/5 xl:w-1/6"
-        />
-      ))}
-    </div>
-  );
-}
-
 type CategoryPageTemplateProps = {
   slug: string;
 };
@@ -96,9 +55,7 @@ type CategoryPageTemplateProps = {
 export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps) {
   const category = getCatalogCategory(slug);
   const [data, setData] = useState<CategoryDiscoverPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { mode: cardLayout } = useCatalogCardStyle();
-  const horizontal = cardLayout === "horizontal";
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (category) {
@@ -110,27 +67,11 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     if (!category) return;
 
     let cancelled = false;
-    setLoading(true);
-
-    fetch(`/api/category/${category.slug}/discover`)
-      .then((res) => res.json())
-      .then((json) => {
-        if (cancelled) return;
-        setData({
-          featured: json.featured ?? [],
-          trending: json.trending ?? [],
-          popular: json.popular ?? [],
-          topRated: json.topRated ?? [],
-          new: json.new ?? [],
-          genres: json.genres ?? [],
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setData(EMPTY);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    void fetchCategoryDiscover(category.slug).then((payload) => {
+      if (cancelled) return;
+      setData(payload);
+      setReady(true);
+    });
 
     return () => {
       cancelled = true;
@@ -146,39 +87,38 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     );
   }
 
-  const categoryGenres = (data?.genres ?? []).filter((genre) => genre.count > 0);
+  if (!ready || !data) {
+    return <PageSplash ariaLabel={`Loading ${category.label}`} />;
+  }
+
+  const categoryGenres = data.genres.filter((genre) => genre.count > 0);
 
   const hasContent =
-    data &&
-    (data.featured.length > 0 ||
-      data.trending.length > 0 ||
-      data.popular.length > 0 ||
-      data.topRated.length > 0 ||
-      data.new.length > 0 ||
-      data.genres.some((g) => g.count > 0));
+    data.featured.length > 0 ||
+    data.trending.length > 0 ||
+    data.popular.length > 0 ||
+    data.topRated.length > 0 ||
+    data.new.length > 0 ||
+    data.genres.some((g) => g.count > 0);
 
-  const showTrending = loading || (data?.trending.length ?? 0) > 0;
-  const showFeatured = loading || (data?.featured.length ?? 0) > 0;
+  const hasTrending = data.trending.length > 0;
+  const hasFeatured = data.featured.length > 0;
 
   return (
     <div className="bg-background min-h-screen w-full">
       <Header pageName={category.label} />
 
-      {showTrending && (
+      {hasTrending && (
         <section
           className={`mb-4 mt-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
           aria-label="Trending"
         >
-          {loading ? (
-            <TrendingHeroLoading rounded />
-          ) : (
-            <TrendingHeroViewer
-              trendingMovies={[]}
-              trendingTv={data?.trending ?? []}
-              maxItems={16}
-              rounded
-            />
-          )}
+          <TrendingHeroViewer
+            trendingMovies={[]}
+            trendingTv={data.trending}
+            maxItems={16}
+            rounded
+          />
         </section>
       )}
 
@@ -203,98 +143,72 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           </Button>
         </section>
 
-        {showFeatured && (
+        {hasFeatured && (
           <section className="space-y-3" aria-label="Featured">
             <Chip color="success" variant="flat" size="md" radius="sm">
               Featured
             </Chip>
-            {loading ? (
-              <FeaturedSkeleton />
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {(data?.featured ?? []).map((item) => {
-                  const title = item.title || item.name || "Untitled";
-                  return (
-                    <div
-                      key={itemKey(item)}
-                      className={`${FEATURED_CARD_HEIGHT} overflow-hidden rounded-2xl`}
-                    >
-                      <LargeCard
-                        hero
-                        heroCompact
-                        id={item.id}
-                        title={title}
-                        year={itemYear(item)}
-                        releaseDate={featuredReleaseIso(item)}
-                        runtimeSeconds={item.runtimeSeconds ?? undefined}
-                        seasonAmount={item.season_amount ?? 0}
-                        numberOfEpisodes={item.number_of_episodes ?? undefined}
-                        type="tv"
-                        posterPath={item.poster_path ?? ""}
-                        backdropPath={item.backdrop_path ?? ""}
-                        genres={item.genres ?? item.imdb_genres ?? []}
-                        voteAverage={item.vote_average ?? null}
-                        certification={item.certification ?? null}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {data.featured.map((item) => {
+                const title = item.title || item.name || "Untitled";
+                return (
+                  <div
+                    key={itemKey(item)}
+                    className={`${FEATURED_CARD_HEIGHT} overflow-hidden rounded-2xl`}
+                  >
+                    <LargeCard
+                      hero
+                      heroCompact
+                      id={item.id}
+                      title={title}
+                      year={itemYear(item)}
+                      releaseDate={featuredReleaseIso(item)}
+                      runtimeSeconds={item.runtimeSeconds ?? undefined}
+                      seasonAmount={item.season_amount ?? 0}
+                      numberOfEpisodes={item.number_of_episodes ?? undefined}
+                      type="tv"
+                      posterPath={item.poster_path ?? ""}
+                      backdropPath={item.backdrop_path ?? ""}
+                      genres={item.genres ?? item.imdb_genres ?? []}
+                      voteAverage={item.vote_average ?? null}
+                      certification={item.certification ?? null}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </section>
         )}
 
-        {(loading || categoryGenres.length > 0) && (
+        {categoryGenres.length > 0 && (
           <section className="flex w-full flex-col gap-3" aria-label="Browse by genre">
             <Chip color="success" variant="flat" size="md" radius="sm">
               Browse by genre
             </Chip>
-            {loading ? (
-              <GenreTilesSkeleton />
-            ) : (
-              <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-                <CarouselContent className="-ml-3">
-                  {categoryGenres.map((genre, i) => (
-                    <CarouselItem
-                      key={genre.slug}
-                      className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
-                    >
-                      <GenreCatalogTile
-                        genre={genre}
-                        colorClass={genreTileColor(genre.name, i)}
-                        href={categoryGenreBrowseHref(category, genre.slug)}
-                      />
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
-            )}
+            <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+              <CarouselContent className="-ml-3">
+                {categoryGenres.map((genre, i) => (
+                  <CarouselItem
+                    key={genre.slug}
+                    className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
+                  >
+                    <GenreCatalogTile
+                      genre={genre}
+                      colorClass={genreTileColor(genre.name, i)}
+                      href={categoryGenreBrowseHref(category, genre.slug)}
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
           </section>
         )}
 
-        {loading ? (
-          <div className="flex flex-col gap-8">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-3">
-                <div className="h-7 w-36 animate-pulse rounded-lg bg-default-200" />
-                <CatalogRailSkeleton horizontal={horizontal} count={6} />
-              </div>
-            ))}
-          </div>
-        ) : hasContent ? (
+        {hasContent ? (
           <div className="flex flex-col gap-10">
-            <CatalogRail
-              title="Popular"
-              items={data?.popular ?? []}
-            />
-            <CatalogRail
-              title="Top rated"
-              items={data?.topRated ?? []}
-            />
-            <CatalogRail
-              title="New"
-              items={data?.new ?? []}
-            />
+            <CatalogRail title="Popular" items={data.popular} />
+            <CatalogRail title="Top rated" items={data.topRated} />
+            <CatalogRail title="New" items={data.new} />
           </div>
         ) : (
           <p className="py-12 text-center text-sm text-default-500">

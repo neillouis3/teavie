@@ -5,9 +5,14 @@ import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button, Chip } from '@heroui/react';
 import Header from '@/components/ui/header';
+import PageSplash from '@/components/ui/pageSplash';
 import LargeCard from '@/components/ui/largeCard';
 import CatalogRail from '@/components/explore/catalogRail';
 import type { ContentItem } from '@/types/content';
+import {
+  fetchGenrePagePayload,
+  type GenrePagePayload,
+} from '@/lib/pageDataCache';
 
 export type GenrePageType = 'all' | 'movie' | 'tv';
 export type GenrePageSort = 'popular' | 'top_rated' | 'new';
@@ -44,33 +49,6 @@ function itemKey(item: ContentItem) {
   return `${item.type ?? 'movie'}-${item.id}`;
 }
 
-function dedupeFeatured(rail: ContentItem[], featured: ContentItem[]) {
-  if (featured.length === 0) return rail;
-  const featuredKeys = new Set(featured.map(itemKey));
-  return rail.filter((item) => !featuredKeys.has(itemKey(item)));
-}
-
-function FeaturedSkeleton() {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div
-          key={i}
-          className={`${FEATURED_CARD_HEIGHT} animate-pulse rounded-2xl bg-default-200`}
-        />
-      ))}
-    </div>
-  );
-}
-
-type GenreRails = Record<GenrePageSort, ContentItem[]>;
-
-const EMPTY_RAILS: GenreRails = {
-  popular: [],
-  top_rated: [],
-  new: [],
-};
-
 type GenrePageTemplateProps = {
   slug: string;
   genreLabel: string;
@@ -85,61 +63,24 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const type: GenrePageType =
     rawType === 'movie' || rawType === 'tv' ? rawType : 'all';
 
-  const [rails, setRails] = useState<GenreRails>(EMPTY_RAILS);
-  const [featured, setFeatured] = useState<ContentItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [payload, setPayload] = useState<GenrePagePayload | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     document.title = `${genreLabel} - Teavie`;
   }, [genreLabel]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-
-    const buildQs = (sort: GenrePageSort) => {
-      const qs = new URLSearchParams();
-      qs.set('slug', slug);
-      qs.set('sort', sort);
-      qs.set('limit', String(RAIL_LIMIT));
-      qs.set('page', '1');
-      if (type !== 'all') qs.set('type', type);
-      return qs.toString();
+    let cancelled = false;
+    setReady(false);
+    void fetchGenrePagePayload(slug, type).then((data) => {
+      if (cancelled) return;
+      setPayload(data);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
     };
-
-    Promise.all(
-      RAIL_SECTIONS.map(({ sort }) =>
-        fetch(`/api/genre?${buildQs(sort)}`, { signal: controller.signal }).then(
-          (res) => res.json()
-        )
-      )
-    )
-      .then(([popularJson, topRatedJson, newJson]) => {
-        const featuredItems = Array.isArray(popularJson.featured)
-          ? popularJson.featured
-          : [];
-
-        setFeatured(featuredItems);
-        setTotal(typeof popularJson.total === 'number' ? popularJson.total : 0);
-        setRails({
-          popular: dedupeFeatured(popularJson.results ?? [], featuredItems),
-          top_rated: topRatedJson.results ?? [],
-          new: newJson.results ?? [],
-        });
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setRails(EMPTY_RAILS);
-          setFeatured([]);
-          setTotal(0);
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
   }, [slug, type]);
 
   const mergeParams = useCallback(
@@ -159,7 +100,12 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     [pathname, router, searchParams]
   );
 
-  const countLabel = loading ? '…' : `${total.toLocaleString()} titles`;
+  if (!ready || !payload) {
+    return <PageSplash ariaLabel={`Loading ${genreLabel}`} />;
+  }
+
+  const { featured, total, rails } = payload;
+  const countLabel = `${total.toLocaleString()} titles`;
   const hasAnyRail =
     rails.popular.length > 0 || rails.top_rated.length > 0 || rails.new.length > 0;
 
@@ -193,44 +139,40 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           })}
         </nav>
 
-        {(loading || featured.length > 0) && (
+        {featured.length > 0 && (
           <section className="mt-6 space-y-3" aria-label="Featured">
             <Chip color="success" variant="flat" size="md" radius="sm">
               Featured
             </Chip>
-            {loading ? (
-              <FeaturedSkeleton />
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {featured.map((item) => {
-                  const title = item.title || item.name || 'Untitled';
-                  const mediaType = item.type === 'tv' ? 'tv' : 'movie';
-                  return (
-                    <div
-                      key={itemKey(item)}
-                      className={`${FEATURED_CARD_HEIGHT} overflow-hidden rounded-2xl`}
-                    >
-                      <LargeCard
-                        hero
-                        id={item.id}
-                        title={title}
-                        year={itemYear(item)}
-                        releaseDate={featuredReleaseIso(item)}
-                        runtimeSeconds={item.runtimeSeconds ?? undefined}
-                        seasonAmount={item.season_amount ?? 0}
-                        numberOfEpisodes={item.number_of_episodes ?? undefined}
-                        type={mediaType}
-                        posterPath={item.poster_path ?? ''}
-                        backdropPath={item.backdrop_path ?? ''}
-                        genres={item.genres ?? item.imdb_genres ?? []}
-                        voteAverage={item.vote_average ?? null}
-                        certification={item.certification ?? null}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {featured.map((item) => {
+                const title = item.title || item.name || 'Untitled';
+                const mediaType = item.type === 'tv' ? 'tv' : 'movie';
+                return (
+                  <div
+                    key={itemKey(item)}
+                    className={`${FEATURED_CARD_HEIGHT} overflow-hidden rounded-2xl`}
+                  >
+                    <LargeCard
+                      hero
+                      id={item.id}
+                      title={title}
+                      year={itemYear(item)}
+                      releaseDate={featuredReleaseIso(item)}
+                      runtimeSeconds={item.runtimeSeconds ?? undefined}
+                      seasonAmount={item.season_amount ?? 0}
+                      numberOfEpisodes={item.number_of_episodes ?? undefined}
+                      type={mediaType}
+                      posterPath={item.poster_path ?? ''}
+                      backdropPath={item.backdrop_path ?? ''}
+                      genres={item.genres ?? item.imdb_genres ?? []}
+                      voteAverage={item.vote_average ?? null}
+                      certification={item.certification ?? null}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </section>
         )}
 
@@ -241,11 +183,10 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
               title={title}
               items={rails[sort]}
               maxItems={RAIL_LIMIT}
-              loading={loading}
             />
           ))}
 
-          {!loading && !hasAnyRail && featured.length === 0 ? (
+          {!hasAnyRail && featured.length === 0 ? (
             <p className="py-16 text-left text-sm text-default-500">
               No titles found for {genreLabel}. Try another filter.
             </p>

@@ -33,9 +33,9 @@ import {
   type CatalogDetailLink,
 } from "@/components/ui/catalogDetailColumns";
 import CatalogMediaPanel, {
-  CatalogMediaPanelSkeleton,
   showSubtitleLine,
 } from "@/components/ui/catalogMediaPanel";
+import PageSplash from "@/components/ui/pageSplash";
 import CatalogComingSoon from "@/components/ui/catalogComingSoon";
 import CatalogUnavailable from "@/components/ui/catalogUnavailable";
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
@@ -868,11 +868,8 @@ export default function ShowTemplate({
 
   const showDetailsPanel = (
     <div className="w-full">
-      {loading ? (
-        <CatalogMediaPanelSkeleton />
-      ) : (
-        show && (
-          <CatalogMediaPanel
+      {show && (
+        <CatalogMediaPanel
             posterUrl={imageUrl}
             posterAlt={title}
             title={title}
@@ -891,19 +888,17 @@ export default function ShowTemplate({
             links={showDetailLinks(show)}
             genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
           />
-        )
       )}
     </div>
   );
 
   const showRelatedSections = (
     <>
-      {!loading && showAnimeRelated ? (
+      {showAnimeRelated ? (
         <AnimeRelatedSection key={`related-${idMalForAnilistRails ?? "na"}`} idMal={idMalForAnilistRails ?? undefined} />
       ) : null}
 
-      {!loading &&
-      ((Boolean(show?.is_anime) && idMalForAnilistRails != null) ||
+      {((Boolean(show?.is_anime) && idMalForAnilistRails != null) ||
         (!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)))) ? (
         <YouMightLike
           key={`yml-${resolvedPlayerId}-${idMalForAnilistRails ?? "na"}`}
@@ -948,7 +943,11 @@ export default function ShowTemplate({
     showAnimeAudio: Boolean(show?.is_anime) && canPlayAnime,
   };
 
-  if (!loading && !show) {
+  if (loading) {
+    return <PageSplash ariaLabel="Loading show" />;
+  }
+
+  if (!show) {
     return (
       <CatalogUnavailable
         reason={
@@ -976,9 +975,7 @@ export default function ShowTemplate({
           id={SHOW_VIDEO_PLAYER_ID}
           className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]"
         >
-          {loading ? (
-            <div className="h-full w-full animate-pulse bg-default-200" />
-          ) : isAnimeMovie ? (
+          {isAnimeMovie ? (
             animeMovieResolving ? (
               <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
                 Loading player…
@@ -1029,7 +1026,7 @@ export default function ShowTemplate({
           )}
         </div>
 
-        {!loading && show && !isAnimeMovie ? (
+        {!isAnimeMovie ? (
           <ShowEpisodePickerProvider {...episodePickerProps}>
             <div className="flex w-full flex-col gap-6">
               <div className="order-1 lg:order-2">{showDetailsPanel}</div>

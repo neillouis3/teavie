@@ -4,7 +4,7 @@ import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import GenrePageTemplate from '@/components/genre/GenrePageTemplate';
-import { GridSkeleton } from '@/components/genre/GenrePageSkeleton';
+import PageSplash from '@/components/ui/pageSplash';
 import {
   imdbGenreLabelFromSlug,
   isValidImdbGenreSlug,
@@ -31,20 +31,7 @@ function GenrePageInner() {
 
 export default function GenreSlugPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="bg-main min-h-screen w-full">
-          <div className="px-3 pb-2 pt-5 sm:px-4 sm:pt-6.5">
-            <div className="h-7 w-40 animate-pulse rounded-lg bg-default-200" />
-          </div>
-          <div className="w-full space-y-4 px-3 pb-12 pt-2 sm:px-4">
-            <div className="h-7 w-28 animate-pulse rounded-lg bg-default-200" />
-            <div className="h-16 max-w-2xl animate-pulse rounded-lg bg-default-200" />
-            <GridSkeleton />
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<PageSplash ariaLabel="Loading genre" />}>
       <GenrePageInner />
     </Suspense>
   );

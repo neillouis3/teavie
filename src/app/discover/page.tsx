@@ -1,53 +1,38 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Explore from "@/components/explore";
-import { ContentItem } from "@/types/content";
+import PageSplash from "@/components/ui/pageSplash";
+import { fetchDiscoverFeed } from "@/lib/pageDataCache";
+import type { ContentItem } from "@/types/content";
 
 export default function DiscoverPage() {
   const [newContent, setNewContent] = useState<ContentItem[]>([]);
   const [updatedContent, setUpdatedContent] = useState<ContentItem[]>([]);
   const [upcomingContent, setUpcomingContent] = useState<ContentItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     document.title = "Discover - Teavie";
   }, []);
 
   useEffect(() => {
-    const fetchDiscoverData = async () => {
-      try {
-        const [newRes, updatedRes, upcomingRes] = await Promise.all([
-          fetch("/api/new"),
-          fetch("/api/updated"),
-          fetch("/api/upcoming?type=movie"),
-        ]);
-
-        if (!newRes.ok || !updatedRes.ok || !upcomingRes.ok) {
-          throw new Error("Error fetching discover data");
-        }
-
-        const [newData, updatedData, upcomingData] = await Promise.all([
-          newRes.json(),
-          updatedRes.json(),
-          upcomingRes.json(),
-        ]);
-
-        setNewContent(newData.results ?? []);
-        setUpdatedContent(updatedData.results ?? []);
-        setUpcomingContent(upcomingData.results ?? []);
-      } catch (error) {
-        console.error("Error fetching discover data:", error);
-        setNewContent([]);
-        setUpdatedContent([]);
-        setUpcomingContent([]);
-      } finally {
-        setLoading(false);
-      }
+    let cancelled = false;
+    void fetchDiscoverFeed().then((data) => {
+      if (cancelled) return;
+      setNewContent(data.newContent);
+      setUpdatedContent(data.updatedContent);
+      setUpcomingContent(data.upcomingContent);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
     };
-
-    fetchDiscoverData();
   }, []);
+
+  if (!ready) {
+    return <PageSplash ariaLabel="Loading Discover" />;
+  }
 
   return (
     <div className="h-fit w-full">
@@ -55,7 +40,7 @@ export default function DiscoverPage() {
         newContentData={newContent}
         updatedContentData={updatedContent}
         upcomingContentData={upcomingContent}
-        loading={loading}
+        loading={false}
       />
     </div>
   );

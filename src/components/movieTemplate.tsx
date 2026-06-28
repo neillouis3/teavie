@@ -9,9 +9,9 @@ import {
   type CatalogDetailLink,
 } from './ui/catalogDetailColumns';
 import CatalogMediaPanel, {
-  CatalogMediaPanelSkeleton,
   movieSubtitleLine,
 } from './ui/catalogMediaPanel';
+import PageSplash from '@/components/ui/pageSplash';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { recordMovieInWatchHistory } from '@/lib/watchHistory';
@@ -140,13 +140,15 @@ export default function MovieTemplate({ id }: { id: string }) {
 
   const imageUrl = tmdbImageUrl(movie?.poster_path);
 
+  if (loading) {
+    return <PageSplash ariaLabel="Loading movie" />;
+  }
+
   return (
     <div className="flex h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
       <div className="w-full  flex flex-col gap-6">
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
-          {loading ? (
-            <div className="h-full w-full animate-pulse rounded-lg bg-default-200" />
-          ) : movie && !movieReleased ? (
+          {movie && !movieReleased ? (
             <CatalogComingSoon
               title={movie.title}
               posterUrl={imageUrl}
@@ -159,11 +161,8 @@ export default function MovieTemplate({ id }: { id: string }) {
         </div>
 
         <div className="w-full">
-          {loading ? (
-            <CatalogMediaPanelSkeleton />
-          ) : (
-            movie && (
-              <CatalogMediaPanel
+          {movie && (
+            <CatalogMediaPanel
                 posterUrl={imageUrl}
                 posterAlt={movie.title}
                 title={movie.title}
@@ -181,13 +180,10 @@ export default function MovieTemplate({ id }: { id: string }) {
                 infoLines={buildMovieInfoLines(movie)}
                 links={movieDetailLinks(movie)}
               />
-            )
           )}
         </div>
 
-        {!loading && (
-          <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} />
-        )}
+        <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} />
       </div>
     </div>
   );
