@@ -20,6 +20,7 @@ import {
   fetchSearchPopular,
   fetchSearchResults,
 } from '@/lib/pageDataCache';
+import { clearLegacySearchResultCache } from '@/lib/clientDayCache';
 import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
@@ -63,6 +64,10 @@ function SearchContent() {
   }, [qParam]);
 
   const hasQuery = qParam.trim().length > 0;
+
+  useEffect(() => {
+    clearLegacySearchResultCache();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
