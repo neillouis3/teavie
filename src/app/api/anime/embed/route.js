@@ -1,8 +1,10 @@
 import {
+  buildAnimePlayAniListUrl,
   buildAnimePlayMalUrl,
   sanitizeAnimeEmbedUrl,
 } from "@/lib/animePlayEmbed";
 import { resolveAnikotoFallbackEmbedUrl } from "@/lib/anikotoApi";
+import { lookupKometaByMalId } from "@/lib/kometaAnimeIds";
 import { anilistIdFromMalId } from "@/lib/malToAnilistId";
 
 export async function GET(req) {
@@ -17,28 +19,41 @@ export async function GET(req) {
     }
 
     const ep = Math.max(1, Number.isFinite(episode) ? episode : 1);
-    const primaryUrl = buildAnimePlayMalUrl(malId, ep, audio);
 
-    let fallbackUrl = null;
-    try {
-      const anilistId = await anilistIdFromMalId(malId);
-      if (anilistId) {
+    const kometa = await lookupKometaByMalId(malId);
+    const anilistId =
+      kometa?.anilistId ??
+      (await anilistIdFromMalId(malId).catch(() => null));
+
+    const malUrl = buildAnimePlayMalUrl(malId, ep, audio);
+    const aniUrl =
+      anilistId != null && anilistId > 0
+        ? buildAnimePlayAniListUrl(anilistId, ep, audio)
+        : "";
+
+    const primaryUrl = sanitizeAnimeEmbedUrl(aniUrl) || malUrl;
+    const fallbackUrl = sanitizeAnimeEmbedUrl(malUrl);
+
+    let anikotoUrl = null;
+    if (anilistId) {
+      try {
         const raw = await resolveAnikotoFallbackEmbedUrl({
           anilistId,
           episode: ep,
           audio,
         });
-        fallbackUrl = sanitizeAnimeEmbedUrl(raw);
+        anikotoUrl = sanitizeAnimeEmbedUrl(raw);
+      } catch (e) {
+        console.error("Anikoto fallback lookup failed:", e);
       }
-    } catch (e) {
-      console.error("Anikoto fallback lookup failed:", e);
     }
 
     return Response.json({
       primaryUrl,
-      fallbackUrl,
-      fallbackAvailable: Boolean(fallbackUrl),
+      fallbackUrl: anikotoUrl || fallbackUrl,
+      fallbackAvailable: Boolean(anikotoUrl || fallbackUrl),
       malId,
+      anilistId: anilistId ?? null,
     });
   } catch (err) {
     console.error(err);

@@ -321,8 +321,18 @@ export async function GET(req) {
 
     const { _id, ...docForFallback } = merged;
 
+    const isAnimeCatalogId = /^anime_/i.test(String(id).trim());
+    const isAnimeDoc = Boolean(
+      merged.is_anime || (Array.isArray(merged.tags) && merged.tags.includes("anime"))
+    );
+
     return Response.json({
-      playerId: Number.isFinite(tmdbIdNum) && tmdbIdNum > 0 ? tmdbIdNum : null,
+      playerId:
+        isAnimeCatalogId || isAnimeDoc
+          ? null
+          : Number.isFinite(tmdbIdNum) && tmdbIdNum > 0
+            ? tmdbIdNum
+            : null,
       imdbId: typeof merged.imdb_id === "string" ? merged.imdb_id : null,
       fallback: normalizeTvFallback(docForFallback),
     });

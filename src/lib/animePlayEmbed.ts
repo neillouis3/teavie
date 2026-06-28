@@ -39,9 +39,9 @@ export function buildAnimePlayMalUrl(
   return `${ANIMEPLAY_BASE}/stream/mal/${id}/${ep}/${lang}`;
 }
 
-/** MegaPlay AniList routes 410 on megaplay.buzz — never use for playback. */
+/** Legacy megaplay.buzz AniList routes 410 — animeplay.cfd ani routes are OK. */
 export function isMegaPlayAnilistEmbedUrl(url: string): boolean {
-  return /\/stream\/ani\/\d+/i.test(String(url ?? ""));
+  return /megaplay\.buzz\/stream\/ani\/\d+/i.test(String(url ?? ""));
 }
 
 /**
