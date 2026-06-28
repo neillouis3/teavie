@@ -12,13 +12,23 @@ import {
   mongoAnimeCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
 import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
+import {
+  mergedSplitCourEpisodeCount,
+  splitCourGroupForMal,
+  catalogAnimeSplitCourHiddenClause,
+} from "@/lib/animeSplitCour";
 
 function mapAnimeRow(doc) {
-  return mapCatalogListDoc({
+  const mapped = mapCatalogListDoc({
     ...doc,
     vote_average: catalogDisplayVoteAverage(doc),
     popularity: catalogPopularityScore(doc, { anime: true }),
   });
+  const group = splitCourGroupForMal(doc.mal_id);
+  if (group && group.primaryMalId === Number(doc.mal_id)) {
+    mapped.number_of_episodes = mergedSplitCourEpisodeCount(group);
+  }
+  return mapped;
 }
 
 export async function GET(req) {
@@ -52,7 +62,9 @@ export async function GET(req) {
     const includeUnreleased = searchParams.get("include_unreleased") === "1";
     const todayIso = catalogTodayIsoUtc();
     const released = includeUnreleased ? [] : [releasedAnimeFirstAirClause(todayIso)];
-    const filter = { $and: [base, catalogAnimeIdMongoExpr(), ...released] };
+    const filter = {
+      $and: [base, catalogAnimeIdMongoExpr(), catalogAnimeSplitCourHiddenClause(), ...released],
+    };
 
     const popPipeline = [
       { $match: filter },

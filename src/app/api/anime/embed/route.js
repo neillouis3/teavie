@@ -3,6 +3,7 @@ import {
   buildAnimePlayMalUrl,
   sanitizeAnimeEmbedUrl,
 } from "@/lib/animePlayEmbed";
+import { normalizeSplitCourMalEpisode, resolveSplitCourPlayback, splitCourGroupForMal } from "@/lib/animeSplitCour";
 import { resolveAnikotoFallbackEmbedUrl } from "@/lib/anikotoApi";
 import { lookupKometaByMalId } from "@/lib/kometaAnimeIds";
 import { anilistIdFromMalId } from "@/lib/malToAnilistId";
@@ -19,16 +20,28 @@ export async function GET(req) {
     }
 
     const ep = Math.max(1, Number.isFinite(episode) ? episode : 1);
+    const normalized = normalizeSplitCourMalEpisode(malId, ep);
+    const playbackMal = normalized.malId ?? malId;
+    const playbackEp = normalized.episode;
+    const group = splitCourGroupForMal(playbackMal);
+    const playback = group
+      ? resolveSplitCourPlayback(group, playbackEp)
+      : {
+          malId,
+          malEpisode: ep,
+          anilistId: null,
+        };
 
-    const kometa = await lookupKometaByMalId(malId);
+    const kometa = await lookupKometaByMalId(playback.malId);
     const anilistId =
+      playback.anilistId ??
       kometa?.anilistId ??
-      (await anilistIdFromMalId(malId).catch(() => null));
+      (await anilistIdFromMalId(playback.malId).catch(() => null));
 
-    const malUrl = buildAnimePlayMalUrl(malId, ep, audio);
+    const malUrl = buildAnimePlayMalUrl(playback.malId, playback.malEpisode, audio);
     const aniUrl =
       anilistId != null && anilistId > 0
-        ? buildAnimePlayAniListUrl(anilistId, ep, audio)
+        ? buildAnimePlayAniListUrl(anilistId, playback.malEpisode, audio)
         : "";
 
     const primaryUrl = sanitizeAnimeEmbedUrl(aniUrl) || malUrl;
@@ -39,7 +52,7 @@ export async function GET(req) {
       try {
         const raw = await resolveAnikotoFallbackEmbedUrl({
           anilistId,
-          episode: ep,
+          episode: playback.malEpisode,
           audio,
         });
         anikotoUrl = sanitizeAnimeEmbedUrl(raw);
@@ -52,7 +65,8 @@ export async function GET(req) {
       primaryUrl,
       fallbackUrl: anikotoUrl || fallbackUrl,
       fallbackAvailable: Boolean(anikotoUrl || fallbackUrl),
-      malId,
+      malId: playback.malId,
+      malEpisode: playback.malEpisode,
       anilistId: anilistId ?? null,
     });
   } catch (err) {

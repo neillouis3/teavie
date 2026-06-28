@@ -1,8 +1,8 @@
 import { resolveAnimeTmdbEpisodeTarget } from "@/lib/animeTmdbEpisodes";
 
 /**
- * GET /api/anime/player-target?malId=40028&episode=1
- * TMDB Videasy/VidCore coords for an anime catalog row (Kometa season mapping).
+ * GET /api/anime/player-target?malId=40028&episode=17
+ * TMDB Videasy/VidCore coords for an anime catalog row (Kometa + split-cour mapping).
  */
 export async function GET(req) {
   try {
@@ -17,7 +17,7 @@ export async function GET(req) {
       return Response.json({ error: "Invalid malId" }, { status: 400 });
     }
 
-    const target = await resolveAnimeTmdbEpisodeTarget(null, malId);
+    const target = await resolveAnimeTmdbEpisodeTarget(null, malId, episode);
     if (!target) {
       return Response.json({ error: "TMDB target not resolved" }, { status: 404 });
     }
@@ -25,8 +25,9 @@ export async function GET(req) {
     return Response.json({
       videoId: target.tvId,
       season: target.season,
-      episode,
-      malId,
+      episode: target.episode ?? episode,
+      malId: target.malId ?? malId,
+      malEpisode: target.malEpisode ?? episode,
     });
   } catch (err) {
     console.error("[anime/player-target]", err);

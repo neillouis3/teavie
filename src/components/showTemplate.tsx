@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ShowPlayer from "./showPlayer";
 import AnimePlayer from "./animePlayer";
 import MoviePlayer from "./moviePlayer";
@@ -47,6 +48,12 @@ import {
   showUnavailableReasonForDoc,
 } from "@/lib/tvJpAnimePrune";
 import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster.js";
+import {
+  mergedSplitCourEpisodeCount,
+  primaryMalForSplitCourMal,
+  splitCourGroupForMal,
+  normalizeSplitCourMalEpisode,
+} from "@/lib/animeSplitCour.js";
 
 interface Season {
   season_number: number;
@@ -174,7 +181,18 @@ function anilistEpisodeCap(show: Show | null | undefined): number | null {
 }
 
 /** Catalog / AniList / IMDb-adjacent episode total for anime UI + picker. */
-function catalogAnimeEpisodeCount(show: Show | null | undefined): number | null {
+function catalogAnimeEpisodeCount(
+  show: Show | null | undefined,
+  routeId?: string
+): number | null {
+  const routeMal = routeId ? malIdFromAnimeCatalogRouteId(routeId) : null;
+  const group = splitCourGroupForMal(routeMal ?? show?.mal_id);
+  if (
+    group &&
+    primaryMalForSplitCourMal(routeMal ?? show?.mal_id) === group.primaryMalId
+  ) {
+    return mergedSplitCourEpisodeCount(group);
+  }
   const fromAni = anilistEpisodeCap(show);
   if (fromAni != null) return fromAni;
   const fromDoc = show?.number_of_episodes;
@@ -184,9 +202,9 @@ function catalogAnimeEpisodeCount(show: Show | null | undefined): number | null 
   return null;
 }
 
-function applyAnimeCatalogEpisodeLayout(show: Show): Show {
+function applyAnimeCatalogEpisodeLayout(show: Show, routeId?: string): Show {
   if (!show.is_anime) return show;
-  const eps = catalogAnimeEpisodeCount(show);
+  const eps = catalogAnimeEpisodeCount(show, routeId);
   if (eps == null || eps <= 0) return show;
   return {
     ...show,
@@ -197,10 +215,10 @@ function applyAnimeCatalogEpisodeLayout(show: Show): Show {
 }
 
 /** Prefer AniList/catalog episodes for anime UI; fall back to flattened TMDB totals. */
-function finalizeAnimeShowForUi(show: Show): Show {
+function finalizeAnimeShowForUi(show: Show, routeId?: string): Show {
   if (!show.is_anime) return show;
-  const withCatalog = applyAnimeCatalogEpisodeLayout(show);
-  if (catalogAnimeEpisodeCount(show) != null) return withCatalog;
+  const withCatalog = applyAnimeCatalogEpisodeLayout(show, routeId);
+  if (catalogAnimeEpisodeCount(show, routeId) != null) return withCatalog;
   return withAnimeFlatEpisodeLayout(withCatalog);
 }
 
@@ -453,22 +471,22 @@ async function fetchAnilistAndMerge(
   let url: string | null = null;
   if (aid != null) url = `/api/anilist/media?anilistId=${aid}`;
   else if (malRaw != null) url = `/api/anilist/media?idMal=${malRaw}`;
-  else return base.is_anime ? finalizeAnimeShowForUi(base) : base;
+  else return base.is_anime ? finalizeAnimeShowForUi(base, routeId) : base;
 
   try {
     const res = await fetch(url);
-    if (!res.ok) return base.is_anime ? finalizeAnimeShowForUi(base) : base;
+    if (!res.ok) return base.is_anime ? finalizeAnimeShowForUi(base, routeId) : base;
     const ani = (await res.json()) as AnilistMediaPayload & { error?: string };
     if (!ani || typeof ani !== "object" || "error" in ani) {
-      return base.is_anime ? finalizeAnimeShowForUi(base) : base;
+      return base.is_anime ? finalizeAnimeShowForUi(base, routeId) : base;
     }
     if (typeof ani.id !== "number") {
-      return base.is_anime ? finalizeAnimeShowForUi(base) : base;
+      return base.is_anime ? finalizeAnimeShowForUi(base, routeId) : base;
     }
     const merged = mergeAnilistIntoShow(base, ani, fallback);
-    return base.is_anime || merged.is_anime ? finalizeAnimeShowForUi(merged) : merged;
+    return base.is_anime || merged.is_anime ? finalizeAnimeShowForUi(merged, routeId) : merged;
   } catch {
-    return base.is_anime ? finalizeAnimeShowForUi(base) : base;
+    return base.is_anime ? finalizeAnimeShowForUi(base, routeId) : base;
   }
 }
 
@@ -485,6 +503,8 @@ export default function ShowTemplate({
 }) {
   const { server } = useStreamingSource();
   const { audio: animeAudio } = useAnimeAudio();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [show, setShow] = useState<Show | null>(null);
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
   const [loading, setLoading] = useState(true);
@@ -519,6 +539,19 @@ export default function ShowTemplate({
   }, [id, adminKey]);
 
   useEffect(() => {
+    const routeMal = malIdFromAnimeCatalogRouteId(id);
+    if (routeMal == null) return;
+    const primary = primaryMalForSplitCourMal(routeMal);
+    if (primary === routeMal) return;
+    const partEp = parseInt(searchParams.get("episode") ?? "1", 10);
+    const { episode: mergedEp } = normalizeSplitCourMalEpisode(
+      routeMal,
+      Number.isFinite(partEp) && partEp >= 1 ? partEp : 1
+    );
+    router.replace(`/shows/anime_${primary}?episode=${mergedEp}`);
+  }, [id, router, searchParams]);
+
+  useEffect(() => {
     if (!show) return;
     const animeFilm =
       Boolean(show.is_anime) &&
@@ -532,7 +565,15 @@ export default function ShowTemplate({
     if (progressAppliedForIdRef.current === id) return;
 
     const saved = loadWatchProgress(String(id));
-    if (saved) {
+    const urlEpRaw = searchParams.get("episode");
+    const urlEp = urlEpRaw != null ? parseInt(urlEpRaw, 10) : NaN;
+    const cap = catalogAnimeEpisodeCount(show, id);
+
+    if (Number.isFinite(urlEp) && urlEp >= 1) {
+      const ep = cap != null ? Math.min(urlEp, cap) : urlEp;
+      setSelectedSeason(1);
+      setSelectedEpisode(ep);
+    } else if (saved) {
       const list = tmdbSeasonsWithEpisodes(show.seasons);
       const seasonObj = list.find((s) => s.season_number === saved.lastSeason);
       const max = seasonObj?.episode_count ?? 0;
@@ -551,7 +592,7 @@ export default function ShowTemplate({
     }
     progressAppliedForIdRef.current = id;
     setProgressHydrated(true);
-  }, [id, show, loading]);
+  }, [id, show, loading, searchParams]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -842,8 +883,9 @@ export default function ShowTemplate({
    * in `tmdb_playback_seasons` for embed mapping inside the player.
    */
   const useFlatAllEpisodesPicker = false;
-  const animeEpisodeCap =
-    Boolean(show?.is_anime) && aniListEpCap != null ? aniListEpCap : null;
+  const animeEpisodeCap = Boolean(show?.is_anime)
+    ? (catalogAnimeEpisodeCount(show, id) ?? aniListEpCap ?? null)
+    : null;
   const useTmdbSeasonAiringCapForPlayer =
     Boolean(show && playerUsesTmdb) && !Boolean(show?.is_anime);
 
@@ -852,7 +894,11 @@ export default function ShowTemplate({
     !show.first_air_date ||
     String(show.first_air_date).trim().length < 10 ||
     String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
-  const malIdForPlayer = catalogMalIdForAnilistApi(show, id);
+  const malIdForPlayer = (() => {
+    const raw = catalogMalIdForAnilistApi(show, id);
+    if (raw == null) return null;
+    return primaryMalForSplitCourMal(raw);
+  })();
   const isAnimeCatalogRoute = /^anime_/i.test(String(id).trim());
   const animeAbsoluteEpisode = (() => {
     if (!show?.is_anime) return Math.max(1, selectedEpisode);
@@ -925,7 +971,7 @@ export default function ShowTemplate({
 
   useEffect(() => {
     if (!show?.is_anime || !show.seasons?.length) return;
-    const cap = catalogAnimeEpisodeCount(show);
+    const cap = catalogAnimeEpisodeCount(show, id);
     if (cap == null || cap <= 0) return;
     if (selectedSeason === 1 && selectedEpisode <= cap) return;
     if (selectedSeason !== 1) setSelectedSeason(1);
@@ -978,7 +1024,7 @@ export default function ShowTemplate({
 
   const animePickerEpisodeCap =
     Boolean(show?.is_anime)
-      ? (animeEpisodeCap ?? catalogAnimeEpisodeCount(show))
+      ? (animeEpisodeCap ?? catalogAnimeEpisodeCount(show, id))
       : null;
 
   const episodePickerProps = {

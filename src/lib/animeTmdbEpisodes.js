@@ -3,6 +3,13 @@ import { lookupKometaByMalId } from "./kometaAnimeIds.js";
 import { resolveTmdbTvFromDoc } from "./tmdbResolveFromTitle.js";
 import { tmdbAuth, tmdbFetchJson } from "./tmdbAuth.js";
 import { fetchTmdbSeasonEpisodes } from "./tmdbSeasonEpisodes.js";
+import {
+  mergedSplitCourEpisodeCount,
+  normalizeSplitCourMalEpisode,
+  primaryMalForSplitCourMal,
+  resolveSplitCourPlayback,
+  splitCourGroupForMal,
+} from "./animeSplitCour.js";
 
 function pickNumeric(raw) {
   if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) return raw;
@@ -53,12 +60,26 @@ async function tmdbTvIdFromTvdb(tvdbId, auth) {
  * @param {number} [malId]
  * @returns {Promise<{ tvId: string, season: number } | null>}
  */
-export async function resolveAnimeTmdbEpisodeTarget(doc, malId) {
-  const mal =
+export async function resolveAnimeTmdbEpisodeTarget(doc, malId, absoluteEpisode = 1) {
+  const normalized = normalizeSplitCourMalEpisode(malId, absoluteEpisode);
+  const mal = normalized.malId ??
     pickNumeric(malId) ??
     pickNumeric(doc?.mal_id) ??
     pickNumeric(String(doc?.id ?? "").replace(/^anime_/i, ""));
+  const absEpisode = normalized.episode;
   if (mal == null) return null;
+
+  const group = splitCourGroupForMal(mal);
+  if (group) {
+    const playback = resolveSplitCourPlayback(group, absEpisode);
+    return {
+      tvId: playback.tmdbTvId,
+      season: playback.tmdbSeason,
+      episode: playback.tmdbEpisode,
+      malId: playback.malId,
+      malEpisode: playback.malEpisode,
+    };
+  }
 
   const kometa = await lookupKometaByMalId(mal);
   const auth = tmdbAuth();
@@ -105,7 +126,7 @@ export async function resolveAnimeTmdbEpisodeTarget(doc, malId) {
     kometa?.tvdbSeason != null && kometa.tvdbSeason >= 1 ? kometa.tvdbSeason : 1;
 
   if (!tmdbTvId) return null;
-  return { tvId: String(tmdbTvId), season };
+  return { tvId: String(tmdbTvId), season, episode: Math.max(1, Math.floor(Number(absoluteEpisode)) || 1) };
 }
 
 /**
@@ -115,9 +136,33 @@ export async function resolveAnimeTmdbEpisodeTarget(doc, malId) {
  */
 export async function fetchAnimeTmdbEpisodes(malId, limit = 200) {
   const mal = Math.floor(Number(malId));
+  const effectiveMal = primaryMalForSplitCourMal(mal) ?? mal;
   const cap = Math.min(500, Math.max(1, Math.floor(Number(limit)) || 200));
-  const doc = await findAnimeCatalogDocByMal(mal);
-  const target = await resolveAnimeTmdbEpisodeTarget(doc, mal);
+  const group = splitCourGroupForMal(effectiveMal);
+
+  if (group && group.primaryMalId === effectiveMal) {
+    const mergedCap = Math.min(cap, mergedSplitCourEpisodeCount(group));
+    const rows = await fetchTmdbSeasonEpisodes(group.tmdbTvId, group.tmdbSeason);
+    const episodes = rows.slice(0, mergedCap).map((row) => ({
+      episode_number: row.episode_number,
+      name: row.name,
+      overview: row.overview,
+      runtime: row.runtime,
+      still_path: row.still_path,
+      air_date: row.air_date,
+    }));
+    return {
+      episodes,
+      target: {
+        tvId: String(group.tmdbTvId),
+        season: group.tmdbSeason,
+        merged: true,
+      },
+    };
+  }
+
+  const doc = await findAnimeCatalogDocByMal(effectiveMal);
+  const target = await resolveAnimeTmdbEpisodeTarget(doc, effectiveMal);
   if (!target) {
     return { episodes: [], target: null };
   }

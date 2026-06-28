@@ -15,6 +15,7 @@ import clientPromise from "@/lib/mongo";
 import {
   animeTitleSearchConditions,
   catalogAnimeIdMongoExpr,
+  catalogAnimeSplitCourHiddenClause,
   catalogExcludeJpAnimationNumericTvMongoClause,
   catalogImdbGenreMatchClause,
   catalogKdramaClause,
@@ -233,6 +234,7 @@ export async function GET(req) {
         ],
       },
       catalogAnimeIdMongoExpr(),
+      catalogAnimeSplitCourHiddenClause(),
       ...(includeUnreleased ? [] : [releasedAnimeFirstAirClause(todayIso)]),
       tvYearClause,
     ].filter(Boolean));
