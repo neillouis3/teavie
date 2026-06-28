@@ -177,7 +177,7 @@ function fallbackEpisodes(
 }
 
 const TV_SEASON_CACHE_PREFIX = "teavie.cache.tv-season.v1:";
-const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v4:";
+const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v5:";
 
 async function fetchAnimeEpisodes(
   malId: number,

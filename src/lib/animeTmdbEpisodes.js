@@ -61,18 +61,16 @@ export async function resolveAnimeTmdbEpisodeTarget(doc, malId) {
   if (mal == null) return null;
 
   const kometa = await lookupKometaByMalId(mal);
-
-  let tmdbTvId =
-    pickNumeric(doc?.tmdb_id) ??
-    pickNumeric(
-      doc?.external_ids &&
-        typeof doc.external_ids === "object" &&
-        /** @type {{ tmdb_id?: unknown }} */ (doc.external_ids).tmdb_id
-    ) ??
-    kometa?.tmdbShowId ??
-    null;
-
   const auth = tmdbAuth();
+  const isAnimeRow =
+    String(doc?.id ?? "").startsWith("anime_") ||
+    doc?.is_anime === true ||
+    (Array.isArray(doc?.tags) && doc.tags.includes("anime"));
+
+  // Prefer Kometa/TVDB for split-cour anime — catalog `tmdb_id` is often a wrong
+  // one-off special from IMDb backfill (e.g. anime_40028 → 313028).
+  let tmdbTvId = kometa?.tmdbShowId ?? null;
+
   if (!tmdbTvId && kometa?.tvdbId && auth) {
     tmdbTvId = await tmdbTvIdFromTvdb(kometa.tvdbId, auth);
   }
@@ -90,6 +88,17 @@ export async function resolveAnimeTmdbEpisodeTarget(doc, malId) {
 
     const hit = await resolveTmdbTvFromDoc(doc, auth, { imdbId });
     if (hit?.tmdbId) tmdbTvId = hit.tmdbId;
+  }
+
+  if (!tmdbTvId && !isAnimeRow) {
+    tmdbTvId =
+      pickNumeric(doc?.tmdb_id) ??
+      pickNumeric(
+        doc?.external_ids &&
+          typeof doc.external_ids === "object" &&
+          /** @type {{ tmdb_id?: unknown }} */ (doc.external_ids).tmdb_id
+      ) ??
+      null;
   }
 
   const season =
