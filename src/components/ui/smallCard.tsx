@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { formatHeroRuntime } from '@/lib/formatRelease';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 
 interface SmallCardProps {
@@ -19,6 +20,45 @@ interface SmallCardProps {
   linkHref?: string | null;
 }
 
+function MetaChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex shrink-0 items-center rounded-md bg-default-200/90 px-2 py-0.5 text-[11px] font-medium leading-none text-foreground/75 dark:bg-white/10 dark:text-white/75">
+      {children}
+    </span>
+  );
+}
+
+function buildMetaChips(
+  typeLower: string,
+  year: string,
+  seasonAmount: number,
+  numberOfEpisodes: number | null | undefined,
+  runtimeSeconds?: number
+): string[] {
+  const chips: string[] = [];
+
+  if (typeLower === 'tv') {
+    if (seasonAmount > 0) chips.push(`${seasonAmount} SS`);
+    const eps =
+      typeof numberOfEpisodes === 'number' && numberOfEpisodes > 0
+        ? numberOfEpisodes
+        : null;
+    if (eps != null) chips.push(`${eps} EP`);
+    chips.push('TV');
+  } else if (typeLower === 'movie') {
+    const runtime = formatHeroRuntime(runtimeSeconds);
+    if (runtime) chips.push(runtime);
+    chips.push('MOVIE');
+  } else {
+    chips.push(typeLower.toUpperCase());
+  }
+
+  const when = String(year ?? '').trim();
+  if (when && when !== 'N/A') chips.push(when);
+
+  return chips;
+}
+
 export default function SmallCard({
   id,
   title,
@@ -32,13 +72,18 @@ export default function SmallCard({
   linkHref,
 }: SmallCardProps) {
   const typeLower = (type ?? '').toLowerCase();
-  const runtimeMin =
-    runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const hasPoster = Boolean(posterPath?.trim());
   const imageUrl = tmdbImageUrl(posterPath);
   const defaultHref = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
   const resolvedHref = String(linkHref ?? '').trim() || defaultHref;
   const external = /^https?:\/\//i.test(resolvedHref);
+  const metaChips = buildMetaChips(
+    typeLower,
+    year,
+    seasonAmount,
+    numberOfEpisodes,
+    runtimeSeconds
+  );
 
   const poster = (
     <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden rounded-xl bg-default-200">
@@ -49,7 +94,7 @@ export default function SmallCard({
           fill
           unoptimized
           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 20vw, 140px"
-          className="object-cover transition-opacity duration-300 group-hover:opacity-50"
+          className="object-cover transition-opacity duration-300 group-hover:opacity-90"
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-default-500">
@@ -60,50 +105,29 @@ export default function SmallCard({
   );
 
   const meta = (
-    <div className="mt-2 flex shrink-0 flex-col gap-1 rounded-b-xl text-gray-500">
-        <div className="flex w-full flex-row items-center justify-between gap-1">
-          <p className="flex-1 truncate text-start text-xs">{year}</p>
-          <div className="flex-shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs transition-colors duration-300 group-hover:border-success group-hover:text-success">
-            {typeLower === 'tv'
-              ? 'TV'
-              : typeLower === 'movie'
-                ? 'Movie'
-                : type}
-          </div>
-          <p className="flex-1 truncate text-end text-xs">
-            {typeLower === 'tv'
-              ? (() => {
-                  const eps =
-                    typeof numberOfEpisodes === "number" && numberOfEpisodes > 0
-                      ? numberOfEpisodes
-                      : null;
-                  if (eps != null) return `${eps} ep${eps === 1 ? "" : "s"}`;
-                  if (seasonAmount != null && seasonAmount > 0)
-                    return `${seasonAmount} season${seasonAmount === 1 ? "" : "s"}`;
-                  return "—";
-                })()
-              : typeLower === 'movie'
-                ? runtimeMin != null
-                  ? `${runtimeMin} min`
-                  : '—'
-                : ''}
-          </p>
+    <div className="mt-2.5 flex min-w-0 flex-col gap-2">
+      {metaChips.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {metaChips.map((chip, i) => (
+            <MetaChip key={`${chip}-${i}`}>{chip}</MetaChip>
+          ))}
         </div>
-        <h1
-          className="min-h-[2.5rem] text-sm font-medium leading-snug text-foreground line-clamp-2 transition-colors duration-300 group-hover:text-success sm:text-[15px]"
-          title={title}
+      ) : null}
+      <h2
+        className="text-sm font-bold uppercase leading-snug tracking-tight text-foreground line-clamp-2 transition-colors duration-300 group-hover:text-success sm:text-[15px]"
+        title={title}
+      >
+        {title}
+      </h2>
+      {releaseNote ? (
+        <p
+          className="line-clamp-2 text-[11px] leading-snug text-default-500"
+          title={releaseNote}
         >
-          {title}
-        </h1>
-        {releaseNote ? (
-          <p
-            className="mt-0.5 min-h-[2.5rem] line-clamp-2 text-[11px] leading-snug text-default-500"
-            title={releaseNote}
-          >
-            {releaseNote}
-          </p>
-        ) : null}
-      </div>
+          {releaseNote}
+        </p>
+      ) : null}
+    </div>
   );
 
   const shellClass = 'group flex min-w-0 w-full flex-col rounded-xl';
