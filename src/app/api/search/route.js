@@ -19,6 +19,9 @@ import {
   catalogImdbGenreMatchClause,
   catalogKdramaClause,
   catalogMoviePolicyClause,
+  catalogSearchQueryTokens,
+  catalogTextSearchConditions,
+  catalogTokenTitleMatchCondition,
   catalogTodayIsoUtc,
   escapeRegex,
   releasedAnimeFirstAirClause,
@@ -76,7 +79,7 @@ function buildSortFields(sortBy) {
 }
 
 /** Title relevance boosts for catalog + anime alias fields. */
-function titleRelevanceScoreAddends(lowered, safeLower) {
+function titleRelevanceScoreAddends(lowered, safeLower, tokens, safeTokens) {
   const lowerField = (path) => ({ $toLower: { $ifNull: [path, ""] } });
   const fields = [
     "$title",
@@ -100,6 +103,25 @@ function titleRelevanceScoreAddends(lowered, safeLower) {
       },
       { $cond: [{ $regexMatch: { input: field, regex: safeLower } }, 120, 0] }
     );
+  }
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const safeToken = safeTokens[i];
+    for (const path of fields) {
+      const field = lowerField(path);
+      out.push({
+        $cond: [
+          {
+            $regexMatch: {
+              input: field,
+              regex: `(^|[^a-z0-9])${safeToken}([^a-z0-9]|$)`,
+            },
+          },
+          80,
+          0,
+        ],
+      });
+    }
   }
   out.push({
     $cond: [
@@ -157,14 +179,13 @@ export async function GET(req) {
     const safe = escapeRegex(q);
     const lowered = q.toLowerCase();
     const safeLower = escapeRegex(lowered);
+    const queryTokens = catalogSearchQueryTokens(q);
+    const safeTokens = queryTokens.map((t) => escapeRegex(t));
+    const tokenTitleCond = catalogTokenTitleMatchCondition(q);
 
     // --- Keyword / title conditions (title, name, overview, tagline) ---
-    const textConds = [
-      { title: { $regex: safe, $options: "i" } },
-      { name: { $regex: safe, $options: "i" } },
-      { overview: { $regex: safe, $options: "i" } },
-      { tagline: { $regex: safe, $options: "i" } },
-    ];
+    const textConds = [...catalogTextSearchConditions(safe)];
+    if (tokenTitleCond) textConds.push(tokenTitleCond);
 
     // --- Genre conditions (canonical `imdb_genres` on catalog docs) ---
     const { imdbLabels, kdrama } = detectGenres(q);
@@ -228,8 +249,10 @@ export async function GET(req) {
       {
         $or: [
           ...animeTitleSearchConditions(safe),
+          ...catalogTextSearchConditions(safe).slice(0, 2),
           { overview: { $regex: safe, $options: "i" } },
           { tagline: { $regex: safe, $options: "i" } },
+          ...(tokenTitleCond ? [tokenTitleCond] : []),
           ...genreConds,
         ],
       },
@@ -373,7 +396,7 @@ export async function GET(req) {
                     },
                   ]
                 : []),
-              ...titleRelevanceScoreAddends(lowered, safeLower),
+              ...titleRelevanceScoreAddends(lowered, safeLower, queryTokens, safeTokens),
             ],
           },
         },

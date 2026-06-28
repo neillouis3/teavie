@@ -99,12 +99,12 @@ function SearchContent() {
         setTotalPages(data.totalPages);
         setReady(true);
       })
-      .catch((err) => {
+      .catch(() => {
         if (cancelled) return;
         setResults([]);
         setTotal(0);
         setTotalPages(0);
-        setError(err instanceof Error ? err.message : 'Something went wrong');
+        setError("Search is temporarily unavailable. Try again in a moment.");
         setReady(true);
       });
 

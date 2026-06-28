@@ -102,6 +102,53 @@ export function animeTitleSearchConditions(safe) {
   ];
 }
 
+/** Title/name/overview/tagline substring match for movies + live TV search. */
+export function catalogTextSearchConditions(safe) {
+  return [
+    { title: { $regex: safe, $options: "i" } },
+    { name: { $regex: safe, $options: "i" } },
+    { overview: { $regex: safe, $options: "i" } },
+    { tagline: { $regex: safe, $options: "i" } },
+  ];
+}
+
+function searchQueryTokens(q) {
+  return String(q || "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 2);
+}
+
+/**
+ * When the query has multiple words, also match rows where every token appears
+ * somewhere in the title stack (e.g. "one piece" matches "ONE PIECE").
+ * @param {string} q raw query
+ * @returns {Record<string, unknown> | null}
+ */
+export function catalogTokenTitleMatchCondition(q) {
+  const tokens = searchQueryTokens(q);
+  if (tokens.length <= 1) return null;
+
+  const perToken = tokens.map((token) => {
+    const safe = escapeRegex(token);
+    return {
+      $or: [
+        { title: { $regex: safe, $options: "i" } },
+        { name: { $regex: safe, $options: "i" } },
+        { title_aliases: { $regex: safe, $options: "i" } },
+        ...animeTitleSearchConditions(safe),
+      ],
+    };
+  });
+
+  return { $and: perToken };
+}
+
+/** @param {string} q raw query @returns {string[]} */
+export function catalogSearchQueryTokens(q) {
+  return searchQueryTokens(q);
+}
+
 /**
  * Anime browse/search only includes rows from the anime import (`anime_{id}`).
  * @returns {Record<string, unknown>} use inside `$and` for `find` / `$match`.

@@ -244,18 +244,20 @@ export async function fetchSearchPopular(
 export async function fetchSearchResults(
   queryString: string
 ): Promise<SearchResultsPayload> {
-  return withDayCache(`${PREFIX}.search-results.v1:${queryString}`, async () => {
-    try {
-      const res = await fetch(`/api/search?${queryString}`);
-      if (!res.ok) return { results: [], total: 0, totalPages: 0 };
-      const data = await res.json();
-      return {
-        results: data.results ?? [],
-        total: typeof data.total === "number" ? data.total : 0,
-        totalPages: typeof data.totalPages === "number" ? data.totalPages : 0,
-      };
-    } catch {
-      return { results: [], total: 0, totalPages: 0 };
+  return withDayCache(`${PREFIX}.search-results.v2:${queryString}`, async () => {
+    const res = await fetch(`/api/search?${queryString}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.error) {
+      throw new Error(
+        typeof data?.message === "string" && data.message.trim()
+          ? data.message
+          : "Search is temporarily unavailable. Try again in a moment."
+      );
     }
+    return {
+      results: data.results ?? [],
+      total: typeof data.total === "number" ? data.total : 0,
+      totalPages: typeof data.totalPages === "number" ? data.totalPages : 0,
+    };
   });
 }
