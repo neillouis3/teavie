@@ -9,16 +9,22 @@ import {
   type CatalogCardLayoutMode,
 } from '@/contexts/catalogCardStyleContext';
 import {
+  ANIME_AUDIO_OPTIONS,
+  useAnimeAudio,
+} from '@/contexts/animeAudioContext';
+import {
   STREAM_SERVER_OPTIONS,
   streamServerLabel,
   useStreamingSource,
   type StreamServerId,
 } from '@/contexts/streamingSourceContext';
+import { animeAudioLabel } from '@/lib/animePlayEmbed';
 
 export default function SettingsPage() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { mode: cardLayout, setMode: setCardLayout } = useCatalogCardStyle();
   const { server: streamServer, setServer: setStreamServer } = useStreamingSource();
+  const { audio: animeAudio, setAudio: setAnimeAudio } = useAnimeAudio();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -68,10 +74,31 @@ export default function SettingsPage() {
         </section>
 
         <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Anime audio</h2>
+          <p className="text-xs text-default-500">
+            Default subtitle or dub track for anime episodes (MegaPlay embed). You can also switch
+            on any anime show page.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {ANIME_AUDIO_OPTIONS.map((lang) => (
+              <Button
+                key={lang}
+                size="sm"
+                variant={animeAudio === lang ? 'solid' : 'flat'}
+                color={animeAudio === lang ? 'success' : 'default'}
+                onPress={() => setAnimeAudio(lang)}
+              >
+                {animeAudioLabel(lang)}
+              </Button>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Streaming source</h2>
           <p className="text-xs text-default-500">
-            Third-party player used for movies and TV episodes. Change here anytime; we can&apos;t
-            control ads or playback from these sources.
+            Third-party player used for movies and live-action TV. Anime uses MegaPlay separately.
+            We can&apos;t control ads or playback from these sources.
           </p>
           <div className="flex flex-wrap gap-2">
             {STREAM_SERVER_OPTIONS.map((id: StreamServerId) => (

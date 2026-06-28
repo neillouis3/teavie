@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import ShowPlayer from "./showPlayer";
+import AnimePlayer from "./animePlayer";
 import MoviePlayer from "./moviePlayer";
 import YouMightLike from "./youMightLike";
 import AnimeRelatedSection from "./animeRelatedSection";
@@ -19,6 +20,9 @@ import {
   useStreamingSource,
   type StreamServerId,
 } from "@/contexts/streamingSourceContext";
+import { useAnimeAudio } from "@/contexts/animeAudioContext";
+import { animeAudioLabel } from "@/lib/animePlayEmbed";
+import { Button } from "@heroui/react";
 import {
   formatWatchEpKey,
   loadWatchProgress,
@@ -464,6 +468,7 @@ export default function ShowTemplate({
   adminPreview?: boolean;
 }) {
   const { server } = useStreamingSource();
+  const { audio: animeAudio, setAudio: setAnimeAudio } = useAnimeAudio();
   const [show, setShow] = useState<Show | null>(null);
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
   const [loading, setLoading] = useState(true);
@@ -643,9 +648,15 @@ export default function ShowTemplate({
           throw new Error("Failed to fetch show details");
         }
         const data = (await res.json()) as Show;
+        const catalogIdForPolicy =
+          /^anime_/i.test(String(id).trim())
+            ? String(id).trim()
+            : typeof fallbackShow?.id === "string" && fallbackShow.id.startsWith("anime_")
+              ? fallbackShow.id
+              : Number(targetTmdbId) || targetTmdbId;
         const blockedDoc = {
           type: "tv" as const,
-          id: Number(targetTmdbId) || targetTmdbId,
+          id: catalogIdForPolicy,
           origin_country: data.origin_country,
           original_language: data.original_language,
           genres: data.genres,
@@ -654,6 +665,7 @@ export default function ShowTemplate({
             : [],
           imdb_genres: fallbackShow?.imdb_genres,
           is_anime: fallbackShow?.is_anime,
+          mal_id: fallbackShow?.mal_id,
         };
         if (shouldPruneTvAnimeWithoutAnilist(blockedDoc) && !bypassPolicy) {
           setShowUnavailableReason(showUnavailableReasonForDoc(blockedDoc));
@@ -795,7 +807,22 @@ export default function ShowTemplate({
     !show.first_air_date ||
     String(show.first_air_date).trim().length < 10 ||
     String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
-  const canPlay = playerUsesTmdb && tmdbShowPremiered;
+  const anilistIdForPlayer = catalogAnilistId(show);
+  const animeAbsoluteEpisode = (() => {
+    if (!show?.is_anime) return Math.max(1, selectedEpisode);
+    const uiSeasons = tmdbSeasonsWithEpisodes(show.seasons);
+    if (uiSeasons.length <= 1 && selectedSeason <= 1) {
+      return Math.max(1, selectedEpisode);
+    }
+    return cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode);
+  })();
+  const canPlayAnime =
+    Boolean(show?.is_anime) &&
+    !isAnimeMovie &&
+    anilistIdForPlayer != null &&
+    tmdbShowPremiered;
+  const canPlayTv = !show?.is_anime && playerUsesTmdb && tmdbShowPremiered;
+  const canPlay = canPlayAnime || canPlayTv;
   const imageUrl = tmdbImageUrl(show?.poster_path);
   const title = show ? showDisplayTitle(show) : "";
 
@@ -959,6 +986,13 @@ export default function ShowTemplate({
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               No released episodes to play in this season yet.
             </div>
+          ) : canPlayAnime && anilistIdForPlayer != null ? (
+            <AnimePlayer
+              key={`${anilistIdForPlayer}-${animeAbsoluteEpisode}-${animeAudio}`}
+              anilistId={anilistIdForPlayer}
+              episode={animeAbsoluteEpisode}
+              audio={animeAudio}
+            />
           ) : (
             <ShowPlayer
               key={id}
@@ -969,6 +1003,23 @@ export default function ShowTemplate({
             />
           )}
         </div>
+
+        {!loading && show?.is_anime && !isAnimeMovie && canPlayAnime ? (
+          <div className="flex flex-wrap items-center justify-end gap-2 px-1">
+            <span className="text-xs text-default-500">Audio</span>
+            {(["sub", "dub"] as const).map((lang) => (
+              <Button
+                key={lang}
+                size="sm"
+                variant={animeAudio === lang ? "solid" : "flat"}
+                color={animeAudio === lang ? "success" : "default"}
+                onPress={() => setAnimeAudio(lang)}
+              >
+                {animeAudioLabel(lang)}
+              </Button>
+            ))}
+          </div>
+        ) : null}
 
         {!loading && show && !isAnimeMovie ? (
           <ShowEpisodePickerProvider {...episodePickerProps}>

@@ -9,6 +9,7 @@ import SideBar from "@/components/ui/sideBar";
 import MobileTopNav from "@/components/ui/mobileTopNav";
 import MainWithSidebarOffset from "@/components/layout/mainWithSidebarOffset";
 import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
+import { AnimeAudioProvider } from "@/contexts/animeAudioContext";
 import { StreamingSourceProvider } from "@/contexts/streamingSourceContext";
 import { Suspense } from "react";
 import AmbientSuccessOrbs from "@/components/ui/ambientSuccessOrbs";
@@ -27,6 +28,7 @@ export function Providers({ children }: ProvidersProps) {
         <SidebarProvider>
           <CatalogCardStyleProvider>
             <StreamingSourceProvider>
+              <AnimeAudioProvider>
               <AmbientSuccessOrbs />
               <MaintenanceAnnouncementModal />
               <Suspense
@@ -44,6 +46,7 @@ export function Providers({ children }: ProvidersProps) {
                 <SideBar />
               </Suspense>
               <MainWithSidebarOffset>{children}</MainWithSidebarOffset>
+              </AnimeAudioProvider>
             </StreamingSourceProvider>
           </CatalogCardStyleProvider>
         </SidebarProvider>
