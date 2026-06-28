@@ -978,8 +978,8 @@ export default function ShowTemplate({
     showSeasonTabs: showSeasonPickerStrip,
     preferCatalogEpisodes: Boolean(show?.is_anime),
     malId: Boolean(show?.is_anime) ? idMalForAnilistRails : null,
-    tmdbTvIdForStills: animeTmdbStills?.tvId ?? null,
-    tmdbStillsSeason: animeTmdbStills?.season ?? 1,
+    animeTmdbTvId: animeTmdbStills?.tvId ?? null,
+    animeTmdbSeason: animeTmdbStills?.season ?? 1,
     fallbackStillPath:
       show?.is_anime && show
         ? animeBackdropFromDoc(show) ?? show.poster_path ?? null
