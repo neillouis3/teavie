@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { formatHeroRuntime } from '@/lib/formatRelease';
+import { catalogDisplayTitle } from '@/lib/catalogDisplayTitle';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 
 interface SmallCardProps {
@@ -84,6 +85,7 @@ export default function SmallCard({
     numberOfEpisodes,
     runtimeSeconds
   );
+  const displayTitle = catalogDisplayTitle(title);
 
   const poster = (
     <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden rounded-xl bg-default-200">
@@ -114,10 +116,10 @@ export default function SmallCard({
         </div>
       ) : null}
       <h2
-        className="text-sm leading-snug text-foreground line-clamp-2 transition-colors duration-300 group-hover:text-success sm:text-[15px]"
-        title={title}
+        className="normal-case text-sm leading-snug text-foreground line-clamp-2 transition-colors duration-300 group-hover:text-success sm:text-[15px]"
+        title={displayTitle}
       >
-        {title}
+        {displayTitle}
       </h2>
       {releaseNote ? (
         <p
