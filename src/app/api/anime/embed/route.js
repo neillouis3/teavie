@@ -44,8 +44,13 @@ export async function GET(req) {
         ? buildAnimePlayAniListUrl(anilistId, playback.malEpisode, audio)
         : "";
 
-    const primaryUrl = sanitizeAnimeEmbedUrl(aniUrl) || malUrl;
-    const fallbackUrl = sanitizeAnimeEmbedUrl(malUrl);
+    const primaryUrl =
+      sanitizeAnimeEmbedUrl(malUrl) || sanitizeAnimeEmbedUrl(aniUrl) || "";
+    const megaPlayAlt =
+      sanitizeAnimeEmbedUrl(aniUrl) && sanitizeAnimeEmbedUrl(aniUrl) !== primaryUrl
+        ? sanitizeAnimeEmbedUrl(aniUrl)
+        : null;
+    const fallbackUrl = megaPlayAlt || sanitizeAnimeEmbedUrl(malUrl);
 
     let anikotoUrl = null;
     if (anilistId) {

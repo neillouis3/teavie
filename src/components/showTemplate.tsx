@@ -523,11 +523,6 @@ export default function ShowTemplate({
     "content_policy" | "not_found" | "unauthorized" | null
   >(null);
   const [adminBypassActive, setAdminBypassActive] = useState(false);
-  const [animeTmdbPlayer, setAnimeTmdbPlayer] = useState<{
-    videoId: string;
-    season: number;
-    episode: number;
-  } | null>(null);
   const progressAppliedForIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -958,37 +953,6 @@ export default function ShowTemplate({
   };
 
   useEffect(() => {
-    if (!isAnimeCatalogRoute || malIdForPlayer == null) {
-      setAnimeTmdbPlayer(null);
-      return;
-    }
-    let cancelled = false;
-    const qs = new URLSearchParams({
-      malId: String(malIdForPlayer),
-      episode: String(animeAbsoluteEpisode),
-    });
-    fetch(`/api/anime/player-target?${qs.toString()}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled || !data?.videoId) {
-          if (!cancelled) setAnimeTmdbPlayer(null);
-          return;
-        }
-        setAnimeTmdbPlayer({
-          videoId: String(data.videoId),
-          season: Math.max(1, Number(data.season) || 1),
-          episode: Math.max(1, Number(data.episode) || 1),
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setAnimeTmdbPlayer(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAnimeCatalogRoute, malIdForPlayer, animeAbsoluteEpisode]);
-
-  useEffect(() => {
     if (!show?.is_anime || !show.seasons?.length) return;
     const cap = catalogAnimeEpisodeCount(show, id);
     if (cap == null || cap <= 0) return;
@@ -1134,14 +1098,6 @@ export default function ShowTemplate({
             <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
               No released episodes to play in this season yet.
             </div>
-          ) : isAnimeCatalogRoute && animeTmdbPlayer ? (
-            <ShowPlayer
-              key={`anime-tmdb-${animeTmdbPlayer.videoId}-${animeTmdbPlayer.season}-${animeTmdbPlayer.episode}-${server}`}
-              server={server}
-              videoId={animeTmdbPlayer.videoId}
-              season={animeTmdbPlayer.season}
-              episode={animeTmdbPlayer.episode}
-            />
           ) : (canPlayAnime || isAnimeCatalogRoute) && malIdForPlayer != null ? (
             <AnimePlayer
               key={`${malIdForPlayer}-${animeAbsoluteEpisode}-${animeAudio}`}
