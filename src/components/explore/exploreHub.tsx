@@ -100,7 +100,7 @@ export default function ExploreHub() {
     <div className="flex w-full flex-col bg-background">
       {hasTrending && (
         <section
-          className="relative mb-4 w-full max-w-full overflow-hidden"
+          className="relative -mt-2 mb-4 w-full max-w-full overflow-hidden"
           aria-label="Spotlight"
         >
           <TrendingHero
