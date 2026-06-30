@@ -69,11 +69,7 @@ export default function SideBar() {
       <div className="flex h-full w-full flex-col gap-4">
         <div className="flex items-center justify-between px-2 min-h-[48px]">
           <AnimatePresence mode="wait">
-            {isCollapsed ? (
-              <Link href="/explore" className="flex shrink-0 items-center justify-center p-1">
-                <img src={TEAVIE_LOGO.icon} alt="Teavie" className="h-9 w-9" />
-              </Link>
-            ) : (
+            {!isCollapsed && (
               <motion.div
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
