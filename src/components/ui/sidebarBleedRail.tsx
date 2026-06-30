@@ -28,9 +28,9 @@ export function useSidebarBleedOffset() {
   return useSyncExternalStore(subscribeLgUp, getLgUpSnapshot, () => false);
 }
 
-/** Full viewport bleed under the sidebar; ends pr-4 (1rem) before the screen edge on desktop. */
+/** Full viewport width under the fixed sidebar (desktop). */
 export const SIDEBAR_BLEED_SHELL =
-  "w-full pr-4 lg:relative lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:w-[calc(100vw-1rem)] lg:pr-0";
+  "w-full lg:relative lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:w-[100vw]";
 
 export const SIDEBAR_BLEED_CAROUSEL_OPTS = {
   align: "start" as const,
