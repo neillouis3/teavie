@@ -57,7 +57,7 @@ export default function SideBar() {
   return (
     <div
       data-sidebar-shell
-      className="relative isolate z-40 hidden h-dvh w-full shrink-0 flex-col items-center overflow-hidden bg-background py-4 px-2 lg:sticky lg:top-0 lg:flex lg:self-start"
+      className="fixed left-0 top-0 z-50 isolate hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center overflow-hidden bg-background py-4 px-2 lg:flex"
     >
       <SidebarEdgeReflection />
       <div className="relative z-10 flex h-full w-full flex-col gap-4">

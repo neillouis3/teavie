@@ -6,8 +6,8 @@ import SideBar from "@/components/ui/sideBar";
 import MainWithSidebarOffset from "@/components/layout/mainWithSidebarOffset";
 
 /**
- * Desktop: sidebar + main as grid columns for the full document height.
- * Mobile: main column only (sidebar is in the drawer).
+ * Desktop: sidebar track + main column grid for the full document height.
+ * Sidebar is fixed inside the first track; the track reserves horizontal space.
  */
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { state } = useSidebar();
@@ -21,8 +21,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           : "lg:grid-cols-[16rem_minmax(0,1fr)]"
       }`}
     >
-      <SideBar />
-      <MainWithSidebarOffset>{children}</MainWithSidebarOffset>
+      <div className="hidden min-h-screen lg:block" aria-hidden>
+        <SideBar />
+      </div>
+      <div className="min-w-0 overflow-x-hidden">
+        <MainWithSidebarOffset>{children}</MainWithSidebarOffset>
+      </div>
     </div>
   );
 }

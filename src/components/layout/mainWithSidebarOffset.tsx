@@ -16,7 +16,7 @@ export default function MainWithSidebarOffset({
 
   return (
     <div
-      className={`relative flex min-h-screen w-full min-w-0 flex-col ${
+      className={`relative flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden ${
         heroBleed ? "pt-0" : "pt-14"
       }`}
     >

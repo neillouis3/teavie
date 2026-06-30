@@ -144,16 +144,16 @@ export default function TrendingHero({
     const spotlightHeight = bleedUnderNav ? SPOTLIGHT_BLEED_H : TRENDING_CAROUSEL_H;
     return (
       <div
-        className={`flex w-full flex-col ${spotlightHeight}`}
+        className={`flex w-full max-w-full flex-col overflow-hidden ${spotlightHeight}`}
         aria-label="Spotlight"
       >
-        <div className="relative h-full w-full">
+        <div className="relative h-full w-full max-w-full overflow-hidden">
           <Carousel
             opts={{ align: "start", loop: true }}
-            className="h-full w-full [&>div]:h-full"
+            className="h-full w-full max-w-full [&>div]:h-full"
             setApi={setApi}
           >
-            <CarouselContent className="ml-0 h-full [&>div]:h-full">
+            <CarouselContent className="ml-0 h-full max-w-full [&>div]:h-full">
               {carouselSlides}
             </CarouselContent>
             <CarouselPrevious

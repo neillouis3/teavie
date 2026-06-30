@@ -99,7 +99,10 @@ export default function ExploreHub() {
   return (
     <div className="flex w-full flex-col bg-background">
       {hasTrending && (
-        <section className="relative mb-4 w-full" aria-label="Spotlight">
+        <section
+          className="relative mb-4 w-full max-w-full overflow-hidden"
+          aria-label="Spotlight"
+        >
           <TrendingHero
             variant="spotlight"
             bleedUnderNav
