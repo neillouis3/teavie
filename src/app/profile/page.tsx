@@ -76,7 +76,7 @@ export default function ProfilePage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Profile" />
-      <div className="max-w-2xl space-y-10 px-3 pb-12 pt-4 sm:px-4">
+      <div className="max-w-2xl px-3 pt-4 sm:px-4">
         <section className="flex flex-col gap-6 sm:flex-row sm:items-center">
           <Avatar
             name={displayNick}
@@ -118,26 +118,30 @@ export default function ProfilePage() {
             )}
           </div>
         </section>
+      </div>
 
-        {historyRows.length > 0 ? (
-          <WatchHistoryRail items={historyRows} />
-        ) : (
+      {historyRows.length > 0 ? (
+        <div className="mt-10 w-full px-3 sm:px-4">
+          <WatchHistoryRail items={historyRows} layout="profile" maxItems={7} />
+        </div>
+      ) : (
+        <div className="mt-10 max-w-2xl px-3 sm:px-4">
           <section className="space-y-2">
             <h2 className="text-sm font-semibold text-foreground">Continue watching</h2>
             <p className="text-sm text-default-500">
               Titles you play will show up here and on Explore.
             </p>
           </section>
-        )}
+        </div>
+      )}
 
-        <section className="space-y-2 border-t border-divider pt-8">
-          <p className="text-sm text-default-500">
-            Theme, streaming sources, and catalog layout live in Settings.
-          </p>
-          <Button as={Link} href="/settings" variant="flat" size="sm">
-            Open settings
-          </Button>
-        </section>
+      <div className="max-w-2xl space-y-2 border-t border-divider px-3 pb-12 pt-8 sm:px-4">
+        <p className="text-sm text-default-500">
+          Theme, streaming sources, and catalog layout live in Settings.
+        </p>
+        <Button as={Link} href="/settings" variant="flat" size="sm">
+          Open settings
+        </Button>
       </div>
     </div>
   );
