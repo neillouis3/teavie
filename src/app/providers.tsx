@@ -35,7 +35,7 @@ export function Providers({ children }: ProvidersProps) {
               <Suspense
                 fallback={
                   <div
-                    className="fixed left-0 right-0 top-0 z-50 h-14 border-b border-divider bg-background lg:hidden"
+                    className="fixed left-0 right-0 top-0 z-50 h-14 bg-background lg:hidden"
                     aria-hidden
                   />
                 }
