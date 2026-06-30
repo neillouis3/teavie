@@ -14,9 +14,9 @@ type SidebarBleedRailProps = {
 export const SIDEBAR_BLEED_SHELL =
   "w-full lg:relative lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:z-0 lg:w-screen lg:max-w-[100vw]";
 
-/** Padding on native scroll tracks so the first card aligns with page content. */
+/** Left inset on scroll tracks so the first card aligns with page content. */
 export const SIDEBAR_BLEED_TRACK_INSET =
-  "box-border pr-3 sm:pr-4 lg:pl-[var(--sidebar-w,16rem)]";
+  "box-border lg:pl-[var(--sidebar-w,16rem)]";
 
 /** Embla opts: allow slides to scroll into the leading sidebar gutter. */
 export const SIDEBAR_BLEED_CAROUSEL_OPTS = {
@@ -25,23 +25,32 @@ export const SIDEBAR_BLEED_CAROUSEL_OPTS = {
   containScroll: false as const,
 };
 
+/** Trailing pad so the last slide can scroll flush to the viewport's right edge. */
+export const SIDEBAR_BLEED_END_PAD_VERTICAL =
+  "pr-[calc(100%-45%-0.75rem)] sm:pr-[calc(100%-32%-0.75rem)] md:pr-[calc(100%-20%-0.75rem)] lg:pr-[calc(100%-14%-0.75rem)] xl:pr-[calc(100%-12%-0.75rem)]";
+
+export const SIDEBAR_BLEED_END_PAD_HORIZONTAL =
+  "pr-[calc(100%-88%-0.75rem)] sm:pr-[calc(100%-55%-0.75rem)] md:pr-[calc(100%-42%-0.75rem)] lg:pr-[calc(100%-33.333%-0.75rem)] xl:pr-[calc(100%-25%-0.75rem)]";
+
+export const SIDEBAR_BLEED_END_PAD_GENRE =
+  "pr-[calc(100%-42%-0.75rem)] sm:pr-[calc(100%-30%-0.75rem)] md:pr-[calc(100%-25%-0.75rem)] lg:pr-[calc(100%-20%-0.75rem)] xl:pr-[calc(100%-16.667%-0.75rem)]";
+
+export const SIDEBAR_BLEED_END_PAD_UPCOMING =
+  "pr-[calc(100%-88%-0.75rem)] sm:pr-[calc(100%-66.666%-1rem)]";
+
 const SCROLL_HIDE =
   "overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
 type ClassValue = string | false | null | undefined;
 
-/** Embla viewport: extends under sidebar; left padding aligns the first slide. */
+/** Embla viewport: full-bleed shell only (inset lives on the flex track). */
 export function sidebarBleedViewportClass(...extra: ClassValue[]) {
-  return cn(
-    SIDEBAR_BLEED_SHELL,
-    "lg:box-border lg:pl-[var(--sidebar-w,16rem)] pr-3 sm:pr-4",
-    extra
-  );
+  return cn(SIDEBAR_BLEED_SHELL, extra);
 }
 
-/** Slide gutter classes on the Embla flex track (not the sidebar inset). */
+/** Slide gutter + sidebar/track inset on the Embla flex row. */
 export function sidebarBleedTrackClass(...extra: ClassValue[]) {
-  return cn(...extra);
+  return cn(SIDEBAR_BLEED_TRACK_INSET, ...extra);
 }
 
 export default function SidebarBleedRail({

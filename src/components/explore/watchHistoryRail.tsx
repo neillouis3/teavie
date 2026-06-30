@@ -4,6 +4,8 @@ import React from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
+  SIDEBAR_BLEED_END_PAD_HORIZONTAL,
+  SIDEBAR_BLEED_END_PAD_VERTICAL,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -47,6 +49,7 @@ export default function WatchHistoryRail({
     : profile
       ? CAROUSEL_ITEM_VERTICAL_PROFILE
       : CAROUSEL_ITEM_VERTICAL;
+  const endPad = horizontal ? SIDEBAR_BLEED_END_PAD_HORIZONTAL : SIDEBAR_BLEED_END_PAD_VERTICAL;
 
   const visibleItems = React.useMemo(() => {
     const list = maxItems != null ? items.slice(0, maxItems) : items;
@@ -77,7 +80,7 @@ export default function WatchHistoryRail({
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
             viewportClassName={sidebarBleedViewportClass()}
-            className={sidebarBleedTrackClass("-ml-3")}
+            className={sidebarBleedTrackClass("-ml-3", endPad)}
           >
           {visibleItems.map((item) => {
             const titleText = item.title || item.name || "Untitled";

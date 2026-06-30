@@ -11,6 +11,7 @@ import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
+  SIDEBAR_BLEED_END_PAD_GENRE,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -192,7 +193,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
               <CarouselContent
                 viewportClassName={sidebarBleedViewportClass()}
-                className={sidebarBleedTrackClass("-ml-3")}
+                className={sidebarBleedTrackClass("-ml-3", SIDEBAR_BLEED_END_PAD_GENRE)}
               >
                 {categoryGenres.map((genre, i) => (
                   <CarouselItem
