@@ -99,9 +99,13 @@ export default function ExploreHub() {
   return (
     <div className="bg-background flex w-full flex-col">
       {hasTrending && (
-        <section className="mb-4 w-full" aria-label="Spotlight">
+        <section
+          className="relative -mt-14 mb-4 w-full"
+          aria-label="Spotlight"
+        >
           <TrendingHero
             variant="spotlight"
+            bleedUnderNav
             showDots={false}
             trendingMovies={discover.trendingMovies}
             trendingTv={discover.trendingTv}

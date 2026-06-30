@@ -15,6 +15,9 @@ import type { ContentItem } from "@/types/content";
 const TRENDING_CAROUSEL_H =
   "h-[min(52vh,400px)] sm:h-[min(62vh,480px)] lg:h-[calc(80vh-2rem)]";
 
+const SPOTLIGHT_BLEED_H =
+  "h-[calc(min(52vh,400px)+3.5rem)] sm:h-[calc(min(62vh,480px)+3.5rem)] lg:h-[calc(80vh-2rem+3.5rem)]";
+
 const TRENDING_ARROW_CLASS =
   "top-1/2 z-20 h-10 w-10 -translate-y-1/2 border-none bg-black/45 text-white backdrop-blur-sm hover:bg-black/60 disabled:opacity-40";
 
@@ -46,6 +49,8 @@ interface TrendingHeroProps {
   showDots?: boolean;
   /** Full-bleed single-slide spotlight (Explore). */
   variant?: "carousel" | "spotlight";
+  /** Extend spotlight behind the fixed top nav (Explore). */
+  bleedUnderNav?: boolean;
 }
 
 export default function TrendingHero({
@@ -55,6 +60,7 @@ export default function TrendingHero({
   rounded = false,
   showDots = true,
   variant = "carousel",
+  bleedUnderNav = false,
 }: TrendingHeroProps) {
   const items = React.useMemo(
     () => interleaveTrending(trendingMovies, trendingTv, maxItems),
@@ -136,9 +142,10 @@ export default function TrendingHero({
     ) : null;
 
   if (variant === "spotlight") {
+    const spotlightHeight = bleedUnderNav ? SPOTLIGHT_BLEED_H : TRENDING_CAROUSEL_H;
     return (
       <div
-        className={`flex w-full flex-col ${TRENDING_CAROUSEL_H}`}
+        className={`flex w-full flex-col ${spotlightHeight}`}
         aria-label="Spotlight"
       >
         <div className="relative h-full w-full">
