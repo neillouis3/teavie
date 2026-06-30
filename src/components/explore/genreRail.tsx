@@ -30,7 +30,7 @@ export default function GenreRail({ genres }: GenreRailProps) {
   }
 
   return (
-    <section className="flex w-full flex-col gap-3" aria-label="Browse by genre">
+    <section className="mt-16 flex w-full flex-col gap-3" aria-label="Browse by genre">
       <ExploreSectionTitle>Browse by genre</ExploreSectionTitle>
 
       <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
