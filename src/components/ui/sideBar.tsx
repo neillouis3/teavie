@@ -12,6 +12,9 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Alert } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
+import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from "@/components/ui/navGlass";
+import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
+import { useScrollNavBlend } from "@/hooks/useScrollNavBlend";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -19,6 +22,10 @@ export default function SideBar() {
   const [mounted, setMounted] = useState(false);
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const heroBleed = pathUsesHeroBleed(pathname);
+  const blend = useScrollNavBlend(heroBleed);
+  const overHero = heroBleed && navOverHero(blend);
+  const chromeStyle = heroBleed ? navChromeStyle(blend) : undefined;
 
   useEffect(() => {
     setMounted(true);
@@ -53,7 +60,10 @@ export default function SideBar() {
   return (
     <div
       data-sidebar-shell
-      className="fixed left-0 top-0 z-50 flex hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center bg-background py-4 px-2 lg:flex"
+      className={`fixed left-0 top-0 z-50 flex hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center py-4 px-2 transition-[color] duration-200 ease-in-out lg:flex ${
+        heroBleed ? "" : NAV_GLASS_CLASS
+      } ${overHero ? "text-white" : "text-foreground"}`}
+      style={chromeStyle}
     >
       <div className="flex h-full w-full flex-col gap-4">
         <div className="flex items-center justify-between px-2 min-h-[48px]">
@@ -73,7 +83,9 @@ export default function SideBar() {
 
           <button
             onClick={toggleSidebar}
-            className="p-1.5 rounded-lg hover:bg-default-100 transition-colors flex-shrink-0 ml-auto"
+            className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ml-auto ${
+              overHero ? "hover:bg-white/10" : "hover:bg-default-100"
+            }`}
             aria-label={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
             title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
           >
@@ -92,7 +104,9 @@ export default function SideBar() {
               className={`flex flex-col gap-1 ${sectionIndex > 0 ? "mt-4" : ""}`}
             >
               {!isCollapsed && section.title ? (
-                <p className="px-3 pb-1 text-sm text-foreground">{section.title}</p>
+                <p className={`px-3 pb-1 text-sm ${overHero ? "text-white/90" : "text-foreground"}`}>
+                  {section.title}
+                </p>
               ) : null}
               {section.items.map((item) => {
                 const isActive = selectedKey === item.key;
@@ -105,7 +119,9 @@ export default function SideBar() {
                   ${
                     isActive
                       ? "bg-success text-success-foreground shadow-sm"
-                      : "hover:bg-default-100 text-foreground"
+                      : overHero
+                        ? "hover:bg-white/10 text-white"
+                        : "hover:bg-default-100 text-foreground"
                   }
                   ${isCollapsed ? "justify-center" : ""}
                 `}
