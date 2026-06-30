@@ -13,7 +13,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Alert, Tooltip } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
-import { SIDEBAR_GLASS_CLASS } from "@/components/ui/navGlass";
+import SidebarEdgeReflection from "@/components/ui/sidebarEdgeReflection";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -56,11 +56,13 @@ export default function SideBar() {
 
   return (
     <div
-      className={`items-center z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex transition-[width] duration-200 ease-in-out ${SIDEBAR_GLASS_CLASS} ${
+      data-sidebar-shell
+      className={`relative isolate items-center z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex overflow-hidden transition-[width] duration-200 ease-in-out bg-background ${
         isCollapsed ? "w-16" : "w-64"
       }`}
     >
-      <div className="w-full h-full flex flex-col gap-4">
+      <SidebarEdgeReflection />
+      <div className="relative z-10 flex h-full w-full flex-col gap-4">
         <div className="flex items-center justify-between px-2 min-h-[48px]">
           <AnimatePresence mode="wait">
             {!isCollapsed && (

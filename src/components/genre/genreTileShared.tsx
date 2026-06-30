@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { genrePageHref } from "@/lib/imdbGenres";
+import { genreTileGlowStops } from "@/lib/sidebarEdgeGlow";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
 
 export type CatalogGenreRow = {
@@ -42,7 +43,7 @@ export const GENRE_TILE_COLORS: Record<string, string> = {
   Western: "from-orange-500 to-amber-600",
 };
 
-const FALLBACK_COLORS = [
+export const FALLBACK_COLORS = [
   "from-rose-400 to-pink-500",
   "from-violet-400 to-purple-500",
   "from-sky-400 to-blue-500",
@@ -88,18 +89,24 @@ export function GenreCatalogTile({
   genre,
   colorClass,
   href: hrefOverride,
+  glowIndex = 0,
 }: {
   genre: CatalogGenreRow;
   colorClass: string;
   href?: string;
+  glowIndex?: number;
 }) {
   const href = hrefOverride ?? genrePageHref(genre.slug);
   const posters = deckPosters(genre.posters);
+  const glow = genreTileGlowStops(genre.name, glowIndex);
 
   return (
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
+      data-genre-glow
+      data-glow-inner={glow.inner}
+      data-glow-outer={glow.outer}
       className="group relative flex aspect-[40/21] w-full overflow-hidden rounded-xl p-3"
     >
       <span
