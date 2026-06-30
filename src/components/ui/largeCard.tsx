@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
-import { heroGlowStops } from "@/lib/sidebarEdgeGlow";
 import { tmdbImageUrlOr } from "@/lib/tmdbImage";
 
 type LargeCardProps = {
@@ -219,25 +218,13 @@ export default function LargeCard({
   const imageUrl = tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, "/placeholder.jpg"));
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
-  const heroGlow = hero ? heroGlowStops(genres) : null;
   const when =
     releaseDate != null && String(releaseDate).trim().length >= 10
       ? formatReleasePhrase(releaseDate)
       : null;
 
   return (
-    <Link
-      href={href}
-      className={`block min-w-0 w-full ${hero ? "h-full" : ""}`}
-      {...(heroGlow
-        ? {
-            "data-sidebar-glow": true,
-            "data-glow-inner": heroGlow.inner,
-            "data-glow-outer": heroGlow.outer,
-            "data-glow-priority": "8",
-          }
-        : {})}
-    >
+    <Link href={href} className={`block min-w-0 w-full ${hero ? "h-full" : ""}`}>
       <div
         className={`group relative w-full overflow-hidden ${
           hero ? "h-full min-h-[280px] rounded-none" : "aspect-video rounded-xl"

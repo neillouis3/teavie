@@ -13,7 +13,6 @@ import { AnimeSourceProvider } from "@/contexts/animeSourceContext";
 import { StreamingSourceProvider } from "@/contexts/streamingSourceContext";
 import { WatchPartyNavProvider } from "@/contexts/watchPartyNavContext";
 import { Suspense } from "react";
-import AmbientSuccessOrbs from "@/components/ui/ambientSuccessOrbs";
 import MaintenanceAnnouncementModal from "@/components/ui/maintenanceAnnouncementModal";
 
 export interface ProvidersProps {
@@ -32,7 +31,6 @@ export function Providers({ children }: ProvidersProps) {
               <AnimeSourceProvider>
               <AnimeAudioProvider>
               <WatchPartyNavProvider>
-              <AmbientSuccessOrbs />
               <MaintenanceAnnouncementModal />
               <Suspense
                 fallback={

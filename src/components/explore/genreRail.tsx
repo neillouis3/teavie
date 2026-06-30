@@ -40,7 +40,6 @@ export default function GenreRail({ genres }: GenreRailProps) {
               <GenreCatalogTile
                 genre={genre}
                 colorClass={genreTileColor(genre.name, i)}
-                glowIndex={i}
               />
             </CarouselItem>
           ))}

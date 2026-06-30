@@ -13,7 +13,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Alert, Tooltip } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
-import SidebarEdgeReflection from "@/components/ui/sidebarEdgeReflection";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -57,10 +56,9 @@ export default function SideBar() {
   return (
     <div
       data-sidebar-shell
-      className="fixed left-0 top-0 z-50 isolate hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center overflow-hidden bg-background py-4 px-2 lg:flex"
+      className="fixed left-0 top-0 z-50 flex hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center bg-background py-4 px-2 lg:flex"
     >
-      <SidebarEdgeReflection />
-      <div className="relative z-10 flex h-full w-full flex-col gap-4">
+      <div className="flex h-full w-full flex-col gap-4">
         <div className="flex items-center justify-between px-2 min-h-[48px]">
           <AnimatePresence mode="wait">
             {!isCollapsed && (
