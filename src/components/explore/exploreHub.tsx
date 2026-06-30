@@ -97,12 +97,9 @@ export default function ExploreHub() {
   const hasNew = newContent.length > 0;
 
   return (
-    <div className="bg-background flex w-full flex-col">
+    <div className="flex w-full flex-col bg-background">
       {hasTrending && (
-        <section
-          className="relative -mt-14 mb-4 w-full"
-          aria-label="Spotlight"
-        >
+        <section className="relative mb-4 w-full" aria-label="Spotlight">
           <TrendingHero
             variant="spotlight"
             bleedUnderNav
