@@ -44,7 +44,7 @@ interface TrendingHeroProps {
   rounded?: boolean;
   /** Pagination dots under the carousel. @default true */
   showDots?: boolean;
-  /** Full-bleed horizontal spotlight row (Explore). */
+  /** Full-bleed single-slide spotlight (Explore). */
   variant?: "carousel" | "spotlight";
 }
 
@@ -76,10 +76,6 @@ export default function TrendingHero({
 
   if (items.length === 0) return null;
 
-  const SPOTLIGHT_ITEM =
-    "basis-[92%] pl-3 sm:basis-[72%] md:basis-[56%] lg:basis-[44%] xl:basis-[36%]";
-  const SPOTLIGHT_H = "h-[min(50vh,420px)] sm:h-[min(58vh,480px)]";
-
   function renderCard(item: ContentItem) {
     const title = item.title ?? item.name ?? "Untitled";
     const releaseDate = item.release_date ?? item.first_air_date ?? "";
@@ -95,7 +91,6 @@ export default function TrendingHero({
     return (
       <LargeCard
         hero
-        heroCompact={variant === "spotlight"}
         id={item.id}
         title={title}
         year={year}
@@ -114,27 +109,60 @@ export default function TrendingHero({
     );
   }
 
+  const carouselSlides = items.map((item) => {
+    const type = item.type ?? "movie";
+    return (
+      <CarouselItem
+        key={`${type}-${item.id}`}
+        className="h-full basis-full pl-0"
+      >
+        {renderCard(item)}
+      </CarouselItem>
+    );
+  });
+
+  const paginationDots =
+    showDots && count > 0 ? (
+      <div className="mt-4 flex items-center justify-center space-x-2">
+        {Array.from({ length: count }).map((_, index) => (
+          <div
+            key={index}
+            className={`h-2 rounded-full transition-all duration-300 ${
+              index === current - 1 ? "w-2 bg-gray-400" : "w-2 bg-gray-500"
+            }`}
+          />
+        ))}
+      </div>
+    ) : null;
+
   if (variant === "spotlight") {
     return (
-      <div className={`w-full ${SPOTLIGHT_H}`} aria-label="Spotlight">
-        <Carousel
-          opts={{ align: "start", dragFree: true }}
-          className="h-full w-full [&>div]:h-full"
-        >
-          <CarouselContent className="-ml-3 h-full [&>div]:h-full">
-            {items.map((item) => {
-              const type = item.type ?? "movie";
-              return (
-                <CarouselItem
-                  key={`${type}-${item.id}`}
-                  className={`h-full ${SPOTLIGHT_ITEM}`}
-                >
-                  <div className="h-full w-full">{renderCard(item)}</div>
-                </CarouselItem>
-              );
-            })}
-          </CarouselContent>
-        </Carousel>
+      <div
+        className={`flex w-full flex-col ${TRENDING_CAROUSEL_H}`}
+        aria-label="Spotlight"
+      >
+        <div className="relative h-full w-full">
+          <Carousel
+            opts={{ align: "start", loop: true }}
+            className="h-full w-full [&>div]:h-full"
+            setApi={setApi}
+          >
+            <CarouselContent className="ml-0 h-full [&>div]:h-full">
+              {carouselSlides}
+            </CarouselContent>
+            <CarouselPrevious
+              variant="flat"
+              aria-label="Previous spotlight title"
+              className={`${TRENDING_ARROW_CLASS} left-3 sm:left-4`}
+            />
+            <CarouselNext
+              variant="flat"
+              aria-label="Next spotlight title"
+              className={`${TRENDING_ARROW_CLASS} right-3 sm:right-4`}
+            />
+          </Carousel>
+        </div>
+        {paginationDots}
       </div>
     );
   }
@@ -151,45 +179,22 @@ export default function TrendingHero({
           className="h-full w-full [&>div]:h-full"
           setApi={setApi}
         >
-        <CarouselContent className="ml-0 h-full [&>div]:h-full">
-          {items.map((item) => {
-            const type = item.type ?? "movie";
-
-            return (
-              <CarouselItem
-                key={`${type}-${item.id}`}
-                className="h-full basis-full pl-0"
-              >
-                {renderCard(item)}
-              </CarouselItem>
-            );
-          })}
-        </CarouselContent>
-        <CarouselPrevious
-          variant="flat"
-          aria-label="Previous trending title"
-          className={`${TRENDING_ARROW_CLASS} left-3 sm:left-4`}
-        />
-        <CarouselNext
-          variant="flat"
-          aria-label="Next trending title"
-          className={`${TRENDING_ARROW_CLASS} right-3 sm:right-4`}
-        />
-      </Carousel>
+          <CarouselContent className="ml-0 h-full [&>div]:h-full">
+            {carouselSlides}
+          </CarouselContent>
+          <CarouselPrevious
+            variant="flat"
+            aria-label="Previous trending title"
+            className={`${TRENDING_ARROW_CLASS} left-3 sm:left-4`}
+          />
+          <CarouselNext
+            variant="flat"
+            aria-label="Next trending title"
+            className={`${TRENDING_ARROW_CLASS} right-3 sm:right-4`}
+          />
+        </Carousel>
       </div>
-
-      {showDots && count > 0 ? (
-        <div className="mt-4 flex items-center justify-center space-x-2">
-          {Array.from({ length: count }).map((_, index) => (
-            <div
-              key={index}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === current - 1 ? "w-2 bg-gray-400" : "w-2 bg-gray-500"
-              }`}
-            />
-          ))}
-        </div>
-      ) : null}
+      {paginationDots}
     </div>
   );
 }
