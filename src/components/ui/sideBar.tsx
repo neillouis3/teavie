@@ -56,41 +56,44 @@ export default function SideBar() {
 
   return (
     <div
-      className={`items-center z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex transition-[width] duration-200 ease-in-out ${SIDEBAR_GLASS_CLASS} ${
+      className={`fixed left-0 top-0 z-40 hidden h-screen flex-col transition-[width] duration-200 ease-in-out lg:flex ${
         isCollapsed ? "w-16" : "w-64"
       }`}
     >
-      <div className="w-full h-full flex flex-col gap-4">
-        <div className="flex items-center justify-between px-2 min-h-[48px]">
-          <AnimatePresence mode="wait">
-            {!isCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.15 }}
-                className="overflow-hidden"
-              >
-                <img src={logoSrc} alt="TeaVie" className="h-12 w-auto" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+      {/* Transparent over full-bleed nav — logo sits on the shared glass bar */}
+      <div className="flex h-14 shrink-0 items-center justify-between px-2">
+        <AnimatePresence mode="wait">
+          {!isCollapsed && (
+            <motion.div
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.15 }}
+              className="overflow-hidden"
+            >
+              <img src={logoSrc} alt="TeaVie" className="h-9 w-auto" />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          <button
-            onClick={toggleSidebar}
-            className="p-1.5 rounded-lg hover:bg-default-100 transition-colors flex-shrink-0 ml-auto"
-            aria-label={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-            title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-          >
-            {isCollapsed ? (
-              <HugeiconsIcon icon={ArrowRight01Icon} size={20} className="shrink-0" />
-            ) : (
-              <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="shrink-0" />
-            )}
-          </button>
-        </div>
+        <button
+          onClick={toggleSidebar}
+          className="ml-auto shrink-0 rounded-lg p-1.5 transition-colors hover:bg-default-100/80"
+          aria-label={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
+          title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
+        >
+          {isCollapsed ? (
+            <HugeiconsIcon icon={ArrowRight01Icon} size={20} className="shrink-0" />
+          ) : (
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="shrink-0" />
+          )}
+        </button>
+      </div>
 
-        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
+      <div
+        className={`flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-4 ${SIDEBAR_GLASS_CLASS}`}
+      >
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1 pt-2">
           {APP_NAV_SECTIONS.map((section, sectionIndex) => (
             <div
               key={section.id}
