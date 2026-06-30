@@ -15,8 +15,7 @@ import type { ContentItem } from "@/types/content";
 const TRENDING_CAROUSEL_H =
   "h-[min(52vh,400px)] sm:h-[min(62vh,480px)] lg:h-[calc(80vh-2rem)]";
 
-const SPOTLIGHT_BLEED_H =
-  "h-[calc(min(34vh,260px)+3.5rem)] sm:h-[calc(min(39vh,310px)+3.5rem)] lg:h-[calc(min(46vh,450px)+3.5rem)]";
+const SPOTLIGHT_BLEED_H = "h-[calc(80vh+3.5rem)]";
 
 const TRENDING_ARROW_CLASS =
   "top-1/2 z-20 h-10 w-10 -translate-y-1/2 border-none bg-black/45 text-white backdrop-blur-sm hover:bg-black/60 disabled:opacity-40";
