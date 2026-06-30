@@ -1,5 +1,9 @@
 import type { CSSProperties } from "react";
 
+/** Frosted sidebar — needs scroll/content or ambient color behind it to read. */
+export const SIDEBAR_GLASS_CLASS =
+  "bg-background/55 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/40 dark:bg-background/45 dark:supports-[backdrop-filter]:bg-background/35";
+
 /** Static frosted glass (non-hero pages). */
 export const NAV_GLASS_CLASS =
   "border-b border-divider/15 bg-background/40 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/32 dark:border-white/[0.04] dark:bg-background/32 dark:supports-[backdrop-filter]:bg-background/26";
