@@ -12,14 +12,6 @@ import {
 
 type ImdbGenre = { slug: string; label: string };
 
-const TYPE_OPTIONS = [
-  { key: 'all', label: 'All types' },
-  { key: 'movie', label: 'Movies' },
-  { key: 'tv', label: 'TV Shows' },
-  { key: 'anime', label: 'Anime' },
-  { key: 'kdrama', label: 'K-Drama' },
-] as const;
-
 const SORT_OPTIONS = [
   { key: 'relevance', label: 'Relevance' },
   { key: 'title', label: 'Title A-Z' },
@@ -80,9 +72,6 @@ export default function SearchCatalogFilters({
   const router = useRouter();
   const pathname = usePathname();
 
-  const rawType = searchParams.get('type') || 'all';
-  const type =
-    TYPE_OPTIONS.some((o) => o.key === rawType) ? rawType : 'all';
   const rawSort = searchParams.get('sort_by') || 'relevance';
   const sortBy = SORT_OPTIONS.some((o) => o.key === rawSort) ? rawSort : 'relevance';
   const rawGenre = searchParams.get('genre') || '';
@@ -91,11 +80,6 @@ export default function SearchCatalogFilters({
   const yearMax = searchParams.get('year_max') || '';
 
   const years = useMemo(() => yearChoices(), []);
-
-  const typeItems: SelectRow[] = useMemo(
-    () => TYPE_OPTIONS.map((o) => ({ id: o.key, label: o.label })),
-    []
-  );
 
   const sortItems: SelectRow[] = useMemo(
     () => SORT_OPTIONS.map((o) => ({ id: o.key, label: o.label })),
@@ -120,7 +104,7 @@ export default function SearchCatalogFilters({
     (patch: Record<string, string | null | undefined>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [k, v] of Object.entries(patch)) {
-        if (!v || (k === 'type' && v === 'all') || (k === 'sort_by' && v === 'relevance')) {
+        if (!v || (k === 'sort_by' && v === 'relevance')) {
           params.delete(k);
         } else {
           params.set(k, String(v));
@@ -132,6 +116,14 @@ export default function SearchCatalogFilters({
   );
 
   useEffect(() => {
+    if (!searchParams.get('type')) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('type');
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname);
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
     if (!rawGenre) return;
     const normalized = imdbGenreSlugFromBrowseParam(rawGenre);
     if (normalized && normalized !== rawGenre) {
@@ -140,7 +132,6 @@ export default function SearchCatalogFilters({
   }, [rawGenre, mergeParams]);
 
   const hasActiveFilters =
-    type !== 'all' ||
     sortBy !== 'relevance' ||
     Boolean(genre) ||
     Boolean(yearMin) ||
@@ -148,7 +139,6 @@ export default function SearchCatalogFilters({
 
   const clearFilters = () =>
     mergeParams({
-      type: null,
       sort_by: null,
       genre: null,
       year_min: null,
@@ -156,32 +146,13 @@ export default function SearchCatalogFilters({
       page: '1',
     });
 
-  const countLabel = !hasQuery
-    ? 'Enter a search term'
-    : loading
-      ? 'Searching…'
-      : `${total.toLocaleString()} result${total === 1 ? '' : 's'}`;
+  const countLabel = loading
+    ? 'Searching…'
+    : `${total.toLocaleString()} result${total === 1 ? '' : 's'}`;
 
   return (
-    <section className="w-full space-y-3" aria-label="Search filters">
+    <section className="w-full space-y-2" aria-label="Search filters">
       <div className="flex w-full flex-wrap items-end gap-2">
-        <Select<SelectRow>
-          aria-label="Content type"
-          placeholder="Type"
-          items={typeItems}
-          selectedKeys={new Set([type])}
-          onSelectionChange={(keys) => {
-            const v = Array.from(keys)[0] as string | undefined;
-            if (v) mergeParams({ type: v, page: '1' });
-          }}
-          size="sm"
-          variant="bordered"
-          radius="sm"
-          classNames={filterSelectClassNames(type !== 'all', true)}
-        >
-          {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
-        </Select>
-
         <Select<SelectRow>
           aria-label="Sort by"
           placeholder="Sort"
@@ -265,11 +236,13 @@ export default function SearchCatalogFilters({
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Chip color="success" size="md" radius="sm" variant="flat">
-          {countLabel}
-        </Chip>
-      </div>
+      {hasQuery ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip color="success" size="md" radius="sm" variant="flat">
+            {countLabel}
+          </Chip>
+        </div>
+      ) : null}
     </section>
   );
 }

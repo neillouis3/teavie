@@ -62,7 +62,6 @@ function BrowseCatalogPageContent({
 
   const [items, setItems] = useState<ContentItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   const [genreSlugs, setGenreSlugs] = useState<string[] | undefined>();
   const [loading, setLoading] = useState(true);
 
@@ -79,14 +78,12 @@ function BrowseCatalogPageContent({
         if (cancelled) return;
         setItems(data.results);
         setTotalPages(data.totalPages);
-        setTotal(data.total);
         if (data.genreSlugs) setGenreSlugs(data.genreSlugs);
       })
       .catch(() => {
         if (cancelled) return;
         setItems([]);
         setTotalPages(1);
-        setTotal(0);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -109,8 +106,6 @@ function BrowseCatalogPageContent({
       <div className="space-y-4 pr-3 pb-8 pt-2 sm:pr-4">
         <BrowseCatalogFilters
           mode={filterMode}
-          total={total}
-          loading={loading}
           genreSlugs={genreSlugs}
           defaultSort={defaultSort}
         />

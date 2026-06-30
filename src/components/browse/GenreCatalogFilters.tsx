@@ -61,8 +61,6 @@ function yearChoices() {
 
 type GenreCatalogFiltersProps = {
   genreLabel: string;
-  total: number;
-  loading: boolean;
   searchDraft: string;
   onSearchDraftChange: (v: string) => void;
   onSearchSubmit: (e: React.FormEvent) => void;
@@ -70,8 +68,6 @@ type GenreCatalogFiltersProps = {
 
 export default function GenreCatalogFilters({
   genreLabel,
-  total,
-  loading,
   searchDraft,
   onSearchDraftChange,
   onSearchSubmit,
@@ -134,7 +130,6 @@ export default function GenreCatalogFilters({
       page: '1',
     });
 
-  const countLabel = loading ? 'Loading…' : `${total.toLocaleString()} titles`;
   const typeLabel = TYPE_OPTIONS.find((o) => o.key === type)?.label ?? 'Titles';
 
   return (
@@ -252,13 +247,6 @@ export default function GenreCatalogFilters({
         >
           Clear
         </Button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Chip color="success" size="md" radius="sm" variant="flat">
-          {countLabel}
-        </Chip>
-        <span className="text-xs text-default-500">{typeLabel}</span>
       </div>
     </section>
   );

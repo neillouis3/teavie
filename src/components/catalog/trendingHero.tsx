@@ -50,6 +50,8 @@ interface TrendingHeroProps {
   variant?: "carousel" | "spotlight";
   /** Extend spotlight behind the fixed top nav (Explore). */
   bleedUnderNav?: boolean;
+  /** Align carousel to the page’s left edge (category hubs). */
+  flushLeft?: boolean;
 }
 
 export default function TrendingHero({
@@ -60,6 +62,7 @@ export default function TrendingHero({
   showDots = true,
   variant = "carousel",
   bleedUnderNav = false,
+  flushLeft = false,
 }: TrendingHeroProps) {
   const items = React.useMemo(
     () => interleaveTrending(trendingMovies, trendingTv, maxItems),
@@ -115,7 +118,9 @@ export default function TrendingHero({
   }
 
   const carouselItemClass =
-    variant === "spotlight" ? "h-full basis-full pl-0" : "h-full basis-full";
+    variant === "spotlight" || flushLeft
+      ? "h-full basis-full pl-0"
+      : "h-full basis-full";
 
   const carouselSlides = items.map((item) => {
     const type = item.type ?? "movie";

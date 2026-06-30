@@ -259,3 +259,38 @@ export async function fetchSearchResults(
     totalPages: typeof data.totalPages === "number" ? data.totalPages : 0,
   };
 }
+
+export type CatalogStatsPayload = {
+  movies: number;
+  tv: number;
+  anime: number;
+  kdrama: number;
+  total: number;
+};
+
+const EMPTY_CATALOG_STATS: CatalogStatsPayload = {
+  movies: 0,
+  tv: 0,
+  anime: 0,
+  kdrama: 0,
+  total: 0,
+};
+
+export async function fetchCatalogStats(): Promise<CatalogStatsPayload> {
+  return withDayCache(`${PREFIX}.catalog-stats.v1`, async () => {
+    try {
+      const res = await fetch("/api/catalog/stats");
+      if (!res.ok) return EMPTY_CATALOG_STATS;
+      const data = await res.json();
+      return {
+        movies: typeof data.movies === "number" ? data.movies : 0,
+        tv: typeof data.tv === "number" ? data.tv : 0,
+        anime: typeof data.anime === "number" ? data.anime : 0,
+        kdrama: typeof data.kdrama === "number" ? data.kdrama : 0,
+        total: typeof data.total === "number" ? data.total : 0,
+      };
+    } catch {
+      return EMPTY_CATALOG_STATS;
+    }
+  });
+}

@@ -1,14 +1,26 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
+import { fetchCatalogStats, type CatalogStatsPayload } from '@/lib/pageDataCache';
 
 export default function HomePage() {
   const router = useRouter();
+  const [stats, setStats] = useState<CatalogStatsPayload | null>(null);
 
   useEffect(() => {
     document.title = 'Teavie - Watch Movies & TV Shows';
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchCatalogStats().then((data) => {
+      if (!cancelled) setStats(data);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -26,9 +38,25 @@ export default function HomePage() {
             className="hidden h-auto w-full max-w-xs rounded-xl p-2 dark:block sm:max-w-md sm:p-4"
           />
 
+          {stats && stats.total > 0 ? (
+            <div className="mt-6 space-y-1 text-sm text-default-500">
+              <p>
+                <span className="font-medium text-foreground">
+                  {stats.total.toLocaleString()}
+                </span>{' '}
+                titles in the catalog
+              </p>
+              <p className="text-xs text-default-400">
+                {stats.movies.toLocaleString()} movies · {stats.tv.toLocaleString()} TV
+                shows · {stats.anime.toLocaleString()} anime ·{' '}
+                {stats.kdrama.toLocaleString()} K-drama
+              </p>
+            </div>
+          ) : null}
+
           <Button
             color="success"
-            className="mt-8 sm:mt-16"
+            className="mt-8 sm:mt-10"
             onPress={() => router.push('/explore')}
           >
             Go Explore The Site

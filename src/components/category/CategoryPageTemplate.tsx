@@ -110,7 +110,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
       {hasTrending && (
         <section
-          className={`mb-4 mt-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
+          className={`mb-4 mt-2 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
           aria-label="Trending"
         >
           <TrendingHero
@@ -118,6 +118,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             trendingTv={data.trending}
             maxItems={16}
             rounded
+            flushLeft
           />
         </section>
       )}
@@ -186,11 +187,11 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
               Browse by genre
             </Chip>
             <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-              <CarouselContent className="-ml-3">
+              <CarouselContent className="ml-0">
                 {categoryGenres.map((genre, i) => (
                   <CarouselItem
                     key={genre.slug}
-                    className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
+                    className="basis-[42%] pl-0 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
                   >
                     <GenreCatalogTile
                       genre={genre}
@@ -206,9 +207,9 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
         {hasContent ? (
           <div className="flex flex-col gap-10">
-            <CatalogRail title="Popular" items={data.popular} />
-            <CatalogRail title="Top rated" items={data.topRated} />
-            <CatalogRail title="New" items={data.new} />
+            <CatalogRail title="Popular" items={data.popular} flushLeft />
+            <CatalogRail title="Top rated" items={data.topRated} flushLeft />
+            <CatalogRail title="New" items={data.new} flushLeft />
           </div>
         ) : (
           <p className="py-12 text-center text-sm text-default-500">

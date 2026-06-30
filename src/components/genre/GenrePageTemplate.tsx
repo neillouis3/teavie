@@ -104,8 +104,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     return <PageSplash ariaLabel={`Loading ${genreLabel}`} />;
   }
 
-  const { featured, total, rails } = payload;
-  const countLabel = `${total.toLocaleString()} titles`;
+  const { featured, rails } = payload;
   const hasAnyRail =
     rails.popular.length > 0 || rails.top_rated.length > 0 || rails.new.length > 0;
 
@@ -113,10 +112,6 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     <div className="bg-main min-h-screen w-full">
       <Header pageName={genreLabel} />
       <div className="w-full space-y-4 pr-3 pb-12 pt-2 sm:pr-4">
-        <Chip color="success" variant="flat" size="md" radius="sm">
-          {countLabel}
-        </Chip>
-
         <nav
           className="flex flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-1"
           aria-label="Content type"

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Input, Button, Select, SelectItem, Chip } from '@heroui/react';
+import { Input, Button, Select, SelectItem } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import {
@@ -60,8 +60,6 @@ function yearChoices() {
 
 type BrowseCatalogFiltersProps = {
   mode: 'movie' | 'tv' | 'kdrama' | 'anime';
-  total: number;
-  loading: boolean;
   /** When set, genre filter only lists these slugs (e.g. category-scoped browse). */
   genreSlugs?: string[];
   defaultSort?: string;
@@ -69,8 +67,6 @@ type BrowseCatalogFiltersProps = {
 
 export default function BrowseCatalogFilters({
   mode,
-  total,
-  loading,
   genreSlugs,
   defaultSort = 'title',
 }: BrowseCatalogFiltersProps) {
@@ -154,8 +150,6 @@ export default function BrowseCatalogFilters({
     e.preventDefault();
     mergeParams({ q: searchDraft.trim() || null, page: '1' });
   };
-
-  const countLabel = loading ? 'Loading…' : `${total.toLocaleString()} titles`;
 
   const searchPlaceholder = 'Search titles…';
 
@@ -268,12 +262,6 @@ export default function BrowseCatalogFilters({
         >
           Clear
         </Button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Chip color="success" size="md" radius="sm" variant="flat">
-          {countLabel}
-        </Chip>
       </div>
     </section>
   );

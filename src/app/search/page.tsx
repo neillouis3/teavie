@@ -39,7 +39,6 @@ function SearchContent() {
   const qParam = searchParams.get('q') ?? '';
   const rawPage = parseInt(searchParams.get('page') || '1', 10);
   const pageParam = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
-  const typeParam = searchParams.get('type') ?? '';
   const genreParam = searchParams.get('genre') ?? '';
   const yearMinParam = searchParams.get('year_min') ?? '';
   const yearMaxParam = searchParams.get('year_max') ?? '';
@@ -90,7 +89,6 @@ function SearchContent() {
     qs.set('q', qParam.trim());
     qs.set('page', String(pageParam));
     qs.set('limit', '28');
-    if (typeParam && typeParam !== 'all') qs.set('type', typeParam);
     if (genreParam) qs.set('genre', genreParam);
     if (yearMinParam) qs.set('year_min', yearMinParam);
     if (yearMaxParam) qs.set('year_max', yearMaxParam);
@@ -120,7 +118,6 @@ function SearchContent() {
     hasQuery,
     qParam,
     pageParam,
-    typeParam,
     genreParam,
     yearMinParam,
     yearMaxParam,
@@ -199,37 +196,39 @@ function SearchContent() {
       <div className="bg-main min-h-screen w-full">
         <Header pageName="Search" />
 
-        <div className="space-y-6 pr-3 pb-6 pt-6 sm:pr-4 sm:pt-8">
-          <form onSubmit={submitSearch} className="w-full">
-            <Input
-              aria-label="Search query"
-              placeholder="Search titles…"
-              value={inputValue}
-              onValueChange={setInputValue}
-              size="sm"
-              variant="flat"
-              radius="sm"
-              className="w-full"
-              startContent={
-                <HugeiconsIcon
-                  icon={Search01Icon}
-                  size={16}
-                  className="shrink-0 text-default-400"
-                />
-              }
-              classNames={{
-                base: 'w-full',
-                input: 'text-sm',
-                inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
-              }}
-            />
-          </form>
+        <div className="space-y-6 pr-3 pb-6 pt-2 sm:pr-4">
+          <div className="space-y-2">
+            <form onSubmit={submitSearch} className="w-full">
+              <Input
+                aria-label="Search query"
+                placeholder="Search titles…"
+                value={inputValue}
+                onValueChange={setInputValue}
+                size="sm"
+                variant="flat"
+                radius="sm"
+                className="w-full"
+                startContent={
+                  <HugeiconsIcon
+                    icon={Search01Icon}
+                    size={16}
+                    className="shrink-0 text-default-400"
+                  />
+                }
+                classNames={{
+                  base: 'w-full',
+                  input: 'text-sm',
+                  inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
+                }}
+              />
+            </form>
 
-          <SearchCatalogFilters
-            total={0}
-            loading
-            hasQuery={hasQuery}
-          />
+            <SearchCatalogFilters
+              total={0}
+              loading
+              hasQuery={hasQuery}
+            />
+          </div>
 
           {hasQuery ? (
             <SearchCatalogGridLoading />
@@ -260,37 +259,39 @@ function SearchContent() {
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Search" />
 
-      <div className="space-y-6 pr-3 pb-6 pt-6 sm:pr-4 sm:pt-8">
-        <form onSubmit={submitSearch} className="w-full">
-          <Input
-            aria-label="Search query"
-            placeholder="Search titles…"
-            value={inputValue}
-            onValueChange={setInputValue}
-            size="sm"
-            variant="flat"
-            radius="sm"
-            className="w-full"
-            startContent={
-              <HugeiconsIcon
-                icon={Search01Icon}
-                size={16}
-                className="shrink-0 text-default-400"
-              />
-            }
-            classNames={{
-              base: 'w-full',
-              input: 'text-sm',
-              inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
-            }}
-          />
-        </form>
+      <div className="space-y-6 pr-3 pb-6 pt-2 sm:pr-4">
+        <div className="space-y-2">
+          <form onSubmit={submitSearch} className="w-full">
+            <Input
+              aria-label="Search query"
+              placeholder="Search titles…"
+              value={inputValue}
+              onValueChange={setInputValue}
+              size="sm"
+              variant="flat"
+              radius="sm"
+              className="w-full"
+              startContent={
+                <HugeiconsIcon
+                  icon={Search01Icon}
+                  size={16}
+                  className="shrink-0 text-default-400"
+                />
+              }
+              classNames={{
+                base: 'w-full',
+                input: 'text-sm',
+                inputWrapper: 'h-9 w-full bg-default-100 hover:bg-default-200',
+              }}
+            />
+          </form>
 
-        <SearchCatalogFilters
-          total={total}
-          loading={false}
-          hasQuery={hasQuery}
-        />
+          <SearchCatalogFilters
+            total={total}
+            loading={false}
+            hasQuery={hasQuery}
+          />
+        </div>
 
         {!hasQuery && (
           <div className="space-y-8">
