@@ -3,16 +3,8 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/components/ui/sidebarContext";
+import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
 import DesktopTopNav from "@/components/ui/desktopTopNav";
-
-/** Routes whose hero should extend under the fixed top nav (no main pt-14). */
-const HERO_BLEED_PATHS = ["/explore"];
-
-function pathUsesHeroBleed(pathname: string) {
-  return HERO_BLEED_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
-}
 
 /**
  * Reserves horizontal space for the fixed desktop sidebar so content is not covered.

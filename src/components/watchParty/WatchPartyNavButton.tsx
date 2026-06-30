@@ -15,9 +15,13 @@ import { WatchPartyContent } from "@/components/watchParty/WatchPartyContent";
 type WatchPartyNavButtonProps = {
   /** Icon-only for nav bars */
   iconOnly?: boolean;
+  overHero?: boolean;
 };
 
-export default function WatchPartyNavButton({ iconOnly = true }: WatchPartyNavButtonProps) {
+export default function WatchPartyNavButton({
+  iconOnly = true,
+  overHero = false,
+}: WatchPartyNavButtonProps) {
   const { registration } = useWatchPartyNav();
   const active = Boolean(registration?.room);
   const canPlay = Boolean(registration?.canPlay);
@@ -31,7 +35,9 @@ export default function WatchPartyNavButton({ iconOnly = true }: WatchPartyNavBu
           color={active ? "secondary" : "default"}
           radius="md"
           aria-label="Watch together"
-          className={active ? "" : "text-foreground"}
+          className={
+            active ? "" : overHero ? "text-white" : "text-foreground"
+          }
         >
           <HugeiconsIcon icon={UserGroup02Icon} size={22} className="shrink-0" />
         </Button>

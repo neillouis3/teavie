@@ -22,7 +22,9 @@ import {
 import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
 import ProfileNavAvatar from '@/components/ui/profileNavAvatar';
 import WatchPartyNavButton from '@/components/watchParty/WatchPartyNavButton';
-import { NAV_GLASS_CLASS } from '@/components/ui/navGlass';
+import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from '@/components/ui/navGlass';
+import { pathUsesHeroBleed } from '@/lib/heroBleedPaths';
+import { useScrollNavBlend } from '@/hooks/useScrollNavBlend';
 
 export default function MobileTopNav() {
   const pathname = usePathname();
@@ -66,6 +68,9 @@ export default function MobileTopNav() {
 
   const settingsActive = pathname.startsWith('/settings');
   const searchActive = pathname.startsWith('/search');
+  const heroBleed = pathUsesHeroBleed(pathname);
+  const blend = useScrollNavBlend(heroBleed);
+  const overHero = heroBleed && navOverHero(blend);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,13 +85,18 @@ export default function MobileTopNav() {
 
   return (
     <>
-      <header className={`fixed left-0 right-0 top-0 z-50 flex h-14 items-center gap-2 px-3 lg:hidden ${NAV_GLASS_CLASS}`}>
+      <header
+        className={`fixed left-0 right-0 top-0 z-50 flex h-14 items-center gap-2 px-3 lg:hidden ${
+          heroBleed ? '' : NAV_GLASS_CLASS
+        } ${overHero ? 'text-white' : 'text-foreground'}`}
+        style={heroBleed ? navChromeStyle(blend) : undefined}
+      >
         <Button
           isIconOnly
           variant="light"
           radius="md"
           aria-label="Open menu"
-          className="shrink-0 text-foreground"
+          className={`shrink-0 ${overHero ? 'text-white' : 'text-foreground'}`}
           onPress={() => setOpen(true)}
         >
           <HugeiconsIcon icon={Menu01Icon} size={24} className="shrink-0" />
@@ -99,13 +109,13 @@ export default function MobileTopNav() {
           <img src={logoSrc} alt="Teavie" className="h-9 w-auto max-w-[9rem]" />
         </Link>
         <div className="flex shrink-0 items-center gap-0.5">
-          <WatchPartyNavButton />
+          <WatchPartyNavButton overHero={overHero} />
           <Link
             href="/search"
             aria-label="Search"
             className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-default-100 ${
-              searchActive ? 'text-success' : 'text-foreground'
-            }`}
+              searchActive ? 'text-success' : overHero ? 'text-white' : 'text-foreground'
+            } ${overHero ? 'hover:bg-white/10' : ''}`}
           >
             <HugeiconsIcon icon={Search01Icon} size={24} className="shrink-0" />
           </Link>
