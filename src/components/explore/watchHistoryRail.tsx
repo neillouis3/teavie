@@ -4,8 +4,10 @@ import React from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SIDEBAR_BLEED_END_TRACK_PAD_HORIZONTAL,
-  SIDEBAR_BLEED_END_TRACK_PAD_VERTICAL,
+  SIDEBAR_BLEED_END_SPACER_HORIZONTAL,
+  SIDEBAR_BLEED_END_SPACER_VERTICAL,
+  SidebarBleedEndSpacer,
+  SidebarBleedStartSpacer,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -49,9 +51,9 @@ export default function WatchHistoryRail({
     : profile
       ? CAROUSEL_ITEM_VERTICAL_PROFILE
       : CAROUSEL_ITEM_VERTICAL;
-  const endTrackPad = horizontal
-    ? SIDEBAR_BLEED_END_TRACK_PAD_HORIZONTAL
-    : SIDEBAR_BLEED_END_TRACK_PAD_VERTICAL;
+  const endSpacer = horizontal
+    ? SIDEBAR_BLEED_END_SPACER_HORIZONTAL
+    : SIDEBAR_BLEED_END_SPACER_VERTICAL;
 
   const visibleItems = React.useMemo(() => {
     const list = maxItems != null ? items.slice(0, maxItems) : items;
@@ -82,8 +84,9 @@ export default function WatchHistoryRail({
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
             viewportClassName={sidebarBleedViewportClass()}
-            className={sidebarBleedTrackClass("-ml-3", endTrackPad)}
+            className={sidebarBleedTrackClass("-ml-3")}
           >
+          <SidebarBleedStartSpacer />
           {visibleItems.map((item) => {
             const titleText = item.title || item.name || "Untitled";
             const year =
@@ -136,6 +139,7 @@ export default function WatchHistoryRail({
               </CarouselItem>
             );
           })}
+          <SidebarBleedEndSpacer widthClass={endSpacer} />
         </CarouselContent>
       </Carousel>
       </SidebarBleedRail>
