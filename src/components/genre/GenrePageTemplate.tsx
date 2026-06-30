@@ -3,11 +3,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Button, Chip } from '@heroui/react';
+import { Button } from '@heroui/react';
 import Header from '@/components/ui/header';
 import PageSplash from '@/components/ui/pageSplash';
 import LargeCard from '@/components/ui/largeCard';
 import CatalogRail from '@/components/catalog/catalogRail';
+import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
 import type { ContentItem } from '@/types/content';
 import {
   fetchGenrePagePayload,
@@ -136,9 +137,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
 
         {featured.length > 0 && (
           <section className="mt-6 space-y-3" aria-label="Featured">
-            <Chip color="success" variant="flat" size="md" radius="sm">
-              Featured
-            </Chip>
+            <ExploreSectionTitle>Featured</ExploreSectionTitle>
             <div className="grid gap-3 sm:grid-cols-2">
               {featured.map((item) => {
                 const title = item.title || item.name || 'Untitled';

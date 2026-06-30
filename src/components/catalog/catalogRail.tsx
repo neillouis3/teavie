@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { Chip } from "@heroui/react";
 import SmallCard from "@/components/ui/smallCard";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 import SmallCardLoading from "@/components/ui/smallCardLoading";
@@ -16,6 +15,7 @@ import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import { formatReleasePhrase } from "@/lib/formatRelease";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
+import SidebarBleedRail from "@/components/ui/sidebarBleedRail";
 
 type CatalogRailProps = {
   title: string;
@@ -27,21 +27,12 @@ type CatalogRailProps = {
   /** Show “Released …” / “Releases …” under title on vertical cards */
   showReleaseNote?: boolean;
   loading?: boolean;
-  /** Plain section title (Explore) vs success chip (default). */
-  sectionTitleStyle?: "chip" | "text";
-  /** Align the rail carousel to the page’s left edge. */
-  flushLeft?: boolean;
 };
 
 const CAROUSEL_ITEM_VERTICAL =
   "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
 const CAROUSEL_ITEM_HORIZONTAL =
   "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
-
-const CAROUSEL_ITEM_VERTICAL_FLUSH =
-  "basis-[45%] pl-0 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
-const CAROUSEL_ITEM_HORIZONTAL_FLUSH =
-  "basis-[88%] pl-0 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 
 function releaseNoteForItem(item: ContentItem): string | undefined {
   const rawDate = item.release_date ?? item.first_air_date ?? "";
@@ -78,19 +69,10 @@ export default function CatalogRail({
   moreLabel = "More",
   showReleaseNote = false,
   loading = false,
-  sectionTitleStyle = "chip",
-  flushLeft = false,
 }: CatalogRailProps) {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === "horizontal";
-  const itemClass = horizontal
-    ? flushLeft
-      ? CAROUSEL_ITEM_HORIZONTAL_FLUSH
-      : CAROUSEL_ITEM_HORIZONTAL
-    : flushLeft
-      ? CAROUSEL_ITEM_VERTICAL_FLUSH
-      : CAROUSEL_ITEM_VERTICAL;
-  const contentOffsetClass = flushLeft ? "ml-0" : "-ml-3";
+  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
 
   const slice = (items ?? []).slice(0, maxItems);
   if (!loading && slice.length === 0) return null;
@@ -98,13 +80,7 @@ export default function CatalogRail({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        {sectionTitleStyle === "text" ? (
-          <ExploreSectionTitle>{title}</ExploreSectionTitle>
-        ) : (
-          <Chip color="success" variant="flat" size="md" radius="sm">
-            {title}
-          </Chip>
-        )}
+        <ExploreSectionTitle>{title}</ExploreSectionTitle>
         {moreHref ? (
           <Link
             href={moreHref}
@@ -115,48 +91,52 @@ export default function CatalogRail({
         ) : null}
       </div>
       {loading ? (
-        <CatalogRailSkeleton horizontal={horizontal} />
+        <SidebarBleedRail>
+          <CatalogRailSkeleton horizontal={horizontal} />
+        </SidebarBleedRail>
       ) : (
-        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-          <CarouselContent className={contentOffsetClass}>
-            {slice.map((item) => {
-              const titleText = item.title || item.name || "Untitled";
-              const year =
-                item.release_date?.split("-")[0] ||
-                item.first_air_date?.split("-")[0] ||
-                "N/A";
-              const key = `${item.type ?? "x"}-${item.id}`;
-              return (
-                <CarouselItem key={key} className={itemClass}>
-                  {horizontal ? (
-                    <HorizontalCatalogCard
-                      id={item.id}
-                      title={titleText}
-                      year={year}
-                      type={item.type || "movie"}
-                      posterPath={item.poster_path || ""}
-                      backdropPath={item.backdrop_path || ""}
-                    />
-                  ) : (
-                    <SmallCard
-                      id={item.id}
-                      title={titleText}
-                      year={year}
-                      releaseNote={
-                        showReleaseNote ? releaseNoteForItem(item) : undefined
-                      }
-                      type={item.type || "movie"}
-                      runtimeSeconds={item.runtimeSeconds ?? undefined}
-                      seasonAmount={item.season_amount ?? 0}
-                      numberOfEpisodes={item.number_of_episodes ?? undefined}
-                      posterPath={item.poster_path || ""}
-                    />
-                  )}
-                </CarouselItem>
-              );
-            })}
-          </CarouselContent>
-        </Carousel>
+        <SidebarBleedRail>
+          <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+            <CarouselContent className="-ml-3">
+              {slice.map((item) => {
+                const titleText = item.title || item.name || "Untitled";
+                const year =
+                  item.release_date?.split("-")[0] ||
+                  item.first_air_date?.split("-")[0] ||
+                  "N/A";
+                const key = `${item.type ?? "x"}-${item.id}`;
+                return (
+                  <CarouselItem key={key} className={itemClass}>
+                    {horizontal ? (
+                      <HorizontalCatalogCard
+                        id={item.id}
+                        title={titleText}
+                        year={year}
+                        type={item.type || "movie"}
+                        posterPath={item.poster_path || ""}
+                        backdropPath={item.backdrop_path || ""}
+                      />
+                    ) : (
+                      <SmallCard
+                        id={item.id}
+                        title={titleText}
+                        year={year}
+                        releaseNote={
+                          showReleaseNote ? releaseNoteForItem(item) : undefined
+                        }
+                        type={item.type || "movie"}
+                        runtimeSeconds={item.runtimeSeconds ?? undefined}
+                        seasonAmount={item.season_amount ?? 0}
+                        numberOfEpisodes={item.number_of_episodes ?? undefined}
+                        posterPath={item.poster_path || ""}
+                      />
+                    )}
+                  </CarouselItem>
+                );
+              })}
+            </CarouselContent>
+          </Carousel>
+        </SidebarBleedRail>
       )}
     </div>
   );

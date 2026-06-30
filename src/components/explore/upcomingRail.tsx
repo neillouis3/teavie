@@ -8,6 +8,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
+import SidebarBleedRail from "@/components/ui/sidebarBleedRail";
 import type { ContentItem } from "@/types/content";
 
 type UpcomingRailProps = {
@@ -31,8 +32,9 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
   }, [api]);
 
   return (
-    <div className="flex w-full flex-col items-center">
-      <Carousel
+    <SidebarBleedRail>
+      <div className="flex w-full flex-col items-center">
+        <Carousel
         opts={{
           align: "center",
           loop: true,
@@ -92,5 +94,6 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
         ))}
       </div>
     </div>
+    </SidebarBleedRail>
   );
 }

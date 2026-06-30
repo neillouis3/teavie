@@ -6,6 +6,7 @@ import SmallCard from "@/components/ui/smallCard";
 import HorizontalCatalogCardLoading from "@/components/ui/horizontalCatalogCardLoading";
 import SmallCardLoading from "@/components/ui/smallCardLoading";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
+import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
@@ -82,7 +83,7 @@ export default function AnimeRelatedSection({
   if (loading) {
     return (
       <section className="w-full pt-6">
-        <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
+        <ExploreSectionTitle className="mb-3">Related anime</ExploreSectionTitle>
         <div className={`${gridClass} items-start`}>
           {Array.from({ length: 6 }).map((_, i) =>
             horizontal ? (
@@ -100,7 +101,7 @@ export default function AnimeRelatedSection({
 
   return (
     <section className="w-full pt-6">
-      <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
+      <ExploreSectionTitle className="mb-3">Related anime</ExploreSectionTitle>
       <ul className={`${gridClass} items-start`}>
         {items.map((item) => {
           const key = item.catalogId ?? `al-${item.anilistId ?? "ext"}`;

@@ -2,9 +2,10 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Input, Button, Select, SelectItem, Chip } from '@heroui/react';
+import { Input, Button, Select, SelectItem } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
+import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
 
 const TYPE_OPTIONS = [
   { key: 'movie', label: 'Movies' },
@@ -135,9 +136,7 @@ export default function GenreCatalogFilters({
   return (
     <section className="mb-4 w-full space-y-3" aria-label={`${genreLabel} browse`}>
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <Chip color="success" variant="flat" size="md" radius="sm">
-          {genreLabel}
-        </Chip>
+        <ExploreSectionTitle>{genreLabel}</ExploreSectionTitle>
 
         <div className="inline-flex rounded-lg border border-default-200 p-0.5 dark:border-white/10">
           {TYPE_OPTIONS.map((opt) => (

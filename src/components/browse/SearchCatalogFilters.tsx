@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Button, Select, SelectItem, Chip } from '@heroui/react';
+import { Button, Select, SelectItem } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
 import {
   IMDB_GENRES,
   imdbGenreSlugFromBrowseParam,
@@ -238,9 +239,7 @@ export default function SearchCatalogFilters({
 
       {hasQuery ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Chip color="success" size="md" radius="sm" variant="flat">
-            {countLabel}
-          </Chip>
+          <ExploreSectionTitle>{countLabel}</ExploreSectionTitle>
         </div>
       ) : null}
     </section>

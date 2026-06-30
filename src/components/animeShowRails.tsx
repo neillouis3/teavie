@@ -8,6 +8,7 @@ import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
 } from "@/lib/catalogGrid";
+import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import {
   clearLegacyAnimeShowRailsCache,
   readClientDayCache,
@@ -195,7 +196,7 @@ export default function AnimeShowRails({
     <>
       {showRelated ? (
         <section className="w-full pt-6">
-          <h2 className="mb-3 text-lg font-semibold text-foreground">Related anime</h2>
+          <ExploreSectionTitle className="mb-3">Related anime</ExploreSectionTitle>
           {related.length > 0 ? (
             <ul className={`${gridClass} items-start`}>
               {related.map((item) => {
@@ -249,7 +250,7 @@ export default function AnimeShowRails({
 
       {showYml ? (
         <section className={`${related.length > 0 || relatedLoading ? "mt-10" : ""} w-full pt-8`}>
-          <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
+          <ExploreSectionTitle className="mb-4">You might like</ExploreSectionTitle>
           {youMightLike.length > 0 ? (
             <ul className={`${gridClass} items-start`}>
               {youMightLike.map((item) => (

@@ -17,13 +17,15 @@ export default function MainWithSidebarOffset({
 
   return (
     <div
-      className={`relative flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden ${
+      className={`relative flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden lg:overflow-x-visible ${
         heroBleed ? "pt-0" : "pt-14"
       }`}
     >
       <DesktopTopNav />
       <div
-        className={`min-h-0 min-w-0 flex-1 pl-0 ${heroBleed ? "overflow-x-clip" : "overflow-x-hidden"}`}
+        className={`min-h-0 min-w-0 flex-1 pl-0 ${
+          heroBleed ? "overflow-x-clip lg:overflow-x-visible" : "overflow-x-hidden lg:overflow-x-visible"
+        }`}
       >
         {children}
       </div>

@@ -2,12 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Chip, Button } from "@heroui/react";
+import { Button } from "@heroui/react";
 import Header from "@/components/ui/header";
 import PageSplash from "@/components/ui/pageSplash";
 import LargeCard from "@/components/ui/largeCard";
 import CatalogRail from "@/components/catalog/catalogRail";
+import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
+import SidebarBleedRail from "@/components/ui/sidebarBleedRail";
 import {
   Carousel,
   CarouselContent,
@@ -146,9 +148,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
         {hasFeatured && (
           <section className="space-y-3" aria-label="Featured">
-            <Chip color="success" variant="flat" size="md" radius="sm">
-              Featured
-            </Chip>
+            <ExploreSectionTitle>Featured</ExploreSectionTitle>
             <div className="grid gap-3 sm:grid-cols-2">
               {data.featured.map((item) => {
                 const title = item.title || item.name || "Untitled";
@@ -183,15 +183,14 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
         {categoryGenres.length > 0 && (
           <section className="flex w-full flex-col gap-3" aria-label="Browse by genre">
-            <Chip color="success" variant="flat" size="md" radius="sm">
-              Browse by genre
-            </Chip>
+            <ExploreSectionTitle>Browse by genre</ExploreSectionTitle>
+            <SidebarBleedRail>
             <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-              <CarouselContent className="ml-0">
+              <CarouselContent className="-ml-3">
                 {categoryGenres.map((genre, i) => (
                   <CarouselItem
                     key={genre.slug}
-                    className="basis-[42%] pl-0 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
+                    className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
                   >
                     <GenreCatalogTile
                       genre={genre}
@@ -202,14 +201,15 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                 ))}
               </CarouselContent>
             </Carousel>
+            </SidebarBleedRail>
           </section>
         )}
 
         {hasContent ? (
           <div className="flex flex-col gap-10">
-            <CatalogRail title="Popular" items={data.popular} flushLeft />
-            <CatalogRail title="Top rated" items={data.topRated} flushLeft />
-            <CatalogRail title="New" items={data.new} flushLeft />
+            <CatalogRail title="Popular" items={data.popular} />
+            <CatalogRail title="Top rated" items={data.topRated} />
+            <CatalogRail title="New" items={data.new} />
           </div>
         ) : (
           <p className="py-12 text-center text-sm text-default-500">

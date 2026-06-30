@@ -7,6 +7,7 @@ import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardL
 import SmallCardLoading from '@/components/ui/smallCardLoading';
 import { tmdbBearerToken } from '@/lib/tmdbAuth';
 import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
+import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
 import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
@@ -252,7 +253,7 @@ export default function YouMightLike({
   if (loading) {
     return (
       <section className="mt-10 w-full pt-8">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
+        <ExploreSectionTitle className="mb-4">You might like</ExploreSectionTitle>
         <div className={`${gridClass} items-start`}>
           {Array.from({ length: maxItems }).map((_, i) =>
             horizontal ? (
@@ -270,7 +271,7 @@ export default function YouMightLike({
 
   return (
     <section className="mt-10 w-full pt-8">
-      <h2 className="mb-4 text-lg font-semibold text-foreground">You might like</h2>
+      <ExploreSectionTitle className="mb-4">You might like</ExploreSectionTitle>
       <ul className={`${gridClass} items-start`}>
         {items.map((item) => (
           <li key={`${item.keyId}-${item.linkId}`} className="min-w-0">

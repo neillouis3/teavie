@@ -24,7 +24,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="hidden min-h-screen lg:block" aria-hidden>
         <SideBar />
       </div>
-      <div className="min-w-0 overflow-x-hidden">
+      <div className="min-w-0 overflow-x-hidden lg:overflow-x-visible">
         <MainWithSidebarOffset>{children}</MainWithSidebarOffset>
       </div>
     </div>
