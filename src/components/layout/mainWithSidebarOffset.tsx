@@ -4,6 +4,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
 import DesktopTopNav from "@/components/ui/desktopTopNav";
+import Footer from "@/components/ui/footer";
 
 /** Main column beside the sidebar grid track (desktop) or full width (mobile). */
 export default function MainWithSidebarOffset({
@@ -26,6 +27,7 @@ export default function MainWithSidebarOffset({
       >
         {children}
       </div>
+      <Footer />
     </div>
   );
 }

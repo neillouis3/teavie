@@ -1,33 +1,38 @@
-import React from "react";
 import Link from "next/link";
 
-export default function Footer () {
-    return (
-        <div className="w-full mt-48 py-4 justify-center items-center px-4 ">
-            <div className="bg-white flex items-center  flex-col bg-opacity-50 py-8 px-4 rounded-lg">
-                <div>
-                    <Link href='/explore'>
-                        <img src="/verLogo.png" alt="logo" className=" w-64 h-fit" />
+const FOOTER_LINKS = [
+  { href: "/explore", label: "Explore" },
+  { href: "/movies/all", label: "Movies" },
+  { href: "/shows/all", label: "TV Shows" },
+  { href: "/settings", label: "Settings" },
+] as const;
 
-                    </Link>
-                </div>
+export default function Footer() {
+  const year = new Date().getFullYear();
 
-                <div className="mt-8 flex py-4 flex-col justify-center items-center border-t border-[#21D5E0]">
-                    <p className="text-xs text-gray-400">
-                        Sofacouch - Free movies online, here you can watch movies online in high quality for free just come and enjoy your movies online. 
-                    </p>
-                    <p className="text-xs text-[#21D5E0]">
-                        Disclaimer: This site does not store any files on its server. All contents are provided by non-affiliated third parties.
-                    </p>
-                    <p className="text-xs text-gray-400">
-                        SofaCouch © 2024. All Rights Reserved
-                    </p>
-                </div>
-            
-                </div>
-
-
-
-        </div>
-    )
+  return (
+    <footer className="mt-auto w-full border-t border-default-200/80 px-4 py-8">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
+        <p className="text-sm text-default-500">© {year} Teavie</p>
+        <nav
+          aria-label="Footer"
+          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1"
+        >
+          {FOOTER_LINKS.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-sm text-default-500 transition-colors hover:text-foreground"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+      <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-default-400">
+        Teavie does not host video files. Playback is provided by third-party
+        services.
+      </p>
+    </footer>
+  );
 }
