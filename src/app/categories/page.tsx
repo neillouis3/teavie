@@ -18,7 +18,7 @@ export default function CategoriesIndexPage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Categories" />
-      <div className="w-full px-3 pb-12 pt-2 sm:px-4">
+      <div className="w-full pr-3 pb-12 pt-2 sm:pr-4">
         {categories.length === 0 ? (
           <CategorySquareTilesSkeleton />
         ) : (

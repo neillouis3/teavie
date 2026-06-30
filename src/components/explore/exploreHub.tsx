@@ -114,13 +114,13 @@ export default function ExploreHub() {
         </section>
       )}
 
-      <div className="mt-2 w-full px-3 sm:px-4">
+      <div className="mt-2 w-full pr-3 sm:pr-4">
         <WatchHistoryRail items={historyRows} />
         <GenreRail genres={genres} />
       </div>
 
       {hasPopular && (
-        <div className="mt-6 flex w-full flex-col gap-12 px-3 sm:px-4">
+        <div className="mt-6 flex w-full flex-col gap-12 pr-3 sm:pr-4">
           <div className="flex flex-col gap-10">
             <CatalogRail
               title="Popular movies"
@@ -139,7 +139,7 @@ export default function ExploreHub() {
       )}
 
       {(hasUpcoming || hasNew) && (
-        <div className="mt-6 flex w-full flex-col gap-10 px-3 pb-8 sm:px-4">
+        <div className="mt-6 flex w-full flex-col gap-10 pr-3 pb-8 sm:pr-4">
           {hasUpcoming && (
             <section className="flex w-full flex-col gap-3" aria-label="New and upcoming">
               <ExploreSectionTitle>New &amp; upcoming</ExploreSectionTitle>

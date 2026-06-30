@@ -299,7 +299,7 @@ export default function MovieTemplate({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
+    <div className="flex h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
       <div className="w-full  flex flex-col gap-6">
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {movie && !movieReleased ? (

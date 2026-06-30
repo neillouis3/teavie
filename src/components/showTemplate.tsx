@@ -1265,7 +1265,7 @@ export default function ShowTemplate({
   }
 
   return (
-    <div className="flex min-h-full w-full flex-col bg-background/92 px-0 py-4 pb-32 dark:bg-background/88">
+    <div className="flex min-h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
       {adminPreview && adminBypassActive ? (
         <div className="mb-3 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-center text-xs text-warning-800 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">
           Admin preview — content policy bypass active

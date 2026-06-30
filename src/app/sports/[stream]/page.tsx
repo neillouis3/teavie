@@ -20,7 +20,7 @@ export default function SportsStreamPlayerPage() {
     return (
       <div className="flex min-h-screen w-full flex-col bg-main">
         <Header pageName="Sports" />
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-16">
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 pr-4 py-16">
           <p className="text-center text-sm text-default-500">This stream was not found.</p>
           
         </div>
@@ -29,7 +29,7 @@ export default function SportsStreamPlayerPage() {
   }
 
   return (
-    <div className="flex min-h-full w-full flex-col bg-background px-4 py-4 pb-32">
+    <div className="flex min-h-full w-full flex-col bg-background pr-4 pt-0 pb-32">
       <div className="flex w-full flex-col gap-6">
 
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">

@@ -112,7 +112,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={genreLabel} />
-      <div className="w-full space-y-4 px-3 pb-12 pt-2 sm:px-4">
+      <div className="w-full space-y-4 pr-3 pb-12 pt-2 sm:pr-4">
         <Chip color="success" variant="flat" size="md" radius="sm">
           {countLabel}
         </Chip>

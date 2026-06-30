@@ -10,7 +10,7 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
-import { Alert, Tooltip } from "@heroui/react";
+import { Alert } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
 
 export default function SideBar() {
@@ -147,19 +147,7 @@ export default function SideBar() {
                 description="Use an ad blocker—third-party players show ads we don’t control."
               />
             </div>
-          ) : (
-            <div className="flex flex-col items-center gap-4 px-1 pt-3">
-              <Tooltip
-                placement="right"
-                content="Use an ad blocker—third-party players show ads we don’t control."
-                classNames={{ content: "max-w-[220px] text-tiny" }}
-              >
-                <span className="cursor-default text-center text-[10px] font-medium leading-tight text-success">
-                  Adblock
-                </span>
-              </Tooltip>
-            </div>
-          )}
+          ) : null}
         </nav>
 
         {!isCollapsed ? (

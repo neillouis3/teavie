@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { CONTENT_INSET_X } from "@/lib/contentInset";
 
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-auto w-full px-4 pt-10 pb-4">
+    <footer className={`mt-auto w-full pt-10 pb-4 ${CONTENT_INSET_X}`}>
       <div className="flex w-full flex-col gap-2 text-left">
         <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
           <Link href="/explore" className="inline-flex shrink-0">

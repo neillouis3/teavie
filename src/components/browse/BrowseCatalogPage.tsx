@@ -106,7 +106,7 @@ function BrowseCatalogPageContent({
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={pageName} />
-      <div className="space-y-4 px-3 pb-8 pt-2 sm:px-4">
+      <div className="space-y-4 pr-3 pb-8 pt-2 sm:pr-4">
         <BrowseCatalogFilters
           mode={filterMode}
           total={total}
@@ -157,7 +157,7 @@ function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={pageName} />
-      <div className="px-3 pb-8 pt-2 sm:px-4">
+      <div className="pr-3 pb-8 pt-2 sm:pr-4">
         <MovieCatalogGridLoading />
       </div>
     </div>

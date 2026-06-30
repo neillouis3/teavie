@@ -1,8 +1,9 @@
 import React from 'react';
+import { CONTENT_INSET_X } from '@/lib/contentInset';
 
 export default function Header({ pageName }: { pageName: string }) {
   return (
-    <header className="w-full px-3 pb-2 pt-5 sm:px-4 sm:pt-6.5">
+    <header className={`w-full pb-2 pt-0 sm:pt-0.5 ${CONTENT_INSET_X}`}>
       <h1 className="text-xl font-normal tracking-tight text-foreground sm:text-2xl">
         {pageName}
       </h1>

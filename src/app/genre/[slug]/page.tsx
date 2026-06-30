@@ -16,7 +16,7 @@ function GenrePageInner() {
 
   if (!isValidImdbGenreSlug(slug)) {
     return (
-      <div className="bg-main min-h-screen w-full px-4 py-16 text-center sm:px-6">
+      <div className="bg-main min-h-screen w-full pr-4 py-16 text-center sm:pr-6">
         <p className="text-sm text-default-500">That genre doesn&apos;t exist.</p>
         <Link href="/genres" className="mt-3 inline-block text-sm text-success hover:underline">
           Browse all genres

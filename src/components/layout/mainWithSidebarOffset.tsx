@@ -23,7 +23,7 @@ export default function MainWithSidebarOffset({
     >
       <DesktopTopNav />
       <div
-        className={`min-h-0 min-w-0 flex-1 ${heroBleed ? "overflow-x-clip" : "overflow-x-hidden"}`}
+        className={`min-h-0 min-w-0 flex-1 pl-0 ${heroBleed ? "overflow-x-clip" : "overflow-x-hidden"}`}
       >
         {children}
       </div>

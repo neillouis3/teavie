@@ -12,7 +12,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col items-center justify-center bg-main px-4 py-12 sm:px-8 sm:py-24 lg:min-h-screen">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col items-center justify-center bg-main pr-4 py-12 sm:pr-8 sm:py-24 lg:min-h-screen">
       <div className="flex w-full max-w-lg flex-col items-center justify-center sm:max-w-2xl">
         <div className="flex w-full flex-col items-center justify-center text-center">
           <img

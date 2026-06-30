@@ -119,7 +119,7 @@ export default function TrendingHero({
     return (
       <CarouselItem
         key={`${type}-${item.id}`}
-        className="h-full basis-full pl-0"
+        className="h-full basis-full"
       >
         {renderCard(item)}
       </CarouselItem>
@@ -175,7 +175,7 @@ export default function TrendingHero({
 
   return (
     <div
-      className={`flex w-full flex-col items-center px-3 sm:px-4 ${TRENDING_CAROUSEL_H}`}
+      className={`flex w-full flex-col items-center pr-3 sm:pr-4 ${TRENDING_CAROUSEL_H}`}
     >
       <div
         className={`h-full w-full ${rounded ? "overflow-hidden rounded-2xl" : ""}`}
