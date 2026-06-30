@@ -26,9 +26,6 @@ export default function HomePage() {
             className="hidden h-auto w-full max-w-xs rounded-xl p-2 dark:block sm:max-w-md sm:p-4"
           />
 
-          <p className="mt-8 max-w-md text-sm text-default-600 dark:text-default-400 sm:mt-16 sm:text-base">
-            Movies and shows shown are limited and just for demo purposes.
-          </p>
           <Button
             color="success"
             className="mt-8 sm:mt-16"

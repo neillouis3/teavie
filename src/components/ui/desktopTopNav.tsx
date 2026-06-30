@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation";
 function SearchFallback() {
   return (
     <div
-      className="h-10 w-full animate-pulse rounded-lg bg-default-100"
+      className="h-10 w-full max-w-sm animate-pulse rounded-lg bg-default-100"
       aria-hidden
     />
   );
@@ -38,7 +38,7 @@ export default function DesktopTopNav() {
         ...chromeStyle,
       }}
     >
-      <div className="grid w-full grid-cols-[1fr_minmax(0,28rem)_1fr] items-center gap-3">
+      <div className="grid w-full grid-cols-[1fr_minmax(0,20rem)_1fr] items-center gap-3">
         <div aria-hidden className="min-w-0" />
         <Suspense fallback={<SearchFallback />}>
           <NavSearchBar

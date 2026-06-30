@@ -18,11 +18,9 @@ import {
   Menu01Icon,
   Search01Icon,
   Settings01Icon,
+  UserCircleIcon,
 } from '@hugeicons/core-free-icons';
 import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
-import ProfileNavAvatar from '@/components/ui/profileNavAvatar';
-import WatchPartyNavButton from '@/components/watchParty/WatchPartyNavButton';
-import ThemeNavButton from '@/components/ui/themeNavButton';
 import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from '@/components/ui/navGlass';
 import { pathUsesHeroBleed } from '@/lib/heroBleedPaths';
 import { useScrollNavBlend } from '@/hooks/useScrollNavBlend';
@@ -68,6 +66,7 @@ export default function MobileTopNav() {
                 : null;
 
   const settingsActive = pathname.startsWith('/settings');
+  const profileActive = pathname.startsWith('/profile');
   const searchActive = pathname.startsWith('/search');
   const heroBleed = pathUsesHeroBleed(pathname);
   const blend = useScrollNavBlend(heroBleed);
@@ -110,7 +109,6 @@ export default function MobileTopNav() {
           <img src={logoSrc} alt="Teavie" className="h-9 w-auto max-w-[9rem]" />
         </Link>
         <div className="flex h-10 shrink-0 items-center gap-0.5">
-          <WatchPartyNavButton overHero={overHero} />
           <Link
             href="/search"
             aria-label="Search"
@@ -120,8 +118,6 @@ export default function MobileTopNav() {
           >
             <HugeiconsIcon icon={Search01Icon} size={24} className="shrink-0" />
           </Link>
-          <ThemeNavButton overHero={overHero} />
-          <ProfileNavAvatar />
         </div>
       </header>
 
@@ -216,18 +212,32 @@ export default function MobileTopNav() {
               />
             </div>
 
-            <Link
-              href="/settings"
-              onClick={() => setOpen(false)}
-              className={`mt-6 flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
-                settingsActive
-                  ? 'bg-success text-success-foreground shadow-sm'
-                  : 'text-foreground hover:bg-default-100'
-              }`}
-            >
-              <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
-              Settings
-            </Link>
+            <div className="mt-6 flex flex-col gap-1">
+              <Link
+                href="/profile"
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
+                  profileActive
+                    ? 'bg-success text-success-foreground shadow-sm'
+                    : 'text-foreground hover:bg-default-100'
+                }`}
+              >
+                <HugeiconsIcon icon={UserCircleIcon} size={20} className="shrink-0" />
+                Profile
+              </Link>
+              <Link
+                href="/settings"
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
+                  settingsActive
+                    ? 'bg-success text-success-foreground shadow-sm'
+                    : 'text-foreground hover:bg-default-100'
+                }`}
+              >
+                <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
+                Settings
+              </Link>
+            </div>
           </DrawerBody>
         </DrawerContent>
       </Drawer>
