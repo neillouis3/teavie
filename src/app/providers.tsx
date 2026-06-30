@@ -5,9 +5,8 @@ import { HeroUIProvider } from "@heroui/system";
 import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SidebarProvider } from "@/components/ui/sidebarContext";
-import SideBar from "@/components/ui/sideBar";
 import MobileTopNav from "@/components/ui/mobileTopNav";
-import MainWithSidebarOffset from "@/components/layout/mainWithSidebarOffset";
+import AppShell from "@/components/layout/appShell";
 import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
 import { AnimeAudioProvider } from "@/contexts/animeAudioContext";
 import { AnimeSourceProvider } from "@/contexts/animeSourceContext";
@@ -37,19 +36,15 @@ export function Providers({ children }: ProvidersProps) {
               <MaintenanceAnnouncementModal />
               <Suspense
                 fallback={
-                  <>
-                    <div
-                      className="fixed left-0 right-0 top-0 z-50 h-14 border-b border-divider bg-background lg:hidden"
-                      aria-hidden
-                    />
-                    <div className="fixed left-0 top-0 hidden h-screen w-16 bg-background lg:block lg:w-64" />
-                  </>
+                  <div
+                    className="fixed left-0 right-0 top-0 z-50 h-14 border-b border-divider bg-background lg:hidden"
+                    aria-hidden
+                  />
                 }
               >
                 <MobileTopNav />
-                <SideBar />
               </Suspense>
-              <MainWithSidebarOffset>{children}</MainWithSidebarOffset>
+              <AppShell>{children}</AppShell>
               </WatchPartyNavProvider>
               </AnimeAudioProvider>
               </AnimeSourceProvider>

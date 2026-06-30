@@ -57,9 +57,7 @@ export default function SideBar() {
   return (
     <div
       data-sidebar-shell
-      className={`relative isolate items-center z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex overflow-hidden transition-[width] duration-200 ease-in-out bg-background ${
-        isCollapsed ? "w-16" : "w-64"
-      }`}
+      className="relative isolate z-40 hidden h-dvh w-full shrink-0 flex-col items-center overflow-hidden bg-background py-4 px-2 lg:sticky lg:top-0 lg:flex lg:self-start"
     >
       <SidebarEdgeReflection />
       <div className="relative z-10 flex h-full w-full flex-col gap-4">

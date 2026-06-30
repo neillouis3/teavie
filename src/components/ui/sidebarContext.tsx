@@ -40,6 +40,13 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   const state = open ? "expanded" : "collapsed";
 
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-w",
+      state === "collapsed" ? "4rem" : "16rem"
+    );
+  }, [state]);
+
   return (
     <SidebarContext.Provider value={{ state, open, setOpen, isMobile, toggleSidebar }}>
       {children}

@@ -5,7 +5,6 @@ import NavSearchBar from "@/components/ui/navSearchBar";
 import ProfileNavAvatar from "@/components/ui/profileNavAvatar";
 import WatchPartyNavButton from "@/components/watchParty/WatchPartyNavButton";
 import ThemeNavButton from "@/components/ui/themeNavButton";
-import { useSidebar } from "@/components/ui/sidebarContext";
 import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from "@/components/ui/navGlass";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
 import { useScrollNavBlend } from "@/hooks/useScrollNavBlend";
@@ -20,25 +19,18 @@ function SearchFallback() {
   );
 }
 
-/**
- * Fixed top bar for lg+ viewports (main column, beside the sidebar).
- * Uses fixed positioning — sticky breaks when ancestors use overflow-x-hidden.
- */
+/** Sticky top bar for lg+ viewports (main grid column only). */
 export default function DesktopTopNav() {
   const pathname = usePathname();
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
   const heroBleed = pathUsesHeroBleed(pathname);
   const blend = useScrollNavBlend(heroBleed);
   const overHero = heroBleed && navOverHero(blend);
 
   return (
     <header
-      className={`fixed top-0 right-0 z-40 hidden h-14 items-center px-4 transition-[left,color] duration-200 ease-in-out lg:flex ${
+      className={`sticky top-0 z-40 hidden h-14 w-full shrink-0 items-center px-4 transition-colors duration-200 ease-in-out lg:flex ${
         heroBleed ? "" : NAV_GLASS_CLASS
-      } ${overHero ? "text-white" : "text-foreground"} ${
-        collapsed ? "left-16" : "left-64"
-      }`}
+      } ${overHero ? "text-white" : "text-foreground"}`}
       style={heroBleed ? navChromeStyle(blend) : undefined}
     >
       <div className="grid w-full grid-cols-[1fr_minmax(0,28rem)_1fr] items-center gap-3">
