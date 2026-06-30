@@ -1,6 +1,7 @@
 /** Shared display name for watch party + profile avatar. */
 
 export const PARTY_NICK_KEY = "teavie.party.nickname";
+export const PARTY_NICKNAME_CHANGED_EVENT = "teavie-party-nickname-changed";
 
 export function getStoredPartyNickname(): string {
   if (typeof window === "undefined") return "Guest";
@@ -8,6 +9,16 @@ export function getStoredPartyNickname(): string {
     return localStorage.getItem(PARTY_NICK_KEY)?.trim() || "Guest";
   } catch {
     return "Guest";
+  }
+}
+
+export function setStoredPartyNickname(name: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PARTY_NICK_KEY, name.trim().slice(0, 32));
+    window.dispatchEvent(new CustomEvent(PARTY_NICKNAME_CHANGED_EVENT));
+  } catch {
+    /* ignore */
   }
 }
 

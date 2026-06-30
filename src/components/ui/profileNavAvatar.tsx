@@ -10,10 +10,12 @@ import {
   DropdownTrigger,
 } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Settings01Icon } from "@hugeicons/core-free-icons";
-import { avatarInitials, getStoredPartyNickname } from "@/lib/partyNickname";
-
-const NICK_CHANGED = "teavie-party-nickname-changed";
+import { Settings01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import {
+  avatarInitials,
+  getStoredPartyNickname,
+  PARTY_NICKNAME_CHANGED_EVENT,
+} from "@/lib/partyNickname";
 
 export default function ProfileNavAvatar() {
   const [nickname, setNickname] = useState("Guest");
@@ -22,10 +24,10 @@ export default function ProfileNavAvatar() {
     const refresh = () => setNickname(getStoredPartyNickname());
     refresh();
     window.addEventListener("storage", refresh);
-    window.addEventListener(NICK_CHANGED, refresh);
+    window.addEventListener(PARTY_NICKNAME_CHANGED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
-      window.removeEventListener(NICK_CHANGED, refresh);
+      window.removeEventListener(PARTY_NICKNAME_CHANGED_EVENT, refresh);
     };
   }, []);
 
@@ -49,6 +51,16 @@ export default function ProfileNavAvatar() {
         </button>
       </DropdownTrigger>
       <DropdownMenu aria-label="Profile actions">
+        <DropdownItem
+          key="profile"
+          href="/profile"
+          as={Link}
+          startContent={
+            <HugeiconsIcon icon={UserCircleIcon} size={16} className="shrink-0" />
+          }
+        >
+          Profile
+        </DropdownItem>
         <DropdownItem
           key="settings"
           href="/settings"
