@@ -7,6 +7,7 @@ import {
   CategorySquareTile,
   CategorySquareTilesSkeleton,
 } from "@/components/category/categoryTileShared";
+import { CONTENT_INSET_X } from "@/lib/contentInset";
 
 export default function CategoriesIndexPage() {
   const categories = listCatalogCategories();
@@ -18,7 +19,7 @@ export default function CategoriesIndexPage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Categories" />
-      <div className="w-full pr-3 pb-12 pt-2 sm:pr-4">
+      <div className={`w-full pb-12 pt-2 ${CONTENT_INSET_X}`}>
         {categories.length === 0 ? (
           <CategorySquareTilesSkeleton />
         ) : (

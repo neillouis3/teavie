@@ -21,6 +21,7 @@ import {
   watchHistoryProgressLabel,
   WATCH_HISTORY_CHANGED_EVENT,
 } from "@/lib/watchHistory";
+import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 
 export type { TmdbDiscoverPayload };
 
@@ -114,13 +115,13 @@ export default function ExploreHub() {
         </section>
       )}
 
-      <div className="mt-2 w-full">
+      <div className={`mt-2 w-full ${MOBILE_CONTENT_INSET_LEFT}`}>
         <WatchHistoryRail items={historyRows} />
         <GenreRail genres={genres} />
       </div>
 
       {hasPopular && (
-        <div className="mt-6 flex w-full flex-col gap-12">
+        <div className={`mt-6 flex w-full flex-col gap-12 ${MOBILE_CONTENT_INSET_LEFT}`}>
           <div className="flex flex-col gap-10">
             <CatalogRail
               title="Popular movies"
@@ -137,7 +138,7 @@ export default function ExploreHub() {
       )}
 
       {(hasUpcoming || hasNew) && (
-        <div className="mt-6 flex w-full flex-col gap-10 pb-8">
+        <div className={`mt-6 flex w-full flex-col gap-10 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
           {hasUpcoming && (
             <section className="flex w-full flex-col gap-3" aria-label="New and upcoming">
               <ExploreSectionTitle>New &amp; upcoming</ExploreSectionTitle>

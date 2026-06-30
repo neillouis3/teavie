@@ -62,7 +62,7 @@ export default function MobileTopNav() {
   return (
     <>
       <header
-        className={`fixed left-0 right-0 top-0 z-50 flex h-14 items-center gap-2 px-3 lg:hidden ${
+        className={`fixed left-0 right-0 top-0 z-50 flex h-14 items-center gap-2 pl-4 pr-3 lg:hidden ${
           heroBleed ? '' : NAV_GLASS_CLASS
         } ${overHero ? 'text-white' : 'text-foreground'}`}
         style={heroBleed ? navChromeStyle(blend) : undefined}

@@ -20,6 +20,7 @@ import {
   fetchExploreHistoryRows,
   type ExploreHistoryRow,
 } from "@/lib/explorePageData";
+import { CONTENT_INSET_X } from "@/lib/contentInset";
 
 export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
@@ -76,7 +77,7 @@ export default function ProfilePage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Profile" />
-      <div className="max-w-2xl pr-3 pt-4 sm:pr-4">
+      <div className={`max-w-2xl pt-4 ${CONTENT_INSET_X}`}>
         <section className="flex flex-col gap-6 sm:flex-row sm:items-center">
           <Avatar
             name={displayNick}
@@ -121,11 +122,11 @@ export default function ProfilePage() {
       </div>
 
       {historyRows.length > 0 ? (
-        <div className="mt-10 w-full pr-3 sm:pr-4">
+        <div className={`mt-10 w-full ${CONTENT_INSET_X}`}>
           <WatchHistoryRail items={historyRows} layout="profile" maxItems={7} />
         </div>
       ) : (
-        <div className="mt-10 max-w-2xl pr-3 sm:pr-4">
+        <div className={`mt-10 max-w-2xl ${CONTENT_INSET_X}`}>
           <section className="space-y-2">
             <h2 className="text-sm font-semibold text-foreground">Continue watching</h2>
             <p className="text-sm text-default-500">
@@ -135,7 +136,7 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <div className="max-w-2xl space-y-2 border-t border-divider pr-3 pb-12 pt-8 sm:pr-4">
+      <div className={`max-w-2xl space-y-2 border-t border-divider pb-12 pt-8 ${CONTENT_INSET_X}`}>
         <p className="text-sm text-default-500">
           Theme, streaming sources, and catalog layout live in Settings.
         </p>

@@ -3,12 +3,13 @@
 import React from 'react';
 import Header from '@/components/ui/header';
 import SearchCatalogGridLoading from '@/components/browse/skeleton/searchCatalogGridLoading';
+import { CONTENT_INSET_X } from '@/lib/contentInset';
 
 export default function SearchPageSkeleton() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Search" />
-      <div className="space-y-6 pr-3 pb-6 pt-2 sm:pr-4">
+      <div className={`space-y-6 pb-6 pt-2 ${CONTENT_INSET_X}`}>
         <div className="space-y-2">
           <div className="h-9 w-full animate-pulse rounded-md bg-default-200" />
           <div className="flex flex-wrap gap-2">

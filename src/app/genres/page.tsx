@@ -11,6 +11,7 @@ import {
   type CatalogGenreRow,
 } from "@/components/genre/genreTileShared";
 import { fetchGenresIndex } from "@/lib/pageDataCache";
+import { CONTENT_INSET_X } from "@/lib/contentInset";
 
 function mergeAllGenres(fromApi: CatalogGenreRow[]): CatalogGenreRow[] {
   const bySlug = new Map(fromApi.map((g) => [g.slug, g]));
@@ -59,7 +60,7 @@ export default function GenresIndexPage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Genres" />
-      <div className="w-full pr-3 pb-12 pt-2 sm:pr-4">
+      <div className={`w-full pb-12 pt-2 ${CONTENT_INSET_X}`}>
         {error ? (
           <p className="py-12 text-left text-sm text-default-500">
             Could not load genres. Try again later.

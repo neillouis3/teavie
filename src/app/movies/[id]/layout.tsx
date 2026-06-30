@@ -1,4 +1,5 @@
 import React from 'react';
+import { CONTENT_INSET_X } from '@/lib/contentInset';
 
 export default function MovieLayout({
   children,
@@ -7,7 +8,7 @@ export default function MovieLayout({
 }) {
   return (
     <div className="bg-background flex h-full w-full min-w-0 justify-center">
-      <div className="flex h-full w-full min-w-0 flex-col pr-3 sm:pr-4">
+      <div className={`flex h-full w-full min-w-0 flex-col ${CONTENT_INSET_X}`}>
         {children}
       </div>
     </div>

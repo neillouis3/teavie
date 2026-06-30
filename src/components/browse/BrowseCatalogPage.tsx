@@ -11,6 +11,7 @@ import BrowseCatalogFilters from "@/components/browse/BrowseCatalogFilters";
 import { Pagination } from "@heroui/react";
 import type { ContentItem } from "@/types/content";
 import { fetchBrowseCatalogPayload } from "@/lib/pageDataCache";
+import { CONTENT_INSET_X } from "@/lib/contentInset";
 
 type BrowseCatalogPageProps = {
   pageName: string;
@@ -103,7 +104,7 @@ function BrowseCatalogPageContent({
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={pageName} />
-      <div className="space-y-4 pr-3 pb-8 pt-2 sm:pr-4">
+      <div className={`space-y-4 pb-8 pt-2 ${CONTENT_INSET_X}`}>
         <BrowseCatalogFilters
           mode={filterMode}
           genreSlugs={genreSlugs}
@@ -152,7 +153,7 @@ function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={pageName} />
-      <div className="pr-3 pb-8 pt-2 sm:pr-4">
+      <div className={`pb-8 pt-2 ${CONTENT_INSET_X}`}>
         <MovieCatalogGridLoading />
       </div>
     </div>

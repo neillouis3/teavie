@@ -25,6 +25,7 @@ import {
   type StreamServerId,
 } from '@/contexts/streamingSourceContext';
 import { animeAudioLabel } from '@/lib/animePlayEmbed';
+import { CONTENT_INSET_X } from '@/lib/contentInset';
 
 export default function SettingsPage() {
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -47,7 +48,7 @@ export default function SettingsPage() {
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Settings" />
-      <div className="max-w-2xl space-y-10 pr-3 pb-12 pt-4 sm:pr-4">
+      <div className={`max-w-2xl space-y-10 pb-12 pt-4 ${CONTENT_INSET_X}`}>
         <p className="text-sm text-default-500">
           Appearance, catalog layout, and default streaming embed for movies and TV. Choices are
           saved in this browser.

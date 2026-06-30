@@ -30,6 +30,7 @@ import {
   categoryGenreBrowseHref,
   getCatalogCategory,
 } from "@/lib/catalogCategories";
+import { CONTENT_INSET_X } from "@/lib/contentInset";
 import {
   fetchCategoryDiscover,
   type CategoryDiscoverPayload,
@@ -130,7 +131,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
         </section>
       )}
 
-      <div className="space-y-8 pr-3 pb-8 sm:pr-4">
+      <div className={`space-y-8 pb-8 ${CONTENT_INSET_X}`}>
         <section
           className="flex flex-col gap-4 rounded-xl border border-default-200/70 bg-default-50/60 p-4 dark:border-white/10 dark:bg-default-50/10 sm:flex-row sm:items-center sm:justify-between sm:p-5"
           aria-label={`Browse all ${category.label}`}

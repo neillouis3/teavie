@@ -10,6 +10,7 @@ import {
   CATALOG_GRID_HORIZONTAL,
   CATALOG_GRID_VERTICAL,
 } from '@/lib/catalogGrid';
+import { CONTENT_INSET_X } from '@/lib/contentInset';
 
 export default function SportsPage() {
   const { mode } = useCatalogCardStyle();
@@ -22,7 +23,7 @@ export default function SportsPage() {
   return (
     <div className="min-h-screen w-full bg-main">
       <Header pageName="Sports" />
-      <div className="space-y-4 pr-3 pb-8 pt-2 sm:pr-4">
+      <div className={`space-y-4 pb-8 pt-2 ${CONTENT_INSET_X}`}>
         <div className={horizontal ? CATALOG_GRID_HORIZONTAL : CATALOG_GRID_VERTICAL}>
           {SPORTS_STREAMS.map((s) =>
             horizontal ? (

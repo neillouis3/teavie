@@ -14,6 +14,7 @@ import {
   fetchGenrePagePayload,
   type GenrePagePayload,
 } from '@/lib/pageDataCache';
+import { CONTENT_INSET_X } from '@/lib/contentInset';
 
 export type GenrePageType = 'all' | 'movie' | 'tv';
 export type GenrePageSort = 'popular' | 'top_rated' | 'new';
@@ -112,7 +113,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName={genreLabel} />
-      <div className="w-full space-y-4 pr-3 pb-12 pt-2 sm:pr-4">
+      <div className={`w-full space-y-4 pb-12 pt-2 ${CONTENT_INSET_X}`}>
         <nav
           className="flex flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-1"
           aria-label="Content type"

@@ -11,6 +11,7 @@ import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import CatalogRail, { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
 import SearchCatalogGridLoading from '@/components/browse/skeleton/searchCatalogGridLoading';
 import SearchPageSkeleton from '@/components/browse/skeleton/searchPageSkeleton';
+import { CONTENT_INSET_X } from '@/lib/contentInset';
 import {
   useCatalogCardStyle,
 } from '@/contexts/catalogCardStyleContext';
@@ -196,7 +197,7 @@ function SearchContent() {
       <div className="bg-main min-h-screen w-full">
         <Header pageName="Search" />
 
-        <div className="space-y-6 pr-3 pb-6 pt-2 sm:pr-4">
+        <div className={`space-y-6 pb-6 pt-2 ${CONTENT_INSET_X}`}>
           <div className="space-y-2">
             <form onSubmit={submitSearch} className="w-full">
               <Input
@@ -259,7 +260,7 @@ function SearchContent() {
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Search" />
 
-      <div className="space-y-6 pr-3 pb-6 pt-2 sm:pr-4">
+      <div className={`space-y-6 pb-6 pt-2 ${CONTENT_INSET_X}`}>
         <div className="space-y-2">
           <form onSubmit={submitSearch} className="w-full">
             <Input
