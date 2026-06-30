@@ -1,40 +1,29 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSidebar } from "./sidebarContext";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Search01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
-import { Input, Alert, Tooltip } from "@heroui/react";
+import { Alert, Tooltip } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
 
 export default function SideBar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    const q = searchParams.get("q") ?? "";
-    if (pathname === "/search") {
-      setSearchValue(q);
-    }
-  }, [pathname, searchParams]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -48,16 +37,6 @@ export default function SideBar() {
   }, [toggleSidebar]);
 
   const logoSrc = mounted && resolvedTheme === "dark" ? "/darkLogo.png" : "/lightLogo.png";
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = searchValue.trim();
-    if (trimmed) {
-      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
-    } else {
-      router.push("/search");
-    }
-  };
 
   const selectedKey =
     pathname.startsWith("/explore")
@@ -161,56 +140,6 @@ export default function SideBar() {
               })}
             </div>
           ))}
-
-          {isCollapsed ? (
-            <Tooltip placement="right" content="Search">
-              <Link
-                href="/search"
-                className={`
-                  mt-1 flex items-center justify-center rounded-lg px-3 py-2.5 transition-all
-                  ${
-                    pathname.startsWith("/search")
-                      ? "bg-success text-success-foreground shadow-sm"
-                      : "text-foreground hover:bg-default-100"
-                  }
-                `}
-                aria-label="Search"
-              >
-                <HugeiconsIcon icon={Search01Icon} size={20} className="shrink-0" />
-              </Link>
-            </Tooltip>
-          ) : (
-            <AnimatePresence mode="wait">
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.15 }}
-                className="px-1 pt-2"
-              >
-                <form onSubmit={handleSearch}>
-                  <Input
-                    size="sm"
-                    variant="flat"
-                    placeholder="Search..."
-                    value={searchValue}
-                    onValueChange={setSearchValue}
-                    startContent={
-                      <HugeiconsIcon
-                        icon={Search01Icon}
-                        size={16}
-                        className="shrink-0 text-default-400"
-                      />
-                    }
-                    classNames={{
-                      input: "text-sm",
-                      inputWrapper: "h-9 bg-default-100 hover:bg-default-200",
-                    }}
-                  />
-                </form>
-              </motion.div>
-            </AnimatePresence>
-          )}
 
           {!isCollapsed ? (
             <div className="flex flex-col gap-4 px-0 pt-3">
