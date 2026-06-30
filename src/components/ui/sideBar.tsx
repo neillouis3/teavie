@@ -12,7 +12,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Alert } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
-import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from "@/components/ui/navGlass";
+import { SIDEBAR_GLASS_CLASS, sidebarChromeStyle, navOverHero } from "@/components/ui/navGlass";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
 import { useScrollNavBlend } from "@/hooks/useScrollNavBlend";
 import { TEAVIE_LOGO, teavieLogoForTheme } from "@/lib/brandAssets";
@@ -26,7 +26,7 @@ export default function SideBar() {
   const heroBleed = pathUsesHeroBleed(pathname);
   const blend = useScrollNavBlend(heroBleed);
   const overHero = heroBleed && navOverHero(blend);
-  const chromeStyle = heroBleed ? navChromeStyle(blend) : undefined;
+  const chromeStyle = heroBleed ? sidebarChromeStyle(blend) : undefined;
 
   useEffect(() => {
     setMounted(true);
@@ -62,7 +62,7 @@ export default function SideBar() {
     <div
       data-sidebar-shell
       className={`pointer-events-auto fixed left-0 top-0 z-50 flex hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center py-4 px-2 transition-[color] duration-200 ease-in-out lg:flex ${
-        heroBleed ? "" : NAV_GLASS_CLASS
+        heroBleed ? "" : SIDEBAR_GLASS_CLASS
       } ${overHero ? "text-white" : "text-foreground"}`}
       style={chromeStyle}
     >
