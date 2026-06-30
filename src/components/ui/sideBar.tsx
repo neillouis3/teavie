@@ -13,7 +13,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Alert, Tooltip } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
-import { SIDEBAR_GLASS_CLASS } from "@/components/ui/navGlass";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -56,44 +55,41 @@ export default function SideBar() {
 
   return (
     <div
-      className={`fixed left-0 top-0 z-40 hidden h-screen flex-col transition-[width] duration-200 ease-in-out lg:flex ${
+      className={`items-center bg-background z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex transition-[width] duration-200 ease-in-out ${
         isCollapsed ? "w-16" : "w-64"
       }`}
     >
-      {/* Transparent over full-bleed nav — logo sits on the shared glass bar */}
-      <div className="flex h-14 shrink-0 items-center justify-between px-2">
-        <AnimatePresence mode="wait">
-          {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.15 }}
-              className="overflow-hidden"
-            >
-              <img src={logoSrc} alt="TeaVie" className="h-9 w-auto" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <div className="w-full h-full flex flex-col gap-4">
+        <div className="flex items-center justify-between px-2 min-h-[48px]">
+          <AnimatePresence mode="wait">
+            {!isCollapsed && (
+              <motion.div
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.15 }}
+                className="overflow-hidden"
+              >
+                <img src={logoSrc} alt="TeaVie" className="h-12 w-auto" />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        <button
-          onClick={toggleSidebar}
-          className="ml-auto shrink-0 rounded-lg p-1.5 transition-colors hover:bg-default-100/80"
-          aria-label={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-          title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-        >
-          {isCollapsed ? (
-            <HugeiconsIcon icon={ArrowRight01Icon} size={20} className="shrink-0" />
-          ) : (
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="shrink-0" />
-          )}
-        </button>
-      </div>
+          <button
+            onClick={toggleSidebar}
+            className="p-1.5 rounded-lg hover:bg-default-100 transition-colors flex-shrink-0 ml-auto"
+            aria-label={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
+            title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
+          >
+            {isCollapsed ? (
+              <HugeiconsIcon icon={ArrowRight01Icon} size={20} className="shrink-0" />
+            ) : (
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="shrink-0" />
+            )}
+          </button>
+        </div>
 
-      <div
-        className={`flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-4 ${SIDEBAR_GLASS_CLASS}`}
-      >
-        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1 pt-2">
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
           {APP_NAV_SECTIONS.map((section, sectionIndex) => (
             <div
               key={section.id}

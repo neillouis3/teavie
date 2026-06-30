@@ -21,7 +21,8 @@ function SearchFallback() {
 }
 
 /**
- * Fixed full-bleed top bar on lg+; inner padding clears the sidebar.
+ * Fixed top bar for lg+ viewports (main column, beside the sidebar).
+ * Uses fixed positioning — sticky breaks when ancestors use overflow-x-hidden.
  */
 export default function DesktopTopNav() {
   const pathname = usePathname();
@@ -33,17 +34,14 @@ export default function DesktopTopNav() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-30 hidden h-14 items-center transition-[color] duration-200 ease-in-out lg:flex ${
+      className={`fixed top-0 right-0 z-40 hidden h-14 items-center px-4 transition-[left,color] duration-200 ease-in-out lg:flex ${
         heroBleed ? "" : NAV_GLASS_CLASS
-      } ${overHero ? "text-white" : "text-foreground"}`}
+      } ${overHero ? "text-white" : "text-foreground"} ${
+        collapsed ? "left-16" : "left-64"
+      }`}
       style={heroBleed ? navChromeStyle(blend) : undefined}
     >
-      <div
-        className={`flex h-full w-full items-center px-4 transition-[padding-left] duration-200 ease-in-out ${
-          collapsed ? "lg:pl-16" : "lg:pl-64"
-        }`}
-      >
-        <div className="grid w-full grid-cols-[1fr_minmax(0,28rem)_1fr] items-center gap-3">
+      <div className="grid w-full grid-cols-[1fr_minmax(0,28rem)_1fr] items-center gap-3">
         <div aria-hidden className="min-w-0" />
         <Suspense fallback={<SearchFallback />}>
           <NavSearchBar
@@ -56,7 +54,6 @@ export default function DesktopTopNav() {
           <WatchPartyNavButton overHero={overHero} />
           <ThemeNavButton overHero={overHero} />
           <ProfileNavAvatar />
-        </div>
         </div>
       </div>
     </header>
