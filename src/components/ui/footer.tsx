@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="mt-auto w-full px-4 py-10 pb-12">
       <div className="flex w-full flex-col gap-6 text-left">
         <Link href="/explore" className="inline-flex w-fit shrink-0">
-          <img src="/qw.png" alt="Teavie" className="h-9 w-auto opacity-90" />
+          <img src="/qw.png" alt="Teavie" className="h-14 w-auto opacity-90 sm:h-16" />
         </Link>
 
         <p className="max-w-3xl text-xs leading-relaxed text-default-500">
