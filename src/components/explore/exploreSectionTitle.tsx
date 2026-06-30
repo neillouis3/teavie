@@ -12,7 +12,7 @@ export default function ExploreSectionTitle({
 }: ExploreSectionTitleProps) {
   return (
     <h2
-      className={`text-xl font-normal tracking-tight text-foreground normal-case ${className}`.trim()}
+      className={`pl-2 text-xl font-normal tracking-tight text-foreground normal-case ${className}`.trim()}
     >
       {children}
     </h2>
