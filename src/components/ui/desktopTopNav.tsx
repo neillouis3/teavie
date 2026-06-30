@@ -4,6 +4,7 @@ import React, { Suspense } from "react";
 import NavSearchBar from "@/components/ui/navSearchBar";
 import ProfileNavAvatar from "@/components/ui/profileNavAvatar";
 import WatchPartyNavButton from "@/components/watchParty/WatchPartyNavButton";
+import ThemeNavButton from "@/components/ui/themeNavButton";
 import { useSidebar } from "@/components/ui/sidebarContext";
 import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from "@/components/ui/navGlass";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
@@ -51,6 +52,7 @@ export default function DesktopTopNav() {
         </Suspense>
         <div className="flex h-10 min-w-0 items-center justify-end gap-1">
           <WatchPartyNavButton overHero={overHero} />
+          <ThemeNavButton overHero={overHero} />
           <ProfileNavAvatar />
         </div>
       </div>

@@ -22,6 +22,7 @@ import {
 import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
 import ProfileNavAvatar from '@/components/ui/profileNavAvatar';
 import WatchPartyNavButton from '@/components/watchParty/WatchPartyNavButton';
+import ThemeNavButton from '@/components/ui/themeNavButton';
 import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from '@/components/ui/navGlass';
 import { pathUsesHeroBleed } from '@/lib/heroBleedPaths';
 import { useScrollNavBlend } from '@/hooks/useScrollNavBlend';
@@ -119,6 +120,7 @@ export default function MobileTopNav() {
           >
             <HugeiconsIcon icon={Search01Icon} size={24} className="shrink-0" />
           </Link>
+          <ThemeNavButton overHero={overHero} />
           <ProfileNavAvatar />
         </div>
       </header>
