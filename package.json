@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "round-icon": "node scripts/round-app-icon.mjs",
+    "process:brand": "node scripts/process-brand-assets.mjs",
     "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs",
     "seed:popular": "node scripts/seed-popular-catalog.mjs",
     "seed:kdrama": "node scripts/seed-kdrama-catalog.mjs --target=5000",

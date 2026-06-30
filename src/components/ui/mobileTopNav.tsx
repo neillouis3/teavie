@@ -22,6 +22,7 @@ import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
 import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from '@/components/ui/navGlass';
 import { pathUsesHeroBleed } from '@/lib/heroBleedPaths';
 import { useScrollNavBlend } from '@/hooks/useScrollNavBlend';
+import { TEAVIE_LOGO, teavieLogoForTheme } from '@/lib/brandAssets';
 
 export default function MobileTopNav() {
   const pathname = usePathname();
@@ -37,8 +38,7 @@ export default function MobileTopNav() {
     setOpen(false);
   }, [pathname]);
 
-  const logoSrc =
-    mounted && resolvedTheme === 'dark' ? '/darkLogo.png' : '/lightLogo.png';
+  const logoSrc = mounted ? teavieLogoForTheme(resolvedTheme) : TEAVIE_LOGO.dark;
 
   const selectedKey =
     pathname.startsWith('/explore')
@@ -98,7 +98,13 @@ export default function MobileTopNav() {
       >
         <DrawerContent>
           <DrawerHeader className="flex flex-col gap-1 border-b border-divider px-4 py-3">
-            <span className="text-sm font-semibold text-foreground">Menu</span>
+            <Link href="/explore" onClick={() => setOpen(false)}>
+              <img
+                src={logoSrc}
+                alt="Teavie"
+                className="h-9 w-auto max-w-[9rem]"
+              />
+            </Link>
           </DrawerHeader>
           <DrawerBody className="gap-0 px-3 py-4">
             <nav className="flex flex-col gap-1">

@@ -15,6 +15,7 @@ import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
 import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from "@/components/ui/navGlass";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
 import { useScrollNavBlend } from "@/hooks/useScrollNavBlend";
+import { TEAVIE_LOGO, teavieLogoForTheme } from "@/lib/brandAssets";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -42,7 +43,7 @@ export default function SideBar() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar]);
 
-  const logoSrc = mounted && resolvedTheme === "dark" ? "/darkLogo.png" : "/lightLogo.png";
+  const logoSrc = mounted ? teavieLogoForTheme(resolvedTheme) : TEAVIE_LOGO.dark;
 
   const selectedKey =
     pathname.startsWith("/explore")
@@ -68,7 +69,11 @@ export default function SideBar() {
       <div className="flex h-full w-full flex-col gap-4">
         <div className="flex items-center justify-between px-2 min-h-[48px]">
           <AnimatePresence mode="wait">
-            {!isCollapsed && (
+            {isCollapsed ? (
+              <Link href="/explore" className="flex shrink-0 items-center justify-center p-1">
+                <img src={TEAVIE_LOGO.icon} alt="Teavie" className="h-9 w-9" />
+              </Link>
+            ) : (
               <motion.div
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
@@ -76,7 +81,9 @@ export default function SideBar() {
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <img src={logoSrc} alt="TeaVie" className="h-12 w-auto" />
+                <Link href="/explore">
+                  <img src={logoSrc} alt="Teavie" className="h-10 w-auto" />
+                </Link>
               </motion.div>
             )}
           </AnimatePresence>

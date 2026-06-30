@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { TEAVIE_LOGO } from "@/lib/brandAssets";
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -9,7 +10,7 @@ export default function Footer() {
       <div className="flex w-full flex-col gap-2 text-left">
         <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
           <Link href="/explore" className="inline-flex shrink-0">
-            <img src="/qw.png" alt="Teavie" className="h-12 w-auto opacity-90" />
+            <img src={TEAVIE_LOGO.dark} alt="Teavie" className="h-10 w-auto" />
           </Link>
 
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-default-500">

@@ -29,7 +29,7 @@ export const CATALOG_CATEGORIES = {
     browseAllHref: "/kdrama/all",
     browseAllLabel: "Browse all K-Drama",
     browseAllCardText: "Check out all K-Drama here:",
-    aboutImage: "/qw.png",
+    aboutImage: null,
     tileColor: "from-rose-400 to-pink-600",
   },
 };

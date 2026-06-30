@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
+import { TEAVIE_LOGO } from '@/lib/brandAssets';
 import { fetchCatalogStats, type CatalogStatsPayload } from '@/lib/pageDataCache';
 
 export default function HomePage() {
@@ -28,12 +29,12 @@ export default function HomePage() {
       <div className="flex w-full max-w-lg flex-col items-center justify-center sm:max-w-2xl">
         <div className="flex w-full flex-col items-center justify-center text-center">
           <img
-            src="/lightLogo.png"
+            src={TEAVIE_LOGO.light}
             alt="Teavie"
             className="h-auto w-full max-w-xs rounded-xl p-2 dark:hidden sm:max-w-md sm:p-4"
           />
           <img
-            src="/darkLogo.png"
+            src={TEAVIE_LOGO.dark}
             alt="Teavie"
             className="hidden h-auto w-full max-w-xs rounded-xl p-2 dark:block sm:max-w-md sm:p-4"
           />

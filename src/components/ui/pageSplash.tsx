@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
+import { teavieLogoForTheme } from "@/lib/brandAssets";
 
 type PageSplashProps = {
   ariaLabel?: string;
@@ -26,8 +27,7 @@ export default function PageSplash({
     };
   }, []);
 
-  const logoSrc =
-    mounted && resolvedTheme === "dark" ? "/darkLogo.png" : "/lightLogo.png";
+  const logoSrc = teavieLogoForTheme(resolvedTheme);
 
   if (!mounted) return null;
 
