@@ -60,7 +60,7 @@ export default function SideBar() {
   return (
     <div
       data-sidebar-shell
-      className={`fixed left-0 top-0 z-50 flex hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center py-4 px-2 transition-[color] duration-200 ease-in-out lg:flex ${
+      className={`pointer-events-auto fixed left-0 top-0 z-50 flex hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center py-4 px-2 transition-[color] duration-200 ease-in-out lg:flex ${
         heroBleed ? "" : NAV_GLASS_CLASS
       } ${overHero ? "text-white" : "text-foreground"}`}
       style={chromeStyle}

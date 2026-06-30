@@ -2,7 +2,11 @@
 
 import React from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import SidebarBleedRail, { sidebarBleedTrackClass } from "@/components/ui/sidebarBleedRail";
+import SidebarBleedRail, {
+  SIDEBAR_BLEED_CAROUSEL_OPTS,
+  sidebarBleedTrackClass,
+  sidebarBleedViewportClass,
+} from "@/components/ui/sidebarBleedRail";
 import SmallCard from "@/components/ui/smallCard";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 import {
@@ -70,8 +74,11 @@ export default function WatchHistoryRail({
       <ExploreSectionTitle>Continue watching</ExploreSectionTitle>
 
       <SidebarBleedRail>
-        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-          <CarouselContent className={sidebarBleedTrackClass("-ml-3")}>
+        <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+          <CarouselContent
+            viewportClassName={sidebarBleedViewportClass()}
+            className={sidebarBleedTrackClass("-ml-3")}
+          >
           {visibleItems.map((item) => {
             const titleText = item.title || item.name || "Untitled";
             const year =

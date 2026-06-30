@@ -21,7 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           : "lg:grid-cols-[16rem_minmax(0,1fr)]"
       }`}
     >
-      <div className="hidden min-h-screen lg:block" aria-hidden>
+      <div className="pointer-events-none hidden min-h-screen bg-transparent lg:block" aria-hidden>
         <SideBar />
       </div>
       <div className="min-w-0 overflow-x-hidden lg:overflow-x-visible">

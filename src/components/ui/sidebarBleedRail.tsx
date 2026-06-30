@@ -10,30 +10,51 @@ type SidebarBleedRailProps = {
   scrollable?: boolean;
 };
 
-/** Full-viewport-width rail shell (sits in the main column, extends under the sidebar). */
+/** Full-viewport-width bleed under the fixed sidebar (native scroll rails). */
 export const SIDEBAR_BLEED_SHELL =
-  "w-full lg:-ml-[var(--sidebar-w,16rem)] lg:w-screen lg:max-w-[100vw]";
+  "w-full lg:relative lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:z-0 lg:w-screen lg:max-w-[100vw]";
 
-/** Padding on the scroll track so the first card aligns with page content. */
+/** Padding on native scroll tracks so the first card aligns with page content. */
 export const SIDEBAR_BLEED_TRACK_INSET =
   "box-border pr-3 sm:pr-4 lg:pl-[var(--sidebar-w,16rem)]";
+
+/** Embla opts: allow slides to scroll into the leading sidebar gutter. */
+export const SIDEBAR_BLEED_CAROUSEL_OPTS = {
+  align: "start" as const,
+  dragFree: true,
+  containScroll: false as const,
+};
 
 const SCROLL_HIDE =
   "overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
-export function sidebarBleedTrackClass(...extra: ClassValue[]) {
-  return cn(SIDEBAR_BLEED_TRACK_INSET, ...extra);
+type ClassValue = string | false | null | undefined;
+
+/** Embla viewport: extends under sidebar; left padding aligns the first slide. */
+export function sidebarBleedViewportClass(...extra: ClassValue[]) {
+  return cn(
+    SIDEBAR_BLEED_SHELL,
+    "lg:box-border lg:pl-[var(--sidebar-w,16rem)] pr-3 sm:pr-4",
+    extra
+  );
 }
 
-type ClassValue = string | false | null | undefined;
+/** Slide gutter classes on the Embla flex track (not the sidebar inset). */
+export function sidebarBleedTrackClass(...extra: ClassValue[]) {
+  return cn(...extra);
+}
 
 export default function SidebarBleedRail({
   children,
   className,
   scrollable = false,
 }: SidebarBleedRailProps) {
+  if (!scrollable) {
+    return <>{children}</>;
+  }
+
   return (
-    <div className={cn(SIDEBAR_BLEED_SHELL, scrollable && SCROLL_HIDE, className)}>
+    <div className={cn(SIDEBAR_BLEED_SHELL, SCROLL_HIDE, className)}>
       {children}
     </div>
   );

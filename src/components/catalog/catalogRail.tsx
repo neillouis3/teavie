@@ -15,7 +15,11 @@ import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import { formatReleasePhrase } from "@/lib/formatRelease";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import SidebarBleedRail, { sidebarBleedTrackClass } from "@/components/ui/sidebarBleedRail";
+import SidebarBleedRail, {
+  SIDEBAR_BLEED_CAROUSEL_OPTS,
+  sidebarBleedTrackClass,
+  sidebarBleedViewportClass,
+} from "@/components/ui/sidebarBleedRail";
 
 type CatalogRailProps = {
   title: string;
@@ -49,8 +53,11 @@ export function CatalogRailSkeleton({
 }) {
   const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
   return (
-    <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-      <CarouselContent className="-ml-3">
+    <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+      <CarouselContent
+        viewportClassName={sidebarBleedViewportClass()}
+        className={sidebarBleedTrackClass("-ml-3")}
+      >
         {Array.from({ length: count }).map((_, i) => (
           <CarouselItem key={i} className={itemClass}>
             {horizontal ? <HorizontalCatalogCardLoading /> : <SmallCardLoading />}
@@ -96,8 +103,11 @@ export default function CatalogRail({
         </SidebarBleedRail>
       ) : (
         <SidebarBleedRail>
-          <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-            <CarouselContent className={sidebarBleedTrackClass("-ml-3")}>
+          <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+            <CarouselContent
+              viewportClassName={sidebarBleedViewportClass()}
+              className={sidebarBleedTrackClass("-ml-3")}
+            >
               {slice.map((item) => {
                 const titleText = item.title || item.name || "Untitled";
                 const year =
