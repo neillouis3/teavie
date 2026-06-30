@@ -9,8 +9,6 @@ import {
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
 import SidebarBleedRail, {
-  SIDEBAR_BLEED_END_SPACER_UPCOMING,
-  SidebarBleedEndSpacer,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -89,7 +87,6 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
               </CarouselItem>
             );
           })}
-          <SidebarBleedEndSpacer widthClass={SIDEBAR_BLEED_END_SPACER_UPCOMING} />
         </CarouselContent>
       </Carousel>
 

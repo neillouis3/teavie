@@ -11,8 +11,6 @@ import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SIDEBAR_BLEED_END_SPACER_GENRE,
-  SidebarBleedEndSpacer,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -209,7 +207,6 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                     />
                   </CarouselItem>
                 ))}
-                <SidebarBleedEndSpacer widthClass={SIDEBAR_BLEED_END_SPACER_GENRE} />
               </CarouselContent>
             </Carousel>
             </SidebarBleedRail>

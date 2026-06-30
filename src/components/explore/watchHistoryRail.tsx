@@ -4,9 +4,6 @@ import React from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SIDEBAR_BLEED_END_SPACER_HORIZONTAL,
-  SIDEBAR_BLEED_END_SPACER_VERTICAL,
-  SidebarBleedEndSpacer,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -50,9 +47,6 @@ export default function WatchHistoryRail({
     : profile
       ? CAROUSEL_ITEM_VERTICAL_PROFILE
       : CAROUSEL_ITEM_VERTICAL;
-  const endSpacer = horizontal
-    ? SIDEBAR_BLEED_END_SPACER_HORIZONTAL
-    : SIDEBAR_BLEED_END_SPACER_VERTICAL;
 
   const visibleItems = React.useMemo(() => {
     const list = maxItems != null ? items.slice(0, maxItems) : items;
@@ -137,7 +131,6 @@ export default function WatchHistoryRail({
               </CarouselItem>
             );
           })}
-          <SidebarBleedEndSpacer widthClass={endSpacer} />
         </CarouselContent>
       </Carousel>
       </SidebarBleedRail>

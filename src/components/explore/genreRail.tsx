@@ -4,8 +4,6 @@ import React, { useMemo } from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SIDEBAR_BLEED_END_SPACER_GENRE,
-  SidebarBleedEndSpacer,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -57,7 +55,6 @@ export default function GenreRail({ genres }: GenreRailProps) {
           <CarouselItem className={CAROUSEL_ITEM}>
             <GenreBrowseAllTile />
           </CarouselItem>
-          <SidebarBleedEndSpacer widthClass={SIDEBAR_BLEED_END_SPACER_GENRE} />
         </CarouselContent>
       </Carousel>
       </SidebarBleedRail>
