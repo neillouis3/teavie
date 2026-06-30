@@ -31,6 +31,7 @@ import { tmdbSeasonEpisodeFromAbsolute } from "@/lib/cumulativeTvEpisode";
 import { useAnimeAudio } from "@/contexts/animeAudioContext";
 import { animeAudioLabel, ANIME_AUDIO_OPTIONS } from "@/lib/animePlayEmbed";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
+import { filterReleasedEpisodes } from "@/lib/episodeRelease";
 
 export type ShowEpisodePickerSeason = {
   season_number: number;
@@ -44,6 +45,7 @@ export type EpisodeCardRow = {
   overview?: string | null;
   runtime: number | null;
   still_path?: string | null;
+  air_date?: string | null;
   /** 1-based cumulative index when flatMode */
   displayNumber?: number;
 };
@@ -203,6 +205,7 @@ async function fetchAnimeEpisodes(
       overview?: string | null;
       runtime: number | null;
       still_path?: string | null;
+      air_date?: string | null;
     }) => ({
       season: 1,
       episode: ep.episode_number,
@@ -210,6 +213,7 @@ async function fetchAnimeEpisodes(
       overview: ep.overview ?? null,
       runtime: ep.runtime,
       still_path: ep.still_path ?? null,
+      air_date: ep.air_date ?? null,
     })
   );
   writeClientDayCache(cacheKey, mapped);
@@ -240,6 +244,7 @@ async function fetchSeasonEpisodes(
       overview?: string | null;
       runtime: number | null;
       still_path?: string | null;
+      air_date?: string | null;
     }) => ({
       season: seasonNum,
       episode: ep.episode_number,
@@ -247,6 +252,7 @@ async function fetchSeasonEpisodes(
       overview: ep.overview ?? null,
       runtime: ep.runtime,
       still_path: ep.still_path ?? null,
+      air_date: ep.air_date ?? null,
     })
   );
   writeClientDayCache(cacheKey, mapped);
@@ -301,9 +307,17 @@ function useEpisodePickerState({
   const [jumpEpisode, setJumpEpisode] = useState(String(selectedEpisode));
   const [episodeSortLatestFirst, setEpisodeSortLatestFirst] = useState(true);
 
+  const releasedEpisodes = useMemo(
+    () => filterReleasedEpisodes(episodes),
+    [episodes]
+  );
+
   const displayedEpisodes = useMemo(
-    () => (episodeSortLatestFirst ? [...episodes].reverse() : episodes),
-    [episodes, episodeSortLatestFirst]
+    () =>
+      episodeSortLatestFirst
+        ? [...releasedEpisodes].reverse()
+        : releasedEpisodes,
+    [releasedEpisodes, episodeSortLatestFirst]
   );
 
   const toggleEpisodeSort = useCallback(() => {
@@ -344,29 +358,21 @@ function useEpisodePickerState({
           if (Number.isFinite(mal) && mal > 0 && count > 0) {
             try {
               const rows = await fetchAnimeEpisodes(mal, count, controller.signal);
-              const byEp = new Map(rows.map((r) => [r.episode, r]));
-              const merged = Array.from({ length: count }, (_, i) => {
-                const ep = i + 1;
-                const hit = byEp.get(ep);
-                return (
-                  hit ?? {
-                    season: seasonNum,
-                    episode: ep,
-                    name: `Episode ${ep}`,
-                    overview: null,
-                    runtime: null,
-                    still_path: null,
-                  }
-                );
-              });
-              if (!cancelled) setEpisodes(merged);
+              const released = filterReleasedEpisodes(
+                rows.map((row) => ({ ...row, season: seasonNum }))
+              );
+              if (!cancelled) setEpisodes(released);
               return;
             } catch {
-              /* fall through to placeholders */
+              if (!cancelled) {
+                setEpisodes([]);
+                setError(true);
+              }
+              return;
             }
           }
           if (!cancelled) {
-            setEpisodes(fallbackEpisodes(seasonNum, count));
+            setEpisodes([]);
           }
           return;
         }
@@ -391,14 +397,14 @@ function useEpisodePickerState({
                 displayNumber: abs,
               });
             }
-            if (!cancelled) setEpisodes(rows);
+            if (!cancelled) setEpisodes(filterReleasedEpisodes(rows));
           } else {
             const seasonObj = releasedSeasons.find(
               (s) => s.season_number === selectedSeason
             );
             const count = seasonObj?.episode_count ?? 0;
             if (!cancelled) {
-              setEpisodes(fallbackEpisodes(selectedSeason, count));
+              setEpisodes(filterReleasedEpisodes(fallbackEpisodes(selectedSeason, count)));
             }
           }
           return;
@@ -429,7 +435,7 @@ function useEpisodePickerState({
                 episode: ep.displayNumber ?? ep.episode,
               }))
             : capped;
-          if (!cancelled) setEpisodes(finalRows);
+          if (!cancelled) setEpisodes(filterReleasedEpisodes(finalRows));
           return;
         }
 
@@ -438,7 +444,7 @@ function useEpisodePickerState({
           selectedSeason,
           controller.signal
         );
-        if (!cancelled) setEpisodes(rows);
+        if (!cancelled) setEpisodes(filterReleasedEpisodes(rows));
       } catch {
         if (!cancelled) {
           setError(true);
@@ -446,7 +452,9 @@ function useEpisodePickerState({
             (s) => s.season_number === selectedSeason
           );
           setEpisodes(
-            fallbackEpisodes(selectedSeason, seasonObj?.episode_count ?? 0)
+            filterReleasedEpisodes(
+              fallbackEpisodes(selectedSeason, seasonObj?.episode_count ?? 0)
+            )
           );
         }
       } finally {
@@ -476,19 +484,19 @@ function useEpisodePickerState({
   ]);
 
   useEffect(() => {
-    onPlayableEpisodeCountChange?.(episodes.length);
-  }, [episodes.length, onPlayableEpisodeCountChange]);
+    onPlayableEpisodeCountChange?.(releasedEpisodes.length);
+  }, [releasedEpisodes.length, onPlayableEpisodeCountChange]);
 
   const currentSeasonEpisodeCount = useMemo(() => {
     const inSeason = flatMode
-      ? episodes.filter((row) => row.season === selectedSeason)
-      : episodes;
+      ? releasedEpisodes.filter((row) => row.season === selectedSeason)
+      : releasedEpisodes;
     if (inSeason.length > 0) return inSeason.length;
     return (
       releasedSeasons.find((s) => s.season_number === selectedSeason)
         ?.episode_count ?? 0
     );
-  }, [flatMode, episodes, selectedSeason, releasedSeasons]);
+  }, [flatMode, releasedEpisodes, selectedSeason, releasedSeasons]);
 
   const currentSeasonEpisodeLabel =
     currentSeasonEpisodeCount > 0
@@ -521,11 +529,11 @@ function useEpisodePickerState({
   };
 
   const currentEpisodeIndex = useMemo(() => {
-    return episodes.findIndex((row) => isSelected(row));
-  }, [episodes, isSelected]);
+    return releasedEpisodes.findIndex((row) => isSelected(row));
+  }, [releasedEpisodes, isSelected]);
 
   const hasPreviousEpisode = useMemo(() => {
-    if (loading || episodes.length === 0) return false;
+    if (loading || releasedEpisodes.length === 0) return false;
     if (currentEpisodeIndex > 0) return true;
     if (flatMode) return false;
     const seasonIdx = releasedSeasons.findIndex(
@@ -534,7 +542,7 @@ function useEpisodePickerState({
     return seasonIdx > 0;
   }, [
     loading,
-    episodes.length,
+    releasedEpisodes.length,
     currentEpisodeIndex,
     flatMode,
     releasedSeasons,
@@ -542,10 +550,10 @@ function useEpisodePickerState({
   ]);
 
   const hasNextEpisode = useMemo(() => {
-    if (loading || episodes.length === 0) return false;
+    if (loading || releasedEpisodes.length === 0) return false;
     if (
       currentEpisodeIndex >= 0 &&
-      currentEpisodeIndex < episodes.length - 1
+      currentEpisodeIndex < releasedEpisodes.length - 1
     ) {
       return true;
     }
@@ -556,7 +564,7 @@ function useEpisodePickerState({
     return seasonIdx >= 0 && seasonIdx < releasedSeasons.length - 1;
   }, [
     loading,
-    episodes.length,
+    releasedEpisodes.length,
     currentEpisodeIndex,
     flatMode,
     releasedSeasons,
@@ -566,7 +574,7 @@ function useEpisodePickerState({
   const previousEpisodeLabel = useMemo(() => {
     if (!hasPreviousEpisode) return null;
     if (currentEpisodeIndex > 0) {
-      const row = episodes[currentEpisodeIndex - 1];
+      const row = releasedEpisodes[currentEpisodeIndex - 1];
       return formatEpNavLabel(
         episodeNavNumber(row, flatMode, catalogAbsoluteEpisodes)
       );
@@ -581,7 +589,7 @@ function useEpisodePickerState({
   }, [
     hasPreviousEpisode,
     currentEpisodeIndex,
-    episodes,
+    releasedEpisodes,
     flatMode,
     catalogAbsoluteEpisodes,
     releasedSeasons,
@@ -592,9 +600,9 @@ function useEpisodePickerState({
     if (!hasNextEpisode) return null;
     if (
       currentEpisodeIndex >= 0 &&
-      currentEpisodeIndex < episodes.length - 1
+      currentEpisodeIndex < releasedEpisodes.length - 1
     ) {
-      const row = episodes[currentEpisodeIndex + 1];
+      const row = releasedEpisodes[currentEpisodeIndex + 1];
       return formatEpNavLabel(
         episodeNavNumber(row, flatMode, catalogAbsoluteEpisodes)
       );
@@ -607,7 +615,7 @@ function useEpisodePickerState({
   }, [
     hasNextEpisode,
     currentEpisodeIndex,
-    episodes,
+    releasedEpisodes,
     flatMode,
     catalogAbsoluteEpisodes,
     releasedSeasons,
@@ -617,7 +625,7 @@ function useEpisodePickerState({
   const goPreviousEpisode = () => {
     if (!hasPreviousEpisode) return;
     if (currentEpisodeIndex > 0) {
-      handleSelect(episodes[currentEpisodeIndex - 1]);
+      handleSelect(releasedEpisodes[currentEpisodeIndex - 1]);
       return;
     }
     const seasonIdx = releasedSeasons.findIndex(
@@ -635,9 +643,9 @@ function useEpisodePickerState({
     if (!hasNextEpisode) return;
     if (
       currentEpisodeIndex >= 0 &&
-      currentEpisodeIndex < episodes.length - 1
+      currentEpisodeIndex < releasedEpisodes.length - 1
     ) {
-      handleSelect(episodes[currentEpisodeIndex + 1]);
+      handleSelect(releasedEpisodes[currentEpisodeIndex + 1]);
       return;
     }
     const seasonIdx = releasedSeasons.findIndex(
@@ -657,7 +665,7 @@ function useEpisodePickerState({
       if (!Number.isFinite(s) || s < 1 || !Number.isFinite(e) || e < 1) return;
 
       if (flatMode) {
-        const cap = episodes.length;
+        const cap = releasedEpisodes.length;
         const abs = Math.min(e, cap || e);
         if (cap < 1) return;
         const coords = tmdbSeasonEpisodeFromAbsolute(releasedSeasons, abs);
@@ -684,7 +692,7 @@ function useEpisodePickerState({
     },
     [
       flatMode,
-      episodes.length,
+      releasedEpisodes.length,
       releasedSeasons,
       selectedSeason,
       selectedEpisode,
@@ -706,7 +714,7 @@ function useEpisodePickerState({
 
   return {
     releasedSeasons,
-    episodes,
+    episodes: releasedEpisodes,
     displayedEpisodes,
     episodeSortLatestFirst,
     toggleEpisodeSort,
