@@ -18,12 +18,28 @@ export const SIDEBAR_BLEED_SHELL =
 export const SIDEBAR_BLEED_TRACK_INSET =
   "box-border lg:pl-[var(--sidebar-w,16rem)]";
 
-/** Embla opts for bleed rails (no trailing spacer — scroll ends at the last slide). */
+/** Embla opts for bleed rails. */
 export const SIDEBAR_BLEED_CAROUSEL_OPTS = {
   align: "start" as const,
   dragFree: true,
-  containScroll: false as const,
+  containScroll: "trimSnaps" as const,
 };
+
+/**
+ * Desktop trailing track pad (lg+ only) — lets the last slide sit on the right edge
+ * while earlier slides stay visible. Left inset lives on the viewport, not here.
+ */
+export const SIDEBAR_BLEED_END_TRACK_PAD_VERTICAL =
+  "lg:pr-[calc(100%_-_14%_-_0.75rem)] xl:pr-[calc(100%_-_12%_-_0.75rem)]";
+
+export const SIDEBAR_BLEED_END_TRACK_PAD_HORIZONTAL =
+  "lg:pr-[calc(100%_-_33.333%_-_0.75rem)] xl:pr-[calc(100%_-_25%_-_0.75rem)]";
+
+export const SIDEBAR_BLEED_END_TRACK_PAD_GENRE =
+  "lg:pr-[calc(100%_-_20%_-_0.75rem)] xl:pr-[calc(100%_-_16.667%_-_0.75rem)]";
+
+export const SIDEBAR_BLEED_END_TRACK_PAD_UPCOMING =
+  "lg:pr-[calc(100%_-_66.667%_-_1rem)]";
 
 const SCROLL_HIDE =
   "overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
