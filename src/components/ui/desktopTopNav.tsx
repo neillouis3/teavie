@@ -49,7 +49,7 @@ export default function DesktopTopNav() {
             navBlend={heroBleed ? blend : undefined}
           />
         </Suspense>
-        <div className="flex min-w-0 items-center justify-end gap-1">
+        <div className="flex h-10 min-w-0 items-center justify-end gap-1">
           <WatchPartyNavButton overHero={overHero} />
           <ProfileNavAvatar />
         </div>

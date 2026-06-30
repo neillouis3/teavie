@@ -34,7 +34,7 @@ export default function ProfileNavAvatar() {
       <DropdownTrigger>
         <button
           type="button"
-          className="inline-flex shrink-0 rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-success"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-success"
           aria-label="Profile menu"
         >
           <Avatar
@@ -42,8 +42,8 @@ export default function ProfileNavAvatar() {
             name={nickname}
             getInitials={() => avatarInitials(nickname)}
             classNames={{
-              base: "bg-success/20 text-success",
-              name: "text-xs font-semibold",
+              base: "h-10 w-10 bg-success/20 text-success",
+              name: "text-sm font-semibold",
             }}
           />
         </button>

@@ -35,9 +35,9 @@ export default function WatchPartyNavButton({
           color={active ? "secondary" : "default"}
           radius="md"
           aria-label="Watch together"
-          className={
+          className={`h-10 w-10 min-w-10 ${
             active ? "" : overHero ? "text-white" : "text-foreground"
-          }
+          }`}
         >
           <HugeiconsIcon icon={UserGroup02Icon} size={22} className="shrink-0" />
         </Button>

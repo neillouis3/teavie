@@ -108,7 +108,7 @@ export default function MobileTopNav() {
         >
           <img src={logoSrc} alt="Teavie" className="h-9 w-auto max-w-[9rem]" />
         </Link>
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex h-10 shrink-0 items-center gap-0.5">
           <WatchPartyNavButton overHero={overHero} />
           <Link
             href="/search"
