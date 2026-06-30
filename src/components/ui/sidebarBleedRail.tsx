@@ -30,7 +30,7 @@ export function useSidebarBleedOffset() {
 
 /** Full viewport width under the fixed sidebar (desktop). */
 export const SIDEBAR_BLEED_SHELL =
-  "w-full lg:relative lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:w-[100vw]";
+  "w-full pr-4 lg:relative lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:w-[100vw]";
 
 export const SIDEBAR_BLEED_CAROUSEL_OPTS = {
   align: "start" as const,
