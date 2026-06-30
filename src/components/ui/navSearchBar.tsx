@@ -58,7 +58,7 @@ export default function NavSearchBar({
         classNames={{
           input: "text-sm",
           inputWrapper:
-            "h-10 bg-default-100 shadow-none hover:bg-default-200 data-[focus=true]:bg-default-100",
+            "h-10 bg-default-100/60 shadow-none backdrop-blur-sm hover:bg-default-100/80 data-[focus=true]:bg-default-100/70 dark:bg-white/5 dark:hover:bg-white/10",
         }}
       />
     </form>

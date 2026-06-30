@@ -22,6 +22,7 @@ import {
 import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
 import ProfileNavAvatar from '@/components/ui/profileNavAvatar';
 import WatchPartyNavButton from '@/components/watchParty/WatchPartyNavButton';
+import { NAV_GLASS_CLASS } from '@/components/ui/navGlass';
 
 export default function MobileTopNav() {
   const pathname = usePathname();
@@ -79,7 +80,7 @@ export default function MobileTopNav() {
 
   return (
     <>
-      <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center gap-2 border-b border-divider bg-background/95 px-3 backdrop-blur-md lg:hidden">
+      <header className={`fixed left-0 right-0 top-0 z-50 flex h-14 items-center gap-2 px-3 lg:hidden ${NAV_GLASS_CLASS}`}>
         <Button
           isIconOnly
           variant="light"

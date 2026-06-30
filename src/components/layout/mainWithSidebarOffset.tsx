@@ -17,12 +17,12 @@ export default function MainWithSidebarOffset({
 
   return (
     <div
-      className={`relative z-10 flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden pt-14 transition-[padding-left] duration-200 ease-in-out lg:pt-0 ${
+      className={`relative z-10 flex min-h-screen w-full min-w-0 flex-col pt-14 transition-[padding-left] duration-200 ease-in-out ${
         collapsed ? "lg:pl-16" : "lg:pl-64"
       }`}
     >
       <DesktopTopNav />
-      <div className="min-h-0 min-w-0 flex-1">{children}</div>
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">{children}</div>
     </div>
   );
 }
