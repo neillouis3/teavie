@@ -15,6 +15,7 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   Menu01Icon,
+  Search01Icon,
   Settings01Icon,
   UserCircleIcon,
 } from '@hugeicons/core-free-icons';
@@ -55,6 +56,7 @@ export default function MobileTopNav() {
 
   const settingsActive = pathname.startsWith('/settings');
   const profileActive = pathname.startsWith('/profile');
+  const searchActive = pathname.startsWith('/search');
   const heroBleed = pathUsesHeroBleed(pathname);
   const blend = useScrollNavBlend(heroBleed);
   const overHero = heroBleed && navOverHero(blend);
@@ -84,7 +86,15 @@ export default function MobileTopNav() {
         >
           <img src={logoSrc} alt="Teavie" className="h-9 w-auto max-w-[9rem]" />
         </Link>
-        <div className="h-10 w-10 shrink-0" aria-hidden />
+        <Link
+          href="/search"
+          aria-label="Search"
+          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-default-100 ${
+            searchActive ? 'text-success' : overHero ? 'text-white' : 'text-foreground'
+          } ${overHero ? 'hover:bg-white/10' : ''}`}
+        >
+          <HugeiconsIcon icon={Search01Icon} size={24} className="shrink-0" />
+        </Link>
       </header>
 
       <Drawer
