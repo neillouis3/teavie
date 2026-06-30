@@ -110,9 +110,6 @@ export function GenreCatalogTile({
         <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
           {genre.name}
         </span>
-        <span className="mt-0.5 text-[11px] font-medium text-white/80">
-          {genre.count.toLocaleString()} titles
-        </span>
       </div>
 
       {posters.length > 0 && (
@@ -182,11 +179,6 @@ export function GenreSquareTile({
         <span className="text-xs font-bold leading-tight text-white drop-shadow-sm sm:text-sm">
           {genre.name}
         </span>
-        {genre.count > 0 ? (
-          <span className="mt-0.5 text-[10px] font-medium text-white/80 sm:text-[11px]">
-            {genre.count.toLocaleString()} titles
-          </span>
-        ) : null}
       </div>
       <span className="pointer-events-none absolute inset-0 z-[1] rounded-xl bg-gradient-to-br from-white/15 to-black/20" />
     </Link>
