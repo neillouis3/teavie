@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Chip } from "@heroui/react";
 import PageSplash from "@/components/ui/pageSplash";
 import CatalogRail from "@/components/catalog/catalogRail";
 import TrendingHero from "@/components/catalog/trendingHero";
+import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import GenreRail from "@/components/explore/genreRail";
 import WatchHistoryRail from "@/components/explore/watchHistoryRail";
 import UpcomingRail from "@/components/explore/upcomingRail";
@@ -121,11 +121,13 @@ export default function ExploreHub() {
           <div className="flex flex-col gap-10">
             <CatalogRail
               title="Popular movies"
+              sectionTitleStyle="text"
               items={discover.popularMovies}
               maxItems={SECTION_MAX_ITEMS}
             />
             <CatalogRail
               title="Popular TV shows"
+              sectionTitleStyle="text"
               items={discover.popularTv}
               maxItems={SECTION_MAX_ITEMS}
             />
@@ -137,17 +139,13 @@ export default function ExploreHub() {
         <div className="mt-6 flex w-full flex-col gap-10 px-3 pb-8 sm:px-4">
           {hasUpcoming && (
             <section className="flex w-full flex-col gap-3" aria-label="New and upcoming">
-              <Chip color="success" variant="flat" size="md" radius="sm">
-                New &amp; Upcoming
-              </Chip>
+              <ExploreSectionTitle>New &amp; upcoming</ExploreSectionTitle>
               <UpcomingRail items={upcomingContent} />
             </section>
           )}
           {hasNew && (
             <section className="flex w-full flex-col gap-3" aria-label="New on Teavie">
-              <Chip color="success" variant="flat" size="md" radius="sm">
-                New on Teavie
-              </Chip>
+              <ExploreSectionTitle>New on Teavie</ExploreSectionTitle>
               <NewContentRail items={newContent} />
             </section>
           )}

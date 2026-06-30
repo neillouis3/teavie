@@ -15,6 +15,7 @@ import {
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import { formatReleasePhrase } from "@/lib/formatRelease";
+import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 
 type CatalogRailProps = {
   title: string;
@@ -26,6 +27,8 @@ type CatalogRailProps = {
   /** Show “Released …” / “Releases …” under title on vertical cards */
   showReleaseNote?: boolean;
   loading?: boolean;
+  /** Plain section title (Explore) vs success chip (default). */
+  sectionTitleStyle?: "chip" | "text";
 };
 
 const CAROUSEL_ITEM_VERTICAL =
@@ -68,6 +71,7 @@ export default function CatalogRail({
   moreLabel = "More",
   showReleaseNote = false,
   loading = false,
+  sectionTitleStyle = "chip",
 }: CatalogRailProps) {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === "horizontal";
@@ -79,9 +83,13 @@ export default function CatalogRail({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <Chip color="success" variant="flat" size="md" radius="sm">
-          {title}
-        </Chip>
+        {sectionTitleStyle === "text" ? (
+          <ExploreSectionTitle>{title}</ExploreSectionTitle>
+        ) : (
+          <Chip color="success" variant="flat" size="md" radius="sm">
+            {title}
+          </Chip>
+        )}
         {moreHref ? (
           <Link
             href={moreHref}

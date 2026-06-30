@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Chip } from "@heroui/react";
+import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SmallCard from "@/components/ui/smallCard";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 import {
@@ -40,9 +40,7 @@ export default function WatchHistoryRail({ items }: WatchHistoryRailProps) {
 
   return (
     <section className="mb-8 flex w-full flex-col gap-3" aria-label="Watch history">
-      <Chip color="success" variant="flat" size="md" radius="sm">
-        Continue watching
-      </Chip>
+      <ExploreSectionTitle>Continue watching</ExploreSectionTitle>
 
       <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
         <CarouselContent className="-ml-3">

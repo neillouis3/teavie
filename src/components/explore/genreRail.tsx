@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Chip } from "@heroui/react";
+import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import {
   Carousel,
   CarouselContent,
@@ -31,9 +31,7 @@ export default function GenreRail({ genres }: GenreRailProps) {
 
   return (
     <section className="flex w-full flex-col gap-3" aria-label="Browse by genre">
-      <Chip color="success" variant="flat" size="md" radius="sm">
-        Browse by genre
-      </Chip>
+      <ExploreSectionTitle>Browse by genre</ExploreSectionTitle>
 
       <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
         <CarouselContent className="-ml-3">
