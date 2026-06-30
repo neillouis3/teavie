@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import StreamQualityBadge from '@/components/ui/streamQualityBadge';
 import {
   VIDEASY_PLAYER_BASE,
-  VIDEASY_TV_QUERY,
+  VIDEASY_TV_QUERY_PREFIX,
+  withVideasyProgress,
 } from '@/lib/videasyPlayer';
 
 /** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
@@ -16,20 +17,22 @@ export const SHOW_SERVERS = {
   videasy: {
     base: VIDEASY_PLAYER_BASE,
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
-    suffix: () => VIDEASY_TV_QUERY,
+    suffix: () => VIDEASY_TV_QUERY_PREFIX,
+    supportsProgress: true,
   },
   vidcore: {
     base: 'https://vidcore.net',
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
     suffix: () => VIDCORE_TV_QUERY,
+    supportsProgress: false,
   },
 };
 
 /**
- * @param {{ server: string; videoId?: string; season: number; episode: number }} p
+ * @param {{ server: string; videoId?: string; season: number; episode: number; startSeconds?: number }} p
  */
 function buildEmbedUrl(p) {
-  const { server, videoId, season, episode } = p;
+  const { server, videoId, season, episode, startSeconds } = p;
 
   try {
     const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
@@ -40,7 +43,10 @@ function buildEmbedUrl(p) {
     const s = Math.max(0, Math.floor(Number(season)) || 0);
     const e = Math.max(1, Math.floor(Number(episode)) || 1);
     const path = cfg.path(id, s, e);
-    const suffix = typeof cfg.suffix === 'function' ? cfg.suffix() : '';
+    let suffix = typeof cfg.suffix === 'function' ? cfg.suffix() : '';
+    if (cfg.supportsProgress && startSeconds > 0) {
+      suffix = withVideasyProgress(suffix, { progress: startSeconds });
+    }
     return { url: `${cfg.base}${path}${suffix}`, error: null };
   } catch (e) {
     return { url: '', error: e?.message || 'Unknown error' };
@@ -53,13 +59,24 @@ function buildEmbedUrl(p) {
  * @param {number} props.season
  * @param {number} props.episode
  * @param {string} [props.server]
+ * @param {number} [props.startSeconds] Videasy resume position
+ * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
  */
 export default function ShowPlayer({
   videoId,
   season,
   episode,
   server = 'videasy',
+  startSeconds = 0,
+  onVideasyProgress,
 }) {
+  const progressHandler = useCallback(
+    (msg) => {
+      onVideasyProgress?.(msg);
+    },
+    [onVideasyProgress]
+  );
+
   const { url, error } = useMemo(
     () =>
       buildEmbedUrl({
@@ -67,8 +84,9 @@ export default function ShowPlayer({
         videoId,
         season,
         episode,
+        startSeconds: server === 'videasy' ? startSeconds : 0,
       }),
-    [server, videoId, season, episode]
+    [server, videoId, season, episode, startSeconds]
   );
 
   if (error) {
@@ -88,6 +106,7 @@ export default function ShowPlayer({
           title="Episode player"
           src={url}
           className="absolute inset-0 h-full w-full border-0"
+          onVideasyProgress={server === 'videasy' ? progressHandler : undefined}
         />
       ) : (
         <PlayerEmbedSkeleton />

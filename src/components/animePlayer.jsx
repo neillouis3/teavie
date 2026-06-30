@@ -1,19 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAnimeSource } from "@/contexts/animeSourceContext";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
 import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
 import StreamQualityBadge from "@/components/ui/streamQualityBadge";
-import { sanitizeAnimeEmbedUrl } from "@/lib/animePlayEmbed";
+import {
+  sanitizeAnimeEmbedUrl,
+  withMegaPlayStartTime,
+} from "@/lib/animePlayEmbed";
+import { isMegaPlayEmbedUrl } from "@/lib/megaPlayProgress";
 
 /**
  * @param {object} props
  * @param {number} props.malId MAL anime id (`anime_{malId}` catalog routes)
  * @param {number} props.episode 1-based absolute episode index
  * @param {"sub" | "dub"} props.audio
+ * @param {number} [props.startSeconds] MegaPlay resume offset
+ * @param {(msg: import('@/lib/megaPlayProgress').MegaPlayMessage) => void} [props.onMegaPlayMessage]
  */
-export default function AnimePlayer({ malId, episode, audio = "sub" }) {
+export default function AnimePlayer({
+  malId,
+  episode,
+  audio = "sub",
+  startSeconds = 0,
+  onMegaPlayMessage,
+}) {
   const { source: animeSource } = useAnimeSource();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,8 +89,23 @@ export default function AnimePlayer({ malId, episode, audio = "sub" }) {
   const alternateRaw = animeSource === "anikoto" ? primaryUrl : fallbackUrl;
   const preferredUrl = sanitizeAnimeEmbedUrl(preferredRaw);
   const alternateUrl = sanitizeAnimeEmbedUrl(alternateRaw);
-  const activeUrl = preferredUrl || alternateUrl || primaryUrl;
-  const playerKey = `${animeSource}-${malId}-${activeUrl}`;
+  const activeRaw = preferredUrl || alternateUrl || primaryUrl;
+  const isMegaPlay = isMegaPlayEmbedUrl(activeRaw);
+
+  const activeUrl = useMemo(() => {
+    if (!activeRaw) return "";
+    if (!isMegaPlay || startSeconds <= 0) return activeRaw;
+    return withMegaPlayStartTime(activeRaw, startSeconds) || activeRaw;
+  }, [activeRaw, isMegaPlay, startSeconds]);
+
+  const progressHandler = useCallback(
+    (msg) => {
+      onMegaPlayMessage?.(msg);
+    },
+    [onMegaPlayMessage]
+  );
+
+  const playerKey = `${animeSource}-${malId}-${episode}-${activeUrl}`;
 
   if (error) {
     return (
@@ -100,6 +127,7 @@ export default function AnimePlayer({ malId, episode, audio = "sub" }) {
             title="Anime player"
             src={activeUrl}
             className="absolute inset-0 h-full w-full border-0"
+            onMegaPlayMessage={isMegaPlay ? progressHandler : undefined}
           />
         ) : (
           <p className="absolute inset-0 flex items-center justify-center p-4 text-sm text-white/70">

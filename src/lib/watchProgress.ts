@@ -8,6 +8,8 @@ export type WatchProgressPayload = {
   lastEpisode: number;
   /** Canonical keys `s{season}e{episode}` (1-based, TMDB season/episode). */
   watched: string[];
+  /** Resume position in seconds per episode key. */
+  positions?: Record<string, number>;
 };
 
 export function formatWatchEpKey(season: number, episode: number): string {
@@ -31,11 +33,20 @@ export function loadWatchProgress(catalogId: string): WatchProgressPayload | nul
     const watched = Array.isArray(data.watched)
       ? data.watched.filter((x) => typeof x === "string")
       : [];
+    const positions =
+      data.positions && typeof data.positions === "object"
+        ? Object.fromEntries(
+            Object.entries(data.positions).filter(
+              ([k, v]) => typeof k === "string" && Number.isFinite(Number(v)) && Number(v) >= 0
+            )
+          )
+        : undefined;
     return {
       v: WATCH_PROGRESS_VERSION,
       lastSeason: Math.max(1, Math.floor(ls)),
       lastEpisode: Math.max(1, Math.floor(le)),
       watched,
+      positions,
     };
   } catch {
     return null;
@@ -48,16 +59,48 @@ export function saveWatchProgress(
 ): void {
   if (typeof window === "undefined") return;
   try {
+    const existing = loadWatchProgress(catalogId);
     const full: WatchProgressPayload = {
       v: WATCH_PROGRESS_VERSION,
       lastSeason: payload.lastSeason,
       lastEpisode: payload.lastEpisode,
       watched: payload.watched,
+      positions: payload.positions ?? existing?.positions,
     };
     localStorage.setItem(watchProgressStorageKey(catalogId), JSON.stringify(full));
   } catch {
     /* quota / private mode */
   }
+}
+
+export function saveEpisodePlaybackPosition(
+  catalogId: string,
+  season: number,
+  episode: number,
+  seconds: number
+): void {
+  if (typeof window === "undefined") return;
+  const sec = Math.max(0, Math.floor(Number(seconds)) || 0);
+  const existing = loadWatchProgress(catalogId);
+  const key = formatWatchEpKey(season, episode);
+  const positions = { ...(existing?.positions ?? {}), [key]: sec };
+  saveWatchProgress(catalogId, {
+    lastSeason: existing?.lastSeason ?? season,
+    lastEpisode: existing?.lastEpisode ?? episode,
+    watched: existing?.watched ?? [],
+    positions,
+  });
+}
+
+export function loadEpisodePlaybackPosition(
+  catalogId: string,
+  season: number,
+  episode: number
+): number {
+  const saved = loadWatchProgress(catalogId);
+  const key = formatWatchEpKey(season, episode);
+  const sec = saved?.positions?.[key];
+  return Number.isFinite(Number(sec)) && Number(sec) > 0 ? Math.floor(Number(sec)) : 0;
 }
 
 export function clearWatchProgress(catalogId: string): void {

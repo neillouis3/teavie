@@ -53,3 +53,22 @@ export function sanitizeAnimeEmbedUrl(url: string | null | undefined): string | 
   if (isMegaPlayAnilistEmbedUrl(u)) return null;
   return u;
 }
+
+/** Optional resume offset (seconds) for MegaPlay embed URLs. */
+export function withMegaPlayStartTime(
+  url: string | null | undefined,
+  seconds: number
+): string | null {
+  const base = sanitizeAnimeEmbedUrl(url);
+  if (!base) return null;
+  const sec = Math.floor(Number(seconds));
+  if (!Number.isFinite(sec) || sec <= 0) return base;
+  try {
+    const parsed = new URL(base);
+    parsed.searchParams.set("start", String(sec));
+    return parsed.toString();
+  } catch {
+    const join = base.includes("?") ? "&" : "?";
+    return `${base}${join}start=${sec}`;
+  }
+}

@@ -1,8 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
+import { useWatchParty } from '@/hooks/useWatchParty';
+import { useRegisterWatchPartyNav } from '@/hooks/useRegisterWatchPartyNav';
+import type { VideasyProgressMessage } from '@/lib/videasyProgress';
+import {
+  loadMoviePlaybackPosition,
+  saveMoviePlaybackPosition,
+} from '@/lib/movieWatchProgress';
 import {
   buildMovieInfoLines,
   catalogGenresForDisplay,
@@ -73,8 +81,124 @@ function movieDetailLinks(movie: Movie): CatalogDetailLink[] {
 
 export default function MovieTemplate({ id }: { id: string }) {
   const { server } = useStreamingSource();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
+  const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
+  const [playerEpoch, setPlayerEpoch] = useState(0);
+  const partyPlaybackBroadcastRef = useRef(0);
+  const lastGuestPlaybackRef = useRef(-1);
+
+  const partyRoomId = searchParams.get('party');
+
+  const watchParty = useWatchParty({
+    catalogId: id,
+    mediaType: 'movie',
+    title: movie?.title ?? '',
+    roomIdFromUrl: partyRoomId,
+    onGuestPlayback: (_season, _episode, seconds) => {
+      const sec = Math.floor(seconds);
+      if (
+        lastGuestPlaybackRef.current >= 0 &&
+        Math.abs(lastGuestPlaybackRef.current - sec) < 12
+      ) {
+        return;
+      }
+      lastGuestPlaybackRef.current = sec;
+      setPlayerStartSeconds(sec);
+      setPlayerEpoch((n) => n + 1);
+    },
+  });
+
+  useEffect(() => {
+    if (watchParty.room) return;
+    setPlayerStartSeconds(loadMoviePlaybackPosition(String(id)));
+    setPlayerEpoch((n) => n + 1);
+  }, [id, watchParty.room]);
+
+  const handleVideasyProgress = useCallback(
+    (msg: VideasyProgressMessage) => {
+      saveMoviePlaybackPosition(String(id), msg.timestamp);
+      if (!watchParty.isHost || !watchParty.room || server !== 'videasy') return;
+      const now = Date.now();
+      if (now - partyPlaybackBroadcastRef.current < 4000) return;
+      partyPlaybackBroadcastRef.current = now;
+      void watchParty.broadcastPlayback(msg.timestamp);
+    },
+    [
+      id,
+      server,
+      watchParty.isHost,
+      watchParty.room,
+      watchParty.broadcastPlayback,
+    ]
+  );
+
+  const handleCreateParty = async (nickname: string) => {
+    const roomId = await watchParty.createRoom(nickname);
+    if (!roomId) return null;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('party', roomId);
+    router.replace(`${pathname}?${params.toString()}`);
+    return roomId;
+  };
+
+  const handleJoinParty = (code: string, nickname: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('party', code.trim().toUpperCase());
+    router.replace(`${pathname}?${params.toString()}`);
+    void watchParty.joinRoom(code.trim().toUpperCase(), nickname);
+  };
+
+  const handleLeaveParty = () => {
+    watchParty.leaveRoom();
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('party');
+    const q = params.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname);
+  };
+
+  const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
+
+  const partyNavError =
+    watchParty.room && watchParty.room.catalogId !== id
+      ? 'This party is for a different title — open the shared link from the host.'
+      : watchParty.error;
+
+  const watchPartyNavRegistration = useMemo(
+    () =>
+      movieReleased
+        ? {
+            canPlay: true,
+            room: watchParty.room,
+            isHost: watchParty.isHost,
+            loading: watchParty.loading,
+            error: partyNavError,
+            nickname: watchParty.nickname,
+            mediaType: 'movie' as const,
+            onCreate: handleCreateParty,
+            onJoin: handleJoinParty,
+            onLeave: handleLeaveParty,
+            onSendChat: watchParty.sendChat,
+          }
+        : null,
+    [
+      movieReleased,
+      watchParty.room,
+      watchParty.isHost,
+      watchParty.loading,
+      partyNavError,
+      watchParty.nickname,
+      watchParty.sendChat,
+      handleCreateParty,
+      handleJoinParty,
+      handleLeaveParty,
+    ]
+  );
+
+  useRegisterWatchPartyNav(watchPartyNavRegistration);
 
   useEffect(() => {
     const fetchMovieDetails = async () => {
@@ -132,8 +256,6 @@ export default function MovieTemplate({ id }: { id: string }) {
     }
   }, [movie]);
 
-  const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
-
   useEffect(() => {
     if (!movie || loading || !movieReleased) return;
     recordMovieInWatchHistory(String(id));
@@ -158,8 +280,11 @@ export default function MovieTemplate({ id }: { id: string }) {
             />
           ) : (
             <MoviePlayer
+              key={`movie-${id}-${playerEpoch}`}
               videoId={id}
               server={server}
+              startSeconds={server === 'videasy' ? playerStartSeconds : 0}
+              onVideasyProgress={server === 'videasy' ? handleVideasyProgress : undefined}
               streamQuality={
                 movie
                   ? inferMovieStreamQuality(

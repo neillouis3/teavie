@@ -1,11 +1,12 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import StreamQualityBadge from '@/components/ui/streamQualityBadge';
 import {
   VIDEASY_MOVIE_QUERY,
   VIDEASY_PLAYER_BASE,
+  withVideasyProgress,
 } from '@/lib/videasyPlayer';
 
 /** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
@@ -16,11 +17,13 @@ export const MOVIE_SERVERS = {
     base: VIDEASY_PLAYER_BASE,
     path: (id) => `/movie/${id}`,
     suffix: () => VIDEASY_MOVIE_QUERY,
+    supportsProgress: true,
   },
   vidcore: {
     base: 'https://vidcore.net',
     path: (id) => `/movie/${id}`,
     suffix: () => VIDCORE_QUERY,
+    supportsProgress: false,
   },
 };
 
@@ -29,17 +32,34 @@ export const MOVIE_SERVERS = {
  * @param {string | number} props.videoId
  * @param {string} [props.server]
  * @param {'cam' | 'hd'} [props.streamQuality]
+ * @param {number} [props.startSeconds] Videasy resume position
+ * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
  */
-const MoviePlayer = ({ videoId, server = 'videasy', streamQuality: streamQualityProp }) => {
-  const [playerUrl, setPlayerUrl] = useState('');
+const MoviePlayer = ({
+  videoId,
+  server = 'videasy',
+  streamQuality: streamQualityProp,
+  startSeconds = 0,
+  onVideasyProgress,
+}) => {
   const [streamQuality, setStreamQuality] = useState(streamQualityProp ?? null);
 
-  useEffect(() => {
+  const progressHandler = useCallback(
+    (msg) => {
+      onVideasyProgress?.(msg);
+    },
+    [onVideasyProgress]
+  );
+
+  const playerUrl = useMemo(() => {
     const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.videasy;
     const path = config.path(videoId);
-    const suffix = typeof config.suffix === 'function' ? config.suffix() : '';
-    setPlayerUrl(`${config.base}${path}${suffix}`);
-  }, [videoId, server]);
+    let suffix = typeof config.suffix === 'function' ? config.suffix() : '';
+    if (config.supportsProgress && startSeconds > 0) {
+      suffix = withVideasyProgress(suffix, { progress: startSeconds });
+    }
+    return `${config.base}${path}${suffix}`;
+  }, [videoId, server, startSeconds]);
 
   useEffect(() => {
     if (streamQualityProp) {
@@ -77,9 +97,11 @@ const MoviePlayer = ({ videoId, server = 'videasy', streamQuality: streamQuality
       {streamQuality ? <StreamQualityBadge quality={streamQuality} /> : null}
       {playerUrl ? (
         <VideoEmbedFrame
+          key={playerUrl}
           title="Movie player"
           src={playerUrl}
           className="absolute inset-0 h-full w-full border-0"
+          onVideasyProgress={server === 'videasy' ? progressHandler : undefined}
         />
       ) : (
         <PlayerEmbedSkeleton />

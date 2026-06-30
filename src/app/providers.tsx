@@ -12,6 +12,7 @@ import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
 import { AnimeAudioProvider } from "@/contexts/animeAudioContext";
 import { AnimeSourceProvider } from "@/contexts/animeSourceContext";
 import { StreamingSourceProvider } from "@/contexts/streamingSourceContext";
+import { WatchPartyNavProvider } from "@/contexts/watchPartyNavContext";
 import { Suspense } from "react";
 import AmbientSuccessOrbs from "@/components/ui/ambientSuccessOrbs";
 import MaintenanceAnnouncementModal from "@/components/ui/maintenanceAnnouncementModal";
@@ -31,6 +32,7 @@ export function Providers({ children }: ProvidersProps) {
             <StreamingSourceProvider>
               <AnimeSourceProvider>
               <AnimeAudioProvider>
+              <WatchPartyNavProvider>
               <AmbientSuccessOrbs />
               <MaintenanceAnnouncementModal />
               <Suspense
@@ -48,6 +50,7 @@ export function Providers({ children }: ProvidersProps) {
                 <SideBar />
               </Suspense>
               <MainWithSidebarOffset>{children}</MainWithSidebarOffset>
+              </WatchPartyNavProvider>
               </AnimeAudioProvider>
               </AnimeSourceProvider>
             </StreamingSourceProvider>

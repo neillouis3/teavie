@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import ShowPlayer from "./showPlayer";
 import AnimePlayer from "./animePlayer";
 import MoviePlayer from "./moviePlayer";
@@ -26,7 +26,11 @@ import {
   formatWatchEpKey,
   loadWatchProgress,
   saveWatchProgress,
+  saveEpisodePlaybackPosition,
+  loadEpisodePlaybackPosition,
 } from "@/lib/watchProgress";
+import type { VideasyProgressMessage } from "@/lib/videasyProgress";
+import type { MegaPlayMessage } from "@/lib/megaPlayProgress";
 import { recordMovieInWatchHistory, touchWatchHistory } from "@/lib/watchHistory";
 import {
   buildShowInfoLines,
@@ -47,6 +51,8 @@ import {
   shouldPruneTvAnimeWithoutAnilist,
   showUnavailableReasonForDoc,
 } from "@/lib/tvJpAnimePrune";
+import { useWatchParty } from "@/hooks/useWatchParty";
+import { useRegisterWatchPartyNav } from "@/hooks/useRegisterWatchPartyNav";
 import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster.js";
 import {
   mergedSplitCourEpisodeCount,
@@ -504,6 +510,7 @@ export default function ShowTemplate({
   const { server } = useStreamingSource();
   const { audio: animeAudio } = useAnimeAudio();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [show, setShow] = useState<Show | null>(null);
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
@@ -523,7 +530,12 @@ export default function ShowTemplate({
     "content_policy" | "not_found" | "unauthorized" | null
   >(null);
   const [adminBypassActive, setAdminBypassActive] = useState(false);
+  const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
+  const [playerEpoch, setPlayerEpoch] = useState(0);
   const progressAppliedForIdRef = useRef<string | null>(null);
+  const partyPlaybackBroadcastRef = useRef(0);
+  const lastGuestPlaybackRef = useRef(-1);
+  const lastPartyEpRef = useRef<string | null>(null);
 
   useEffect(() => {
     progressAppliedForIdRef.current = null;
@@ -934,6 +946,201 @@ export default function ShowTemplate({
   );
   const title = show ? showDisplayTitle(show) : "";
 
+  const partyRoomId = searchParams.get("party");
+
+  const watchParty = useWatchParty({
+    catalogId: id,
+    mediaType: "tv",
+    title,
+    season: selectedSeason,
+    episode: selectedEpisode,
+    roomIdFromUrl: partyRoomId,
+    onGuestEpisode: (season, ep) => {
+      lastGuestPlaybackRef.current = -1;
+      setSelectedSeason(season);
+      setSelectedEpisode(ep);
+    },
+    onGuestPlayback: (_season, _episode, seconds) => {
+      const sec = Math.floor(seconds);
+      if (
+        lastGuestPlaybackRef.current >= 0 &&
+        Math.abs(lastGuestPlaybackRef.current - sec) < 12
+      ) {
+        return;
+      }
+      lastGuestPlaybackRef.current = sec;
+      setPlayerStartSeconds(sec);
+      setPlayerEpoch((n) => n + 1);
+    },
+  });
+
+  useEffect(() => {
+    if (!progressHydrated || watchParty.room) return;
+    const sec = loadEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode);
+    setPlayerStartSeconds(sec);
+    setPlayerEpoch((n) => n + 1);
+  }, [id, selectedSeason, selectedEpisode, progressHydrated, watchParty.room]);
+
+  const handleVideasyProgress = useCallback(
+    (msg: VideasyProgressMessage) => {
+      const s = msg.season ?? selectedSeason;
+      const e = msg.episode ?? selectedEpisode;
+      saveEpisodePlaybackPosition(String(id), s, e, msg.timestamp);
+
+      if (!watchParty.isHost || !watchParty.room || server !== "videasy") return;
+      const now = Date.now();
+      if (now - partyPlaybackBroadcastRef.current < 4000) return;
+      partyPlaybackBroadcastRef.current = now;
+      void watchParty.broadcastPlayback(msg.timestamp);
+    },
+    [
+      id,
+      selectedSeason,
+      selectedEpisode,
+      server,
+      watchParty.isHost,
+      watchParty.room,
+      watchParty.broadcastPlayback,
+    ]
+  );
+
+  const advanceAnimeEpisode = useCallback(() => {
+    if (!show?.is_anime) return;
+    if (watchParty.room && !watchParty.isHost) return;
+    const cap = animeEpisodeCap ?? catalogAnimeEpisodeCount(show, id);
+    const uiSeasons = tmdbSeasonsWithEpisodes(show.seasons);
+    if (uiSeasons.length <= 1 && selectedSeason <= 1) {
+      const next = selectedEpisode + 1;
+      if (cap != null && next > cap) return;
+      setSelectedEpisode(next);
+      setPlayerStartSeconds(0);
+      setPlayerEpoch((n) => n + 1);
+      return;
+    }
+    const abs = cumulativeTvEpisode(show.seasons, selectedSeason, selectedEpisode);
+    const nextAbs = abs + 1;
+    if (cap != null && nextAbs > cap) return;
+    const { season, episode } = tmdbSeasonEpisodeFromAbsolute(uiSeasons, nextAbs);
+    setSelectedSeason(season);
+    setSelectedEpisode(episode);
+    setPlayerStartSeconds(0);
+    setPlayerEpoch((n) => n + 1);
+  }, [
+    show,
+    id,
+    animeEpisodeCap,
+    selectedSeason,
+    selectedEpisode,
+    watchParty.room,
+    watchParty.isHost,
+  ]);
+
+  const handleMegaPlayMessage = useCallback(
+    (msg: MegaPlayMessage) => {
+      if (msg.kind === "complete") {
+        advanceAnimeEpisode();
+        return;
+      }
+      if (msg.kind !== "progress") return;
+      const sec = Math.floor(msg.currentTime);
+      saveEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode, sec);
+      if (!watchParty.isHost || !watchParty.room) return;
+      const now = Date.now();
+      if (now - partyPlaybackBroadcastRef.current < 4000) return;
+      partyPlaybackBroadcastRef.current = now;
+      void watchParty.broadcastPlayback(sec);
+    },
+    [
+      id,
+      selectedSeason,
+      selectedEpisode,
+      watchParty.isHost,
+      watchParty.room,
+      watchParty.broadcastPlayback,
+      advanceAnimeEpisode,
+    ]
+  );
+
+  useEffect(() => {
+    if (!watchParty.isHost || !watchParty.room) {
+      lastPartyEpRef.current = null;
+      return;
+    }
+    const key = `${selectedSeason}:${selectedEpisode}`;
+    if (lastPartyEpRef.current === key) return;
+    lastPartyEpRef.current = key;
+    void watchParty.broadcastEpisode(selectedSeason, selectedEpisode, 0);
+  }, [
+    watchParty.isHost,
+    watchParty.room?.roomId,
+    selectedSeason,
+    selectedEpisode,
+    watchParty.broadcastEpisode,
+  ]);
+
+  const handleCreateParty = async (nickname: string) => {
+    const roomId = await watchParty.createRoom(nickname);
+    if (!roomId) return null;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("party", roomId);
+    router.replace(`${pathname}?${params.toString()}`);
+    return roomId;
+  };
+
+  const handleJoinParty = (code: string, nickname: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("party", code.trim().toUpperCase());
+    router.replace(`${pathname}?${params.toString()}`);
+    void watchParty.joinRoom(code.trim().toUpperCase(), nickname);
+  };
+
+  const handleLeaveParty = () => {
+    watchParty.leaveRoom();
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("party");
+    const q = params.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname);
+  };
+
+  const partyNavError =
+    watchParty.room && watchParty.room.catalogId !== id
+      ? "This party is for a different title — open the shared link from the host."
+      : watchParty.error;
+
+  const watchPartyNavRegistration = useMemo(
+    () =>
+      canPlay && !isAnimeMovie
+        ? {
+            canPlay: true,
+            room: watchParty.room,
+            isHost: watchParty.isHost,
+            loading: watchParty.loading,
+            error: partyNavError,
+            nickname: watchParty.nickname,
+            mediaType: "tv" as const,
+            onCreate: handleCreateParty,
+            onJoin: handleJoinParty,
+            onLeave: handleLeaveParty,
+            onSendChat: watchParty.sendChat,
+          }
+        : null,
+    [
+      canPlay,
+      isAnimeMovie,
+      watchParty.room,
+      watchParty.isHost,
+      watchParty.loading,
+      partyNavError,
+      watchParty.nickname,
+      watchParty.sendChat,
+      handleCreateParty,
+      handleJoinParty,
+      handleLeaveParty,
+    ]
+  );
+
+  useRegisterWatchPartyNav(watchPartyNavRegistration);
+
   const animeHideSeasonRow =
     Boolean(show?.is_anime) && releasedSeasonsForUi.length <= 1;
   const showSeasonPickerStrip =
@@ -1100,18 +1307,22 @@ export default function ShowTemplate({
             </div>
           ) : (canPlayAnime || isAnimeCatalogRoute) && malIdForPlayer != null ? (
             <AnimePlayer
-              key={`${malIdForPlayer}-${animeAbsoluteEpisode}-${animeAudio}`}
+              key={`${malIdForPlayer}-${animeAbsoluteEpisode}-${animeAudio}-${playerEpoch}`}
               malId={malIdForPlayer}
               episode={animeAbsoluteEpisode}
               audio={animeAudio}
+              startSeconds={playerStartSeconds}
+              onMegaPlayMessage={handleMegaPlayMessage}
             />
           ) : (
             <ShowPlayer
-              key={id}
+              key={`${id}-${playerCoords.season}-${playerCoords.episode}-${playerEpoch}`}
               server={server}
               videoId={resolvedPlayerId}
               season={playerCoords.season}
               episode={playerCoords.episode}
+              startSeconds={server === "videasy" ? playerStartSeconds : 0}
+              onVideasyProgress={server === "videasy" ? handleVideasyProgress : undefined}
             />
           )}
         </div>

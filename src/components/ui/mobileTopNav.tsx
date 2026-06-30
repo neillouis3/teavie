@@ -20,6 +20,8 @@ import {
   Settings01Icon,
 } from '@hugeicons/core-free-icons';
 import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
+import ProfileNavAvatar from '@/components/ui/profileNavAvatar';
+import WatchPartyNavButton from '@/components/watchParty/WatchPartyNavButton';
 
 export default function MobileTopNav() {
   const pathname = usePathname();
@@ -95,15 +97,19 @@ export default function MobileTopNav() {
         >
           <img src={logoSrc} alt="Teavie" className="h-9 w-auto max-w-[9rem]" />
         </Link>
-        <Link
-          href="/search"
-          aria-label="Search"
-          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-default-100 ${
-            searchActive ? 'text-success' : 'text-foreground'
-          }`}
-        >
-          <HugeiconsIcon icon={Search01Icon} size={24} className="shrink-0" />
-        </Link>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <WatchPartyNavButton />
+          <Link
+            href="/search"
+            aria-label="Search"
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-default-100 ${
+              searchActive ? 'text-success' : 'text-foreground'
+            }`}
+          >
+            <HugeiconsIcon icon={Search01Icon} size={24} className="shrink-0" />
+          </Link>
+          <ProfileNavAvatar />
+        </div>
       </header>
 
       <Drawer
