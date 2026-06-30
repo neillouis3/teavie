@@ -13,6 +13,13 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Alert, Tooltip } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
+import {
+  SIDEBAR_GLASS_CLASS,
+  navOverHero,
+  sidebarChromeStyle,
+} from "@/components/ui/navGlass";
+import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
+import { useScrollNavBlend } from "@/hooks/useScrollNavBlend";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -52,12 +59,19 @@ export default function SideBar() {
                 : null;
 
   const settingsActive = pathname.startsWith("/settings");
+  const heroBleed = pathUsesHeroBleed(pathname);
+  const blend = useScrollNavBlend(heroBleed);
+  const overHero = heroBleed && navOverHero(blend);
+  const navHover = overHero ? "hover:bg-white/10" : "hover:bg-default-100";
 
   return (
     <div
-      className={`items-center bg-background z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex border-r border-divider transition-[width] duration-200 ease-in-out ${
+      className={`items-center z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex transition-[width] duration-200 ease-in-out ${
+        heroBleed ? "" : SIDEBAR_GLASS_CLASS
+      } ${overHero ? "text-white" : "text-foreground"} ${
         isCollapsed ? "w-16" : "w-64"
       }`}
+      style={heroBleed ? sidebarChromeStyle(blend) : undefined}
     >
       <div className="w-full h-full flex flex-col gap-4">
         <div className="flex items-center justify-between px-2 min-h-[48px]">
@@ -77,7 +91,7 @@ export default function SideBar() {
 
           <button
             onClick={toggleSidebar}
-            className="p-1.5 rounded-lg hover:bg-default-100 transition-colors flex-shrink-0 ml-auto"
+            className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ml-auto ${navHover}`}
             aria-label={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
             title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
           >
@@ -109,7 +123,7 @@ export default function SideBar() {
                   ${
                     isActive
                       ? "bg-success text-success-foreground shadow-sm"
-                      : "hover:bg-default-100 text-foreground"
+                      : `${navHover} text-inherit`
                   }
                   ${isCollapsed ? "justify-center" : ""}
                 `}
@@ -157,7 +171,7 @@ export default function SideBar() {
                   ${
                     settingsActive
                       ? "bg-success text-success-foreground shadow-sm"
-                      : "text-foreground hover:bg-default-100"
+                      : `text-inherit ${navHover}`
                   }
                 `}
               >
@@ -184,7 +198,7 @@ export default function SideBar() {
                     ${
                       settingsActive
                         ? "bg-success text-success-foreground shadow-sm"
-                        : "text-foreground hover:bg-default-100"
+                        : `text-inherit ${navHover}`
                     }
                   `}
                   aria-label="Settings"

@@ -2,12 +2,14 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
-import { useSidebar } from "@/components/ui/sidebarContext";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
+import { SIDEBAR_CONTENT_INSET } from "@/lib/sidebarInset";
 import DesktopTopNav from "@/components/ui/desktopTopNav";
 
 /**
- * Reserves horizontal space for the fixed desktop sidebar so content is not covered.
+ * Main column beside the fixed glass sidebar. Content scrolls full-width;
+ * `SIDEBAR_CONTENT_INSET` keeps readable text aligned while bleed sections
+ * can extend under the sidebar for the frosted reflection.
  */
 export default function MainWithSidebarOffset({
   children,
@@ -15,19 +17,19 @@ export default function MainWithSidebarOffset({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
   const heroBleed = pathUsesHeroBleed(pathname);
 
   return (
     <div
-      className={`relative z-10 flex min-h-screen w-full min-w-0 flex-col transition-[padding-left] duration-200 ease-in-out ${
+      className={`relative z-10 flex min-h-screen w-full min-w-0 flex-col ${
         heroBleed ? "pt-0" : "pt-14"
-      } ${collapsed ? "lg:pl-16" : "lg:pl-64"}`}
+      }`}
     >
       <DesktopTopNav />
       <div
-        className={`min-h-0 min-w-0 flex-1 ${heroBleed ? "overflow-x-clip" : "overflow-x-hidden"}`}
+        className={`min-h-0 min-w-0 flex-1 ${SIDEBAR_CONTENT_INSET} ${
+          heroBleed ? "overflow-x-clip" : "overflow-x-hidden"
+        }`}
       >
         {children}
       </div>
