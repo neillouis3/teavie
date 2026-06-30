@@ -11,7 +11,8 @@ import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SIDEBAR_BLEED_END_PAD_GENRE,
+  SIDEBAR_BLEED_END_SPACER_GENRE,
+  SidebarBleedEndSpacer,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -194,7 +195,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
               <CarouselContent
                 viewportClassName={sidebarBleedViewportClass()}
-                className={sidebarBleedTrackClass("-ml-3", SIDEBAR_BLEED_END_PAD_GENRE)}
+                className={sidebarBleedTrackClass("-ml-3")}
               >
                 {categoryGenres.map((genre, i) => (
                   <CarouselItem
@@ -208,6 +209,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                     />
                   </CarouselItem>
                 ))}
+                <SidebarBleedEndSpacer widthClass={SIDEBAR_BLEED_END_SPACER_GENRE} />
               </CarouselContent>
             </Carousel>
             </SidebarBleedRail>

@@ -17,8 +17,9 @@ import { formatReleasePhrase } from "@/lib/formatRelease";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SIDEBAR_BLEED_END_PAD_HORIZONTAL,
-  SIDEBAR_BLEED_END_PAD_VERTICAL,
+  SIDEBAR_BLEED_END_SPACER_HORIZONTAL,
+  SIDEBAR_BLEED_END_SPACER_VERTICAL,
+  SidebarBleedEndSpacer,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -54,18 +55,21 @@ export function CatalogRailSkeleton({
   count?: number;
 }) {
   const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
-  const endPad = horizontal ? SIDEBAR_BLEED_END_PAD_HORIZONTAL : SIDEBAR_BLEED_END_PAD_VERTICAL;
+  const endSpacer = horizontal
+    ? SIDEBAR_BLEED_END_SPACER_HORIZONTAL
+    : SIDEBAR_BLEED_END_SPACER_VERTICAL;
   return (
     <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
       <CarouselContent
         viewportClassName={sidebarBleedViewportClass()}
-        className={sidebarBleedTrackClass("-ml-3", endPad)}
+        className={sidebarBleedTrackClass("-ml-3")}
       >
         {Array.from({ length: count }).map((_, i) => (
           <CarouselItem key={i} className={itemClass}>
             {horizontal ? <HorizontalCatalogCardLoading /> : <SmallCardLoading />}
           </CarouselItem>
         ))}
+        <SidebarBleedEndSpacer widthClass={endSpacer} />
       </CarouselContent>
     </Carousel>
   );
@@ -87,7 +91,9 @@ export default function CatalogRail({
   const slice = (items ?? []).slice(0, maxItems);
   if (!loading && slice.length === 0) return null;
 
-  const endPad = horizontal ? SIDEBAR_BLEED_END_PAD_HORIZONTAL : SIDEBAR_BLEED_END_PAD_VERTICAL;
+  const endSpacer = horizontal
+    ? SIDEBAR_BLEED_END_SPACER_HORIZONTAL
+    : SIDEBAR_BLEED_END_SPACER_VERTICAL;
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -111,7 +117,7 @@ export default function CatalogRail({
           <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
             <CarouselContent
               viewportClassName={sidebarBleedViewportClass()}
-              className={sidebarBleedTrackClass("-ml-3", endPad)}
+              className={sidebarBleedTrackClass("-ml-3")}
             >
               {slice.map((item) => {
                 const titleText = item.title || item.name || "Untitled";
@@ -149,6 +155,7 @@ export default function CatalogRail({
                   </CarouselItem>
                 );
               })}
+              <SidebarBleedEndSpacer widthClass={endSpacer} />
             </CarouselContent>
           </Carousel>
         </SidebarBleedRail>

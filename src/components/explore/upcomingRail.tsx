@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
 import SidebarBleedRail, {
-  SIDEBAR_BLEED_END_PAD_UPCOMING,
+  SIDEBAR_BLEED_END_SPACER_UPCOMING,
+  SidebarBleedEndSpacer,
   sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
@@ -49,7 +50,7 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
       >
         <CarouselContent
           viewportClassName={sidebarBleedViewportClass()}
-          className={sidebarBleedTrackClass("-ml-4", SIDEBAR_BLEED_END_PAD_UPCOMING)}
+          className={sidebarBleedTrackClass("-ml-4")}
         >
           {items.map((item) => {
             const title = item.title ?? item.name ?? "Untitled";
@@ -88,6 +89,7 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
               </CarouselItem>
             );
           })}
+          <SidebarBleedEndSpacer widthClass={SIDEBAR_BLEED_END_SPACER_UPCOMING} />
         </CarouselContent>
       </Carousel>
 
