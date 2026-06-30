@@ -921,6 +921,8 @@ export default function ShowTemplate({
     String(show.first_air_date).trim().length < 10 ||
     String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
   const malIdForPlayer = (() => {
+    const fromRoute = malIdFromAnimeCatalogRouteId(id);
+    if (fromRoute != null) return fromRoute;
     const raw = catalogMalIdForAnilistApi(show, id);
     if (raw == null) return null;
     return primaryMalForSplitCourMal(raw);

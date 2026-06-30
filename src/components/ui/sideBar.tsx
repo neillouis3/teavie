@@ -55,7 +55,7 @@ export default function SideBar() {
 
   return (
     <div
-      className={`items-center bg-background z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex border-r border-divider transition-[width] duration-200 ease-in-out ${
+      className={`items-center bg-background z-40 flex flex-col fixed left-0 top-0 h-screen py-4 px-2 hidden lg:flex transition-[width] duration-200 ease-in-out ${
         isCollapsed ? "w-16" : "w-64"
       }`}
     >

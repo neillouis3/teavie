@@ -175,3 +175,21 @@ export function normalizeSplitCourMalEpisode(malId, episode = 1) {
     episode: splitCourRedirectEpisodeOffset(mal) + ep,
   };
 }
+
+/**
+ * MegaPlay MAL routes use the merged catalog MAL + absolute episode (e.g. anime_35760/10
+ * → /mal/35760/10), not per-cour ids like 38524 for part 2.
+ * @param {number | string | null | undefined} malId
+ * @param {number | string | null | undefined} episode
+ */
+export function animePlayMalEmbedTarget(malId, episode = 1) {
+  const normalized = normalizeSplitCourMalEpisode(malId, episode);
+  const primaryMal =
+    primaryMalForSplitCourMal(normalized.malId ?? malId) ??
+    normalized.malId ??
+    Math.floor(Number(malId));
+  return {
+    malId: primaryMal,
+    episode: normalized.episode,
+  };
+}

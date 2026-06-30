@@ -3,7 +3,7 @@ import {
   buildAnimePlayMalUrl,
   sanitizeAnimeEmbedUrl,
 } from "@/lib/animePlayEmbed";
-import { normalizeSplitCourMalEpisode, resolveSplitCourPlayback, splitCourGroupForMal } from "@/lib/animeSplitCour";
+import { normalizeSplitCourMalEpisode, resolveSplitCourPlayback, splitCourGroupForMal, animePlayMalEmbedTarget } from "@/lib/animeSplitCour";
 import { resolveAnikotoFallbackEmbedUrl } from "@/lib/anikotoApi";
 import { lookupKometaByMalId } from "@/lib/kometaAnimeIds";
 import { anilistIdFromMalId } from "@/lib/malToAnilistId";
@@ -20,6 +20,7 @@ export async function GET(req) {
     }
 
     const ep = Math.max(1, Number.isFinite(episode) ? episode : 1);
+    const { malId: malEmbedId, episode: malEmbedEp } = animePlayMalEmbedTarget(malId, ep);
     const normalized = normalizeSplitCourMalEpisode(malId, ep);
     const playbackMal = normalized.malId ?? malId;
     const playbackEp = normalized.episode;
@@ -27,8 +28,8 @@ export async function GET(req) {
     const playback = group
       ? resolveSplitCourPlayback(group, playbackEp)
       : {
-          malId,
-          malEpisode: ep,
+          malId: malEmbedId,
+          malEpisode: malEmbedEp,
           anilistId: null,
         };
 
@@ -38,7 +39,7 @@ export async function GET(req) {
       kometa?.anilistId ??
       (await anilistIdFromMalId(playback.malId).catch(() => null));
 
-    const malUrl = buildAnimePlayMalUrl(playback.malId, playback.malEpisode, audio);
+    const malUrl = buildAnimePlayMalUrl(malEmbedId, malEmbedEp, audio);
     const aniUrl =
       anilistId != null && anilistId > 0
         ? buildAnimePlayAniListUrl(anilistId, playback.malEpisode, audio)
@@ -70,8 +71,8 @@ export async function GET(req) {
       primaryUrl,
       fallbackUrl: anikotoUrl || fallbackUrl,
       fallbackAvailable: Boolean(anikotoUrl || fallbackUrl),
-      malId: playback.malId,
-      malEpisode: playback.malEpisode,
+      malId: malEmbedId,
+      malEpisode: malEmbedEp,
       anilistId: anilistId ?? null,
     });
   } catch (err) {

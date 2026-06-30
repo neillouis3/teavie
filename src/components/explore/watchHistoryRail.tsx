@@ -39,7 +39,7 @@ export default function WatchHistoryRail({ items }: WatchHistoryRailProps) {
   }
 
   return (
-    <section className="mt-24 mb-8 flex w-full flex-col gap-3" aria-label="Watch history">
+    <section className="mt-12 mb-8 flex w-full flex-col gap-3" aria-label="Watch history">
       <ExploreSectionTitle>Continue watching</ExploreSectionTitle>
 
       <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
