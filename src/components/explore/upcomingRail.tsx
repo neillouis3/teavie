@@ -8,7 +8,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
-import SidebarBleedRail from "@/components/ui/sidebarBleedRail";
+import SidebarBleedRail, { sidebarBleedTrackClass } from "@/components/ui/sidebarBleedRail";
 import type { ContentItem } from "@/types/content";
 
 type UpcomingRailProps = {
@@ -42,7 +42,7 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
         className="w-full"
         setApi={setApi}
       >
-        <CarouselContent className="-ml-4">
+        <CarouselContent className={sidebarBleedTrackClass("-ml-4")}>
           {items.map((item) => {
             const title = item.title ?? item.name ?? "Untitled";
             const releaseDate = item.release_date ?? item.first_air_date ?? "";

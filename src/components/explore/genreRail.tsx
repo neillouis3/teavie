@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import SidebarBleedRail from "@/components/ui/sidebarBleedRail";
+import SidebarBleedRail, { sidebarBleedTrackClass } from "@/components/ui/sidebarBleedRail";
 import {
   Carousel,
   CarouselContent,
@@ -36,7 +36,7 @@ export default function GenreRail({ genres }: GenreRailProps) {
 
       <SidebarBleedRail>
         <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-          <CarouselContent className="-ml-3">
+          <CarouselContent className={sidebarBleedTrackClass("-ml-3")}>
           {railGenres.map((genre, i) => (
             <CarouselItem key={genre.slug} className={CAROUSEL_ITEM}>
               <GenreCatalogTile

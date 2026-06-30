@@ -15,7 +15,7 @@ import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import { formatReleasePhrase } from "@/lib/formatRelease";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import SidebarBleedRail from "@/components/ui/sidebarBleedRail";
+import SidebarBleedRail, { sidebarBleedTrackClass } from "@/components/ui/sidebarBleedRail";
 
 type CatalogRailProps = {
   title: string;
@@ -97,7 +97,7 @@ export default function CatalogRail({
       ) : (
         <SidebarBleedRail>
           <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-            <CarouselContent className="-ml-3">
+            <CarouselContent className={sidebarBleedTrackClass("-ml-3")}>
               {slice.map((item) => {
                 const titleText = item.title || item.name || "Untitled";
                 const year =

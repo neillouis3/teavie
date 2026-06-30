@@ -9,7 +9,7 @@ import LargeCard from "@/components/ui/largeCard";
 import CatalogRail from "@/components/catalog/catalogRail";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
-import SidebarBleedRail from "@/components/ui/sidebarBleedRail";
+import SidebarBleedRail, { sidebarBleedTrackClass } from "@/components/ui/sidebarBleedRail";
 import {
   Carousel,
   CarouselContent,
@@ -186,7 +186,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             <ExploreSectionTitle>Browse by genre</ExploreSectionTitle>
             <SidebarBleedRail>
             <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-              <CarouselContent className="-ml-3">
+              <CarouselContent className={sidebarBleedTrackClass("-ml-3")}>
                 {categoryGenres.map((genre, i) => (
                   <CarouselItem
                     key={genre.slug}
