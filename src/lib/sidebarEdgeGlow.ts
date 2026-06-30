@@ -37,6 +37,12 @@ const GLOW_BY_GRADIENT: Record<string, readonly [string, string]> = {
   "from-amber-400 to-orange-500": ["251,191,36", "249,115,22"],
 };
 
+export function heroGlowStops(genres?: string[]): { inner: string; outer: string } {
+  const name = genres?.[0];
+  if (!name) return { ...SIDEBAR_EDGE_GLOW_DEFAULT };
+  return genreTileGlowStops(name, 0);
+}
+
 export function genreTileGlowStops(name: string, index: number): {
   inner: string;
   outer: string;
@@ -51,8 +57,8 @@ export function genreTileGlowStops(name: string, index: number): {
 export function sidebarEdgeGlowGradient(
   inner: string,
   outer: string,
-  innerAlpha = 0.07,
-  outerAlpha = 0.05
+  innerAlpha = 0.055,
+  outerAlpha = 0.038
 ): string {
   return `linear-gradient(100deg, transparent 70%, rgba(${inner}, ${innerAlpha}) 85%, rgba(${outer}, ${outerAlpha}) 100%)`;
 }

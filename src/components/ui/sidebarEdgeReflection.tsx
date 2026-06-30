@@ -16,9 +16,23 @@ function readGlow(el: Element): GlowStops | null {
   return { inner, outer };
 }
 
+/** Pixels of content strip immediately beside the sidebar edge. */
+function adjacentScore(el: Element, sidebarRight: number): number {
+  const rect = el.getBoundingClientRect();
+  const stripRight = sidebarRight + 96;
+  const overlapX =
+    Math.min(rect.right, stripRight) - Math.max(rect.left, sidebarRight - 8);
+  const overlapY =
+    Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+  if (overlapX <= 0 || overlapY <= 0) return 0;
+
+  const priority = Number(el.getAttribute("data-glow-priority") ?? "1");
+  return overlapX * overlapY * priority;
+}
+
 /**
- * On Explore, tint the sidebar edge from genre tiles currently beside the rail.
- * Elsewhere uses the static violet → orange wash.
+ * On Explore, tint the sidebar edge from content in the strip beside the rail
+ * (spotlight hero prioritized over genre tiles). Elsewhere uses static wash.
  */
 export function useSidebarEdgeGlow(): string {
   const pathname = usePathname();
@@ -34,36 +48,31 @@ export function useSidebarEdgeGlow(): string {
     let raf = 0;
 
     const pickGlow = () => {
-      const tiles = document.querySelectorAll("[data-genre-glow]");
-      if (!tiles.length) {
+      const sources = document.querySelectorAll("[data-sidebar-glow]");
+      if (!sources.length) {
         setGradient(SIDEBAR_EDGE_GLOW_STATIC);
         return;
       }
 
       const shell = document.querySelector("[data-sidebar-shell]");
       const sidebarRight = shell?.getBoundingClientRect().width ?? 256;
-      let best: { ratio: number; glow: GlowStops } | null = null;
+      let best: { score: number; glow: GlowStops } | null = null;
 
-      for (const tile of tiles) {
-        const rect = tile.getBoundingClientRect();
-        if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
-        if (rect.left > sidebarRight + 120) continue;
+      for (const el of sources) {
+        const score = adjacentScore(el, sidebarRight);
+        if (score <= 0) continue;
 
-        const glow = readGlow(tile);
+        const glow = readGlow(el);
         if (!glow) continue;
 
-        const visibleH =
-          Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
-        const ratio = visibleH / Math.max(rect.height, 1);
-        if (!best || ratio > best.ratio) {
-          best = { ratio, glow };
+        if (!best || score > best.score) {
+          best = { score, glow };
         }
       }
 
-      if (best && best.ratio > 0.08) {
-        setGradient(
-          sidebarEdgeGlowGradient(best.glow.inner, best.glow.outer)
-        );
+      const minScore = window.innerHeight * 48;
+      if (best && best.score > minScore) {
+        setGradient(sidebarEdgeGlowGradient(best.glow.inner, best.glow.outer));
       } else {
         setGradient(SIDEBAR_EDGE_GLOW_STATIC);
       }
@@ -76,23 +85,23 @@ export function useSidebarEdgeGlow(): string {
 
     const observer = new IntersectionObserver(schedule, {
       root: null,
-      rootMargin: "0px 0px 0px -35%",
+      rootMargin: "0px 0px 0px -30%",
       threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
     });
 
-    const watchTiles = () => {
+    const watchSources = () => {
       observer.disconnect();
-      document.querySelectorAll("[data-genre-glow]").forEach((el) => {
+      document.querySelectorAll("[data-sidebar-glow]").forEach((el) => {
         observer.observe(el);
       });
       schedule();
     };
 
-    watchTiles();
+    watchSources();
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
 
-    const mo = new MutationObserver(watchTiles);
+    const mo = new MutationObserver(watchSources);
     mo.observe(document.body, { childList: true, subtree: true });
 
     return () => {

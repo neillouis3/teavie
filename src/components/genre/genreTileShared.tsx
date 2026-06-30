@@ -104,9 +104,10 @@ export function GenreCatalogTile({
     <Link
       href={href}
       aria-label={`Browse ${genre.name}`}
-      data-genre-glow
+      data-sidebar-glow
       data-glow-inner={glow.inner}
       data-glow-outer={glow.outer}
+      data-glow-priority={1}
       className="group relative flex aspect-[40/21] w-full overflow-hidden rounded-xl p-3"
     >
       <span
