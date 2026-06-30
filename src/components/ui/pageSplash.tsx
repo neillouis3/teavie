@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useTheme } from "next-themes";
-import { teavieLogoForTheme } from "@/lib/brandAssets";
+import { TEAVIE_LOGO } from "@/lib/brandAssets";
 
 type PageSplashProps = {
   ariaLabel?: string;
@@ -12,7 +11,6 @@ type PageSplashProps = {
 export default function PageSplash({
   ariaLabel = "Loading page",
 }: PageSplashProps) {
-  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -27,8 +25,6 @@ export default function PageSplash({
     };
   }, []);
 
-  const logoSrc = teavieLogoForTheme(resolvedTheme);
-
   if (!mounted) return null;
 
   return createPortal(
@@ -40,9 +36,9 @@ export default function PageSplash({
       aria-label={ariaLabel}
     >
       <img
-        src={logoSrc}
+        src={TEAVIE_LOGO.icon}
         alt="Teavie"
-        className="h-16 w-auto max-w-[12rem] animate-pulse sm:h-20"
+        className="h-16 w-16 animate-pulse sm:h-20 sm:w-20"
       />
     </div>,
     document.body

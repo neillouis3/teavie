@@ -2,6 +2,7 @@
 export const TEAVIE_LOGO = {
   light: "/teavie-logo-light.png",
   dark: "/teavie-logo-dark.png",
+  /** Tea bag mark — sidebar collapsed, loading splash. Favicons use /favicon*. */
   icon: "/teavie-icon.png",
 } as const;
 
