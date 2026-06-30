@@ -26,21 +26,20 @@ export const SIDEBAR_BLEED_CAROUSEL_OPTS = {
 };
 
 /**
- * Trailing pad on the Embla flex track so the last slide can scroll flush right.
- * Must not share the same element as SIDEBAR_BLEED_TRACK_INSET — combined they
- * exceed the viewport width and collapse the rail.
+ * Trailing pad on the Embla flex track so the last slide can scroll flush right on desktop.
+ * lg+ only — mobile calc padding collapses flex slide widths.
  */
 export const SIDEBAR_BLEED_END_PAD_VERTICAL =
-  "pr-[calc(100%_-_45%_-_0.75rem)] sm:pr-[calc(100%_-_32%_-_0.75rem)] md:pr-[calc(100%_-_20%_-_0.75rem)] lg:pr-[calc(100%_-_14%_-_0.75rem)] xl:pr-[calc(100%_-_12%_-_0.75rem)]";
+  "lg:pr-[calc(100%_-_14%_-_0.75rem)] xl:pr-[calc(100%_-_12%_-_0.75rem)]";
 
 export const SIDEBAR_BLEED_END_PAD_HORIZONTAL =
-  "pr-[calc(100%_-_88%_-_0.75rem)] sm:pr-[calc(100%_-_55%_-_0.75rem)] md:pr-[calc(100%_-_42%_-_0.75rem)] lg:pr-[calc(100%_-_33.333%_-_0.75rem)] xl:pr-[calc(100%_-_25%_-_0.75rem)]";
+  "lg:pr-[calc(100%_-_33.333%_-_0.75rem)] xl:pr-[calc(100%_-_25%_-_0.75rem)]";
 
 export const SIDEBAR_BLEED_END_PAD_GENRE =
-  "pr-[calc(100%_-_42%_-_0.75rem)] sm:pr-[calc(100%_-_30%_-_0.75rem)] md:pr-[calc(100%_-_25%_-_0.75rem)] lg:pr-[calc(100%_-_20%_-_0.75rem)] xl:pr-[calc(100%_-_16.667%_-_0.75rem)]";
+  "lg:pr-[calc(100%_-_20%_-_0.75rem)] xl:pr-[calc(100%_-_16.667%_-_0.75rem)]";
 
 export const SIDEBAR_BLEED_END_PAD_UPCOMING =
-  "pr-[calc(100%_-_88%_-_0.75rem)] sm:pr-[calc(100%_-_66.667%_-_1rem)]";
+  "lg:pr-[calc(100%_-_66.667%_-_1rem)]";
 
 const SCROLL_HIDE =
   "overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
