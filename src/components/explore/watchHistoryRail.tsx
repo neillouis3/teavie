@@ -4,11 +4,7 @@ import React from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SIDEBAR_BLEED_END_SPACER_HORIZONTAL,
-  SIDEBAR_BLEED_END_SPACER_VERTICAL,
-  SidebarBleedEndSpacer,
   SidebarBleedStartSpacer,
-  sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
 import SmallCard from "@/components/ui/smallCard";
@@ -51,9 +47,6 @@ export default function WatchHistoryRail({
     : profile
       ? CAROUSEL_ITEM_VERTICAL_PROFILE
       : CAROUSEL_ITEM_VERTICAL;
-  const endSpacer = horizontal
-    ? SIDEBAR_BLEED_END_SPACER_HORIZONTAL
-    : SIDEBAR_BLEED_END_SPACER_VERTICAL;
 
   const visibleItems = React.useMemo(() => {
     const list = maxItems != null ? items.slice(0, maxItems) : items;
@@ -84,64 +77,63 @@ export default function WatchHistoryRail({
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
             viewportClassName={sidebarBleedViewportClass()}
-            className={sidebarBleedTrackClass("-ml-3")}
+            className="-ml-3"
           >
-          <SidebarBleedStartSpacer />
-          {visibleItems.map((item) => {
-            const titleText = item.title || item.name || "Untitled";
-            const year =
-              item.release_date?.split("-")[0] ||
-              item.first_air_date?.split("-")[0] ||
-              "—";
-            const mediaType = item.type === "movie" ? "movie" : "tv";
-            const key = `${mediaType}-${item.id}`;
-            const dismiss = () => removeFromWatchHistory(String(item.id));
-            const progress = progressById.get(String(item.id));
-            if (!progress) return null;
-            const historyEntry = {
-              mediaType: progress.mediaType,
-              lastSeason: progress.lastSeason,
-              lastEpisode: progress.lastEpisode,
-            };
-            const continueMetaChips = watchHistoryMetaChips(
-              historyEntry,
-              item.season_amount ?? 0,
-              item.runtimeSeconds ?? undefined
-            );
+            <SidebarBleedStartSpacer />
+            {visibleItems.map((item) => {
+              const titleText = item.title || item.name || "Untitled";
+              const year =
+                item.release_date?.split("-")[0] ||
+                item.first_air_date?.split("-")[0] ||
+                "—";
+              const mediaType = item.type === "movie" ? "movie" : "tv";
+              const key = `${mediaType}-${item.id}`;
+              const dismiss = () => removeFromWatchHistory(String(item.id));
+              const progress = progressById.get(String(item.id));
+              if (!progress) return null;
+              const historyEntry = {
+                mediaType: progress.mediaType,
+                lastSeason: progress.lastSeason,
+                lastEpisode: progress.lastEpisode,
+              };
+              const continueMetaChips = watchHistoryMetaChips(
+                historyEntry,
+                item.season_amount ?? 0,
+                item.runtimeSeconds ?? undefined
+              );
 
-            return (
-              <CarouselItem key={key} className={itemClass}>
-                {horizontal ? (
-                  <HorizontalCatalogCard
-                    id={item.id}
-                    title={titleText}
-                    year={year}
-                    type={mediaType}
-                    posterPath={item.poster_path || ""}
-                    backdropPath={item.backdrop_path || ""}
-                    topNote={continueMetaChips?.join(" · ")}
-                    onDismiss={dismiss}
-                  />
-                ) : (
-                  <SmallCard
-                    id={item.id}
-                    title={titleText}
-                    year={year}
-                    type={mediaType}
-                    runtimeSeconds={item.runtimeSeconds ?? undefined}
-                    seasonAmount={item.season_amount ?? 0}
-                    numberOfEpisodes={item.number_of_episodes ?? undefined}
-                    posterPath={item.poster_path || ""}
-                    metaChips={continueMetaChips}
-                    onDismiss={dismiss}
-                  />
-                )}
-              </CarouselItem>
-            );
-          })}
-          <SidebarBleedEndSpacer widthClass={endSpacer} />
-        </CarouselContent>
-      </Carousel>
+              return (
+                <CarouselItem key={key} className={itemClass}>
+                  {horizontal ? (
+                    <HorizontalCatalogCard
+                      id={item.id}
+                      title={titleText}
+                      year={year}
+                      type={mediaType}
+                      posterPath={item.poster_path || ""}
+                      backdropPath={item.backdrop_path || ""}
+                      topNote={continueMetaChips?.join(" · ")}
+                      onDismiss={dismiss}
+                    />
+                  ) : (
+                    <SmallCard
+                      id={item.id}
+                      title={titleText}
+                      year={year}
+                      type={mediaType}
+                      runtimeSeconds={item.runtimeSeconds ?? undefined}
+                      seasonAmount={item.season_amount ?? 0}
+                      numberOfEpisodes={item.number_of_episodes ?? undefined}
+                      posterPath={item.poster_path || ""}
+                      metaChips={continueMetaChips}
+                      onDismiss={dismiss}
+                    />
+                  )}
+                </CarouselItem>
+              );
+            })}
+          </CarouselContent>
+        </Carousel>
       </SidebarBleedRail>
     </section>
   );

@@ -4,10 +4,7 @@ import React, { useMemo } from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SIDEBAR_BLEED_END_SPACER_GENRE,
-  SidebarBleedEndSpacer,
   SidebarBleedStartSpacer,
-  sidebarBleedTrackClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
 import {
@@ -45,23 +42,22 @@ export default function GenreRail({ genres }: GenreRailProps) {
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
             viewportClassName={sidebarBleedViewportClass()}
-            className={sidebarBleedTrackClass("-ml-3")}
+            className="-ml-3"
           >
-          <SidebarBleedStartSpacer />
-          {railGenres.map((genre, i) => (
-            <CarouselItem key={genre.slug} className={CAROUSEL_ITEM}>
-              <GenreCatalogTile
-                genre={genre}
-                colorClass={genreTileColor(genre.name, i)}
-              />
+            <SidebarBleedStartSpacer />
+            {railGenres.map((genre, i) => (
+              <CarouselItem key={genre.slug} className={CAROUSEL_ITEM}>
+                <GenreCatalogTile
+                  genre={genre}
+                  colorClass={genreTileColor(genre.name, i)}
+                />
+              </CarouselItem>
+            ))}
+            <CarouselItem className={CAROUSEL_ITEM}>
+              <GenreBrowseAllTile />
             </CarouselItem>
-          ))}
-          <CarouselItem className={CAROUSEL_ITEM}>
-            <GenreBrowseAllTile />
-          </CarouselItem>
-          <SidebarBleedEndSpacer widthClass={SIDEBAR_BLEED_END_SPACER_GENRE} />
-        </CarouselContent>
-      </Carousel>
+          </CarouselContent>
+        </Carousel>
       </SidebarBleedRail>
     </section>
   );
