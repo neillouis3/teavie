@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { Chip } from "@heroui/react";
-import Header from "@/components/ui/header";
 import PageSplash from "@/components/ui/pageSplash";
 import CatalogRail from "@/components/catalog/catalogRail";
 import TrendingHero from "@/components/catalog/trendingHero";
@@ -25,7 +24,6 @@ import {
 
 export type { TmdbDiscoverPayload };
 
-const TRENDING_SECTION_MIN_H = "min-h-[52vh] sm:min-h-[62vh] lg:min-h-[80vh]";
 const SECTION_MAX_ITEMS = 24;
 
 export default function ExploreHub() {
@@ -100,14 +98,11 @@ export default function ExploreHub() {
 
   return (
     <div className="bg-background flex w-full flex-col">
-      <Header pageName="Explore" />
-
       {hasTrending && (
-        <section
-          className={`mb-4 mt-4 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
-          aria-label="Trending"
-        >
+        <section className="mb-4 w-full" aria-label="Spotlight">
           <TrendingHero
+            variant="spotlight"
+            showDots={false}
             trendingMovies={discover.trendingMovies}
             trendingTv={discover.trendingTv}
             maxItems={SECTION_MAX_ITEMS}

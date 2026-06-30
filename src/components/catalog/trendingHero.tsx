@@ -44,6 +44,8 @@ interface TrendingHeroProps {
   rounded?: boolean;
   /** Pagination dots under the carousel. @default true */
   showDots?: boolean;
+  /** Full-bleed horizontal spotlight row (Explore). */
+  variant?: "carousel" | "spotlight";
 }
 
 export default function TrendingHero({
@@ -52,6 +54,7 @@ export default function TrendingHero({
   maxItems = 24,
   rounded = false,
   showDots = true,
+  variant = "carousel",
 }: TrendingHeroProps) {
   const items = React.useMemo(
     () => interleaveTrending(trendingMovies, trendingTv, maxItems),
@@ -73,6 +76,69 @@ export default function TrendingHero({
 
   if (items.length === 0) return null;
 
+  const SPOTLIGHT_ITEM =
+    "basis-[92%] pl-3 sm:basis-[72%] md:basis-[56%] lg:basis-[44%] xl:basis-[36%]";
+  const SPOTLIGHT_H = "h-[min(50vh,420px)] sm:h-[min(58vh,480px)]";
+
+  function renderCard(item: ContentItem) {
+    const title = item.title ?? item.name ?? "Untitled";
+    const releaseDate = item.release_date ?? item.first_air_date ?? "";
+    const year = releaseDate
+      ? String(new Date(releaseDate).getFullYear())
+      : "—";
+    const releaseIso =
+      releaseDate && String(releaseDate).length >= 10
+        ? String(releaseDate).slice(0, 10)
+        : null;
+    const type = item.type ?? "movie";
+
+    return (
+      <LargeCard
+        hero
+        heroCompact={variant === "spotlight"}
+        id={item.id}
+        title={title}
+        year={year}
+        releaseDate={releaseIso}
+        runtimeSeconds={item.runtimeSeconds}
+        seasonAmount={item.season_amount ?? 0}
+        numberOfEpisodes={item.number_of_episodes ?? undefined}
+        type={type}
+        posterPath={item.poster_path}
+        backdropPath={item.backdrop_path}
+        genres={item.genres}
+        voteAverage={item.vote_average}
+        certification={item.certification}
+        overview={item.overview}
+      />
+    );
+  }
+
+  if (variant === "spotlight") {
+    return (
+      <div className={`w-full ${SPOTLIGHT_H}`} aria-label="Spotlight">
+        <Carousel
+          opts={{ align: "start", dragFree: true }}
+          className="h-full w-full [&>div]:h-full"
+        >
+          <CarouselContent className="-ml-3 h-full [&>div]:h-full">
+            {items.map((item) => {
+              const type = item.type ?? "movie";
+              return (
+                <CarouselItem
+                  key={`${type}-${item.id}`}
+                  className={`h-full ${SPOTLIGHT_ITEM}`}
+                >
+                  <div className="h-full w-full">{renderCard(item)}</div>
+                </CarouselItem>
+              );
+            })}
+          </CarouselContent>
+        </Carousel>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex w-full flex-col items-center px-3 sm:px-4 ${TRENDING_CAROUSEL_H}`}
@@ -87,15 +153,6 @@ export default function TrendingHero({
         >
         <CarouselContent className="ml-0 h-full [&>div]:h-full">
           {items.map((item) => {
-            const title = item.title ?? item.name ?? "Untitled";
-            const releaseDate = item.release_date ?? item.first_air_date ?? "";
-            const year = releaseDate
-              ? String(new Date(releaseDate).getFullYear())
-              : "—";
-            const releaseIso =
-              releaseDate && String(releaseDate).length >= 10
-                ? String(releaseDate).slice(0, 10)
-                : null;
             const type = item.type ?? "movie";
 
             return (
@@ -103,23 +160,7 @@ export default function TrendingHero({
                 key={`${type}-${item.id}`}
                 className="h-full basis-full pl-0"
               >
-                <LargeCard
-                  hero
-                  id={item.id}
-                  title={title}
-                  year={year}
-                  releaseDate={releaseIso}
-                  runtimeSeconds={item.runtimeSeconds}
-                  seasonAmount={item.season_amount ?? 0}
-                  numberOfEpisodes={item.number_of_episodes ?? undefined}
-                  type={type}
-                  posterPath={item.poster_path}
-                  backdropPath={item.backdrop_path}
-                  genres={item.genres}
-                  voteAverage={item.vote_average}
-                  certification={item.certification}
-                  overview={item.overview}
-                />
+                {renderCard(item)}
               </CarouselItem>
             );
           })}
