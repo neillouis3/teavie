@@ -26,6 +26,8 @@ import { recordMovieInWatchHistory } from '@/lib/watchHistory';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 import { inferMovieStreamQuality } from '@/lib/streamQuality';
+import { isBlockedMovieTmdbId } from '@/lib/tmdbMovieContentPolicy';
+import CatalogUnavailable from './ui/catalogUnavailable';
 
 interface Movie {
   id: number;
@@ -86,6 +88,9 @@ export default function MovieTemplate({ id }: { id: string }) {
   const searchParams = useSearchParams();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
+  const [movieUnavailableReason, setMovieUnavailableReason] = useState<
+    'content_policy' | 'not_found' | null
+  >(null);
   const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
   const [playerEpoch, setPlayerEpoch] = useState(0);
   const partyPlaybackBroadcastRef = useRef(0);
@@ -204,6 +209,13 @@ export default function MovieTemplate({ id }: { id: string }) {
     const fetchMovieDetails = async () => {
       try {
         setLoading(true);
+        setMovieUnavailableReason(null);
+
+        if (isBlockedMovieTmdbId(id)) {
+          setMovie(null);
+          setMovieUnavailableReason('content_policy');
+          return;
+        }
 
         let catalogFallback: {
           imdb_genres?: string[];
@@ -217,6 +229,13 @@ export default function MovieTemplate({ id }: { id: string }) {
           const resolved = await resolveRes.json();
           if (resolved?.fallback && typeof resolved.fallback === "object") {
             catalogFallback = resolved.fallback;
+          }
+        } else if (resolveRes.status === 404) {
+          const err = await resolveRes.json().catch(() => null);
+          if (err?.error === 'content_policy') {
+            setMovie(null);
+            setMovieUnavailableReason('content_policy');
+            return;
           }
         }
 
@@ -265,6 +284,18 @@ export default function MovieTemplate({ id }: { id: string }) {
 
   if (loading) {
     return <WatchPageSkeleton />;
+  }
+
+  if (!movie) {
+    return (
+      <CatalogUnavailable
+        reason={
+          movieUnavailableReason === 'content_policy'
+            ? 'content_policy'
+            : 'not_found'
+        }
+      />
+    );
   }
 
   return (

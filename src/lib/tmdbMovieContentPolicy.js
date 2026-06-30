@@ -13,6 +13,23 @@ export const BLOCKED_MOVIE_PRODUCTION_COMPANIES = [
   "Lumino",
 ];
 
+/** TMDB movie ids manually blocked from catalog and direct watch URLs. */
+export const BLOCKED_MOVIE_TMDB_IDS = [
+  1522126,
+];
+
+/** @param {unknown} id */
+export function isBlockedMovieTmdbId(id) {
+  const n =
+    typeof id === "number"
+      ? id
+      : typeof id === "string"
+        ? Number(id.trim())
+        : NaN;
+  if (!Number.isFinite(n) || n <= 0) return false;
+  return BLOCKED_MOVIE_TMDB_IDS.includes(n);
+}
+
 function normalizeCompanyName(name) {
   return String(name ?? "").trim().toLowerCase();
 }
@@ -67,6 +84,7 @@ function usReleaseDatesBlocked(movie) {
 export function shouldRejectTmdbMovieFromCatalog(movie) {
   if (!movie || typeof movie !== "object") return true;
   const m = /** @type {Record<string, unknown>} */ (movie);
+  if (isBlockedMovieTmdbId(m.id ?? m.tmdb_id)) return true;
   if (m.adult === true) return true;
   if (usReleaseDatesBlocked(m)) return true;
   if (movieHasBlockedProductionCompany(m)) return true;

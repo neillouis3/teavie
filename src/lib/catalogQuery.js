@@ -2,7 +2,10 @@
  * Shared helpers for /api/movies and /api/tv catalog filters.
  */
 
-import { BLOCKED_MOVIE_PRODUCTION_COMPANIES } from "./tmdbMovieContentPolicy.js";
+import {
+  BLOCKED_MOVIE_PRODUCTION_COMPANIES,
+  BLOCKED_MOVIE_TMDB_IDS,
+} from "./tmdbMovieContentPolicy.js";
 import {
   imdbGenreLabelFromBrowseParam,
   imdbGenreMatchConditions,
@@ -61,6 +64,22 @@ export function catalogMovieHideAdultClause() {
   return { $nor: [{ adult: true }] };
 }
 
+/** Exclude manually blocked TMDB movie ids from catalog queries. */
+export function catalogMovieHideBlockedIdsClause() {
+  if (BLOCKED_MOVIE_TMDB_IDS.length === 0) return {};
+  const ids = BLOCKED_MOVIE_TMDB_IDS.filter(
+    (id) => typeof id === "number" && Number.isFinite(id) && id > 0
+  );
+  if (ids.length === 0) return {};
+  const idStrings = ids.map(String);
+  return {
+    $nor: [
+      { id: { $in: [...ids, ...idStrings] } },
+      { tmdb_id: { $in: ids } },
+    ],
+  };
+}
+
 /** Exclude movies from blocked production companies (see tmdbMovieContentPolicy). */
 export function catalogMovieHideBlockedStudiosClause() {
   if (BLOCKED_MOVIE_PRODUCTION_COMPANIES.length === 0) return {};
@@ -80,6 +99,7 @@ export function catalogMoviePolicyClause() {
   return {
     $and: [
       catalogMovieHideAdultClause(),
+      catalogMovieHideBlockedIdsClause(),
       catalogMovieHideBlockedStudiosClause(),
     ],
   };

@@ -4,6 +4,7 @@
  */
 import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
+import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
 
 function parseEntries(body) {
   const list = body?.entries;
@@ -85,6 +86,9 @@ export async function POST(req) {
         if (!item) return null;
         if (entry.mediaType === "movie" && item.type !== "movie") return null;
         if (entry.mediaType === "tv" && item.type !== "tv") return null;
+        if (entry.mediaType === "movie" && isBlockedMovieTmdbId(entry.catalogId)) {
+          return null;
+        }
         return {
           ...item,
           id: entry.catalogId,

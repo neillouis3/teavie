@@ -5,6 +5,17 @@ import {
   imdbGenresFromOmdbForTmdbId,
   normalizeCatalogResolveFallback,
 } from "@/lib/catalogResolve";
+import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
+
+function blockedMovieResponse() {
+  return Response.json(
+    {
+      error: "content_policy",
+      message: "This title is not available on Teavie.",
+    },
+    { status: 404 }
+  );
+}
 
 export async function GET(req) {
   try {
@@ -12,6 +23,10 @@ export async function GET(req) {
     const id = searchParams.get("id")?.trim();
     if (!id) {
       return Response.json({ error: "Missing id" }, { status: 400 });
+    }
+
+    if (isBlockedMovieTmdbId(id)) {
+      return blockedMovieResponse();
     }
 
     const client = await clientPromise;
@@ -35,6 +50,13 @@ export async function GET(req) {
 
     if (!doc) {
       return Response.json({ error: "Movie not found" }, { status: 404 });
+    }
+
+    if (
+      doc.adult === true ||
+      isBlockedMovieTmdbId(doc.id ?? doc.tmdb_id ?? id)
+    ) {
+      return blockedMovieResponse();
     }
 
     const merged = await enrichCatalogDocGenres(doc, "movie", {
