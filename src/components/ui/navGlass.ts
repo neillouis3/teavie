@@ -4,9 +4,9 @@ import type { CSSProperties } from "react";
 export const NAV_GLASS_CLASS =
   "bg-background/40 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/32 dark:bg-background/32 dark:supports-[backdrop-filter]:bg-background/26";
 
-/** Lighter sidebar glass — less blur and opacity so content shows through more. */
+/** Lighter sidebar glass — same blur as nav, more opaque so content shows through less. */
 export const SIDEBAR_GLASS_CLASS =
-  "bg-background/20 backdrop-blur-md supports-[backdrop-filter]:bg-background/14 dark:bg-background/16 dark:supports-[backdrop-filter]:bg-background/12";
+  "bg-background/52 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/44 dark:bg-background/48 dark:supports-[backdrop-filter]:bg-background/40";
 
 type NavChromeOptions = {
   maxBlurPx?: number;
@@ -30,9 +30,9 @@ export function navChromeStyle(
   };
 }
 
-/** Sidebar hero scroll chrome — softer than top nav. */
+/** Sidebar hero scroll chrome — same blur as nav, slightly more opaque. */
 export function sidebarChromeStyle(blend: number): CSSProperties {
-  return navChromeStyle(blend, { maxBlurPx: 14, maxBgPct: 18 });
+  return navChromeStyle(blend, { maxBlurPx: 40, maxBgPct: 44 });
 }
 
 export function navOverHero(blend: number): boolean {
