@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import { Button, Input, Select, SelectItem, Tab, Tabs } from "@heroui/react";
+import { Button, Input, Select, SelectItem } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
@@ -923,36 +923,39 @@ function ShowEpisodePickerSeasonRow() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-x-2">
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
-        <Tabs
-          aria-label="Seasons"
-          selectedKey={String(selectedSeason)}
-          onSelectionChange={(key) => {
+        <Select
+          aria-label="Season"
+          size="sm"
+          variant="bordered"
+          radius="md"
+          selectedKeys={new Set([String(selectedSeason)])}
+          onSelectionChange={(keys) => {
+            const key = Array.from(keys)[0];
             const s = parseInt(String(key), 10);
             if (!Number.isFinite(s)) return;
             onSeasonChange(s);
             onEpisodeChange(s, 1);
           }}
-          size="sm"
-          variant="bordered"
-          radius="md"
           classNames={{
-            base: "w-full min-w-0 max-w-full lg:w-auto lg:max-w-none",
-            tabList:
-              "flex flex-row flex-nowrap w-full max-w-full gap-0 overflow-x-auto p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:w-auto lg:max-w-none",
-            tab: manySeasons
-              ? "h-8 min-h-8 shrink-0 basis-[40%] px-2 text-xs lg:basis-auto lg:w-auto lg:flex-none lg:px-3"
-              : "h-8 min-h-8 min-w-0 flex-1 px-2 text-xs lg:w-auto lg:min-w-0 lg:flex-none lg:shrink-0 lg:px-3",
-            tabContent: "truncate lg:whitespace-nowrap",
-            panel: "hidden",
+            base: manySeasons
+              ? "w-full min-w-0 max-w-full lg:w-[9.5rem]"
+              : "w-full min-w-0 max-w-full lg:w-auto",
+            trigger:
+              "h-8 min-h-8 border-default-300 px-2 dark:border-default-500/60",
+            value: "text-xs font-normal text-foreground",
+            selectorIcon: "text-default-400",
           }}
+          popoverProps={{ classNames: { content: "min-w-[9rem]" } }}
         >
           {releasedSeasons.map((s) => (
-            <Tab
+            <SelectItem
               key={String(s.season_number)}
-              title={`Season ${s.season_number}`}
-            />
+              textValue={`Season ${s.season_number}`}
+            >
+              Season {s.season_number}
+            </SelectItem>
           ))}
-        </Tabs>
+        </Select>
       ) : null}
       {currentSeasonEpisodeLabel ? (
         <span className="shrink-0 text-xs font-medium text-default-500 sm:text-sm">
