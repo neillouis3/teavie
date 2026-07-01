@@ -25,6 +25,7 @@ import {
   normalizeRelatedMalId,
   yearFromCatalogDoc,
 } from "@/lib/animeRelatedCatalog.js";
+import { isAnimeCatalogDocReleased } from "@/lib/animeRelease.js";
 
 async function buildRelatedItems(rootMal, relationsJson, opts = {}) {
   const includeChain = opts.includeChain !== false;
@@ -124,6 +125,7 @@ async function buildYouMightLikeItems(rootMal, recsJson, limit) {
   for (const d of docs) {
     const cid = String(d.id);
     if (!cid.startsWith("anime_")) continue;
+    if (!isAnimeCatalogDocReleased(d)) continue;
     const m = malIdFromCatalogDoc(d);
     if (m == null || !malIds.includes(m)) continue;
     if (!byMal.has(m)) byMal.set(m, { catalogId: cid, doc: d });

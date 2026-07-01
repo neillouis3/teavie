@@ -35,22 +35,23 @@ export function releasedCatalogClause(dateField, todayIso) {
 }
 
 /**
- * Anime rows: hide when `first_air_date` is a future YYYY-MM-DD; keep rows with missing/empty date.
+ * Anime rows: hide future premieres and explicit "not yet aired" markers.
+ * Rows with missing/empty dates stay visible unless status/tags say otherwise.
  * @param {string} todayIso
  */
 export function releasedAnimeFirstAirClause(todayIso) {
   return {
-    $or: [
+    $nor: [
+      { status: { $regex: /not yet aired/i } },
+      { tags: "not yet aired" },
+      { "anilist.status": "NOT_YET_RELEASED" },
       {
         $and: [
           { first_air_date: { $type: "string" } },
           { first_air_date: { $regex: /^\d{4}-\d{2}-\d{2}/ } },
-          { first_air_date: { $lte: todayIso } },
+          { first_air_date: { $gt: todayIso } },
         ],
       },
-      { first_air_date: { $exists: false } },
-      { first_air_date: null },
-      { first_air_date: "" },
     ],
   };
 }

@@ -60,6 +60,10 @@ import {
   splitCourGroupForMal,
   normalizeSplitCourMalEpisode,
 } from "@/lib/animeSplitCour.js";
+import {
+  animeReleaseDateYmdFromDoc,
+  catalogTvPremiered,
+} from "@/lib/animeRelease.js";
 
 interface Season {
   season_number: number;
@@ -915,11 +919,7 @@ export default function ShowTemplate({
   const useTmdbSeasonAiringCapForPlayer =
     Boolean(show && playerUsesTmdb) && !Boolean(show?.is_anime);
 
-  const tmdbShowPremiered =
-    !show ||
-    !show.first_air_date ||
-    String(show.first_air_date).trim().length < 10 ||
-    String(show.first_air_date).slice(0, 10) <= catalogTodayYmdUtc();
+  const tmdbShowPremiered = catalogTvPremiered(show);
   const malIdForPlayer = (() => {
     const fromRoute = malIdFromAnimeCatalogRouteId(id);
     if (fromRoute != null) return fromRoute;
@@ -1289,11 +1289,11 @@ export default function ShowTemplate({
               </div>
             )
           ) : !canPlay ? (
-            playerUsesTmdb && show && !tmdbShowPremiered ? (
+            show && !tmdbShowPremiered ? (
               <CatalogComingSoon
                 title={title}
                 posterUrl={imageUrl}
-                releaseDate={show.first_air_date}
+                releaseDate={animeReleaseDateYmdFromDoc(show) ?? show.first_air_date}
                 links={showDetailLinks(show)}
               />
             ) : (

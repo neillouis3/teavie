@@ -9,19 +9,23 @@ export default function Footer() {
     <footer className={`mt-auto w-full pt-10 pb-4 ${CONTENT_INSET_X}`}>
       <div className="flex w-full flex-col gap-2 text-left">
         <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-          <Link href="/explore" className="inline-flex shrink-0">
-            <img src={TEAVIE_LOGO.dark} alt="Teavie" className="h-10 w-auto" />
+          <Link href="/" className="inline-flex shrink-0" aria-label="Teavie home">
+            <img
+              src={TEAVIE_LOGO.icon}
+              alt=""
+              className="h-9 w-9 rounded-md"
+            />
           </Link>
 
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-default-500">
             <span>
               © {year}{" "}
-              <a
-                href="https://www.teavie.ca"
+              <Link
+                href="/"
                 className="underline underline-offset-2 transition-colors hover:text-default-400"
               >
                 teavie.ca
-              </a>
+              </Link>
             </span>
             <span className="text-default-600" aria-hidden>
               ·
