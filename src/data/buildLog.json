@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.3.88",
+    "date": "2026-07-01",
+    "title": "Looser genre matching",
+    "summary": "Genre preferences now match when a title shares any of your picks, not only when every genre on the title is selected.",
+    "tags": ["Explore", "Preferences"],
+    "changes": [
+      "A title tagged Drama and Documentary can appear when you picked Drama, even if you did not pick Documentary.",
+      "Language filtering stays strict so unselected languages like Hindi still do not slip through on bilingual titles.",
+      "Popular rails still skip the unfiltered TMDB fallback when you are signed in with preferences."
+    ]
+  },
+  {
     "version": "2.3.87",
     "date": "2026-07-01",
     "title": "Stricter preference filtering",

@@ -3,7 +3,6 @@
  */
 
 import {
-  IMDB_GENRES,
   imdbGenreLabelFromSlug,
   imdbGenreMatchConditions,
   imdbGenresForDoc,
@@ -151,8 +150,8 @@ export function selectedGenreLabels(preferences) {
 }
 
 /**
- * When genre prefs exist, every genre on the title must be selected.
- * Stops multi-genre rows (e.g. Drama + Documentary) from slipping in.
+ * When genre prefs exist, at least one genre on the title must be selected.
+ * Multi-genre titles (e.g. Drama + Documentary) can still match if you picked Drama.
  * @param {Record<string, unknown>} doc
  * @param {import('@/types/user').UserPreferences | null | undefined} preferences
  */
@@ -162,7 +161,7 @@ export function docMatchesGenrePreferences(doc, preferences) {
 
   const docGenres = imdbGenresForDoc(doc);
   if (docGenres.length === 0) return false;
-  return docGenres.every((label) => selected.includes(label));
+  return docGenres.some((label) => selected.includes(label));
 }
 
 /**
@@ -287,14 +286,6 @@ export function buildPreferenceMatch(preferences, opts = {}) {
       clauses.push({
         $or: labels.map((label) => imdbGenreMatchConditions(label)),
       });
-      const excludedLabels = IMDB_GENRES.map((g) => g.label).filter(
-        (label) => !labels.includes(label)
-      );
-      if (excludedLabels.length > 0) {
-        clauses.push({
-          $nor: excludedLabels.map((label) => imdbGenreMatchConditions(label)),
-        });
-      }
     }
   }
 
