@@ -137,35 +137,39 @@ export default function MovieTemplate({ id }: { id: string }) {
     [
       id,
       server,
-      watchParty.isHost,
-      watchParty.room,
-      watchParty.broadcastPlayback,
+      watchParty,
     ]
   );
 
-  const handleCreateParty = async (nickname: string) => {
-    const roomId = await watchParty.createRoom(nickname);
-    if (!roomId) return null;
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('party', roomId);
-    router.replace(`${pathname}?${params.toString()}`);
-    return roomId;
-  };
+  const handleCreateParty = useCallback(
+    async (nickname: string) => {
+      const roomId = await watchParty.createRoom(nickname);
+      if (!roomId) return null;
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('party', roomId);
+      router.replace(`${pathname}?${params.toString()}`);
+      return roomId;
+    },
+    [watchParty, searchParams, pathname, router]
+  );
 
-  const handleJoinParty = (code: string, nickname: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('party', code.trim().toUpperCase());
-    router.replace(`${pathname}?${params.toString()}`);
-    void watchParty.joinRoom(code.trim().toUpperCase(), nickname);
-  };
+  const handleJoinParty = useCallback(
+    (code: string, nickname: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('party', code.trim().toUpperCase());
+      router.replace(`${pathname}?${params.toString()}`);
+      void watchParty.joinRoom(code.trim().toUpperCase(), nickname);
+    },
+    [watchParty, searchParams, pathname, router]
+  );
 
-  const handleLeaveParty = () => {
+  const handleLeaveParty = useCallback(() => {
     watchParty.leaveRoom();
     const params = new URLSearchParams(searchParams.toString());
     params.delete('party');
     const q = params.toString();
     router.replace(q ? `${pathname}?${q}` : pathname);
-  };
+  }, [watchParty, searchParams, pathname, router]);
 
   const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
 
@@ -236,7 +240,7 @@ export default function MovieTemplate({ id }: { id: string }) {
         }
 
         const resolved = await resolveRes.json();
-        let catalogFallback: {
+        const catalogFallback: {
           id?: string | number;
           title?: string;
           release_date?: string;
