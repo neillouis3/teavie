@@ -1,5 +1,19 @@
 [
   {
+    "version": "2.3.87",
+    "date": "2026-07-01",
+    "title": "Stricter preference filtering",
+    "summary": "Popular and personalized rails now respect your saved genres and languages, including bilingual titles and OMDb metadata.",
+    "tags": ["Explore", "Preferences"],
+    "changes": [
+      "Popular movies and TV rails no longer fall back to unfiltered TMDB picks when you are signed in with preferences.",
+      "Genre matching requires every genre on a title to be in your selection, including OMDb genre strings on catalog rows.",
+      "Language matching checks every language on a title, not just the first, so Hindi and other unselected languages do not slip through on bilingual listings.",
+      "Mongo personalized queries match and exclude OMDb language strings, not only TMDB original_language codes.",
+      "Search popular rails use the same strict filters when your preferences are set."
+    ]
+  },
+  {
     "version": "2.3.85",
     "date": "2026-07-01",
     "title": "Build log and cleaner guest mode",

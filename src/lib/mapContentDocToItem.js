@@ -153,6 +153,16 @@ export function mapContentDocToItem(doc) {
     vote_average: doc.vote_average ?? null,
     genres: genreNamesFromDoc(doc),
     imdb_genres: imdbGenresForDoc(doc),
+    original_language: doc.original_language ?? null,
+    omdb:
+      doc.omdb && typeof doc.omdb === "object"
+        ? {
+            genre:
+              typeof doc.omdb.genre === "string" ? doc.omdb.genre : null,
+            language:
+              typeof doc.omdb.language === "string" ? doc.omdb.language : null,
+          }
+        : undefined,
     certification: usCertificationFromDoc(doc),
   };
 }

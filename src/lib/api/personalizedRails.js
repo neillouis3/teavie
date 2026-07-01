@@ -8,7 +8,12 @@ import {
   catalogTodayIsoUtc,
   releasedCatalogClause,
 } from "@/lib/catalogQuery";
-import { buildPreferenceMatch } from "@/lib/preferenceMatch";
+import {
+  buildPreferenceMatch,
+  docMatchesPreferences,
+  selectedGenreLabels,
+  selectedLanguageCodes,
+} from "@/lib/preferenceMatch";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
 import {
@@ -36,8 +41,9 @@ function toDateString(date) {
   return date.toISOString().split("T")[0];
 }
 
-function mapDocsToItems(docs) {
+function mapDocsToItems(docs, preferences) {
   return docs
+    .filter((doc) => docMatchesPreferences(doc, preferences))
     .map((doc) => mapContentDocToItem(doc))
     .filter((item) => {
       if (item.type === "movie" && isBlockedMovieTmdbId(String(item.id))) {
@@ -73,6 +79,10 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
   if (!match) return [];
 
   const limit = Math.min(48, Math.max(1, opts.limit ?? DEFAULT_LIMIT));
+  const hasStrictPrefs =
+    selectedGenreLabels(preferences).length > 0 ||
+    selectedLanguageCodes(preferences).length > 0;
+  const fetchLimit = hasStrictPrefs ? Math.min(144, limit * 3) : limit;
   const todayIso = catalogTodayIsoUtc();
 
   const client = await clientPromise;
@@ -100,7 +110,7 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
         : []),
       { $addFields: { _pop: popularityExpr() } },
       { $sort: { _pop: -1, _id: -1 } },
-      { $limit: limit },
+      { $limit: fetchLimit },
       {
         $project: {
           id: 1,
@@ -120,13 +130,15 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
           number_of_episodes: 1,
           vote_average: 1,
           imdb_genres: 1,
+          omdb: 1,
+          original_language: 1,
           is_anime: 1,
         },
       },
     ])
     .toArray();
 
-  return mapDocsToItems(docs);
+  return mapDocsToItems(docs, preferences).slice(0, limit);
 }
 
 async function queryPersonalizedNew(preferences, limit = 20) {
@@ -175,7 +187,7 @@ async function queryPersonalizedNew(preferences, limit = 20) {
     ])
     .toArray();
 
-  return mapDocsToItems(docs);
+  return mapDocsToItems(docs, preferences);
 }
 
 async function queryPersonalizedUpcoming(preferences, limit = 20) {
@@ -226,7 +238,7 @@ async function queryPersonalizedUpcoming(preferences, limit = 20) {
     ])
     .toArray();
 
-  return mapDocsToItems(docs);
+  return mapDocsToItems(docs, preferences);
 }
 
 /**

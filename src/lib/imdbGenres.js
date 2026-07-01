@@ -325,11 +325,14 @@ export function imdbGenresForDoc(doc) {
       : [];
   if (fromOmdb.length > 0) return fromOmdb;
 
-  const fromStored = Array.isArray(doc.imdb_genres)
-    ? doc.imdb_genres
-        .map((g) => imdbLabelFromRawGenreName(String(g)))
-        .filter(Boolean)
-    : [];
+  let fromStored = [];
+  if (Array.isArray(doc.imdb_genres)) {
+    fromStored = doc.imdb_genres
+      .map((g) => imdbLabelFromRawGenreName(String(g)))
+      .filter(Boolean);
+  } else if (typeof doc.imdb_genres === "string" && doc.imdb_genres.trim()) {
+    fromStored = parseImdbGenresFromOmdb(doc.imdb_genres);
+  }
   if (fromStored.length > 0) return [...new Set(fromStored)];
 
   const idStr = String(doc.id ?? "");

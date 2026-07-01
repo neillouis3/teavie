@@ -18,6 +18,8 @@ export interface ContentItem {
   vote_average?: number | null;
   genres?: string[];
   imdb_genres?: string[];
+  original_language?: string | null;
+  omdb?: { genre?: string | null; language?: string | null };
   certification?: string | null;
 }
   

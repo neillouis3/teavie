@@ -4,6 +4,7 @@ import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import type { WatchHistoryEntry } from "@/lib/watchHistory";
 import type { UserPreferences } from "@/types/user";
 import { hasUserPreferences } from "@/types/user";
+import { contentItemMatchesPreferences } from "@/lib/preferenceMatch";
 import {
   fetchExploreBundle,
   fetchDiscoverFeed,
@@ -340,31 +341,50 @@ async function fetchPersonalizedExploreBundleImpl(
   }
 }
 
+function filterRailByPreferences(
+  items: ContentItem[],
+  preferences: UserPreferences | null
+): ContentItem[] {
+  if (!preferences || !hasUserPreferences(preferences)) return items;
+  return items.filter((item) => contentItemMatchesPreferences(item, preferences));
+}
+
 function buildDiscoverFromPersonalized(
   bundle: ExploreBundle,
-  personalized: PersonalizedExploreBundle | null
+  personalized: PersonalizedExploreBundle | null,
+  preferences: UserPreferences | null
 ): TmdbDiscoverPayload {
   if (!personalized) return bundle.discover;
-  const personalizedMovies = personalized.recommended.filter(
-    (item) => item.type === "movie"
+
+  const personalizedOnly = hasUserPreferences(preferences);
+  const personalizedMovies = filterRailByPreferences(
+    personalized.recommended.filter((item) => item.type === "movie"),
+    preferences
   );
-  const personalizedTv = personalized.recommended.filter(
-    (item) => item.type === "tv"
+  const personalizedTv = filterRailByPreferences(
+    personalized.recommended.filter((item) => item.type === "tv"),
+    preferences
   );
+  const popularMovies = filterRailByPreferences(
+    personalized.popularMovies,
+    preferences
+  );
+  const popularTv = filterRailByPreferences(
+    personalized.popularTv,
+    preferences
+  );
+
+  const pickRail = (personalizedItems: ContentItem[], fallbackItems: ContentItem[]) =>
+    personalizedItems.length > 0 || personalizedOnly
+      ? personalizedItems
+      : fallbackItems;
+
   return {
     ...bundle.discover,
-    trendingMovies:
-      personalizedMovies.length > 0 ? personalizedMovies : bundle.discover.trendingMovies,
-    trendingTv:
-      personalizedTv.length > 0 ? personalizedTv : bundle.discover.trendingTv,
-    popularMovies:
-      personalized.popularMovies.length > 0
-        ? personalized.popularMovies
-        : bundle.discover.popularMovies,
-    popularTv:
-      personalized.popularTv.length > 0
-        ? personalized.popularTv
-        : bundle.discover.popularTv,
+    trendingMovies: pickRail(personalizedMovies, bundle.discover.trendingMovies),
+    trendingTv: pickRail(personalizedTv, bundle.discover.trendingTv),
+    popularMovies: pickRail(popularMovies, bundle.discover.popularMovies),
+    popularTv: pickRail(popularTv, bundle.discover.popularTv),
   };
 }
 
@@ -383,16 +403,21 @@ export async function loadExploreCorePayload(
   ]);
 
   return {
-    discover: buildDiscoverFromPersonalized(bundle, personalized),
+    discover: buildDiscoverFromPersonalized(bundle, personalized, preferences),
     genres: bundle.genres,
-    recommendedRows: personalized?.recommended ?? [],
+    recommendedRows: filterRailByPreferences(
+      personalized?.recommended ?? [],
+      preferences
+    ),
     newContent:
-      personalized && personalized.newContent.length > 0
-        ? personalized.newContent
+      personalized &&
+      (personalized.newContent.length > 0 || hasUserPreferences(preferences))
+        ? filterRailByPreferences(personalized.newContent, preferences)
         : feed.newContent,
     upcomingContent:
-      personalized && personalized.upcomingContent.length > 0
-        ? personalized.upcomingContent
+      personalized &&
+      (personalized.upcomingContent.length > 0 || hasUserPreferences(preferences))
+        ? filterRailByPreferences(personalized.upcomingContent, preferences)
         : feed.upcomingContent,
     personalized,
   };
