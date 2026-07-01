@@ -10,6 +10,8 @@ import {
 import {
   CATEGORY_LANGUAGE_CODES,
   ONBOARDING_LANGUAGES,
+  regionCodesForLanguage,
+  selectedRegionCodes,
 } from "@/lib/onboardingOptions";
 
 const LANGUAGE_NAME_TO_CODE = new Map([
@@ -29,6 +31,64 @@ const LANGUAGE_NAME_TO_CODE = new Map([
   ["portuguese", "pt"],
   ["italian", "it"],
 ]);
+
+const COUNTRY_NAME_TO_ISO = new Map([
+  ["india", "IN"],
+  ["south korea", "KR"],
+  ["korea", "KR"],
+  ["republic of korea", "KR"],
+  ["japan", "JP"],
+  ["china", "CN"],
+  ["taiwan", "TW"],
+  ["hong kong", "HK"],
+  ["macau", "MO"],
+  ["philippines", "PH"],
+  ["thailand", "TH"],
+  ["vietnam", "VN"],
+  ["united states", "US"],
+  ["united states of america", "US"],
+  ["usa", "US"],
+  ["united kingdom", "GB"],
+  ["uk", "GB"],
+  ["great britain", "GB"],
+  ["france", "FR"],
+  ["germany", "DE"],
+  ["spain", "ES"],
+  ["mexico", "MX"],
+  ["brazil", "BR"],
+  ["portugal", "PT"],
+  ["italy", "IT"],
+  ["canada", "CA"],
+  ["australia", "AU"],
+  ["new zealand", "NZ"],
+  ["ireland", "IE"],
+  ["saudi arabia", "SA"],
+  ["united arab emirates", "AE"],
+  ["egypt", "EG"],
+  ["argentina", "AR"],
+  ["colombia", "CO"],
+  ["chile", "CL"],
+  ["peru", "PE"],
+  ["venezuela", "VE"],
+  ["belgium", "BE"],
+  ["switzerland", "CH"],
+  ["austria", "AT"],
+  ["singapore", "SG"],
+]);
+
+const ISO_TO_COUNTRY_NAMES = new Map();
+for (const lang of ONBOARDING_LANGUAGES) {
+  for (const iso of regionCodesForLanguage(lang.code)) {
+    const names = ISO_TO_COUNTRY_NAMES.get(iso) ?? new Set();
+    names.add(lang.label.toLowerCase());
+    ISO_TO_COUNTRY_NAMES.set(iso, names);
+  }
+}
+for (const [name, iso] of COUNTRY_NAME_TO_ISO) {
+  const names = ISO_TO_COUNTRY_NAMES.get(iso) ?? new Set();
+  names.add(name);
+  ISO_TO_COUNTRY_NAMES.set(iso, names);
+}
 
 /** @param {import('@/types/user').UserPreferences | null | undefined} preferences */
 export function selectedLanguageCodes(preferences) {
@@ -67,6 +127,104 @@ export function catalogLanguageMatchConditions(code) {
     or.push({ "omdb.language": { $regex: `\\b${safe}\\b`, $options: "i" } });
   }
   return { $or: or };
+}
+
+/**
+ * @param {string} name
+ * @returns {string | null} ISO 3166-1 alpha-2
+ */
+function countryCodeFromName(name) {
+  const lower = String(name ?? "").trim().toLowerCase();
+  if (!lower) return null;
+  if (/^[a-z]{2}$/i.test(lower)) return lower.toUpperCase();
+  const direct = COUNTRY_NAME_TO_ISO.get(lower);
+  if (direct) return direct;
+  for (const [token, iso] of COUNTRY_NAME_TO_ISO) {
+    if (lower.includes(token)) return iso;
+  }
+  return null;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function normalizeCountryCode(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  if (/^[A-Za-z]{2}$/.test(raw)) return raw.toUpperCase();
+  return countryCodeFromName(raw);
+}
+
+/**
+ * @param {string} iso ISO 3166-1 alpha-2
+ * @returns {string[]}
+ */
+function countryNameTokensForIso(iso) {
+  const code = String(iso ?? "").toUpperCase().trim();
+  return [...(ISO_TO_COUNTRY_NAMES.get(code) ?? [])];
+}
+
+/**
+ * Mongo match for a catalog production region.
+ * @param {string} iso ISO 3166-1 alpha-2
+ */
+export function catalogRegionMatchConditions(iso) {
+  const code = String(iso ?? "").toUpperCase().trim();
+  const or = [
+    { origin_country: code },
+    { "production_countries.iso_3166_1": code },
+  ];
+  for (const name of countryNameTokensForIso(code)) {
+    const safe = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    or.push({ "omdb.country": { $regex: `\\b${safe}\\b`, $options: "i" } });
+  }
+  return { $or: or };
+}
+
+/**
+ * All ISO region codes implied by a catalog doc.
+ * @param {Record<string, unknown>} doc
+ * @returns {string[]}
+ */
+export function catalogCountryCodes(doc) {
+  const codes = new Set();
+  const origins = doc?.origin_country;
+  if (Array.isArray(origins)) {
+    for (const entry of origins) {
+      const code = normalizeCountryCode(entry);
+      if (code) codes.add(code);
+    }
+  } else {
+    const code = normalizeCountryCode(origins);
+    if (code) codes.add(code);
+  }
+
+  const production = doc?.production_countries;
+  if (Array.isArray(production)) {
+    for (const entry of production) {
+      if (!entry || typeof entry !== "object") continue;
+      const code = normalizeCountryCode(
+        /** @type {{ iso_3166_1?: string; name?: string }} */ (entry).iso_3166_1 ??
+          /** @type {{ iso_3166_1?: string; name?: string }} */ (entry).name
+      );
+      if (code) codes.add(code);
+    }
+  }
+
+  const omdb =
+    doc?.omdb && typeof doc.omdb === "object"
+      ? /** @type {{ country?: string }} */ (doc.omdb)
+      : null;
+  const omdbCountry = String(omdb?.country ?? "").trim();
+  if (omdbCountry) {
+    for (const part of omdbCountry.split(",")) {
+      const code = countryCodeFromName(part);
+      if (code) codes.add(code);
+    }
+  }
+
+  return [...codes];
 }
 
 /**
@@ -178,11 +336,29 @@ export function docMatchesLanguagePreferences(doc, preferences) {
   return docCodes.every((code) => selected.includes(code));
 }
 
+/**
+ * When language prefs exist, production countries must map to selected language regions.
+ * e.g. Hindi not selected → India (IN) titles are excluded.
+ * @param {Record<string, unknown>} doc
+ * @param {import('@/types/user').UserPreferences | null | undefined} preferences
+ */
+export function docMatchesRegionPreferences(doc, preferences) {
+  const selected = selectedLanguageCodes(preferences);
+  if (selected.length === 0) return true;
+
+  const docCountries = catalogCountryCodes(doc);
+  if (docCountries.length === 0) return true;
+
+  const allowed = new Set(selectedRegionCodes(selected));
+  return docCountries.every((code) => allowed.has(code));
+}
+
 /** @param {Record<string, unknown>} doc @param {import('@/types/user').UserPreferences | null | undefined} preferences */
 export function docMatchesPreferences(doc, preferences) {
   return (
     docMatchesGenrePreferences(doc, preferences) &&
-    docMatchesLanguagePreferences(doc, preferences)
+    docMatchesLanguagePreferences(doc, preferences) &&
+    docMatchesRegionPreferences(doc, preferences)
   );
 }
 
@@ -197,6 +373,8 @@ export function contentItemMatchesPreferences(item, preferences) {
     {
       imdb_genres: item.imdb_genres,
       original_language: item.original_language,
+      origin_country: item.origin_country,
+      production_countries: item.production_countries,
       omdb: item.omdb,
     },
     preferences
@@ -300,6 +478,16 @@ export function buildPreferenceMatch(preferences, opts = {}) {
       clauses.push({
         $nor: excludedLanguages.map((code) => catalogLanguageMatchConditions(code)),
       });
+      const excludedRegions = [
+        ...new Set(
+          excludedLanguages.flatMap((code) => regionCodesForLanguage(code))
+        ),
+      ];
+      if (excludedRegions.length > 0) {
+        clauses.push({
+          $nor: excludedRegions.map((code) => catalogRegionMatchConditions(code)),
+        });
+      }
     }
   }
 

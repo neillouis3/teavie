@@ -132,6 +132,8 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
           imdb_genres: 1,
           omdb: 1,
           original_language: 1,
+          origin_country: 1,
+          production_countries: 1,
           is_anime: 1,
         },
       },

@@ -19,7 +19,9 @@ export interface ContentItem {
   genres?: string[];
   imdb_genres?: string[];
   original_language?: string | null;
-  omdb?: { genre?: string | null; language?: string | null };
+  origin_country?: string[];
+  production_countries?: { iso_3166_1?: string; name?: string }[];
+  omdb?: { genre?: string | null; language?: string | null; country?: string | null };
   certification?: string | null;
 }
   

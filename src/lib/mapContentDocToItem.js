@@ -154,6 +154,10 @@ export function mapContentDocToItem(doc) {
     genres: genreNamesFromDoc(doc),
     imdb_genres: imdbGenresForDoc(doc),
     original_language: doc.original_language ?? null,
+    origin_country: Array.isArray(doc.origin_country) ? doc.origin_country : [],
+    production_countries: Array.isArray(doc.production_countries)
+      ? doc.production_countries
+      : [],
     omdb:
       doc.omdb && typeof doc.omdb === "object"
         ? {
@@ -161,6 +165,8 @@ export function mapContentDocToItem(doc) {
               typeof doc.omdb.genre === "string" ? doc.omdb.genre : null,
             language:
               typeof doc.omdb.language === "string" ? doc.omdb.language : null,
+            country:
+              typeof doc.omdb.country === "string" ? doc.omdb.country : null,
           }
         : undefined,
     certification: usCertificationFromDoc(doc),

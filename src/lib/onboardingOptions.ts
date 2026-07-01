@@ -149,6 +149,79 @@ export const ONBOARDING_LANGUAGES: OnboardingLanguage[] = [
   { code: "it", label: "Italian" },
 ];
 
+/** Primary production regions tied to onboarding language picks (ISO 3166-1 alpha-2). */
+export const LANGUAGE_REGION_CODES: Record<string, string[]> = {
+  en: ["US", "GB", "AU", "CA", "NZ", "IE"],
+  ko: ["KR"],
+  ja: ["JP"],
+  zh: ["CN", "TW", "HK", "MO", "SG"],
+  es: [
+    "ES",
+    "MX",
+    "AR",
+    "CO",
+    "CL",
+    "PE",
+    "VE",
+    "EC",
+    "GT",
+    "CU",
+    "BO",
+    "DO",
+    "HN",
+    "PY",
+    "SV",
+    "NI",
+    "CR",
+    "PA",
+    "UY",
+    "PR",
+  ],
+  fr: ["FR", "BE", "CH", "LU", "MC"],
+  ar: [
+    "SA",
+    "AE",
+    "EG",
+    "IQ",
+    "JO",
+    "LB",
+    "MA",
+    "QA",
+    "KW",
+    "BH",
+    "OM",
+    "YE",
+    "TN",
+    "DZ",
+    "LY",
+    "SD",
+  ],
+  de: ["DE", "AT", "CH", "LI"],
+  hi: ["IN"],
+  tl: ["PH"],
+  th: ["TH"],
+  vi: ["VN"],
+  pt: ["PT", "BR"],
+  it: ["IT"],
+};
+
+/** @returns ISO region codes for a language preference code. */
+export function regionCodesForLanguage(code: string): string[] {
+  const normalized = String(code ?? "").toLowerCase().trim();
+  return LANGUAGE_REGION_CODES[normalized] ?? [];
+}
+
+/** Union of region codes allowed by the selected language prefs. */
+export function selectedRegionCodes(languageCodes: Iterable<string>): string[] {
+  const out = new Set<string>();
+  for (const code of languageCodes) {
+    for (const region of regionCodesForLanguage(code)) {
+      out.add(region);
+    }
+  }
+  return [...out];
+}
+
 export type OnboardingAnimeAudio = "sub" | "dub" | "both";
 
 export const ONBOARDING_ANIME_AUDIO: {

@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.3.89",
+    "date": "2026-07-01",
+    "title": "Language and region preference filtering",
+    "summary": "Language picks now also filter by production country, so unselected languages hide their home regions from personalized rails.",
+    "tags": ["Explore", "Preferences"],
+    "changes": [
+      "Hindi not selected now excludes India (IN) titles from Popular and personalized Explore rails.",
+      "Korean, Japanese, Chinese, Tagalog, Thai, Vietnamese, and other language picks map to their primary production regions.",
+      "Region checks use origin_country, production_countries, and OMDb country metadata alongside language filters."
+    ]
+  },
+  {
     "version": "2.3.88",
     "date": "2026-07-01",
     "title": "Looser genre matching",
