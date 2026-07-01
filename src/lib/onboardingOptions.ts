@@ -149,7 +149,7 @@ export const ONBOARDING_LANGUAGES: OnboardingLanguage[] = [
   { code: "it", label: "Italian" },
 ];
 
-/** Primary production regions tied to onboarding language picks (ISO 3166-1 alpha-2). */
+/** Primary production regions per language (ISO 3166-1). Order = ranking priority within that language. */
 export const LANGUAGE_REGION_CODES: Record<string, string[]> = {
   en: ["US", "GB", "AU", "CA", "NZ", "IE"],
   ko: ["KR"],

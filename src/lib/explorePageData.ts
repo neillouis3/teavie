@@ -4,7 +4,7 @@ import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import type { WatchHistoryEntry } from "@/lib/watchHistory";
 import type { UserPreferences } from "@/types/user";
 import { hasUserPreferences } from "@/types/user";
-import { contentItemMatchesPreferences, sortContentItemsByGenrePreference } from "@/lib/preferenceMatch";
+import { contentItemMatchesPreferences, sortContentItemsByPreferenceRank } from "@/lib/preferenceMatch";
 import {
   fetchExploreBundle,
   fetchDiscoverFeed,
@@ -349,7 +349,7 @@ function filterRailByPreferences(
   const filtered = items.filter((item) =>
     contentItemMatchesPreferences(item, preferences)
   );
-  return sortContentItemsByGenrePreference(filtered, preferences);
+  return sortContentItemsByPreferenceRank(filtered, preferences);
 }
 
 function buildDiscoverFromPersonalized(

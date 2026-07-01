@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.3.93",
+    "date": "2026-07-01",
+    "title": "English region ranking",
+    "summary": "When English is selected, US productions rank above UK and other English regions in personalized rails.",
+    "tags": ["Explore", "Preferences"],
+    "changes": [
+      "English region priority: US, then UK, then Australia, Canada, New Zealand, and Ireland.",
+      "Co-productions use their highest-priority matching country for ranking.",
+      "Genre ranking still applies first; region order breaks ties within the same genre tier."
+    ]
+  },
+  {
     "version": "2.3.92",
     "date": "2026-07-01",
     "title": "Softer genre ranking",

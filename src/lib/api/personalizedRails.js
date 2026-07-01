@@ -13,7 +13,7 @@ import {
   docMatchesPreferences,
   selectedGenreLabels,
   selectedLanguageCodes,
-  sortDocsByGenrePreference,
+  sortDocsByPreferenceRank,
 } from "@/lib/preferenceMatch";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
@@ -43,7 +43,7 @@ function toDateString(date) {
 }
 
 function mapDocsToItems(docs, preferences) {
-  return sortDocsByGenrePreference(
+  return sortDocsByPreferenceRank(
     docs.filter((doc) => docMatchesPreferences(doc, preferences)),
     preferences
   )

@@ -340,10 +340,64 @@ export function docMatchesGenrePreferences(doc, preferences) {
  * @param {import('@/types/user').UserPreferences | null | undefined} preferences
  */
 export function sortDocsByGenrePreference(docs, preferences) {
-  if (selectedGenreLabels(preferences).length === 0) return docs;
-  return [...docs].sort(
-    (a, b) => genrePreferenceTier(a, preferences) - genrePreferenceTier(b, preferences)
-  );
+  return sortDocsByPreferenceRank(docs, preferences);
+}
+
+/**
+ * Region priority within selected languages (lower = higher in the rail).
+ * English: US before GB, then AU, CA, NZ, IE.
+ * @param {Record<string, unknown>} doc
+ * @param {import('@/types/user').UserPreferences | null | undefined} preferences
+ */
+export function regionPreferenceRank(doc, preferences) {
+  const selected = selectedLanguageCodes(preferences);
+  if (selected.length === 0) return 0;
+
+  const docCountries = catalogCountryCodes(doc);
+  if (docCountries.length === 0) return 0;
+
+  let best = Number.POSITIVE_INFINITY;
+  for (const lang of selected) {
+    const regions = regionCodesForLanguage(lang);
+    for (const country of docCountries) {
+      const idx = regions.indexOf(country);
+      if (idx >= 0) best = Math.min(best, idx);
+    }
+  }
+
+  return Number.isFinite(best) ? best : 0;
+}
+
+function docLikeFromContentItem(item) {
+  return {
+    imdb_genres: item.imdb_genres,
+    omdb: item.omdb,
+    original_language: item.original_language,
+    origin_country: item.origin_country,
+    production_countries: item.production_countries,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} a
+ * @param {Record<string, unknown>} b
+ * @param {import('@/types/user').UserPreferences | null | undefined} preferences
+ */
+export function preferenceRankCompare(a, b, preferences) {
+  const genreDiff = genrePreferenceTier(a, preferences) - genrePreferenceTier(b, preferences);
+  if (genreDiff !== 0) return genreDiff;
+  return regionPreferenceRank(a, preferences) - regionPreferenceRank(b, preferences);
+}
+
+/**
+ * @param {Record<string, unknown>[]} docs
+ * @param {import('@/types/user').UserPreferences | null | undefined} preferences
+ */
+export function sortDocsByPreferenceRank(docs, preferences) {
+  const hasGenre = selectedGenreLabels(preferences).length > 0;
+  const hasLang = selectedLanguageCodes(preferences).length > 0;
+  if (!hasGenre && !hasLang) return docs;
+  return [...docs].sort((a, b) => preferenceRankCompare(a, b, preferences));
 }
 
 /**
@@ -351,16 +405,20 @@ export function sortDocsByGenrePreference(docs, preferences) {
  * @param {import('@/types/user').UserPreferences | null | undefined} preferences
  */
 export function sortContentItemsByGenrePreference(items, preferences) {
-  if (selectedGenreLabels(preferences).length === 0) return items;
-  const tierForItem = (item) =>
-    genrePreferenceTier(
-      {
-        imdb_genres: item.imdb_genres,
-        omdb: item.omdb,
-      },
-      preferences
-    );
-  return [...items].sort((a, b) => tierForItem(a) - tierForItem(b));
+  return sortContentItemsByPreferenceRank(items, preferences);
+}
+
+/**
+ * @param {import('@/types/content').ContentItem[]} items
+ * @param {import('@/types/user').UserPreferences | null | undefined} preferences
+ */
+export function sortContentItemsByPreferenceRank(items, preferences) {
+  const hasGenre = selectedGenreLabels(preferences).length > 0;
+  const hasLang = selectedLanguageCodes(preferences).length > 0;
+  if (!hasGenre && !hasLang) return items;
+  return [...items].sort((a, b) =>
+    preferenceRankCompare(docLikeFromContentItem(a), docLikeFromContentItem(b), preferences)
+  );
 }
 
 /**
