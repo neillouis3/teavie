@@ -5,6 +5,8 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
 import { useWatchParty } from '@/hooks/useWatchParty';
+import type { GuestSyncPayload } from '@/lib/teaPartySync';
+import { PARTY_HOST_BROADCAST_MS } from '@/lib/teaPartySync';
 import { useRegisterWatchPartyNav } from '@/hooks/useRegisterWatchPartyNav';
 import type { VideasyProgressMessage } from '@/lib/videasyProgress';
 import {
@@ -96,7 +98,11 @@ export default function MovieTemplate({ id }: { id: string }) {
   const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
   const [playerEpoch, setPlayerEpoch] = useState(0);
   const partyPlaybackBroadcastRef = useRef(0);
-  const lastGuestPlaybackRef = useRef(-1);
+
+  const applyGuestSync = useCallback((plan: GuestSyncPayload) => {
+    setPlayerStartSeconds(plan.targetSeconds);
+    if (plan.remount) setPlayerEpoch((n) => n + 1);
+  }, []);
 
   const partyRoomId = searchParams.get('party');
 
@@ -105,18 +111,7 @@ export default function MovieTemplate({ id }: { id: string }) {
     mediaType: 'movie',
     title: movie?.title ?? '',
     roomIdFromUrl: partyRoomId,
-    onGuestPlayback: (_season, _episode, seconds) => {
-      const sec = Math.floor(seconds);
-      if (
-        lastGuestPlaybackRef.current >= 0 &&
-        Math.abs(lastGuestPlaybackRef.current - sec) < 12
-      ) {
-        return;
-      }
-      lastGuestPlaybackRef.current = sec;
-      setPlayerStartSeconds(sec);
-      setPlayerEpoch((n) => n + 1);
-    },
+    onGuestSync: applyGuestSync,
   });
 
   useEffect(() => {
@@ -128,9 +123,10 @@ export default function MovieTemplate({ id }: { id: string }) {
   const handleVideasyProgress = useCallback(
     (msg: VideasyProgressMessage) => {
       saveMoviePlaybackPosition(String(id), msg.timestamp);
+      watchParty.noteHostPlayback(msg.timestamp);
       if (!watchParty.isHost || !watchParty.room || server !== 'videasy') return;
       const now = Date.now();
-      if (now - partyPlaybackBroadcastRef.current < 4000) return;
+      if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
       partyPlaybackBroadcastRef.current = now;
       void watchParty.broadcastPlayback(msg.timestamp);
     },
@@ -189,10 +185,14 @@ export default function MovieTemplate({ id }: { id: string }) {
             error: partyNavError,
             nickname: watchParty.nickname,
             mediaType: 'movie' as const,
+            title: movie?.title ?? '',
             onCreate: handleCreateParty,
             onJoin: handleJoinParty,
             onLeave: handleLeaveParty,
             onSendChat: watchParty.sendChat,
+            onUpdateSettings: watchParty.updateSettings,
+            onReleaseSync: watchParty.releaseSyncCheckpoint,
+            guestJoinSyncRole: watchParty.guestJoinSyncRole,
           }
         : null,
     [
@@ -203,6 +203,9 @@ export default function MovieTemplate({ id }: { id: string }) {
       partyNavError,
       watchParty.nickname,
       watchParty.sendChat,
+      watchParty.updateSettings,
+      watchParty.releaseSyncCheckpoint,
+      watchParty.guestJoinSyncRole,
       handleCreateParty,
       handleJoinParty,
       handleLeaveParty,

@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { WatchPartyRoom } from "@/hooks/useWatchParty";
+import type { TeaPartySettings, TeaPartyGuestSyncRole } from "@/lib/teaPartySync";
 
 export type WatchPartyNavRegistration = {
   canPlay: boolean;
@@ -11,22 +12,31 @@ export type WatchPartyNavRegistration = {
   error: string;
   nickname: string;
   mediaType: "tv" | "movie";
+  title?: string;
+  guestJoinSyncRole?: TeaPartyGuestSyncRole;
   onCreate: (nickname: string) => void | Promise<string | null>;
   onJoin: (roomId: string, nickname: string) => void;
   onLeave: () => void;
   onSendChat: (text: string) => void;
+  onUpdateSettings: (settings: Partial<TeaPartySettings>) => void | Promise<void>;
+  onReleaseSync: () => void | Promise<void>;
 };
 
 type WatchPartyNavContextValue = {
   registration: WatchPartyNavRegistration | null;
   register: (value: WatchPartyNavRegistration) => void;
   unregister: () => void;
+  isOpen: boolean;
+  openTeaParty: () => void;
+  closeTeaParty: () => void;
+  setTeaPartyOpen: (open: boolean) => void;
 };
 
 const WatchPartyNavContext = createContext<WatchPartyNavContextValue | null>(null);
 
 export function WatchPartyNavProvider({ children }: { children: React.ReactNode }) {
   const [registration, setRegistration] = useState<WatchPartyNavRegistration | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   const register = useCallback((value: WatchPartyNavRegistration) => {
     setRegistration(value);
@@ -36,9 +46,21 @@ export function WatchPartyNavProvider({ children }: { children: React.ReactNode 
     setRegistration(null);
   }, []);
 
+  const openTeaParty = useCallback(() => setIsOpen(true), []);
+  const closeTeaParty = useCallback(() => setIsOpen(false), []);
+  const setTeaPartyOpen = useCallback((open: boolean) => setIsOpen(open), []);
+
   const value = useMemo(
-    () => ({ registration, register, unregister }),
-    [registration, register, unregister]
+    () => ({
+      registration,
+      register,
+      unregister,
+      isOpen,
+      openTeaParty,
+      closeTeaParty,
+      setTeaPartyOpen,
+    }),
+    [registration, register, unregister, isOpen, openTeaParty, closeTeaParty, setTeaPartyOpen]
   );
 
   return (

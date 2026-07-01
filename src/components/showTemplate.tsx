@@ -53,6 +53,8 @@ import {
   shouldPruneTvAnimeWithoutAnilist,
   showUnavailableReasonForDoc,
 } from "@/lib/tvJpAnimePrune";
+import type { GuestSyncPayload } from "@/lib/teaPartySync";
+import { PARTY_HOST_BROADCAST_MS } from "@/lib/teaPartySync";
 import { useWatchParty } from "@/hooks/useWatchParty";
 import { useRegisterWatchPartyNav } from "@/hooks/useRegisterWatchPartyNav";
 import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster.js";
@@ -540,7 +542,6 @@ export default function ShowTemplate({
   const [playerEpoch, setPlayerEpoch] = useState(0);
   const progressAppliedForIdRef = useRef<string | null>(null);
   const partyPlaybackBroadcastRef = useRef(0);
-  const lastGuestPlaybackRef = useRef(-1);
   const lastPartyEpRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -952,6 +953,13 @@ export default function ShowTemplate({
 
   const partyRoomId = searchParams.get("party");
 
+  const applyGuestSync = useCallback((plan: GuestSyncPayload) => {
+    setSelectedSeason(plan.season);
+    setSelectedEpisode(plan.episode);
+    setPlayerStartSeconds(plan.targetSeconds);
+    if (plan.remount) setPlayerEpoch((n) => n + 1);
+  }, []);
+
   const watchParty = useWatchParty({
     catalogId: id,
     mediaType: "tv",
@@ -959,23 +967,7 @@ export default function ShowTemplate({
     season: selectedSeason,
     episode: selectedEpisode,
     roomIdFromUrl: partyRoomId,
-    onGuestEpisode: (season, ep) => {
-      lastGuestPlaybackRef.current = -1;
-      setSelectedSeason(season);
-      setSelectedEpisode(ep);
-    },
-    onGuestPlayback: (_season, _episode, seconds) => {
-      const sec = Math.floor(seconds);
-      if (
-        lastGuestPlaybackRef.current >= 0 &&
-        Math.abs(lastGuestPlaybackRef.current - sec) < 12
-      ) {
-        return;
-      }
-      lastGuestPlaybackRef.current = sec;
-      setPlayerStartSeconds(sec);
-      setPlayerEpoch((n) => n + 1);
-    },
+    onGuestSync: applyGuestSync,
   });
 
   useEffect(() => {
@@ -990,10 +982,11 @@ export default function ShowTemplate({
       const s = msg.season ?? selectedSeason;
       const e = msg.episode ?? selectedEpisode;
       saveEpisodePlaybackPosition(String(id), s, e, msg.timestamp);
+      watchParty.noteHostPlayback(msg.timestamp);
 
       if (!watchParty.isHost || !watchParty.room || server !== "videasy") return;
       const now = Date.now();
-      if (now - partyPlaybackBroadcastRef.current < 4000) return;
+      if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
       partyPlaybackBroadcastRef.current = now;
       void watchParty.broadcastPlayback(msg.timestamp);
     },
@@ -1048,9 +1041,10 @@ export default function ShowTemplate({
       if (msg.kind !== "progress") return;
       const sec = Math.floor(msg.currentTime);
       saveEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode, sec);
+      watchParty.noteHostPlayback(sec);
       if (!watchParty.isHost || !watchParty.room) return;
       const now = Date.now();
-      if (now - partyPlaybackBroadcastRef.current < 4000) return;
+      if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
       partyPlaybackBroadcastRef.current = now;
       void watchParty.broadcastPlayback(sec);
     },
@@ -1073,7 +1067,7 @@ export default function ShowTemplate({
     const key = `${selectedSeason}:${selectedEpisode}`;
     if (lastPartyEpRef.current === key) return;
     lastPartyEpRef.current = key;
-    void watchParty.broadcastEpisode(selectedSeason, selectedEpisode, 0);
+    void watchParty.broadcastEpisode(selectedSeason, selectedEpisode);
   }, [
     watchParty.isHost,
     watchParty.room?.roomId,
@@ -1122,10 +1116,14 @@ export default function ShowTemplate({
             error: partyNavError,
             nickname: watchParty.nickname,
             mediaType: "tv" as const,
+            title,
             onCreate: handleCreateParty,
             onJoin: handleJoinParty,
             onLeave: handleLeaveParty,
             onSendChat: watchParty.sendChat,
+            onUpdateSettings: watchParty.updateSettings,
+            onReleaseSync: watchParty.releaseSyncCheckpoint,
+            guestJoinSyncRole: watchParty.guestJoinSyncRole,
           }
         : null,
     [
@@ -1137,6 +1135,10 @@ export default function ShowTemplate({
       partyNavError,
       watchParty.nickname,
       watchParty.sendChat,
+      watchParty.updateSettings,
+      watchParty.releaseSyncCheckpoint,
+      watchParty.guestJoinSyncRole,
+      title,
       handleCreateParty,
       handleJoinParty,
       handleLeaveParty,

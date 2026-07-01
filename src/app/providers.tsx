@@ -12,6 +12,8 @@ import { AnimeAudioProvider } from "@/contexts/animeAudioContext";
 import { AnimeSourceProvider } from "@/contexts/animeSourceContext";
 import { StreamingSourceProvider } from "@/contexts/streamingSourceContext";
 import { WatchPartyNavProvider } from "@/contexts/watchPartyNavContext";
+import TeaPartyModal from "@/components/watchParty/TeaPartyModal";
+import TeaPartyHostSyncListener from "@/components/watchParty/TeaPartyHostSyncListener";
 import { Suspense } from "react";
 import MaintenanceAnnouncementModal from "@/components/ui/maintenanceAnnouncementModal";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
@@ -57,6 +59,8 @@ export function Providers({ children }: ProvidersProps) {
               <WatchPartyNavProvider>
               <MaintenanceAnnouncementModal />
               <OnboardingModal />
+              <TeaPartyModal />
+              <TeaPartyHostSyncListener />
               <MobileTopNavGate />
               <AppShell>{children}</AppShell>
               </WatchPartyNavProvider>

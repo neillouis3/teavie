@@ -6,6 +6,35 @@
 import clientPromise from "./mongo.js";
 import crypto from "crypto";
 
+const DEFAULT_SETTINGS = {
+  onGuestJoin: "auto_resume",
+  autoResumeSeconds: 5,
+};
+
+function normalizeSettings(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const mode = src.onGuestJoin;
+  const onGuestJoin =
+    mode === "off" || mode === "auto_resume" || mode === "host_resume"
+      ? mode
+      : DEFAULT_SETTINGS.onGuestJoin;
+  const autoResumeSeconds = Math.min(
+    30,
+    Math.max(3, Math.floor(Number(src.autoResumeSeconds)) || 5)
+  );
+  return { onGuestJoin, autoResumeSeconds };
+}
+
+function normalizeSyncHold(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  return {
+    active: Boolean(src.active),
+    startedAt: typeof src.startedAt === "string" ? src.startedAt : null,
+    triggerNickname:
+      typeof src.triggerNickname === "string" ? src.triggerNickname : null,
+  };
+}
+
 const DB = "teavie";
 const COL = "watch_parties";
 const ROOM_ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -83,6 +112,13 @@ export async function createWatchParty({
     stateVersion: 1,
     playbackSeconds: 0,
     playbackVersion: 0,
+    syncGeneration: 0,
+    settings: { ...DEFAULT_SETTINGS },
+    syncHold: {
+      active: false,
+      startedAt: null,
+      triggerNickname: null,
+    },
     stateUpdatedAt: createdAt,
     members: [
       {
@@ -126,6 +162,9 @@ function publicRoomView(doc) {
     playbackSeconds: Math.max(0, Math.floor(Number(doc.playbackSeconds)) || 0),
     playbackVersion: doc.playbackVersion ?? 0,
     stateVersion: doc.stateVersion ?? 1,
+    syncGeneration: doc.syncGeneration ?? 0,
+    settings: normalizeSettings(doc.settings),
+    syncHold: normalizeSyncHold(doc.syncHold),
     stateUpdatedAt: doc.stateUpdatedAt ?? doc.createdAt,
     members: members.map((m) => ({
       id: m.id,
@@ -159,15 +198,27 @@ export async function joinWatchParty(roomIdRaw, { nickname, memberId: existingMe
 
   let members = pruneStaleMembers(doc.members ?? []);
   const idx = members.findIndex((m) => m.id === memberId);
-  if (idx >= 0) {
+  const isReconnect = idx >= 0;
+  if (isReconnect) {
     members[idx] = { ...members[idx], nickname: nick, lastSeen: seen };
   } else {
     if (members.length >= MAX_MEMBERS) throw new Error("Room is full");
     members.push({ id: memberId, nickname: nick, isHost: false, lastSeen: seen });
   }
 
-  await collection.updateOne({ roomId }, { $set: { members } });
-  return { memberId, room: publicRoomView({ ...doc, members }) };
+  const settings = normalizeSettings(doc.settings);
+  const set = { members };
+  if (!isReconnect && settings.onGuestJoin !== "off") {
+    set.syncHold = {
+      active: true,
+      startedAt: seen,
+      triggerNickname: nick,
+    };
+  }
+
+  await collection.updateOne({ roomId }, { $set: set });
+  const updated = await collection.findOne({ roomId });
+  return { memberId, room: publicRoomView(updated), isNewGuest: !isReconnect };
 }
 
 export async function heartbeatWatchParty(roomIdRaw, memberId) {
@@ -218,6 +269,67 @@ export async function updateWatchPartyState(roomIdRaw, hostToken, patch) {
 
   if (!episodePatch && !playbackPatch) {
     throw new Error("Nothing to update");
+  }
+
+  await collection.updateOne({ roomId }, { $set: set });
+  const updated = await collection.findOne({ roomId });
+  return publicRoomView(updated);
+}
+
+export async function updateWatchPartySettings(roomIdRaw, hostToken, settingsPatch) {
+  const roomId = normalizeRoomId(roomIdRaw);
+  if (!roomId || !hostToken) throw new Error("Unauthorized");
+
+  const collection = await col();
+  const doc = await collection.findOne({ roomId });
+  if (!doc || doc.hostToken !== hostToken) throw new Error("Unauthorized");
+
+  const current = normalizeSettings(doc.settings);
+  const next = normalizeSettings({ ...current, ...settingsPatch });
+
+  await collection.updateOne({ roomId }, { $set: { settings: next } });
+  const updated = await collection.findOne({ roomId });
+  return publicRoomView(updated);
+}
+
+/** Host releases a guest-join sync hold and checkpoints playback for everyone. */
+export async function releasePartySyncCheckpoint(
+  roomIdRaw,
+  hostToken,
+  { playbackSeconds, season, episode }
+) {
+  const roomId = normalizeRoomId(roomIdRaw);
+  if (!roomId || !hostToken) throw new Error("Unauthorized");
+
+  const collection = await col();
+  const doc = await collection.findOne({ roomId });
+  if (!doc || doc.hostToken !== hostToken) throw new Error("Unauthorized");
+
+  const now = nowIso();
+  const set = {
+    stateUpdatedAt: now,
+    syncGeneration: (doc.syncGeneration ?? 0) + 1,
+    syncHold: {
+      active: false,
+      startedAt: null,
+      triggerNickname: null,
+    },
+    playbackSeconds: Math.max(0, Math.floor(Number(playbackSeconds)) || 0),
+    playbackVersion: (doc.playbackVersion ?? 0) + 1,
+  };
+
+  const nextSeason =
+    season != null
+      ? Math.max(1, Math.floor(Number(season)) || 1)
+      : doc.season ?? 1;
+  const nextEpisode =
+    episode != null
+      ? Math.max(1, Math.floor(Number(episode)) || 1)
+      : doc.episode ?? 1;
+  if (nextSeason !== doc.season || nextEpisode !== doc.episode) {
+    set.season = nextSeason;
+    set.episode = nextEpisode;
+    set.stateVersion = (doc.stateVersion ?? 0) + 1;
   }
 
   await collection.updateOne({ roomId }, { $set: set });
