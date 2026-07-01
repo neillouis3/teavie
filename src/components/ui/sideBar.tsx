@@ -12,10 +12,9 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Alert } from "@heroui/react";
 import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
-import { SIDEBAR_GLASS_CLASS, sidebarChromeStyle, navOverHero } from "@/components/ui/navGlass";
-import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
-import { useScrollNavBlend } from "@/hooks/useScrollNavBlend";
+import { SIDEBAR_GLASS_CLASS } from "@/components/ui/navGlass";
 import { TEAVIE_LOGO, teavieLogoForTheme } from "@/lib/brandAssets";
+import VersionChip from "@/components/ui/versionChip";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -23,10 +22,6 @@ export default function SideBar() {
   const [mounted, setMounted] = useState(false);
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const heroBleed = pathUsesHeroBleed(pathname);
-  const blend = useScrollNavBlend(heroBleed);
-  const overHero = heroBleed && navOverHero(blend);
-  const chromeStyle = heroBleed ? sidebarChromeStyle(blend) : undefined;
 
   useEffect(() => {
     setMounted(true);
@@ -61,43 +56,46 @@ export default function SideBar() {
   return (
     <div
       data-sidebar-shell
-      className={`pointer-events-auto fixed left-0 top-0 z-50 flex hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center py-4 px-2 transition-[color] duration-200 ease-in-out lg:flex ${
-        heroBleed ? "" : SIDEBAR_GLASS_CLASS
-      } ${overHero ? "text-white" : "text-foreground"}`}
-      style={chromeStyle}
+      className={`pointer-events-auto fixed left-0 top-0 z-50 flex hidden h-dvh w-[var(--sidebar-w,16rem)] flex-col items-center py-4 px-2 text-foreground transition-[color,width] duration-200 ease-in-out lg:flex ${SIDEBAR_GLASS_CLASS}`}
     >
       <div className="flex h-full w-full flex-col gap-4">
-        <div className="flex items-center justify-between px-2 min-h-[48px]">
-          <AnimatePresence mode="wait">
-            {!isCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.15 }}
-                className="overflow-hidden"
-              >
-                <Link href="/explore">
-                  <img src={logoSrc} alt="Teavie" className="h-10 w-auto" />
-                </Link>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between px-2 min-h-[48px]">
+            <AnimatePresence mode="wait">
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="overflow-hidden"
+                >
+                  <Link href="/explore">
+                    <img src={logoSrc} alt="Teavie" className="h-10 w-auto" />
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          <button
-            onClick={toggleSidebar}
-            className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ml-auto ${
-              overHero ? "hover:bg-white/10" : "hover:bg-default-100"
-            }`}
-            aria-label={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-            title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-          >
-            {isCollapsed ? (
-              <HugeiconsIcon icon={ArrowRight01Icon} size={20} className="shrink-0" />
-            ) : (
-              <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="shrink-0" />
-            )}
-          </button>
+            <button
+              onClick={toggleSidebar}
+              className="p-1.5 rounded-lg transition-colors flex-shrink-0 ml-auto hover:bg-default-100"
+              aria-label={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
+              title={isCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
+            >
+              {isCollapsed ? (
+                <HugeiconsIcon icon={ArrowRight01Icon} size={20} className="shrink-0" />
+              ) : (
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="shrink-0" />
+              )}
+            </button>
+          </div>
+
+          {!isCollapsed ? (
+            <div className="px-2">
+              <VersionChip />
+            </div>
+          ) : null}
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
@@ -107,7 +105,7 @@ export default function SideBar() {
               className={`flex flex-col gap-1 ${sectionIndex > 0 ? "mt-4" : ""}`}
             >
               {!isCollapsed && section.title ? (
-                <p className={`px-3 pb-1 text-sm ${overHero ? "text-white/90" : "text-foreground"}`}>
+                <p className="px-3 pb-1 text-sm text-foreground">
                   {section.title}
                 </p>
               ) : null}
@@ -122,9 +120,7 @@ export default function SideBar() {
                   ${
                     isActive
                       ? "bg-success text-success-foreground shadow-sm"
-                      : overHero
-                        ? "hover:bg-white/10 text-white"
-                        : "hover:bg-default-100 text-foreground"
+                      : "hover:bg-default-100 text-foreground"
                   }
                   ${isCollapsed ? "justify-center" : ""}
                 `}

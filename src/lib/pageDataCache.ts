@@ -1,8 +1,20 @@
 import type { ContentItem } from "@/types/content";
 import type { CatalogGenreRow } from "@/components/genre/genreTileShared";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
+import type { UserPreferences } from "@/types/user";
+import { hasUserPreferences } from "@/types/user";
 
 const PREFIX = "teavie.cache";
+
+function preferencesCacheKey(preferences: UserPreferences | null | undefined): string {
+  if (!preferences || !hasUserPreferences(preferences)) return "default";
+  const sorted = {
+    c: [...preferences.categories].sort(),
+    g: [...preferences.genres].sort(),
+    l: [...preferences.languages].sort(),
+  };
+  return JSON.stringify(sorted);
+}
 
 async function withDayCache<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   const cached = readClientDayCache<T>(key);
@@ -123,11 +135,19 @@ export async function fetchExploreBundle(): Promise<ExploreBundle> {
 }
 
 export async function fetchCategoryDiscover(
-  slug: string
+  slug: string,
+  preferences: UserPreferences | null = null
 ): Promise<CategoryDiscoverPayload> {
-  return withDayCache(`${PREFIX}.category-discover.v1:${slug}`, async () => {
+  const prefKey = preferencesCacheKey(preferences);
+  return withDayCache(`${PREFIX}.category-discover.v2:${slug}:${prefKey}`, async () => {
     try {
-      const res = await fetch(`/api/category/${slug}/discover`);
+      const res = hasUserPreferences(preferences)
+        ? await fetch(`/api/category/${slug}/discover`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ preferences }),
+          })
+        : await fetch(`/api/category/${slug}/discover`);
       if (!res.ok) return EMPTY_CATEGORY;
       const json = await res.json();
       return {
@@ -153,13 +173,25 @@ export async function fetchGenresIndex(): Promise<CatalogGenreRow[]> {
 
 export async function fetchGenrePagePayload(
   slug: string,
-  type: "all" | "movie" | "tv"
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
 ): Promise<GenrePagePayload> {
-  return withDayCache(`${PREFIX}.genre-page.v1:${slug}:${type}`, async () => {
+  const prefKey = preferencesCacheKey(preferences);
+  return withDayCache(`${PREFIX}.genre-page.v2:${slug}:${type}:${prefKey}`, async () => {
     try {
-      const qs = new URLSearchParams({ slug, limit: "24" });
-      if (type !== "all") qs.set("type", type);
-      const res = await fetch(`/api/genre/page?${qs.toString()}`);
+      const res = hasUserPreferences(preferences)
+        ? await fetch("/api/genre/page", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ slug, type, limit: 24, preferences }),
+          })
+        : await fetch(
+            `/api/genre/page?${new URLSearchParams({
+              slug,
+              limit: "24",
+              ...(type !== "all" ? { type } : {}),
+            }).toString()}`
+          );
       if (!res.ok) {
         return { featured: [], total: 0, rails: EMPTY_GENRE_RAILS };
       }

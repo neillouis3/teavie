@@ -34,6 +34,8 @@ import {
   fetchCategoryDiscover,
   type CategoryDiscoverPayload,
 } from "@/lib/pageDataCache";
+import { useUserData } from "@/contexts/userDataContext";
+import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
 
 /** Match Explore trending hero overlay; tuned for two-up featured row. */
 const FEATURED_CARD_HEIGHT =
@@ -61,6 +63,7 @@ type CategoryPageTemplateProps = {
 
 export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps) {
   const category = getCatalogCategory(slug);
+  const { preferences } = useUserData();
   const [data, setData] = useState<CategoryDiscoverPayload | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -74,7 +77,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     if (!category) return;
 
     let cancelled = false;
-    void fetchCategoryDiscover(category.slug).then((payload) => {
+    void fetchCategoryDiscover(category.slug, preferences).then((payload) => {
       if (cancelled) return;
       setData(payload);
       setReady(true);
@@ -83,7 +86,16 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     return () => {
       cancelled = true;
     };
-  }, [category]);
+  }, [category, preferences]);
+
+  useEffect(() => {
+    if (!category) return;
+    const refresh = () => {
+      void fetchCategoryDiscover(category.slug, preferences).then(setData);
+    };
+    window.addEventListener(PREFERENCES_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(PREFERENCES_CHANGED_EVENT, refresh);
+  }, [category, preferences]);
 
   if (!category) {
     return (

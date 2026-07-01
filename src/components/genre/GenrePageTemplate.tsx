@@ -15,6 +15,8 @@ import {
   type GenrePagePayload,
 } from '@/lib/pageDataCache';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
+import { useUserData } from '@/contexts/userDataContext';
+import { PREFERENCES_CHANGED_EVENT } from '@/lib/userPreferences';
 
 export type GenrePageType = 'all' | 'movie' | 'tv';
 export type GenrePageSort = 'popular' | 'top_rated' | 'new';
@@ -60,6 +62,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { preferences } = useUserData();
 
   const rawType = searchParams.get('type') || 'all';
   const type: GenrePageType =
@@ -75,7 +78,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   useEffect(() => {
     let cancelled = false;
     setReady(false);
-    void fetchGenrePagePayload(slug, type).then((data) => {
+    void fetchGenrePagePayload(slug, type, preferences).then((data) => {
       if (cancelled) return;
       setPayload(data);
       setReady(true);
@@ -83,7 +86,17 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     return () => {
       cancelled = true;
     };
-  }, [slug, type]);
+  }, [slug, type, preferences]);
+
+  useEffect(() => {
+    const refresh = () => {
+      void fetchGenrePagePayload(slug, type, preferences).then((data) => {
+        setPayload(data);
+      });
+    };
+    window.addEventListener(PREFERENCES_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(PREFERENCES_CHANGED_EVENT, refresh);
+  }, [slug, type, preferences]);
 
   const mergeParams = useCallback(
     (patch: Record<string, string | null | undefined>) => {

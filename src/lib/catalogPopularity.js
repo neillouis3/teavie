@@ -8,6 +8,39 @@
 
 export const MAL_RANK_INVERT_CEILING = 10_000_000;
 
+/** Minimum TMDB-style vote_average (0–10) for popular browse rails. */
+export const CATALOG_POPULAR_MIN_VOTE_AVERAGE = 6.5;
+
+/** Ignore TMDB rows with very few votes (avoids noisy high scores). */
+export const CATALOG_POPULAR_MIN_VOTE_COUNT = 50;
+
+/**
+ * @param {unknown} row TMDB list row or catalog item with vote_average / vote_count.
+ * @param {{ minVoteAverage?: number; minVoteCount?: number }} [opts]
+ */
+export function passesPopularQualityGate(
+  row,
+  opts = {}
+) {
+  if (!row || typeof row !== "object") return false;
+  const minVoteAverage = opts.minVoteAverage ?? CATALOG_POPULAR_MIN_VOTE_AVERAGE;
+  const minVoteCount = opts.minVoteCount ?? CATALOG_POPULAR_MIN_VOTE_COUNT;
+  const vote = Number(/** @type {Record<string, unknown>} */ (row).vote_average);
+  const count = Number(/** @type {Record<string, unknown>} */ (row).vote_count ?? 0);
+  if (!Number.isFinite(vote) || vote < minVoteAverage) return false;
+  if (Number.isFinite(count) && count > 0 && count < minVoteCount) return false;
+  return true;
+}
+
+/** @param {unknown} voteAverage */
+export function meetsMinCatalogVoteAverage(
+  voteAverage,
+  min = CATALOG_POPULAR_MIN_VOTE_AVERAGE
+) {
+  const vote = Number(voteAverage);
+  return Number.isFinite(vote) && vote >= min;
+}
+
 /** @param {unknown} popularity */
 function malCatalogPopularityScore(popularity) {
   const p = Number(popularity);

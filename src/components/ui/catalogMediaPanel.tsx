@@ -26,6 +26,7 @@ export type CatalogMediaPanelProps = {
   infoLines: CatalogInfoLine[];
   links: CatalogDetailLink[];
   genreBrowseBase?: string;
+  toolbar?: React.ReactNode;
 };
 
 const DETAIL_META_CARD =
@@ -118,6 +119,7 @@ export default function CatalogMediaPanel({
   infoLines,
   links,
   genreBrowseBase,
+  toolbar,
 }: CatalogMediaPanelProps) {
   const ratingLabel =
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
@@ -161,6 +163,7 @@ export default function CatalogMediaPanel({
           ) : null}
         </div>
       )}
+      {toolbar ? <div className="mt-3">{toolbar}</div> : null}
     </>
   );
 

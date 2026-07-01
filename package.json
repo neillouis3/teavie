@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/write-app-version.mjs && next dev",
+    "build": "node scripts/write-app-version.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "round-icon": "node scripts/round-app-icon.mjs",
@@ -17,12 +17,16 @@
     "purge:adult-movies": "node scripts/purge-adult-catalog-movies.mjs",
     "purge:hentai-genre": "node scripts/purge-hentai-genre-titles.mjs",
     "catalog:delete": "node scripts/delete-catalog-content.mjs",
-    "seed:movies-omdb": "node scripts/seed-movies-omdb-filtered.mjs"
+    "seed:movies-omdb": "node scripts/seed-movies-omdb-filtered.mjs",
+    "supabase:migrate": "node scripts/apply-supabase-migration.mjs",
+    "auth-collage": "node scripts/generate-auth-collage.mjs"
   },
   "dependencies": {
     "@heroui/react": "^2.8.4",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.109.0",
     "class-variance-authority": "^0.7.1",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.12",
@@ -41,6 +45,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
+    "pg": "^8.22.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5"

@@ -1,4 +1,4 @@
-import { tmdbBearerToken } from "@/lib/tmdbAuth";
+import { tmdbFetchJson } from "@/lib/tmdbAuth";
 import { inferMovieStreamQuality } from "@/lib/streamQuality";
 
 export async function GET(req) {
@@ -9,27 +9,11 @@ export async function GET(req) {
       return Response.json({ error: "Provide a valid TMDB movie id" }, { status: 400 });
     }
 
-    const token = tmdbBearerToken();
-    if (!token) {
-      return Response.json({ quality: "hd" });
-    }
-
-    const res = await fetch(
+    const movie = await tmdbFetchJson(
       `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=release_dates`,
-      {
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        next: { revalidate: 86_400 },
-      }
+      null,
+      { timeoutMs: 8000 }
     );
-
-    if (!res.ok) {
-      return Response.json({ quality: "hd" });
-    }
-
-    const movie = await res.json();
     const quality = inferMovieStreamQuality(
       movie?.release_dates,
       movie?.release_date

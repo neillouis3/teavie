@@ -3,7 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
+import { SPOTLIGHT_CONTENT_INSET } from "@/components/ui/sidebarBleedRail";
 import { tmdbImageUrlOr } from "@/lib/tmdbImage";
+import { cn } from "@/lib/utils";
 
 type LargeCardProps = {
   id: number | string;
@@ -23,6 +25,8 @@ type LargeCardProps = {
   overview?: string | null;
   /** Fill parent height (Explore trending hero carousel). */
   hero?: boolean;
+  /** Inset hero overlay to the main content column (Explore spotlight). */
+  heroContentInset?: boolean;
   /** Smaller hero overlay type (category featured row). */
   heroCompact?: boolean;
   /** Rich Explore-style overlay on standard aspect-video cards (Discover upcoming). */
@@ -84,6 +88,7 @@ function HeroCardOverlay({
   overview,
   compact = false,
   releaseDateStyle = "short",
+  contentInset = false,
 }: {
   title: string;
   type: "movie" | "tv";
@@ -97,6 +102,7 @@ function HeroCardOverlay({
   overview?: string | null;
   compact?: boolean;
   releaseDateStyle?: "short" | "phrase";
+  contentInset?: boolean;
 }) {
   const dateLabel =
     releaseDateStyle === "phrase"
@@ -127,11 +133,15 @@ function HeroCardOverlay({
 
   return (
     <div
-      className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent ${
+      className={cn(
+        "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent",
         compact
           ? "px-4 pb-4 pt-16 sm:px-5 sm:pb-5 sm:pt-20"
-          : "px-5 pb-8 pt-24 sm:px-8 sm:pb-10 sm:pt-32"
-      }`}
+          : contentInset
+            ? "pr-5 pb-8 pt-24 sm:pr-8 sm:pb-10 sm:pt-32"
+            : "px-5 pb-8 pt-24 sm:px-8 sm:pb-10 sm:pt-32",
+        contentInset && SPOTLIGHT_CONTENT_INSET
+      )}
     >
       <div className="flex max-w-3xl flex-col gap-3">
         {genres.length > 0 ? (
@@ -207,6 +217,7 @@ export default function LargeCard({
   certification,
   overview,
   hero = false,
+  heroContentInset = false,
   heroCompact = false,
   richOverlay = false,
   releaseDateStyle = "short",
@@ -276,6 +287,7 @@ export default function LargeCard({
             overview={overview}
             compact={!hero || heroCompact}
             releaseDateStyle={releaseDateStyle}
+            contentInset={heroContentInset}
           />
         )}
       </div>

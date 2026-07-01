@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Header from "@/components/ui/header";
 import PageSplash from "@/components/ui/pageSplash";
-import { IMDB_GENRES } from "@/lib/imdbGenres";
+import { IMDB_GENRES, orderGenreRowsByPreference } from "@/lib/imdbGenres";
 import {
   GenreSquareTile,
   GENRE_SQUARE_GRID,
@@ -12,6 +12,8 @@ import {
 } from "@/components/genre/genreTileShared";
 import { fetchGenresIndex } from "@/lib/pageDataCache";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { useUserData } from "@/contexts/userDataContext";
+import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
 
 function mergeAllGenres(fromApi: CatalogGenreRow[]): CatalogGenreRow[] {
   const bySlug = new Map(fromApi.map((g) => [g.slug, g]));
@@ -22,11 +24,15 @@ function mergeAllGenres(fromApi: CatalogGenreRow[]): CatalogGenreRow[] {
 }
 
 export default function GenresIndexPage() {
+  const { preferences } = useUserData();
   const [genres, setGenres] = useState<CatalogGenreRow[]>([]);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
 
-  const allGenres = useMemo(() => mergeAllGenres(genres), [genres]);
+  const allGenres = useMemo(
+    () => orderGenreRowsByPreference(mergeAllGenres(genres), preferences.genres),
+    [genres, preferences.genres]
+  );
 
   useEffect(() => {
     document.title = "Genres - Teavie";
@@ -51,6 +57,19 @@ export default function GenresIndexPage() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      void fetchGenresIndex()
+        .then((rows) => {
+          setGenres(rows);
+          setError(false);
+        })
+        .catch(() => setError(true));
+    };
+    window.addEventListener(PREFERENCES_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(PREFERENCES_CHANGED_EVENT, refresh);
   }, []);
 
   if (!ready) {

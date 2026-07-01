@@ -17,6 +17,8 @@ import {
 } from "@/lib/catalogPopularity";
 import { imdbGenreLabelFromSlug, isValidImdbGenreSlug } from "@/lib/imdbGenres";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
+import { mergeWithPreferenceFilter } from "@/lib/preferenceMatch";
+import { hasUserPreferences } from "@/types/user";
 
 const DEFAULT_LIMIT = 28;
 const FEATURED_SIZE = 2;
@@ -154,7 +156,7 @@ function sortStage(sortBy) {
 }
 
 /**
- * @param {{ slug: string; type?: string; sort?: string; page?: number; limit?: number; searchParams?: URLSearchParams }} opts
+ * @param {{ slug: string; type?: string; sort?: string; page?: number; limit?: number; searchParams?: URLSearchParams; preferences?: import('@/types/user').UserPreferences | null }} opts
  */
 export async function queryGenreRail(opts) {
   const slug = opts.slug?.trim() ?? "";
@@ -167,6 +169,8 @@ export async function queryGenreRail(opts) {
   );
   const skip = (page - 1) * limit;
   const todayIso = catalogTodayIsoUtc();
+  const preferences = opts.preferences ?? null;
+  const usePreferences = hasUserPreferences(preferences);
 
   if (!isValidImdbGenreSlug(slug)) {
     return { error: "Invalid genre", status: 400 };
@@ -175,10 +179,21 @@ export async function queryGenreRail(opts) {
   const filterParams = new URLSearchParams(opts.searchParams?.toString() ?? "");
   filterParams.set("genre", slug);
 
-  const filter = buildFilter(slug, type, filterParams, todayIso);
-  if (!filter) {
+  const baseFilter = buildFilter(slug, type, filterParams, todayIso);
+  if (!baseFilter) {
     return { error: "Invalid genre filter", status: 400 };
   }
+
+  const prefOpts = usePreferences
+    ? {
+        skipGenres: true,
+        type: type === "movie" || type === "tv" ? type : undefined,
+      }
+    : null;
+
+  const filter = usePreferences
+    ? mergeWithPreferenceFilter(baseFilter, preferences, prefOpts)
+    : baseFilter;
 
   const popExpr = popularityExpr();
   const client = await clientPromise;
@@ -245,11 +260,19 @@ function dedupeFeatured(rail, featured) {
   );
 }
 
-export async function loadGenrePage(slug, type = "all", limit = 24) {
+export async function loadGenrePage(slug, type = "all", limit = 24, preferences = null) {
   const sorts = ["popular", "top_rated", "new"];
   const rows = await Promise.all(
     sorts.map((sort) =>
-      queryGenreRail({ slug, type, sort, page: 1, limit, searchParams: new URLSearchParams() })
+      queryGenreRail({
+        slug,
+        type,
+        sort,
+        page: 1,
+        limit,
+        searchParams: new URLSearchParams(),
+        preferences,
+      })
     )
   );
 

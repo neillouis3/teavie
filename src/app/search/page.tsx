@@ -21,6 +21,9 @@ import {
   fetchSearchPopular,
   fetchSearchResults,
 } from '@/lib/pageDataCache';
+import { fetchPersonalizedExploreBundle } from '@/lib/explorePageData';
+import { useUserData } from '@/contexts/userDataContext';
+import { hasUserPreferences } from '@/types/user';
 import { clearLegacySearchResultCache } from '@/lib/clientDayCache';
 import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
@@ -54,6 +57,7 @@ function SearchContent() {
   const [popularTv, setPopularTv] = useState<ContentItem[]>([]);
   const [ready, setReady] = useState(false);
   const { mode: cardLayoutMode } = useCatalogCardStyle();
+  const { preferences } = useUserData();
   const horizontal = cardLayoutMode === 'horizontal';
   const popularSectionMax = horizontal ? 8 : 14;
 
@@ -75,7 +79,20 @@ function SearchContent() {
     setError(null);
 
     if (!hasQuery) {
-      void fetchSearchPopular(20).then((data) => {
+      const loadPopular = async () => {
+        if (hasUserPreferences(preferences)) {
+          const bundle = await fetchPersonalizedExploreBundle(preferences);
+          if (bundle) {
+            return {
+              popularMovies: bundle.popularMovies,
+              popularTv: bundle.popularTv,
+            };
+          }
+        }
+        return fetchSearchPopular(20);
+      };
+
+      void loadPopular().then((data) => {
         if (cancelled) return;
         setPopularMovies(data.popularMovies);
         setPopularTv(data.popularTv);
@@ -123,6 +140,7 @@ function SearchContent() {
     yearMinParam,
     yearMaxParam,
     sortParam,
+    preferences,
   ]);
 
   const submitSearch = useCallback(

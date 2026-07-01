@@ -28,6 +28,8 @@ import { tmdbImageUrl } from '@/lib/tmdbImage';
 import { inferMovieStreamQuality } from '@/lib/streamQuality';
 import { isBlockedMovieTmdbId } from '@/lib/tmdbMovieContentPolicy';
 import CatalogUnavailable from './ui/catalogUnavailable';
+import WatchLaterButton from '@/components/watchLater/WatchLaterButton';
+import FavoriteButton from '@/components/favorites/FavoriteButton';
 
 interface Movie {
   id: number;
@@ -217,49 +219,108 @@ export default function MovieTemplate({ id }: { id: string }) {
           return;
         }
 
-        let catalogFallback: {
-          imdb_genres?: string[];
-          omdb?: { genre?: string | null };
-        } | null = null;
-
         const resolveRes = await fetch(
           `/api/movie/resolve?id=${encodeURIComponent(id)}`
         );
-        if (resolveRes.ok) {
-          const resolved = await resolveRes.json();
-          if (resolved?.fallback && typeof resolved.fallback === "object") {
-            catalogFallback = resolved.fallback;
-          }
-        } else if (resolveRes.status === 404) {
+
+        if (!resolveRes.ok) {
           const err = await resolveRes.json().catch(() => null);
           if (err?.error === 'content_policy') {
             setMovie(null);
             setMovieUnavailableReason('content_policy');
             return;
           }
+          setMovie(null);
+          setMovieUnavailableReason('not_found');
+          return;
         }
 
-        const url = `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=release_dates`;
-        const options = {
-          method: 'GET',
-          headers: {
-            accept: 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_TMDB_BEARER}`,
-          },
+        const resolved = await resolveRes.json();
+        let catalogFallback: {
+          id?: string | number;
+          title?: string;
+          release_date?: string;
+          overview?: string;
+          poster_path?: string | null;
+          vote_average?: number;
+          status?: string;
+          imdb_genres?: string[];
+          omdb?: { genre?: string | null };
+          original_language?: string | null;
+        } | null =
+          resolved?.fallback && typeof resolved.fallback === 'object'
+            ? resolved.fallback
+            : null;
+
+        let tmdbId = id;
+        if (resolved?.playerId != null) {
+          tmdbId = String(resolved.playerId);
+        }
+
+        const applyCatalogFallback = (data: Movie): Movie => {
+          if (catalogFallback?.imdb_genres?.length) {
+            data.imdb_genres = catalogFallback.imdb_genres;
+          }
+          if (catalogFallback?.omdb) {
+            data.omdb = catalogFallback.omdb;
+          }
+          return data;
         };
 
-        const res = await fetch(url, options);
-        if (!res.ok) throw new Error('Failed to fetch movie details');
-        const data = await res.json();
-        if (catalogFallback?.imdb_genres?.length) {
-          data.imdb_genres = catalogFallback.imdb_genres;
+        if (!/^\d+$/.test(tmdbId)) {
+          if (catalogFallback?.title) {
+            setMovie({
+              id: Number(catalogFallback.id) || 0,
+              title: catalogFallback.title,
+              release_date: catalogFallback.release_date ?? '',
+              status: catalogFallback.status ?? 'Released',
+              overview: catalogFallback.overview ?? '',
+              poster_path: catalogFallback.poster_path ?? '',
+              vote_average: catalogFallback.vote_average ?? 0,
+              tagline: '',
+              genres: [],
+              imdb_genres: catalogFallback.imdb_genres,
+              omdb: catalogFallback.omdb,
+              original_language: catalogFallback.original_language ?? undefined,
+            });
+            return;
+          }
+          setMovie(null);
+          setMovieUnavailableReason('not_found');
+          return;
         }
-        if (catalogFallback?.omdb) {
-          data.omdb = catalogFallback.omdb;
+
+        const detailsRes = await fetch(
+          `/api/movie/details?id=${encodeURIComponent(tmdbId)}`
+        );
+
+        if (!detailsRes.ok) {
+          if (catalogFallback?.title) {
+            setMovie({
+              id: Number(tmdbId) || 0,
+              title: catalogFallback.title,
+              release_date: catalogFallback.release_date ?? '',
+              status: catalogFallback.status ?? 'Released',
+              overview: catalogFallback.overview ?? '',
+              poster_path: catalogFallback.poster_path ?? '',
+              vote_average: catalogFallback.vote_average ?? 0,
+              tagline: '',
+              genres: [],
+              imdb_genres: catalogFallback.imdb_genres,
+              omdb: catalogFallback.omdb,
+              original_language: catalogFallback.original_language ?? undefined,
+            });
+            return;
+          }
+          throw new Error('Failed to fetch movie details');
         }
-        setMovie(data);
+
+        const data = (await detailsRes.json()) as Movie;
+        setMovie(applyCatalogFallback(data));
       } catch (err) {
         console.error('Error fetching movie details:', err);
+        setMovie(null);
+        setMovieUnavailableReason('not_found');
       } finally {
         setLoading(false);
       }
@@ -347,6 +408,12 @@ export default function MovieTemplate({ id }: { id: string }) {
                 })}
                 infoLines={buildMovieInfoLines(movie)}
                 links={movieDetailLinks(movie)}
+                toolbar={
+                  <div className="flex flex-wrap items-center gap-2">
+                    <FavoriteButton catalogId={String(id)} mediaType="movie" iconOnly />
+                    <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
+                  </div>
+                }
               />
           )}
         </div>

@@ -14,6 +14,7 @@ import {
 } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
+  ChartLineData01Icon,
   Menu01Icon,
   Search01Icon,
   Settings01Icon,
@@ -24,6 +25,7 @@ import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from '@/components/ui/na
 import { pathUsesHeroBleed } from '@/lib/heroBleedPaths';
 import { useScrollNavBlend } from '@/hooks/useScrollNavBlend';
 import { TEAVIE_LOGO, teavieLogoForTheme } from '@/lib/brandAssets';
+import VersionChip from '@/components/ui/versionChip';
 
 export default function MobileTopNav() {
   const pathname = usePathname();
@@ -56,6 +58,7 @@ export default function MobileTopNav() {
 
   const settingsActive = pathname.startsWith('/settings');
   const profileActive = pathname.startsWith('/profile');
+  const activityActive = pathname.startsWith('/activity');
   const searchActive = pathname.startsWith('/search');
   const heroBleed = pathUsesHeroBleed(pathname);
   const blend = useScrollNavBlend(heroBleed);
@@ -106,7 +109,7 @@ export default function MobileTopNav() {
           base: 'w-[min(100vw,18rem)] max-w-full',
         }}
       >
-        <DrawerContent>
+        <DrawerContent className="flex flex-col">
           <DrawerHeader className="flex flex-col gap-1 border-b border-divider px-4 py-3">
             <Link href="/explore" onClick={() => setOpen(false)}>
               <img
@@ -116,7 +119,7 @@ export default function MobileTopNav() {
               />
             </Link>
           </DrawerHeader>
-          <DrawerBody className="gap-0 px-3 py-4">
+          <DrawerBody className="flex min-h-0 flex-1 flex-col gap-0 px-3 py-4">
             <nav className="flex flex-col gap-1">
               {APP_NAV_SECTIONS.map((section, sectionIndex) => (
                 <div key={section.id} className="flex flex-col gap-1">
@@ -174,6 +177,18 @@ export default function MobileTopNav() {
                 Profile
               </Link>
               <Link
+                href="/activity"
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
+                  activityActive
+                    ? 'bg-success text-success-foreground shadow-sm'
+                    : 'text-foreground hover:bg-default-100'
+                }`}
+              >
+                <HugeiconsIcon icon={ChartLineData01Icon} size={20} className="shrink-0" />
+                Activity
+              </Link>
+              <Link
                 href="/settings"
                 onClick={() => setOpen(false)}
                 className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
@@ -185,6 +200,10 @@ export default function MobileTopNav() {
                 <HugeiconsIcon icon={Settings01Icon} size={20} className="shrink-0" />
                 Settings
               </Link>
+            </div>
+
+            <div className="mt-auto border-t border-divider pt-4">
+              <VersionChip />
             </div>
           </DrawerBody>
         </DrawerContent>

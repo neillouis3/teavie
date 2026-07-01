@@ -1,5 +1,19 @@
 import { isValidImdbGenreSlug } from "@/lib/imdbGenres";
 import { loadGenrePage } from "@/lib/api/genreRail";
+import { resolveRequestPreferences } from "@/lib/api/resolveRequestPreferences";
+
+async function handleGenrePage(slug, type, limit, preferences = null) {
+  if (!isValidImdbGenreSlug(slug)) {
+    return Response.json({ error: "Invalid genre" }, { status: 400 });
+  }
+
+  const payload = await loadGenrePage(slug, type, limit, preferences);
+  if (payload.error) {
+    return Response.json({ error: payload.error }, { status: payload.status ?? 400 });
+  }
+
+  return Response.json(payload);
+}
 
 export async function GET(req) {
   try {
@@ -9,16 +23,27 @@ export async function GET(req) {
     const limitRaw = searchParams.get("limit");
     const limit = limitRaw ? Math.min(48, Math.max(1, parseInt(limitRaw, 10))) : 24;
 
-    if (!isValidImdbGenreSlug(slug)) {
-      return Response.json({ error: "Invalid genre" }, { status: 400 });
-    }
+    return handleGenrePage(slug, type, limit);
+  } catch (err) {
+    console.error(err);
+    return Response.json({ error: "Genre page failed" }, { status: 500 });
+  }
+}
 
-    const payload = await loadGenrePage(slug, type, limit);
-    if (payload.error) {
-      return Response.json({ error: payload.error }, { status: payload.status ?? 400 });
-    }
+export async function POST(req) {
+  try {
+    const body = (await req.json()) as {
+      slug?: string;
+      type?: string;
+      limit?: number;
+      preferences?: unknown;
+    };
+    const slug = body.slug?.trim() ?? "";
+    const type = body.type?.trim() || "all";
+    const limit = Math.min(48, Math.max(1, body.limit ?? 24));
+    const preferences = await resolveRequestPreferences(body.preferences);
 
-    return Response.json(payload);
+    return handleGenrePage(slug, type, limit, preferences);
   } catch (err) {
     console.error(err);
     return Response.json({ error: "Genre page failed" }, { status: 500 });

@@ -28,9 +28,34 @@ export function useSidebarBleedOffset() {
   return useSyncExternalStore(subscribeLgUp, getLgUpSnapshot, () => false);
 }
 
+/** Keep sidebar-dependent layout in sync during collapse/expand. */
+export const SIDEBAR_SYNC_TRANSITION =
+  "lg:transition-[left,margin-left,padding-left,width,basis] lg:duration-200 lg:ease-in-out";
+
 /** Full viewport width under the fixed sidebar (desktop). */
 export const SIDEBAR_BLEED_SHELL =
-  "w-full lg:relative lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:w-[100vw]";
+  `w-full lg:ml-[calc(-1*var(--sidebar-w,16rem))] lg:w-screen lg:max-w-none ${SIDEBAR_SYNC_TRANSITION}`;
+
+/** Explore spotlight: gapless full-width slides. */
+export const SPOTLIGHT_SLIDE_CLASS =
+  "h-full !basis-full !pl-0";
+
+/** Explore spotlight: embla track (no default pl-4 gutter). */
+export const SPOTLIGHT_TRACK_CLASS = "!ml-0 h-full";
+
+/** Explore spotlight shell: true viewport width, shifted left from the main column. */
+export const SPOTLIGHT_SHELL_WIDTH =
+  "lg:w-screen";
+
+/** Overlay / controls aligned to the main content column. */
+export const SPOTLIGHT_CONTENT_INSET =
+  `pl-4 lg:pl-[calc(var(--sidebar-w,16rem)+1rem)] ${SIDEBAR_SYNC_TRANSITION}`;
+
+export const SPOTLIGHT_ARROW_PREV =
+  `left-4 lg:left-[calc(var(--sidebar-w,16rem)+1rem)] ${SIDEBAR_SYNC_TRANSITION}`;
+
+export const SPOTLIGHT_ARROW_NEXT =
+  "right-4";
 
 export const SIDEBAR_BLEED_CAROUSEL_OPTS = {
   align: "start" as const,
@@ -47,6 +72,9 @@ export function sidebarBleedViewportClass(
   return cn(SIDEBAR_BLEED_SHELL, extra);
 }
 
+/** Embla viewport: 100vw under the sidebar (Explore spotlight). */
+export const SPOTLIGHT_VIEWPORT_CLASS = sidebarBleedViewportClass("h-full");
+
 /** Desktop-only leading slide matching the sidebar width. */
 export function SidebarBleedStartSpacer() {
   const show = useSidebarBleedOffset();
@@ -55,7 +83,7 @@ export function SidebarBleedStartSpacer() {
   return (
     <CarouselItem
       aria-hidden
-      className="shrink-0 grow-0 basis-[var(--sidebar-w,16rem)] pl-0"
+      className="shrink-0 grow-0 basis-[var(--sidebar-w,16rem)] pl-0 lg:transition-[basis,width] lg:duration-200 lg:ease-in-out"
     >
       <span className="sr-only">Sidebar offset</span>
     </CarouselItem>

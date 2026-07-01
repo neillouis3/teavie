@@ -8,6 +8,10 @@ import {
 import { fetchAnilistEnrichmentForCatalogDoc } from "@/lib/anilistCatalogEnrich";
 import { resolveOmdbImdbIdForDoc } from "@/lib/omdbResolve";
 import { resolveTmdbTvFromDoc } from "@/lib/tmdbResolveFromTitle";
+import {
+  fetchAnimeCatalogEpisodeTotal,
+  fetchAnimeTmdbPlaybackSeasons,
+} from "@/lib/animeTmdbEpisodes";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
 import { isValidAdminKey } from "@/lib/adminAccess";
 import { shouldPruneTvAnimeWithoutAnilist, showUnavailableReasonForDoc, SHOW_UNAVAILABLE_MESSAGES } from "@/lib/tvJpAnimePrune";
@@ -326,6 +330,34 @@ export async function GET(req) {
       merged.is_anime || (Array.isArray(merged.tags) && merged.tags.includes("anime"))
     );
 
+    let fallback = normalizeTvFallback(docForFallback);
+    if (isAnimeCatalogId || isAnimeDoc) {
+      const routeMal = isAnimeCatalogId
+        ? parseInt(String(id).replace(/^anime_/i, ""), 10)
+        : null;
+      const mal =
+        Number.isFinite(routeMal) && routeMal > 0
+          ? routeMal
+          : typeof merged.mal_id === "number" && merged.mal_id > 0
+            ? merged.mal_id
+            : null;
+      if (mal != null) {
+        const episodeTotal = await fetchAnimeCatalogEpisodeTotal(merged, mal);
+        if (episodeTotal != null && episodeTotal > 0) {
+          fallback = {
+            ...fallback,
+            number_of_episodes: episodeTotal,
+            number_of_seasons: 1,
+            seasons: [{ season_number: 1, episode_count: episodeTotal }],
+          };
+        }
+        const playbackSeasons = await fetchAnimeTmdbPlaybackSeasons(merged, mal);
+        if (playbackSeasons.length > 0) {
+          fallback = { ...fallback, tmdb_playback_seasons: playbackSeasons };
+        }
+      }
+    }
+
     return Response.json({
       playerId:
         isAnimeCatalogId || isAnimeDoc
@@ -334,7 +366,7 @@ export async function GET(req) {
             ? tmdbIdNum
             : null,
       imdbId: typeof merged.imdb_id === "string" ? merged.imdb_id : null,
-      fallback: normalizeTvFallback(docForFallback),
+      fallback,
     });
   } catch (err) {
     console.error(err);

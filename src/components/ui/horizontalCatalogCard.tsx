@@ -7,6 +7,7 @@ import { Card, CardBody, Chip } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
+import CatalogCardHoverActions from '@/components/catalog/CatalogCardHoverActions';
 
 export type HorizontalCatalogCardProps = {
   id: number | string;
@@ -20,6 +21,7 @@ export type HorizontalCatalogCardProps = {
   /** When set (e.g. external AniList URL), used instead of `/shows/` or `/movies/` */
   href?: string;
   onDismiss?: () => void;
+  showHoverActions?: boolean;
 };
 
 /**
@@ -35,13 +37,16 @@ export default function HorizontalCatalogCard({
   href: hrefProp,
   topNote,
   onDismiss,
+  showHoverActions = true,
 }: HorizontalCatalogCardProps) {
   const typeLower = String(type ?? '').toLowerCase();
   const isTv = typeLower === 'tv';
+  const mediaType = isTv ? 'tv' : 'movie';
   const href =
     hrefProp?.trim() ||
     (isTv ? `/shows/${id}` : `/movies/${id}`);
   const isExternal = /^https?:\/\//i.test(href);
+  const enableHoverActions = showHoverActions && !isExternal;
   const label = isExternal ? 'Web' : isTv ? 'TV show' : 'Movie';
 
   const backdrop = backdropPath?.trim();
@@ -49,7 +54,7 @@ export default function HorizontalCatalogCard({
   const src = tmdbImageUrl(backdrop) || tmdbImageUrl(poster) || null;
 
   return (
-    <div className="relative min-w-0 w-full">
+    <div className="group relative min-w-0 w-full">
       <Link
         href={href}
         className="block min-w-0 w-full outline-none"
@@ -94,6 +99,15 @@ export default function HorizontalCatalogCard({
                 />
               )}
             </div>
+
+            {enableHoverActions ? (
+              <CatalogCardHoverActions
+                catalogId={String(id)}
+                mediaType={mediaType}
+                title={title}
+                showWatchLater={onDismiss == null}
+              />
+            ) : null}
 
             {src && (
               <div className="absolute bottom-2 left-2 right-2 z-[2] max-w-[92%] sm:bottom-3 sm:left-3 sm:right-4">

@@ -22,13 +22,17 @@ import { exploreGenreRailRows } from "@/lib/imdbGenres";
 
 type GenreRailProps = {
   genres: CatalogGenreRow[];
+  preferredGenreSlugs?: string[];
 };
 
 const CAROUSEL_ITEM =
   "basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-1/5 xl:basis-1/6";
 
-export default function GenreRail({ genres }: GenreRailProps) {
-  const railGenres = useMemo(() => exploreGenreRailRows(genres), [genres]);
+export default function GenreRail({ genres, preferredGenreSlugs = [] }: GenreRailProps) {
+  const railGenres = useMemo(
+    () => exploreGenreRailRows(genres, preferredGenreSlugs),
+    [genres, preferredGenreSlugs]
+  );
 
   if (railGenres.length === 0) {
     return null;
@@ -36,7 +40,7 @@ export default function GenreRail({ genres }: GenreRailProps) {
 
   return (
     <section className="mt-16 flex w-full flex-col gap-3" aria-label="Browse by genre">
-      <ExploreSectionTitle>Browse by genre</ExploreSectionTitle>
+      <ExploreSectionTitle variant="explore">Browse by genre</ExploreSectionTitle>
 
       <SidebarBleedRail>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">

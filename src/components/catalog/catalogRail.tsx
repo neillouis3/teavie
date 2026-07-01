@@ -31,6 +31,7 @@ type CatalogRailProps = {
   /** Show “Released …” / “Releases …” under title on vertical cards */
   showReleaseNote?: boolean;
   loading?: boolean;
+  titleVariant?: "default" | "explore";
 };
 
 const CAROUSEL_ITEM_VERTICAL =
@@ -77,6 +78,7 @@ export default function CatalogRail({
   moreLabel = "More",
   showReleaseNote = false,
   loading = false,
+  titleVariant = "default",
 }: CatalogRailProps) {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === "horizontal";
@@ -88,7 +90,7 @@ export default function CatalogRail({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <ExploreSectionTitle>{title}</ExploreSectionTitle>
+        <ExploreSectionTitle variant={titleVariant}>{title}</ExploreSectionTitle>
         {moreHref ? (
           <Link
             href={moreHref}

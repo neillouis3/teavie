@@ -1,4 +1,4 @@
-import { tmdbBearerToken } from "./tmdbAuth.js";
+import { tmdbAuth, tmdbFetchJson } from "./tmdbAuth.js";
 
 function todayYmdUtc() {
   return new Date().toISOString().slice(0, 10);
@@ -23,23 +23,19 @@ export async function fetchTmdbSeasonEpisodes(tvId, seasonNum, opts = {}) {
     return [];
   }
 
-  const token = tmdbBearerToken();
-  if (!token) return [];
+  const auth = tmdbAuth();
+  if (!auth) return [];
 
-  const res = await fetch(
-    `https://api.themoviedb.org/3/tv/${id}/season/${season}?language=en-US`,
-    {
-      headers: {
-        accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      next: { revalidate: 3600 },
-    }
-  );
-
-  if (!res.ok) return [];
-
-  const json = await res.json();
+  let json;
+  try {
+    json = await tmdbFetchJson(
+      `https://api.themoviedb.org/3/tv/${id}/season/${season}?language=en-US`,
+      auth,
+      { timeoutMs: 15000 }
+    );
+  } catch {
+    return [];
+  }
   const today = todayYmdUtc();
   const airedOnly = opts.airedOnly !== false;
 

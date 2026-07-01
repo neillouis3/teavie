@@ -5,6 +5,64 @@
 import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
+import { tmdbFetchJson } from "@/lib/tmdbAuth";
+
+function mapTmdbToItem(entry, data) {
+  if (entry.mediaType === "movie") {
+    return {
+      id: entry.catalogId,
+      type: "movie",
+      title: data.title ?? "Unknown",
+      release_date: data.release_date ?? null,
+      poster_path: data.poster_path ?? "",
+      backdrop_path: data.backdrop_path ?? "",
+    };
+  }
+  return {
+    id: entry.catalogId,
+    type: "tv",
+    name: data.name ?? "Unknown",
+    title: data.name ?? "Unknown",
+    first_air_date: data.first_air_date ?? null,
+    poster_path: data.poster_path ?? "",
+    backdrop_path: data.backdrop_path ?? "",
+    season_amount: data.number_of_seasons ?? 0,
+    number_of_episodes: data.number_of_episodes ?? undefined,
+  };
+}
+
+async function resolveEntryItem(entry, byKey, reqSignal) {
+  if (reqSignal?.aborted) return null;
+  const item = byKey.get(entry.catalogId);
+  if (item) {
+    if (entry.mediaType === "movie" && item.type !== "movie") return null;
+    if (entry.mediaType === "tv" && item.type !== "tv") return null;
+    if (entry.mediaType === "movie" && isBlockedMovieTmdbId(entry.catalogId)) {
+      return null;
+    }
+    return { ...item, id: entry.catalogId };
+  }
+
+  if (!/^\d+$/.test(entry.catalogId)) return null;
+  if (entry.mediaType === "movie" && isBlockedMovieTmdbId(entry.catalogId)) {
+    return null;
+  }
+
+  try {
+    const path =
+      entry.mediaType === "movie"
+        ? `movie/${entry.catalogId}`
+        : `tv/${entry.catalogId}`;
+    const data = await tmdbFetchJson(
+      `https://api.themoviedb.org/3/${path}?language=en-US`,
+      undefined,
+      { signal: reqSignal }
+    );
+    return mapTmdbToItem(entry, data);
+  } catch {
+    return null;
+  }
+}
 
 function parseEntries(body) {
   const list = body?.entries;
@@ -22,8 +80,19 @@ function parseEntries(body) {
   return out;
 }
 
+function isAbortError(err) {
+  return (
+    err?.name === "AbortError" ||
+    err?.code === "ABORT_ERR" ||
+    err?.message === "aborted"
+  );
+}
+
 export async function POST(req) {
   try {
+    if (req.signal?.aborted) {
+      return Response.json({ items: [] });
+    }
     const body = await req.json();
     const entries = parseEntries(body);
     if (entries.length === 0) {
@@ -80,24 +149,17 @@ export async function POST(req) {
       }
     }
 
-    const items = entries
-      .map((entry) => {
-        const item = byKey.get(entry.catalogId);
-        if (!item) return null;
-        if (entry.mediaType === "movie" && item.type !== "movie") return null;
-        if (entry.mediaType === "tv" && item.type !== "tv") return null;
-        if (entry.mediaType === "movie" && isBlockedMovieTmdbId(entry.catalogId)) {
-          return null;
-        }
-        return {
-          ...item,
-          id: entry.catalogId,
-        };
-      })
-      .filter(Boolean);
+    const items = (
+      await Promise.all(
+        entries.map((entry) => resolveEntryItem(entry, byKey, req.signal))
+      )
+    ).filter(Boolean);
 
     return Response.json({ items });
   } catch (err) {
+    if (isAbortError(err)) {
+      return Response.json({ items: [] });
+    }
     console.error("POST /api/catalog/history", err);
     return Response.json({ items: [] }, { status: 500 });
   }

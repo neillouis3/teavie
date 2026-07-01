@@ -15,8 +15,9 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
-import { removeFromWatchHistory, listWatchHistory, watchHistoryMetaChips } from "@/lib/watchHistory";
+import { watchHistoryMetaChips } from "@/lib/watchHistory";
 import type { ExploreHistoryRow } from "@/lib/explorePageData";
+import { useUserData } from "@/contexts/userDataContext";
 
 const CAROUSEL_ITEM_VERTICAL =
   "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
@@ -27,7 +28,6 @@ const CAROUSEL_ITEM_HORIZONTAL =
 
 type WatchHistoryRailProps = {
   items: ExploreHistoryRow[];
-  /** Profile uses full-width 7-across sizing on large screens. */
   layout?: "explore" | "profile";
   maxItems?: number;
   className?: string;
@@ -40,6 +40,7 @@ export default function WatchHistoryRail({
   className = "",
 }: WatchHistoryRailProps) {
   const { mode } = useCatalogCardStyle();
+  const { watchHistoryEntries, removeHistoryItem } = useUserData();
   const horizontal = mode === "horizontal";
   const profile = layout === "profile";
   const itemClass = horizontal
@@ -49,16 +50,12 @@ export default function WatchHistoryRail({
       : CAROUSEL_ITEM_VERTICAL;
 
   const visibleItems = React.useMemo(() => {
-    const list = maxItems != null ? items.slice(0, maxItems) : items;
-    return list;
+    return maxItems != null ? items.slice(0, maxItems) : items;
   }, [items, maxItems]);
 
   const progressById = React.useMemo(() => {
-    const map = new Map(
-      listWatchHistory().map((e) => [e.catalogId, e] as const)
-    );
-    return map;
-  }, [visibleItems]);
+    return new Map(watchHistoryEntries.map((e) => [e.catalogId, e] as const));
+  }, [watchHistoryEntries, visibleItems]);
 
   if (visibleItems.length === 0) {
     return null;
@@ -71,7 +68,7 @@ export default function WatchHistoryRail({
       } ${className}`}
       aria-label="Watch history"
     >
-      <ExploreSectionTitle>Continue watching</ExploreSectionTitle>
+      <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
 
       <SidebarBleedRail>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
@@ -88,7 +85,7 @@ export default function WatchHistoryRail({
                 "—";
               const mediaType = item.type === "movie" ? "movie" : "tv";
               const key = `${mediaType}-${item.id}`;
-              const dismiss = () => removeFromWatchHistory(String(item.id));
+              const dismiss = () => void removeHistoryItem(String(item.id));
               const progress = progressById.get(String(item.id));
               if (!progress) return null;
               const historyEntry = {

@@ -2,6 +2,8 @@ import type { ContentItem } from "@/types/content";
 import type { CatalogGenreRow } from "@/components/genre/genreTileShared";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import type { WatchHistoryEntry } from "@/lib/watchHistory";
+import type { UserPreferences } from "@/types/user";
+import { hasUserPreferences } from "@/types/user";
 import {
   fetchExploreBundle,
   fetchDiscoverFeed,
@@ -23,6 +25,19 @@ export type ExplorePagePayload = {
   discover: TmdbDiscoverPayload;
   genres: CatalogGenreRow[];
   historyRows: ExploreHistoryRow[];
+  watchLaterRows: ContentItem[];
+  favoriteRows: ContentItem[];
+  recommendedRows: ContentItem[];
+  newContent: ContentItem[];
+  upcomingContent: ContentItem[];
+  personalized: PersonalizedExploreBundle | null;
+};
+
+export type PersonalizedExploreBundle = {
+  recommended: ContentItem[];
+  spotlight: ContentItem[];
+  popularMovies: ContentItem[];
+  popularTv: ContentItem[];
   newContent: ContentItem[];
   upcomingContent: ContentItem[];
 };
@@ -124,22 +139,289 @@ export function projectExploreHistoryRows(
   });
 }
 
+function dedupeCatalogEntries(
+  entries: { catalogId: string; mediaType: "movie" | "tv" }[]
+): { catalogId: string; mediaType: "movie" | "tv" }[] {
+  const seen = new Set<string>();
+  const out: { catalogId: string; mediaType: "movie" | "tv" }[] = [];
+  for (const entry of entries) {
+    if (seen.has(entry.catalogId)) continue;
+    seen.add(entry.catalogId);
+    out.push(entry);
+  }
+  return out;
+}
+
+function catalogEntriesSignature(
+  entries: { catalogId: string; mediaType: "movie" | "tv" }[]
+): string {
+  return entries
+    .map((e) => `${e.mediaType}:${e.catalogId}`)
+    .sort()
+    .join("|");
+}
+
+const catalogRowsInflight = new Map<string, Promise<ContentItem[]>>();
+
+async function fetchCatalogEntryRowsImpl(
+  entries: { catalogId: string; mediaType: "movie" | "tv" }[]
+): Promise<ContentItem[]> {
+  if (entries.length === 0) return [];
+  try {
+    const res = await fetch("/api/catalog/history", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        entries: entries.map((e) => ({
+          catalogId: e.catalogId,
+          mediaType: e.mediaType,
+        })),
+      }),
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { items?: ContentItem[] };
+    const byId = new Map((json.items ?? []).map((item) => [String(item.id), item]));
+    const rows: ContentItem[] = [];
+    for (const entry of entries) {
+      const item = byId.get(entry.catalogId);
+      if (item) rows.push({ ...item, id: entry.catalogId });
+    }
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchCatalogEntryRows(
+  entries: { catalogId: string; mediaType: "movie" | "tv" }[]
+): Promise<ContentItem[]> {
+  const deduped = dedupeCatalogEntries(entries);
+  if (deduped.length === 0) return [];
+
+  const key = catalogEntriesSignature(deduped);
+  const inflight = catalogRowsInflight.get(key);
+  if (inflight) return inflight;
+
+  const promise = fetchCatalogEntryRowsImpl(deduped).finally(() => {
+    catalogRowsInflight.delete(key);
+  });
+  catalogRowsInflight.set(key, promise);
+  return promise;
+}
+
+export type UserRailRows = {
+  historyRows: ExploreHistoryRow[];
+  watchLaterRows: ContentItem[];
+  favoriteRows: ContentItem[];
+};
+
+/** One catalog/history request for continue watching, watch later, and favorites. */
+export async function fetchUserRailRows(options: {
+  historyEntries: WatchHistoryEntry[];
+  watchLaterEntries: { catalogId: string; mediaType: "movie" | "tv" }[];
+  favoriteEntries: { catalogId: string; mediaType: "movie" | "tv" }[];
+  progressLabel: (entry: WatchHistoryEntry) => string;
+}): Promise<UserRailRows> {
+  const { historyEntries, watchLaterEntries, favoriteEntries, progressLabel } =
+    options;
+
+  if (
+    historyEntries.length === 0 &&
+    watchLaterEntries.length === 0 &&
+    favoriteEntries.length === 0
+  ) {
+    return { historyRows: [], watchLaterRows: [], favoriteRows: [] };
+  }
+
+  if (
+    historyEntries.length > 0 &&
+    watchLaterEntries.length === 0 &&
+    favoriteEntries.length === 0
+  ) {
+    const historyRows = await fetchExploreHistoryRows(historyEntries, progressLabel);
+    return { historyRows, watchLaterRows: [], favoriteRows: [] };
+  }
+
+  const batchEntries = dedupeCatalogEntries([
+    ...historyEntries.map((e) => ({
+      catalogId: e.catalogId,
+      mediaType: e.mediaType,
+    })),
+    ...watchLaterEntries,
+    ...favoriteEntries,
+  ]);
+
+  const items = await fetchCatalogEntryRows(batchEntries);
+  const byId = new Map(items.map((item) => [String(item.id), item]));
+
+  const historyRows: ExploreHistoryRow[] = [];
+  for (const entry of historyEntries) {
+    const item = byId.get(entry.catalogId);
+    if (!item) continue;
+    historyRows.push({
+      ...item,
+      id: entry.catalogId,
+      progressLabel: progressLabel(entry),
+      lastSeason: entry.lastSeason,
+      lastEpisode: entry.lastEpisode,
+    });
+  }
+  if (historyRows.length > 0) {
+    writeClientDayCache(historyCacheKey(historyEntries), historyRows);
+  }
+
+  const watchLaterRows: ContentItem[] = [];
+  for (const entry of watchLaterEntries) {
+    const item = byId.get(entry.catalogId);
+    if (item) watchLaterRows.push({ ...item, id: entry.catalogId });
+  }
+
+  const favoriteRows: ContentItem[] = [];
+  for (const entry of favoriteEntries) {
+    const item = byId.get(entry.catalogId);
+    if (item) favoriteRows.push({ ...item, id: entry.catalogId });
+  }
+
+  return { historyRows, watchLaterRows, favoriteRows };
+}
+
+export async function fetchWatchLaterRows(
+  entries: { catalogId: string; mediaType: "movie" | "tv" }[]
+): Promise<ContentItem[]> {
+  return fetchCatalogEntryRows(entries);
+}
+
+export async function fetchFavoriteRows(
+  entries: { catalogId: string; mediaType: "movie" | "tv" }[]
+): Promise<ContentItem[]> {
+  return fetchCatalogEntryRows(entries);
+}
+
+export async function fetchPersonalizedRows(
+  preferences: UserPreferences | null
+): Promise<ContentItem[]> {
+  const bundle = await fetchPersonalizedExploreBundle(preferences);
+  return bundle?.recommended ?? [];
+}
+
+export async function fetchPersonalizedExploreBundle(
+  preferences: UserPreferences | null
+): Promise<PersonalizedExploreBundle | null> {
+  if (!preferences || !hasUserPreferences(preferences)) return null;
+  const key = JSON.stringify(preferences);
+  const inflight = personalizedInflight.get(key);
+  if (inflight) return inflight;
+
+  const promise = fetchPersonalizedExploreBundleImpl(preferences).finally(() => {
+    personalizedInflight.delete(key);
+  });
+  personalizedInflight.set(key, promise);
+  return promise;
+}
+
+const personalizedInflight = new Map<string, Promise<PersonalizedExploreBundle | null>>();
+
+async function fetchPersonalizedExploreBundleImpl(
+  preferences: UserPreferences
+): Promise<PersonalizedExploreBundle | null> {
+  try {
+    const res = await fetch("/api/explore/personalized", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ preferences, bundle: true }),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      bundle?: PersonalizedExploreBundle | null;
+    };
+    return json.bundle ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function buildDiscoverFromPersonalized(
+  bundle: ExploreBundle,
+  personalized: PersonalizedExploreBundle | null
+): TmdbDiscoverPayload {
+  if (!personalized) return bundle.discover;
+  const personalizedMovies = personalized.recommended.filter(
+    (item) => item.type === "movie"
+  );
+  const personalizedTv = personalized.recommended.filter(
+    (item) => item.type === "tv"
+  );
+  return {
+    ...bundle.discover,
+    trendingMovies:
+      personalizedMovies.length > 0 ? personalizedMovies : bundle.discover.trendingMovies,
+    trendingTv:
+      personalizedTv.length > 0 ? personalizedTv : bundle.discover.trendingTv,
+    popularMovies:
+      personalized.popularMovies.length > 0
+        ? personalized.popularMovies
+        : bundle.discover.popularMovies,
+    popularTv:
+      personalized.popularTv.length > 0
+        ? personalized.popularTv
+        : bundle.discover.popularTv,
+  };
+}
+
+export type ExploreCorePayload = Omit<
+  ExplorePagePayload,
+  "historyRows" | "watchLaterRows" | "favoriteRows"
+>;
+
+export async function loadExploreCorePayload(
+  preferences: UserPreferences | null
+): Promise<ExploreCorePayload> {
+  const [bundle, feed, personalized] = await Promise.all([
+    fetchExploreBundle(),
+    fetchDiscoverFeed(),
+    fetchPersonalizedExploreBundle(preferences),
+  ]);
+
+  return {
+    discover: buildDiscoverFromPersonalized(bundle, personalized),
+    genres: bundle.genres,
+    recommendedRows: personalized?.recommended ?? [],
+    newContent:
+      personalized && personalized.newContent.length > 0
+        ? personalized.newContent
+        : feed.newContent,
+    upcomingContent:
+      personalized && personalized.upcomingContent.length > 0
+        ? personalized.upcomingContent
+        : feed.upcomingContent,
+    personalized,
+  };
+}
+
 export async function loadExplorePagePayload(
   historyEntries: WatchHistoryEntry[],
-  progressLabel: (entry: WatchHistoryEntry) => string
+  progressLabel: (entry: WatchHistoryEntry) => string,
+  options?: {
+    watchLaterEntries?: { catalogId: string; mediaType: "movie" | "tv" }[];
+    favoriteEntries?: { catalogId: string; mediaType: "movie" | "tv" }[];
+    preferences?: UserPreferences | null;
+  }
 ): Promise<ExplorePagePayload> {
-  const [bundle, historyRows, feed] = await Promise.all([
-    fetchExploreBundle(),
-    fetchExploreHistoryRows(historyEntries, progressLabel),
-    fetchDiscoverFeed(),
+  const watchLaterEntries = options?.watchLaterEntries ?? [];
+  const favoriteEntries = options?.favoriteEntries ?? [];
+  const preferences = options?.preferences ?? null;
+
+  const [core, rails] = await Promise.all([
+    loadExploreCorePayload(preferences),
+    fetchUserRailRows({
+      historyEntries,
+      watchLaterEntries,
+      favoriteEntries,
+      progressLabel,
+    }),
   ]);
-  return {
-    discover: bundle.discover,
-    genres: bundle.genres,
-    historyRows,
-    newContent: feed.newContent,
-    upcomingContent: feed.upcomingContent,
-  };
+
+  return { ...core, ...rails };
 }
 
 export { fetchExploreBundle, type ExploreBundle };

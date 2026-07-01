@@ -5,7 +5,6 @@ import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
 import SmallCardLoading from '@/components/ui/smallCardLoading';
-import { tmdbBearerToken } from '@/lib/tmdbAuth';
 import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
 import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
 import {
@@ -28,44 +27,6 @@ type RecItem = {
   numberOfEpisodes?: number | null;
   /** Out-of-catalog AniList tiles */
   href?: string | null;
-};
-
-async function fetchCatalogCardMeta(
-  items: RecItem[],
-  mediaType: 'movie' | 'tv',
-  signal?: AbortSignal
-): Promise<RecItem[]> {
-  if (items.length === 0) return items;
-  const qs = new URLSearchParams({
-    type: mediaType,
-    ids: items.map((i) => i.linkId).join(','),
-  });
-  const res = await fetch(`/api/catalog/card-meta?${qs}`, { signal });
-  const data = res.ok ? await res.json() : { meta: {} };
-  const meta = (data.meta ?? {}) as Record<
-    string,
-    { runtimeSeconds?: number | null; seasonAmount?: number; numberOfEpisodes?: number | null }
-  >;
-  return items.map((item) => {
-    const row = meta[item.linkId];
-    if (!row) return item;
-    return {
-      ...item,
-      runtimeSeconds: row.runtimeSeconds ?? item.runtimeSeconds,
-      seasonAmount: row.seasonAmount ?? item.seasonAmount,
-      numberOfEpisodes: row.numberOfEpisodes ?? item.numberOfEpisodes,
-    };
-  });
-}
-
-type TmdbRecRow = {
-  id: number;
-  title?: string;
-  name?: string;
-  poster_path?: string | null;
-  backdrop_path?: string | null;
-  release_date?: string | null;
-  first_air_date?: string | null;
 };
 
 export default function YouMightLike({
@@ -149,81 +110,48 @@ export default function YouMightLike({
     };
 
     const runTmdb = async () => {
-      const token = tmdbBearerToken();
-      if (!token || !/^\d+$/.test(String(id))) {
+      if (!/^\d+$/.test(String(id))) {
         setLoading(false);
         setItems([]);
         return;
       }
       setLoading(true);
       try {
-        const headers = {
-          accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        } as const;
-
-        const takeRows = (payload: unknown): TmdbRecRow[] =>
-          (Array.isArray(payload) ? payload : []) as TmdbRecRow[];
-
-        const mergeRows = (seen: Set<number>, out: RecItem[], rows: TmdbRecRow[]) => {
-          for (const r of rows) {
-            const tmdbId = Number(r?.id);
-            if (!Number.isFinite(tmdbId) || tmdbId <= 0) continue;
-            if (tmdbId === Number(id)) continue;
-            if (seen.has(tmdbId)) continue;
-            seen.add(tmdbId);
-            const date = r.release_date ?? r.first_air_date ?? '';
-            const year = date ? String(new Date(date).getFullYear()) : '—';
-            out.push({
-              keyId: tmdbId,
-              linkId: String(tmdbId),
-              title: r.title ?? r.name ?? 'Untitled',
+        const qs = new URLSearchParams({
+          type: mediaType,
+          id: String(id),
+          limit: String(maxItems),
+        });
+        const res = await fetch(`/api/tmdb/you-might-like?${qs.toString()}`, {
+          signal: controller.signal,
+        });
+        const data = res.ok ? await res.json() : { items: [] };
+        const rows = Array.isArray(data.items) ? data.items : [];
+        setItems(
+          rows.slice(0, maxItems).map(
+            (r: {
+              keyId?: number;
+              linkId: string;
+              title: string;
+              poster_path?: string | null;
+              backdrop_path?: string | null;
+              year?: string;
+              runtimeSeconds?: number | null;
+              seasonAmount?: number;
+              numberOfEpisodes?: number | null;
+            }) => ({
+              keyId: Number(r.keyId) || Number(r.linkId) || 0,
+              linkId: r.linkId,
+              title: r.title ?? 'Untitled',
               poster_path: r.poster_path ?? null,
               backdrop_path: r.backdrop_path ?? null,
-              year,
-            });
-            if (out.length >= maxItems) break;
-          }
-        };
-
-        const out: RecItem[] = [];
-        const seen = new Set<number>();
-
-        const [recRes, simRes, popRes] = await Promise.all([
-          fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${id}/recommendations?language=en-US&page=1`,
-            { signal: controller.signal, headers }
-          ),
-          fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${id}/similar?language=en-US&page=1`,
-            { signal: controller.signal, headers }
-          ),
-          fetch(
-            `https://api.themoviedb.org/3/${mediaType}/popular?language=en-US&page=1`,
-            { signal: controller.signal, headers }
-          ),
-        ]);
-
-        const [recJson, simJson, popJson] = await Promise.all([
-          recRes.ok ? recRes.json() : { results: [] },
-          simRes.ok ? simRes.json() : { results: [] },
-          popRes.ok ? popRes.json() : { results: [] },
-        ]);
-
-        mergeRows(seen, out, takeRows(recJson.results));
-        if (out.length < maxItems) {
-          mergeRows(seen, out, takeRows(simJson.results));
-        }
-        if (out.length < maxItems) {
-          mergeRows(seen, out, takeRows(popJson.results));
-        }
-
-        const enriched = await fetchCatalogCardMeta(
-          out.slice(0, maxItems),
-          mediaType,
-          controller.signal
+              year: r.year ?? '—',
+              runtimeSeconds: r.runtimeSeconds ?? null,
+              seasonAmount: r.seasonAmount ?? 0,
+              numberOfEpisodes: r.numberOfEpisodes ?? null,
+            })
+          )
         );
-        setItems(enriched);
       } catch {
         setItems([]);
       } finally {

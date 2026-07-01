@@ -2,8 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Button } from '@heroui/react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  LayoutGridIcon,
+  LayoutTwoRowIcon,
+  Moon02Icon,
+  Sun03Icon,
+} from '@hugeicons/core-free-icons';
 import Header from '@/components/ui/header';
+import { PageCard, PageCardRow } from '@/components/ui/pageCard';
 import {
   useCatalogCardStyle,
   type CatalogCardLayoutMode,
@@ -16,16 +23,57 @@ import {
   ANIME_SOURCE_OPTIONS,
   animeSourceLabel,
   useAnimeSource,
-  type AnimeSourceId,
 } from '@/contexts/animeSourceContext';
 import {
   STREAM_SERVER_OPTIONS,
   streamServerLabel,
   useStreamingSource,
-  type StreamServerId,
 } from '@/contexts/streamingSourceContext';
 import { animeAudioLabel } from '@/lib/animePlayEmbed';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
+import { cn } from '@/lib/utils';
+
+function SegmentControl<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+  icon,
+}: {
+  options: readonly T[];
+  value: T;
+  onChange: (next: T) => void;
+  label: (id: T) => string;
+  icon?: (id: T) => React.ReactNode;
+}) {
+  return (
+    <div
+      className="inline-flex max-w-full flex-wrap gap-1 rounded-lg bg-default-100/80 p-1 dark:bg-white/[0.06]"
+      role="group"
+    >
+      {options.map((id) => {
+        const selected = value === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onChange(id)}
+            aria-pressed={selected}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              selected
+                ? 'bg-background text-foreground shadow-sm dark:bg-default-100/10'
+                : 'text-default-500 hover:text-foreground'
+            )}
+          >
+            {icon?.(id)}
+            {label(id)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -44,135 +92,81 @@ export default function SettingsPage() {
   }, []);
 
   const activeTheme = (theme ?? resolvedTheme ?? 'light') as string;
+  const cardLayoutOptions = ['vertical', 'horizontal'] as const satisfies readonly CatalogCardLayoutMode[];
 
   return (
     <div className="bg-main min-h-screen w-full">
       <Header pageName="Settings" />
-      <div className={`max-w-2xl space-y-10 pb-12 pt-4 ${CONTENT_INSET_X}`}>
-        <p className="text-sm text-default-500">
-          Appearance, catalog layout, and default streaming embed for movies and TV. Choices are
-          saved in this browser.
-        </p>
+      <div className={`max-w-2xl space-y-5 pb-12 pt-4 ${CONTENT_INSET_X}`}>
+        <PageCard title="Appearance">
+          <PageCardRow label="Theme">
+            {!mounted ? (
+              <div className="h-9 w-40 animate-pulse rounded-lg bg-default-200" />
+            ) : (
+              <SegmentControl
+                options={['light', 'dark'] as const}
+                value={activeTheme === 'dark' ? 'dark' : 'light'}
+                onChange={(next) => setTheme(next)}
+                label={(id) => (id === 'light' ? 'Light' : 'Dark')}
+                icon={(id) => (
+                  <HugeiconsIcon
+                    icon={id === 'light' ? Sun03Icon : Moon02Icon}
+                    size={16}
+                    className="shrink-0"
+                  />
+                )}
+              />
+            )}
+          </PageCardRow>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Theme</h2>
-          <p className="text-xs text-default-500">Light or dark interface for the whole site.</p>
-          {!mounted ? (
-            <div className="h-9 animate-pulse rounded-lg bg-default-200" />
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant={activeTheme === 'light' ? 'solid' : 'flat'}
-                color={activeTheme === 'light' ? 'success' : 'default'}
-                onPress={() => setTheme('light')}
-              >
-                Light
-              </Button>
-              <Button
-                size="sm"
-                variant={activeTheme === 'dark' ? 'solid' : 'flat'}
-                color={activeTheme === 'dark' ? 'success' : 'default'}
-                onPress={() => setTheme('dark')}
-              >
-                Dark
-              </Button>
-            </div>
-          )}
-        </section>
+          <PageCardRow label="Catalog cards">
+            <SegmentControl
+              options={cardLayoutOptions}
+              value={cardLayout}
+              onChange={setCardLayout}
+              label={(id) => (id === 'vertical' ? 'Vertical' : 'Horizontal')}
+              icon={(id) => (
+                <HugeiconsIcon
+                  icon={id === 'vertical' ? LayoutGridIcon : LayoutTwoRowIcon}
+                  size={16}
+                  className="shrink-0"
+                />
+              )}
+            />
+          </PageCardRow>
+        </PageCard>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Anime player</h2>
-          <p className="text-xs text-default-500">
-            Third-party embed used for anime episodes. We can&apos;t control ads or playback from
-            these sources.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {ANIME_SOURCE_OPTIONS.map((id: AnimeSourceId) => (
-              <Button
-                key={id}
-                size="sm"
-                variant={animeSource === id ? 'solid' : 'flat'}
-                color={animeSource === id ? 'success' : 'default'}
-                onPress={() => setAnimeSource(id)}
-              >
-                {animeSourceLabel(id)}
-              </Button>
-            ))}
-          </div>
-        </section>
+        <PageCard
+          title="Playback"
+          footer="Third-party players may show ads we don't control. Settings are saved on this device."
+        >
+          <PageCardRow label="Movies & TV">
+            <SegmentControl
+              options={STREAM_SERVER_OPTIONS}
+              value={streamServer}
+              onChange={setStreamServer}
+              label={streamServerLabel}
+            />
+          </PageCardRow>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Anime audio</h2>
-          <p className="text-xs text-default-500">
-            Default subtitle or dub track for anime episodes. You can also switch on any anime show
-            page.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {ANIME_AUDIO_OPTIONS.map((lang) => (
-              <Button
-                key={lang}
-                size="sm"
-                variant={animeAudio === lang ? 'solid' : 'flat'}
-                color={animeAudio === lang ? 'success' : 'default'}
-                onPress={() => setAnimeAudio(lang)}
-              >
-                {animeAudioLabel(lang)}
-              </Button>
-            ))}
-          </div>
-        </section>
+          <PageCardRow label="Anime player">
+            <SegmentControl
+              options={ANIME_SOURCE_OPTIONS}
+              value={animeSource}
+              onChange={setAnimeSource}
+              label={animeSourceLabel}
+            />
+          </PageCardRow>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Streaming source</h2>
-          <p className="text-xs text-default-500">
-            Third-party player used for movies and live-action TV. We can&apos;t control ads or
-            playback from these sources.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {STREAM_SERVER_OPTIONS.map((id: StreamServerId) => (
-              <Button
-                key={id}
-                size="sm"
-                variant={streamServer === id ? 'solid' : 'flat'}
-                color={streamServer === id ? 'success' : 'default'}
-                onPress={() => setStreamServer(id)}
-              >
-                {streamServerLabel(id)}
-              </Button>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Catalog card layout</h2>
-          <p className="text-xs text-default-500">
-            <strong className="font-medium text-foreground">Vertical</strong> — poster on top,
-            year, type, runtime or seasons, and title (7 per row on large screens). Same idea on
-            Sports (poster + Live).{' '}
-            <strong className="font-medium text-foreground">Horizontal</strong> — wide backdrop
-            image, type and year on top, title on the bottom-left (4 per row). On Sports, tiles are
-            full width with Live top-right.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                { id: 'vertical' as const, label: 'Vertical' },
-                { id: 'horizontal' as const, label: 'Horizontal' },
-              ] satisfies { id: CatalogCardLayoutMode; label: string }[]
-            ).map((o) => (
-              <Button
-                key={o.id}
-                size="sm"
-                variant={cardLayout === o.id ? 'solid' : 'flat'}
-                color={cardLayout === o.id ? 'success' : 'default'}
-                onPress={() => setCardLayout(o.id)}
-              >
-                {o.label}
-              </Button>
-            ))}
-          </div>
-        </section>
+          <PageCardRow label="Anime audio">
+            <SegmentControl
+              options={ANIME_AUDIO_OPTIONS}
+              value={animeAudio}
+              onChange={setAnimeAudio}
+              label={animeAudioLabel}
+            />
+          </PageCardRow>
+        </PageCard>
       </div>
     </div>
   );

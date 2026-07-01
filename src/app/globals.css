@@ -35,3 +35,53 @@
     font-family: Arial, Helvetica, sans-serif;
     text-transform: none;
   }
+
+  @property --sidebar-w {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 16rem;
+  }
+
+  :root {
+    --sidebar-w: 16rem;
+    transition: --sidebar-w 200ms ease-in-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      transition: none;
+    }
+  }
+
+  @keyframes auth-marquee-left {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes auth-marquee-right {
+    from {
+      transform: translateX(-50%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .auth-marquee-left {
+    animation: auth-marquee-left 50s linear infinite;
+  }
+
+  .auth-marquee-right {
+    animation: auth-marquee-right 50s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-marquee-left,
+    .auth-marquee-right {
+      animation: none;
+    }
+  }

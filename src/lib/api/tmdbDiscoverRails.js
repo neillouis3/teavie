@@ -5,10 +5,16 @@
 import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { catalogMoviePolicyClause } from "@/lib/catalogQuery";
-import { tmdbBearerToken } from "@/lib/tmdbAuth";
+import {
+  meetsMinCatalogVoteAverage,
+  passesPopularQualityGate,
+  quantizeVoteAverage,
+} from "@/lib/catalogPopularity";
+import { tmdbAuth, buildTmdbRequest } from "@/lib/tmdbAuth";
 
 const LIMIT = 20;
 const SOURCE_PAGES = 3;
+const POPULAR_SOURCE_PAGES = 5;
 
 function uniquePositiveIds(rows) {
   const ids = (rows || [])
@@ -17,7 +23,13 @@ function uniquePositiveIds(rows) {
   return [...new Set(ids)];
 }
 
-async function movieItemsFromTmdbOrder(col, tmdbRows) {
+function overlayTmdbVoteAverage(item, tmdbRow) {
+  const vote = Number(tmdbRow?.vote_average);
+  if (!item || !Number.isFinite(vote)) return item;
+  return { ...item, vote_average: quantizeVoteAverage(vote) };
+}
+
+async function movieItemsFromTmdbOrder(col, tmdbRows, opts = {}) {
   const ordered = Array.isArray(tmdbRows)
     ? tmdbRows.filter((r) => !r?.adult)
     : [];
@@ -40,9 +52,13 @@ async function movieItemsFromTmdbOrder(col, tmdbRows) {
   }
 
   return ordered
-    .map((r) => byKey.get(r.id) ?? byKey.get(String(r.id)))
-    .filter(Boolean)
-    .map(mapContentDocToItem);
+    .map((r) => {
+      const doc = byKey.get(r.id) ?? byKey.get(String(r.id));
+      if (!doc) return null;
+      const item = mapContentDocToItem(doc);
+      return opts.overlayTmdbVote ? overlayTmdbVoteAverage(item, r) : item;
+    })
+    .filter(Boolean);
 }
 
 function buildTvTmdbLookupMap(docs) {
@@ -73,7 +89,7 @@ function buildTvTmdbLookupMap(docs) {
   return map;
 }
 
-async function tvItemsFromTmdbOrder(col, tmdbRows) {
+async function tvItemsFromTmdbOrder(col, tmdbRows, opts = {}) {
   const ordered = Array.isArray(tmdbRows)
     ? tmdbRows.filter((r) => !r?.adult)
     : [];
@@ -94,16 +110,31 @@ async function tvItemsFromTmdbOrder(col, tmdbRows) {
 
   const byTmdb = buildTvTmdbLookupMap(docs);
   return ordered
-    .map((r) => byTmdb.get(Number(r.id)))
-    .filter(Boolean)
-    .map(mapContentDocToItem);
+    .map((r) => {
+      const doc = byTmdb.get(Number(r.id));
+      if (!doc) return null;
+      const item = mapContentDocToItem(doc);
+      return opts.overlayTmdbVote ? overlayTmdbVoteAverage(item, r) : item;
+    })
+    .filter(Boolean);
 }
 
-async function fetchTmdbPaged(url, headers) {
+function filterPopularTmdbRows(rows) {
+  return (rows ?? []).filter(
+    (row) => !row?.adult && passesPopularQualityGate(row)
+  );
+}
+
+function filterPopularCatalogItems(items) {
+  return (items ?? []).filter((item) => meetsMinCatalogVoteAverage(item?.vote_average));
+}
+
+async function fetchTmdbPaged(url, auth, pages = SOURCE_PAGES) {
   const out = [];
-  for (let p = 1; p <= SOURCE_PAGES; p += 1) {
+  for (let p = 1; p <= pages; p += 1) {
     const u = url.includes("?") ? `${url}&page=${p}` : `${url}?page=${p}`;
-    const res = await fetch(u, { headers, next: { revalidate: 3600 } });
+    const { url: finalUrl, init } = buildTmdbRequest(u, auth);
+    const res = await fetch(finalUrl, { ...init, next: { revalidate: 3600 } });
     if (!res.ok) break;
     const json = await res.json().catch(() => null);
     const rows = json && typeof json === "object" ? json.results : null;
@@ -126,32 +157,29 @@ export async function loadTmdbDiscoverRails() {
     popularTv: [],
   };
 
-  const token = tmdbBearerToken();
-  if (!token) {
-    return { error: "Missing TMDB bearer token", ...empty };
+  const auth = tmdbAuth();
+  if (!auth) {
+    return { error: "Missing TMDB auth (TMDB_BEARER or TMDB_API_KEY)", ...empty };
   }
-
-  const headers = {
-    accept: "application/json",
-    Authorization: `Bearer ${token}`,
-  };
 
   const [tMovieRows, tTvRows, pMovieRows, pTvRows] = await Promise.all([
     fetchTmdbPaged(
       "https://api.themoviedb.org/3/trending/movie/week?language=en-US&include_adult=false",
-      headers
+      auth
     ),
     fetchTmdbPaged(
       "https://api.themoviedb.org/3/trending/tv/week?language=en-US&include_adult=false",
-      headers
+      auth
     ),
     fetchTmdbPaged(
       "https://api.themoviedb.org/3/movie/popular?language=en-US&include_adult=false",
-      headers
+      auth,
+      POPULAR_SOURCE_PAGES
     ),
     fetchTmdbPaged(
       "https://api.themoviedb.org/3/tv/popular?language=en-US&include_adult=false",
-      headers
+      auth,
+      POPULAR_SOURCE_PAGES
     ),
   ]);
 
@@ -162,14 +190,18 @@ export async function loadTmdbDiscoverRails() {
     await Promise.all([
       movieItemsFromTmdbOrder(col, tMovieRows),
       tvItemsFromTmdbOrder(col, tTvRows),
-      movieItemsFromTmdbOrder(col, pMovieRows),
-      tvItemsFromTmdbOrder(col, pTvRows),
+      movieItemsFromTmdbOrder(col, filterPopularTmdbRows(pMovieRows), {
+        overlayTmdbVote: true,
+      }),
+      tvItemsFromTmdbOrder(col, filterPopularTmdbRows(pTvRows), {
+        overlayTmdbVote: true,
+      }),
     ]);
 
   return {
     trendingMovies: capOrdered(trendingMoviesAll),
     trendingTv: capOrdered(trendingTvAll),
-    popularMovies: capOrdered(popularMoviesAll),
-    popularTv: capOrdered(popularTvAll),
+    popularMovies: capOrdered(filterPopularCatalogItems(popularMoviesAll)),
+    popularTv: capOrdered(filterPopularCatalogItems(popularTvAll)),
   };
 }

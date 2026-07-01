@@ -204,39 +204,12 @@ export async function fetchOmdbAnimeEpisodesForCatalog(
   const totalEps = seasons.reduce((n, s) => n + s.rows.length, 0);
   const episodes = [];
 
-  const useFullSeries = cap >= totalEps || seasons.length === 1;
-  if (useFullSeries) {
-    for (const { rows } of seasons) {
-      for (const row of rows) {
-        pushFlattenedEpisode(episodes, row);
-        if (episodes.length >= cap) break;
-      }
+  for (const { rows } of seasons) {
+    for (const row of rows) {
+      pushFlattenedEpisode(episodes, row);
       if (episodes.length >= cap) break;
     }
-  } else {
-    const exactMatches = seasons.filter((s) => s.rows.length === cap);
-    const pick =
-      exactMatches.length > 0
-        ? exactMatches[exactMatches.length - 1]
-        : seasons.reduce((best, s) => {
-            if (!best) return s;
-            const dbest = Math.abs(best.rows.length - cap);
-            const dcur = Math.abs(s.rows.length - cap);
-            return dcur < dbest ? s : best;
-          }, null);
-
-    const target = pick ?? seasons[seasons.length - 1];
-    for (const row of target.rows) {
-      episodes.push({
-        episode_number: row.episode_number,
-        name: row.name,
-        overview: row.overview,
-        runtime: row.runtime,
-        still_path: null,
-        imdb_episode_id: row.imdb_episode_id,
-      });
-      if (episodes.length >= cap) break;
-    }
+    if (episodes.length >= cap) break;
   }
 
   if (enrichPlots && episodes.length > 0) {

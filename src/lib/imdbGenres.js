@@ -65,17 +65,66 @@ const IMDB_LABEL_TO_SLUG = new Map(
 
 /**
  * @param {{ slug: string; name: string; count: number; posters: string[] }[]} rows
+ * @param {string[]} [preferredSlugs]
  * @returns {{ slug: string; name: string; count: number; posters: string[] }[]}
  */
-export function exploreGenreRailRows(rows) {
+export function exploreGenreRailRows(rows, preferredSlugs = []) {
   const bySlug = new Map(rows.map((g) => [g.slug, g]));
-  return EXPLORE_GENRE_SLUGS.map((slug) => {
+  const buildRow = (slug) => {
     const row = bySlug.get(slug);
     if (row) return row;
     const label = IMDB_SLUG_TO_LABEL.get(slug);
     if (!label) return null;
     return { slug, name: label, count: 0, posters: [] };
-  }).filter(Boolean);
+  };
+
+  const seen = new Set();
+  const ordered = [];
+
+  for (const slug of preferredSlugs) {
+    const row = buildRow(slug);
+    if (row && !seen.has(slug)) {
+      ordered.push(row);
+      seen.add(slug);
+    }
+  }
+
+  for (const slug of EXPLORE_GENRE_SLUGS) {
+    if (seen.has(slug)) continue;
+    const row = buildRow(slug);
+    if (row) ordered.push(row);
+  }
+
+  return ordered;
+}
+
+/**
+ * Reorder genre rows so preferred slugs appear first.
+ * @param {{ slug: string; name: string; count: number; posters: string[] }[]} rows
+ * @param {string[]} preferredSlugs
+ */
+export function orderGenreRowsByPreference(rows, preferredSlugs = []) {
+  if (!preferredSlugs.length) return rows;
+  const bySlug = new Map(rows.map((g) => [g.slug, g]));
+  const seen = new Set();
+  const ordered = [];
+
+  for (const slug of preferredSlugs) {
+    const row = bySlug.get(slug);
+    if (row && !seen.has(slug)) {
+      ordered.push(row);
+      seen.add(slug);
+    }
+  }
+
+  for (const row of rows) {
+    if (!seen.has(row.slug)) {
+      ordered.push(row);
+      seen.add(row.slug);
+    }
+  }
+
+  return ordered;
 }
 
 /** AniList / MAL genre strings → IMDb label (null = skip). Not TMDB. */

@@ -8,6 +8,7 @@ import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { formatHeroRuntime } from '@/lib/formatRelease';
 import { catalogDisplayTitle } from '@/lib/catalogDisplayTitle';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
+import CatalogCardHoverActions from '@/components/catalog/CatalogCardHoverActions';
 
 interface SmallCardProps {
   id: number | string;
@@ -29,6 +30,8 @@ interface SmallCardProps {
   metaChips?: string[];
   /** Top-right dismiss control (e.g. remove from continue watching). */
   onDismiss?: () => void;
+  /** Hover actions: favorite (star) and watch later (plus). */
+  showHoverActions?: boolean;
 }
 
 function MetaChip({ children }: { children: React.ReactNode }) {
@@ -90,8 +93,10 @@ export default function SmallCard({
   subtitle,
   metaChips: metaChipsProp,
   onDismiss,
+  showHoverActions = true,
 }: SmallCardProps) {
   const typeLower = (type ?? '').toLowerCase();
+  const mediaType = typeLower === 'tv' ? 'tv' : 'movie';
   const hasPoster = Boolean(posterPath?.trim());
   const imageUrl = tmdbImageUrl(posterPath);
   const defaultHref = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
@@ -107,6 +112,7 @@ export default function SmallCard({
       runtimeSeconds
     );
   const displayTitle = catalogDisplayTitle(title);
+  const enableHoverActions = showHoverActions && !external;
 
   const poster = (
     <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden rounded-xl bg-default-200">
@@ -124,6 +130,14 @@ export default function SmallCard({
           No poster
         </div>
       )}
+      {enableHoverActions ? (
+        <CatalogCardHoverActions
+          catalogId={String(id)}
+          mediaType={mediaType}
+          title={displayTitle}
+          showWatchLater={onDismiss == null}
+        />
+      ) : null}
     </div>
   );
 

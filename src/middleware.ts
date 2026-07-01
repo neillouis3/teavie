@@ -5,19 +5,20 @@ import {
   normalizeSplitCourMalEpisode,
   primaryMalForSplitCourMal,
 } from "@/lib/animeSplitCour.js";
+import { updateSession } from "@/utils/supabase/middleware";
 
 /** Redirect hidden split-cour anime rows to their merged primary show page. */
-export function middleware(request: NextRequest) {
+function splitCourRedirect(request: NextRequest): NextResponse | null {
   const match = request.nextUrl.pathname.match(/^\/shows\/anime_(\d+)$/);
-  if (!match) return NextResponse.next();
+  if (!match) return null;
 
   const mal = parseInt(match[1], 10);
   if (!Number.isFinite(mal) || !isHiddenSplitCourMal(mal)) {
-    return NextResponse.next();
+    return null;
   }
 
   const primary = primaryMalForSplitCourMal(mal);
-  if (primary == null || primary === mal) return NextResponse.next();
+  if (primary == null || primary === mal) return null;
 
   const partEp = parseInt(request.nextUrl.searchParams.get("episode") ?? "1", 10);
   const { episode: mergedEp } = normalizeSplitCourMalEpisode(
@@ -31,6 +32,16 @@ export function middleware(request: NextRequest) {
   return NextResponse.redirect(url, 307);
 }
 
+export async function middleware(request: NextRequest) {
+  const redirect = splitCourRedirect(request);
+  if (redirect) return redirect;
+
+  return updateSession(request);
+}
+
 export const config = {
-  matcher: ["/shows/:path*"],
+  matcher: [
+    "/shows/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };

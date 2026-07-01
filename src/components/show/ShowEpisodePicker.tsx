@@ -179,7 +179,9 @@ function fallbackEpisodes(
 }
 
 const TV_SEASON_CACHE_PREFIX = "teavie.cache.tv-season.v1:";
-const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v6:";
+const ANIME_EPISODES_CACHE_PREFIX = "teavie.cache.anime-eps.v7:";
+/** Airing anime often have unknown totals (AniList episodes = 0); still fetch metadata. */
+const DEFAULT_ANIME_EPISODE_FETCH_LIMIT = 500;
 
 async function fetchAnimeEpisodes(
   malId: number,
@@ -350,14 +352,24 @@ function useEpisodePickerState({
               0
             );
           }
-          if (flatEpisodeCap != null && flatEpisodeCap > 0) {
-            count = Math.min(count, flatEpisodeCap);
-          }
           const seasonNum = seasonObj?.season_number ?? selectedSeason ?? 1;
           const mal = Math.floor(Number(malId));
-          if (Number.isFinite(mal) && mal > 0 && count > 0) {
+          let fetchLimit =
+            count > 0
+              ? count
+              : flatEpisodeCap != null && flatEpisodeCap > 0
+                ? flatEpisodeCap
+                : DEFAULT_ANIME_EPISODE_FETCH_LIMIT;
+          if (flatEpisodeCap != null && flatEpisodeCap > 0 && count > 0) {
+            fetchLimit = Math.min(count, flatEpisodeCap);
+          }
+          if (Number.isFinite(mal) && mal > 0) {
             try {
-              const rows = await fetchAnimeEpisodes(mal, count, controller.signal);
+              const rows = await fetchAnimeEpisodes(
+                mal,
+                fetchLimit,
+                controller.signal
+              );
               const released = filterReleasedEpisodes(
                 rows.map((row) => ({ ...row, season: seasonNum }))
               );
@@ -365,8 +377,17 @@ function useEpisodePickerState({
               return;
             } catch {
               if (!cancelled) {
-                setEpisodes([]);
-                setError(true);
+                if (count > 0) {
+                  setEpisodes(
+                    filterReleasedEpisodes(
+                      fallbackEpisodes(seasonNum, count)
+                    )
+                  );
+                  setError(false);
+                } else {
+                  setEpisodes([]);
+                  setError(true);
+                }
               }
               return;
             }

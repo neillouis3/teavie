@@ -2,6 +2,16 @@
 
 const KEY_PREFIX = "teavie.movie.progress:";
 
+let movieProgressSyncDelegate:
+  | ((catalogId: string, seconds: number) => void)
+  | null = null;
+
+export function setMovieProgressSyncDelegate(
+  fn: ((catalogId: string, seconds: number) => void) | null
+): void {
+  movieProgressSyncDelegate = fn;
+}
+
 export function movieProgressStorageKey(catalogId: string): string {
   return `${KEY_PREFIX}${catalogId}`;
 }
@@ -26,6 +36,7 @@ export function saveMoviePlaybackPosition(catalogId: string, seconds: number): v
       return;
     }
     localStorage.setItem(movieProgressStorageKey(catalogId), String(sec));
+    movieProgressSyncDelegate?.(catalogId, sec);
   } catch {
     /* quota / private mode */
   }

@@ -17,8 +17,10 @@ import {
   tvEpisodeCountFromDoc,
   tvSeasonCountFromDoc,
 } from "@/lib/mapContentDocToItem";
-import { IMDB_GENRES } from "@/lib/imdbGenres";
+import { IMDB_GENRES, orderGenreRowsByPreference } from "@/lib/imdbGenres";
 import { getCatalogCategory } from "@/lib/catalogCategories";
+import { mergeWithPreferenceFilter } from "@/lib/preferenceMatch";
+import { hasUserPreferences } from "@/types/user";
 
 const TILE_POSTERS = 5;
 const RAIL_LIMIT = 24;
@@ -264,14 +266,22 @@ export async function fetchCategoryGenres(col, slug) {
 /**
  * @param {import("mongodb").Collection} col
  * @param {string} slug
+ * @param {import('@/types/user').UserPreferences | null} [preferences]
  */
-export async function fetchCategoryDiscover(col, slug) {
+export async function fetchCategoryDiscover(col, slug, preferences = null) {
   const category = getCatalogCategory(slug);
   if (!category) return null;
 
   const kind = category.slug === "anime" ? "anime" : "kdrama";
   const anime = kind === "anime";
-  const baseFilter = categoryReleasedFilter(kind);
+  let baseFilter = categoryReleasedFilter(kind);
+
+  if (hasUserPreferences(preferences)) {
+    baseFilter = mergeWithPreferenceFilter(baseFilter, preferences, {
+      skipGenres: true,
+      skipCategories: true,
+    });
+  }
 
   const [
     featuredDocs,
@@ -297,6 +307,8 @@ export async function fetchCategoryDiscover(col, slug) {
     popular: dedupeFeatured(popular, featured),
     topRated,
     new: newest,
-    genres,
+    genres: hasUserPreferences(preferences)
+      ? orderGenreRowsByPreference(genres, preferences.genres)
+      : genres,
   };
 }

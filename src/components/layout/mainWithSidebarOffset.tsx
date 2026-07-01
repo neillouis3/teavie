@@ -24,7 +24,9 @@ export default function MainWithSidebarOffset({
       <DesktopTopNav />
       <div
         className={`min-h-0 min-w-0 flex-1 pl-0 ${
-          heroBleed ? "overflow-x-clip lg:overflow-x-visible" : "overflow-x-hidden lg:overflow-x-visible"
+          heroBleed
+            ? "relative overflow-x-visible"
+            : "overflow-x-hidden lg:overflow-x-visible"
         }`}
       >
         {children}

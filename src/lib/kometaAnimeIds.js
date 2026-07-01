@@ -93,6 +93,8 @@ export function resolveKometaByMalId(malId, index) {
       Number.isFinite(Number(primary.tvdb_season)) && Number(primary.tvdb_season) >= 0
         ? Number(primary.tvdb_season)
         : null,
+    /** Kometa -1: entire franchise as one absolute episode list (e.g. One Piece). */
+    allSeasonsFlat: Number(primary.tvdb_season) === -1,
     tvdbEpOffset:
       Number.isFinite(Number(primary.tvdb_epoffset)) ? Number(primary.tvdb_epoffset) : 0,
     tmdbShowId:

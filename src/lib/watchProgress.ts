@@ -20,6 +20,16 @@ export function watchProgressStorageKey(catalogId: string): string {
   return `teavie.watch.v${WATCH_PROGRESS_VERSION}:${catalogId}`;
 }
 
+let tvProgressSyncDelegate:
+  | ((catalogId: string, payload: Omit<WatchProgressPayload, "v">) => void)
+  | null = null;
+
+export function setTvProgressSyncDelegate(
+  fn: ((catalogId: string, payload: Omit<WatchProgressPayload, "v">) => void) | null
+): void {
+  tvProgressSyncDelegate = fn;
+}
+
 export function loadWatchProgress(catalogId: string): WatchProgressPayload | null {
   if (typeof window === "undefined") return null;
   try {
@@ -68,6 +78,12 @@ export function saveWatchProgress(
       positions: payload.positions ?? existing?.positions,
     };
     localStorage.setItem(watchProgressStorageKey(catalogId), JSON.stringify(full));
+    tvProgressSyncDelegate?.(catalogId, {
+      lastSeason: full.lastSeason,
+      lastEpisode: full.lastEpisode,
+      watched: full.watched,
+      positions: full.positions,
+    });
   } catch {
     /* quota / private mode */
   }

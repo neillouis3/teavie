@@ -53,7 +53,7 @@ export function buildTmdbRequest(url, auth) {
  * @param {string} url
  * @param {{ kind: "bearer" | "api_key"; value: string } | string | null | undefined} [authOrBearer]
  */
-export async function tmdbFetchJson(url, authOrBearer, { timeoutMs = 12000 } = {}) {
+export async function tmdbFetchJson(url, authOrBearer, { timeoutMs = 12000, signal } = {}) {
   /** @type {{ kind: "bearer" | "api_key"; value: string } | null} */
   let auth = null;
   if (authOrBearer && typeof authOrBearer === "object" && authOrBearer.kind) {
@@ -68,12 +68,18 @@ export async function tmdbFetchJson(url, authOrBearer, { timeoutMs = 12000 } = {
   const { url: finalUrl, init } = buildTmdbRequest(url, auth);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const res = await fetch(finalUrl, { ...init, signal: controller.signal }).finally(() =>
-    clearTimeout(timer)
-  );
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`TMDB ${res.status}: ${t.slice(0, 160)}`);
+  const onParentAbort = () => controller.abort();
+  signal?.addEventListener("abort", onParentAbort, { once: true });
+
+  try {
+    const res = await fetch(finalUrl, { ...init, signal: controller.signal });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`TMDB ${res.status}: ${t.slice(0, 160)}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onParentAbort);
   }
-  return res.json();
 }

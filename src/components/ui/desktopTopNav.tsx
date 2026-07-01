@@ -39,7 +39,7 @@ export default function DesktopTopNav() {
       }}
     >
       <div className="grid w-full grid-cols-[1fr_minmax(0,20rem)_1fr] items-center gap-3">
-        <div aria-hidden className="min-w-0" />
+        <div className="min-w-0" aria-hidden />
         <Suspense fallback={<SearchFallback />}>
           <NavSearchBar
             className="w-full min-w-0"

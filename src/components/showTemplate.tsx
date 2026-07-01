@@ -32,6 +32,8 @@ import {
 import type { VideasyProgressMessage } from "@/lib/videasyProgress";
 import type { MegaPlayMessage } from "@/lib/megaPlayProgress";
 import { recordMovieInWatchHistory, touchWatchHistory } from "@/lib/watchHistory";
+import WatchLaterButton from "@/components/watchLater/WatchLaterButton";
+import FavoriteButton from "@/components/favorites/FavoriteButton";
 import {
   buildShowInfoLines,
   catalogGenresForDisplay,
@@ -706,6 +708,13 @@ export default function ShowTemplate({
           if (poster) merged.poster_path = poster;
           const backdrop = animeBackdropFromDoc(merged);
           if (backdrop) merged.backdrop_path = backdrop;
+          if (
+            merged.is_anime &&
+            Array.isArray(fallbackShow.tmdb_playback_seasons) &&
+            fallbackShow.tmdb_playback_seasons.length > 0
+          ) {
+            merged.tmdb_playback_seasons = fallbackShow.tmdb_playback_seasons;
+          }
           const today = catalogTodayYmdUtc();
           if (merged.seasons?.length && !merged.is_anime) {
             merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
@@ -716,15 +725,8 @@ export default function ShowTemplate({
           return;
         }
 
-        const url = `https://api.themoviedb.org/3/tv/${targetTmdbId}?language=en-US&append_to_response=content_ratings`;
-        const options = {
-          method: "GET",
-          headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_TMDB_BEARER}`,
-          },
-        };
-        const res = await fetch(url, options);
+        const url = `/api/tv/details?id=${encodeURIComponent(targetTmdbId)}`;
+        const res = await fetch(url);
         if (!res.ok) {
           if (fallbackShow) {
             const merged = await fetchAnilistAndMerge(fallbackShow, fallbackShow, id);
@@ -1191,6 +1193,12 @@ export default function ShowTemplate({
             infoLines={buildShowInfoLines(show)}
             links={showDetailLinks(show)}
             genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
+            toolbar={
+              <div className="flex flex-wrap items-center gap-2">
+                <FavoriteButton catalogId={String(id)} mediaType="tv" iconOnly />
+                <WatchLaterButton catalogId={String(id)} mediaType="tv" iconOnly />
+              </div>
+            }
           />
       )}
     </div>

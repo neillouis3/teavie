@@ -1,4 +1,5 @@
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
+import { passesPopularQualityGate } from "@/lib/catalogPopularity";
 
 /**
  * TMDB popular movies + TV for browse state on /search (no query).
@@ -46,7 +47,7 @@ export async function GET(req) {
     const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
 
     const movies = (movieData.results || [])
-      .filter((r) => !r.adult)
+      .filter((r) => !r.adult && passesPopularQualityGate(r))
       .slice(0, cap)
       .map((r) => ({
       id: r.id,
@@ -64,7 +65,7 @@ export async function GET(req) {
     }));
 
     const tv = (tvData.results || [])
-      .filter((r) => !r.adult)
+      .filter((r) => !r.adult && passesPopularQualityGate(r))
       .slice(0, cap)
       .map((r) => ({
       id: r.id,
