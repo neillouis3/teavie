@@ -47,7 +47,7 @@ export async function POST(request, { params }) {
   const slug = String(rawSlug ?? "").trim().toLowerCase();
 
   try {
-    const body = (await request.json()) as { preferences?: unknown };
+    const body = await request.json();
     const preferences = await resolveRequestPreferences(body.preferences);
     return await handleCategoryDiscover(slug, preferences);
   } catch (err) {

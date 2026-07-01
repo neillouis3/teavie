@@ -32,12 +32,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const body = (await req.json()) as {
-      slug?: string;
-      type?: string;
-      limit?: number;
-      preferences?: unknown;
-    };
+    const body = await req.json();
     const slug = body.slug?.trim() ?? "";
     const type = body.type?.trim() || "all";
     const limit = Math.min(48, Math.max(1, body.limit ?? 24));
