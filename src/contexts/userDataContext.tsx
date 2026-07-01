@@ -34,11 +34,7 @@ import {
   FAVORITES_CHANGED_EVENT,
 } from "@/lib/favorites";
 import {
-  loadGuestPreferences,
-  saveGuestPreferences,
-  PREFERENCES_CHANGED_EVENT,
-} from "@/lib/userPreferences";
-import {
+  EMPTY_USER_PREFERENCES,
   hasUserPreferences,
   normalizeUserPreferences,
   type UserPreferences,
@@ -115,16 +111,13 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>([]);
   const [watchLaterEntries, setWatchLaterEntries] = useState<WatchLaterEntry[]>([]);
   const [favoriteEntries, setFavoriteEntries] = useState<FavoriteEntry[]>([]);
-  const [guestPreferences, setGuestPreferences] = useState<UserPreferences>(
-    loadGuestPreferences
-  );
 
   const preferences = useMemo(() => {
     if (user && profile) {
       return normalizeUserPreferences(profile.preferences);
     }
-    return guestPreferences;
-  }, [user, profile, guestPreferences]);
+    return EMPTY_USER_PREFERENCES;
+  }, [user, profile]);
 
   const usingRemoteData = Boolean(user);
   const watchLaterSigRef = useRef("");
@@ -155,8 +148,6 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       watchLaterSigRef.current = laterSig;
       setWatchLaterEntries(localLater);
     }
-
-    setGuestPreferences(loadGuestPreferences());
   }, [user]);
 
   useEffect(() => {
@@ -178,26 +169,20 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     const onFavorites = () => {
       if (!user) setFavoriteEntries(listFavorites());
     };
-    const onPrefs = () => {
-      if (!user) setGuestPreferences(loadGuestPreferences());
-    };
     window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistory);
     window.addEventListener(WATCH_LATER_CHANGED_EVENT, onLater);
     window.addEventListener(FAVORITES_CHANGED_EVENT, onFavorites);
-    window.addEventListener(PREFERENCES_CHANGED_EVENT, onPrefs);
     window.addEventListener("storage", onHistory);
     return () => {
       window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistory);
       window.removeEventListener(WATCH_LATER_CHANGED_EVENT, onLater);
       window.removeEventListener(FAVORITES_CHANGED_EVENT, onFavorites);
-      window.removeEventListener(PREFERENCES_CHANGED_EVENT, onPrefs);
       window.removeEventListener("storage", onHistory);
     };
   }, [user]);
 
-  const savePreferencesLocal = useCallback((prefs: UserPreferences) => {
-    saveGuestPreferences(prefs);
-    setGuestPreferences(prefs);
+  const savePreferencesLocal = useCallback((_prefs: UserPreferences) => {
+    // Preferences are account-only; guests have none.
   }, []);
 
   const removeHistoryItem = useCallback(async (catalogId: string) => {

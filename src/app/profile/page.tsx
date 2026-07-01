@@ -233,43 +233,45 @@ export default function ProfilePage() {
           ) : null}
         </PageCard>
 
-        <PageCard
-          title="Your preferences"
-          action={
-            <Button
-              size="sm"
-              variant="flat"
-              onPress={() => window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT))}
-            >
-              Edit
-            </Button>
-          }
-        >
-          {preferenceGroups ? (
-            preferenceGroups.map((group) => (
-              <PageCardRow key={group.label} label={group.label}>
-                <div className="flex flex-wrap gap-2">
-                  {group.items.map((item) => (
-                    <Chip key={item} size="sm" variant="flat">
-                      {item}
-                    </Chip>
-                  ))}
-                </div>
-              </PageCardRow>
-            ))
-          ) : (
-            <PageCardRow label="Taste profile">
+        {user ? (
+          <PageCard
+            title="Your preferences"
+            action={
               <Button
                 size="sm"
                 variant="flat"
-                color="success"
                 onPress={() => window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT))}
               >
-                Set preferences
+                Edit
               </Button>
-            </PageCardRow>
-          )}
-        </PageCard>
+            }
+          >
+            {preferenceGroups ? (
+              preferenceGroups.map((group) => (
+                <PageCardRow key={group.label} label={group.label}>
+                  <div className="flex flex-wrap gap-2">
+                    {group.items.map((item) => (
+                      <Chip key={item} size="sm" variant="flat">
+                        {item}
+                      </Chip>
+                    ))}
+                  </div>
+                </PageCardRow>
+              ))
+            ) : (
+              <PageCardRow label="Taste profile">
+                <Button
+                  size="sm"
+                  variant="flat"
+                  color="success"
+                  onPress={() => window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT))}
+                >
+                  Set preferences
+                </Button>
+              </PageCardRow>
+            )}
+          </PageCard>
+        ) : null}
       </div>
     </div>
   );

@@ -1,0 +1,118 @@
+[
+  {
+    "version": "2.3.85",
+    "date": "2026-07-01",
+    "title": "Build log and cleaner guest mode",
+    "summary": "Added a public build log and made guest browsing simpler by keeping preference setup account-only.",
+    "tags": ["Build log", "Guests", "Profile"],
+    "changes": [
+      "Added a public /build-log page linked from the footer.",
+      "Moved build log content into a hand-curated JSON file so release notes can be written clearly instead of copied from commit messages.",
+      "Removed guest onboarding and guest preferences; recommendations only personalize after sign-in.",
+      "Hid the preferences card from guest profiles."
+    ]
+  },
+  {
+    "version": "2.3.84",
+    "date": "2026-07-01",
+    "title": "Production build fixes",
+    "summary": "Cleaned up deploy-blocking issues after the account release went live.",
+    "tags": ["Deploy", "Lint"],
+    "changes": [
+      "Removed TypeScript-only syntax from JavaScript API route files so Vercel can compile them.",
+      "Fixed hook dependency warnings in the movie watch page.",
+      "Kept the watch party controls stable across renders."
+    ]
+  },
+  {
+    "version": "2.3.82",
+    "date": "2026-07-01",
+    "title": "Accounts, synced data, and personalized Explore",
+    "summary": "Shipped Supabase-backed accounts with synced user data and personalized browse rails.",
+    "tags": ["Accounts", "Supabase", "Explore"],
+    "changes": [
+      "Added login and signup pages with a new auth poster collage.",
+      "Added account profile data, avatar upload, onboarding preferences, watch history, watch progress, watch later, and favorites sync.",
+      "Added the Activity page for Continue watching, Watch later, and Favorites.",
+      "Personalized Explore, genre pages, category pages, and search when signed-in preferences are available.",
+      "Added Supabase migrations for profiles, avatars, watch history, progress, watch later, and favorites."
+    ]
+  },
+  {
+    "version": "2.3.81",
+    "date": "2026-07-01",
+    "title": "Search and footer polish",
+    "summary": "Tightened up search results and simplified the footer.",
+    "tags": ["Search", "Footer"],
+    "changes": [
+      "Removed extra search result labels and captions for a cleaner results view.",
+      "Simplified footer copy and layout.",
+      "Kept unreleased anime out of browse rails."
+    ]
+  },
+  {
+    "version": "2.3.77",
+    "date": "2026-06-30",
+    "title": "Watch page refinements",
+    "summary": "Improved watch page controls and related content rails.",
+    "tags": ["Player", "TV", "Recommendations"],
+    "changes": [
+      "Replaced episode season tabs with a compact selector.",
+      "Hid unreleased episodes from the show episode picker.",
+      "Fixed You might like recommendations for movie and show pages by moving TMDB calls server-side.",
+      "Added high-rating filters for popular movie and TV recommendations."
+    ]
+  },
+  {
+    "version": "2.3.67",
+    "date": "2026-06-30",
+    "title": "Brand and layout refresh",
+    "summary": "Updated the Teavie chrome, brand assets, and full-bleed Explore layout.",
+    "tags": ["Brand", "Explore", "Layout"],
+    "changes": [
+      "Replaced legacy logos with cropped Teavie brand assets.",
+      "Moved the version chip into the sidebar and mobile drawer.",
+      "Reworked Explore spotlight and horizontal rails so they align with the sidebar and screen edge.",
+      "Smoothed sidebar collapse behavior for full-bleed rails."
+    ]
+  },
+  {
+    "version": "2.3.51",
+    "date": "2026-06-30",
+    "title": "Catalog browsing polish",
+    "summary": "Improved browse pages, cards, genre pages, and content density.",
+    "tags": ["Catalog", "Genres", "Cards"],
+    "changes": [
+      "Polished search and category pages.",
+      "Moved catalog stats to the homepage.",
+      "Updated activity and profile rails to show seven cards across where space allows.",
+      "Matched card sizing across profile and activity rails."
+    ]
+  },
+  {
+    "version": "2.3.14",
+    "date": "2026-06-30",
+    "title": "Watch parties and player sync",
+    "summary": "Added watch party support and persistent playback progress.",
+    "tags": ["Watch parties", "Progress"],
+    "changes": [
+      "Added watch party room creation and join controls.",
+      "Synced host playback state for supported movie and TV players.",
+      "Persisted movie and TV progress locally, with account sync added later.",
+      "Added sticky top navigation for player pages."
+    ]
+  },
+  {
+    "version": "2.3.10",
+    "date": "2026-06-28",
+    "title": "Anime rails and metadata cleanup",
+    "summary": "Improved anime recommendations, related franchise rails, posters, and episode metadata.",
+    "tags": ["Anime", "Metadata"],
+    "changes": [
+      "Made anime show rails load progressively and cache results.",
+      "Showed full anime franchises in Related rails.",
+      "Fixed empty Related and You might like anime rails after split-cour merges.",
+      "Improved anime poster and episode metadata handling."
+    ]
+  }
+]

@@ -34,6 +34,15 @@ export default function Footer() {
               Design and built by{" "}
               <span className="font-semibold text-white">neillouis3</span>
             </span>
+            <span className="text-default-600" aria-hidden>
+              ·
+            </span>
+            <Link
+              href="/build-log"
+              className="underline underline-offset-2 transition-colors hover:text-default-400"
+            >
+              Build log
+            </Link>
           </div>
         </div>
 

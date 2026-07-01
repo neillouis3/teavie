@@ -39,7 +39,6 @@ import {
 import type { UserPreferences } from "@/types/user";
 import { MODAL_GLASS_CLASS } from "@/components/ui/navGlass";
 
-const GUEST_ONBOARDING_KEY = "teavie:onboarding-completed:v1";
 const MAINTENANCE_STORAGE_KEY = "teavie:maintenance-announcement-seen:v3";
 
 function toggleInSet(prev: Set<string>, id: string): Set<string> {
@@ -110,21 +109,9 @@ export default function OnboardingModal() {
   const tryOpen = useCallback(() => {
     if (!maintenanceSeen()) return;
     if (preferenceEditRef.current) return;
-
-    // Signed-in: server profile is source of truth for first-time onboarding.
-    if (user) {
-      if (authLoading || profileLoading) return;
-      setOpen(needsOnboarding);
-      return;
-    }
-
-    // Guest: optional onboarding before sign-in.
-    try {
-      if (localStorage.getItem(GUEST_ONBOARDING_KEY) === "1") return;
-      setOpen(true);
-    } catch {
-      setOpen(true);
-    }
+    if (!user) return;
+    if (authLoading || profileLoading) return;
+    setOpen(needsOnboarding);
   }, [authLoading, profileLoading, needsOnboarding, user]);
 
   useEffect(() => {
@@ -165,6 +152,7 @@ export default function OnboardingModal() {
 
   useEffect(() => {
     const onRequest = () => {
+      if (!user) return;
       preferenceEditRef.current = true;
       setIsPreferenceEdit(true);
       setStepIndex(0);
@@ -179,7 +167,7 @@ export default function OnboardingModal() {
       window.removeEventListener("storage", onMaintenance);
       window.clearInterval(id);
     };
-  }, [tryOpen]);
+  }, [tryOpen, user]);
 
   const saveProfileStep = useCallback(async () => {
     const name = displayName.trim().slice(0, 64) || "Guest";
@@ -248,9 +236,6 @@ export default function OnboardingModal() {
     try {
       savePreferencesLocal(prefs);
       await savePreferences(prefs, { completeOnboarding: !isPreferenceEdit });
-      if (!user && !isPreferenceEdit) {
-        localStorage.setItem(GUEST_ONBOARDING_KEY, "1");
-      }
       closeModal();
     } catch (err) {
       console.error("Failed to save onboarding preferences", err);
@@ -270,25 +255,27 @@ export default function OnboardingModal() {
   ]);
 
   const skipOnboarding = useCallback(async () => {
-    if (user) {
-      await savePreferences(
-        preferencesFromState(categories, genres, languages, preferences.anime_audio),
-        {
-          completeOnboarding: true,
-        }
-      );
-    } else {
-      try {
-        localStorage.setItem(GUEST_ONBOARDING_KEY, "1");
-      } catch {
-        /* ignore */
-      }
+    if (!user) {
+      closeModal();
+      return;
     }
-    setOpen(false);
-    setStepIndex(0);
-    preferenceEditRef.current = false;
-    setIsPreferenceEdit(false);
-  }, [categories, genres, languages, preferences.anime_audio, savePreferences, user]);
+
+    await savePreferences(
+      preferencesFromState(categories, genres, languages, preferences.anime_audio),
+      {
+        completeOnboarding: true,
+      }
+    );
+    closeModal();
+  }, [
+    categories,
+    closeModal,
+    genres,
+    languages,
+    preferences.anime_audio,
+    savePreferences,
+    user,
+  ]);
 
   const goNext = useCallback(async () => {
     if (isProfile) {
@@ -449,11 +436,6 @@ export default function OnboardingModal() {
             <p className="text-sm text-default-500">
               Step {stepIndex + 1} of {steps.length}
             </p>
-            {!isProfile && !user && !isPreferenceEdit ? (
-              <Button size="sm" variant="light" onPress={() => void skipOnboarding()}>
-                Skip for now
-              </Button>
-            ) : null}
           </div>
           <Progress
             aria-label="Onboarding progress"

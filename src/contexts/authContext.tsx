@@ -12,7 +12,6 @@ import React, {
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/client";
 import { collectLocalUserData } from "@/lib/collectLocalUserData";
-import { saveGuestPreferences } from "@/lib/userPreferences";
 import {
   normalizeUserPreferences,
   type UserPreferences,
@@ -169,22 +168,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       preferences: UserPreferences,
       options?: { completeOnboarding?: boolean }
     ) => {
+      if (!user) return;
+
       const normalized = normalizeUserPreferences(preferences);
-      saveGuestPreferences(normalized);
-      if (user) {
-        const res = await fetch("/api/user/profile", {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            preferences: normalized,
-            onboarding_completed: options?.completeOnboarding === true,
-          }),
-        });
-        if (res.ok) {
-          const json = (await res.json()) as { profile: UserProfile };
-          setProfile(json.profile);
-        }
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          preferences: normalized,
+          onboarding_completed: options?.completeOnboarding === true,
+        }),
+      });
+      if (res.ok) {
+        const json = (await res.json()) as { profile: UserProfile };
+        setProfile(json.profile);
       }
     },
     [user]
