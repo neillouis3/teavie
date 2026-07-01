@@ -308,18 +308,59 @@ export function selectedGenreLabels(preferences) {
 }
 
 /**
+ * Genre fit tier for ranking (lower = higher in the rail).
+ * 0 = every genre on the title is selected
+ * 1 = overlap, but at least one genre was not selected
+ * 2 = no overlap (exclude)
+ * @param {Record<string, unknown>} doc
+ * @param {import('@/types/user').UserPreferences | null | undefined} preferences
+ */
+export function genrePreferenceTier(doc, preferences) {
+  const selected = selectedGenreLabels(preferences);
+  if (selected.length === 0) return 0;
+
+  const docGenres = imdbGenresForDoc(doc);
+  if (docGenres.length === 0) return 2;
+  if (!docGenres.some((label) => selected.includes(label))) return 2;
+  if (docGenres.every((label) => selected.includes(label))) return 0;
+  return 1;
+}
+
+/**
  * When genre prefs exist, at least one genre on the title must be selected.
- * Multi-genre titles (e.g. Drama + Documentary) can still match if you picked Drama.
  * @param {Record<string, unknown>} doc
  * @param {import('@/types/user').UserPreferences | null | undefined} preferences
  */
 export function docMatchesGenrePreferences(doc, preferences) {
-  const selected = selectedGenreLabels(preferences);
-  if (selected.length === 0) return true;
+  return genrePreferenceTier(doc, preferences) < 2;
+}
 
-  const docGenres = imdbGenresForDoc(doc);
-  if (docGenres.length === 0) return false;
-  return docGenres.some((label) => selected.includes(label));
+/**
+ * @param {Record<string, unknown>[]} docs
+ * @param {import('@/types/user').UserPreferences | null | undefined} preferences
+ */
+export function sortDocsByGenrePreference(docs, preferences) {
+  if (selectedGenreLabels(preferences).length === 0) return docs;
+  return [...docs].sort(
+    (a, b) => genrePreferenceTier(a, preferences) - genrePreferenceTier(b, preferences)
+  );
+}
+
+/**
+ * @param {import('@/types/content').ContentItem[]} items
+ * @param {import('@/types/user').UserPreferences | null | undefined} preferences
+ */
+export function sortContentItemsByGenrePreference(items, preferences) {
+  if (selectedGenreLabels(preferences).length === 0) return items;
+  const tierForItem = (item) =>
+    genrePreferenceTier(
+      {
+        imdb_genres: item.imdb_genres,
+        omdb: item.omdb,
+      },
+      preferences
+    );
+  return [...items].sort((a, b) => tierForItem(a) - tierForItem(b));
 }
 
 /**

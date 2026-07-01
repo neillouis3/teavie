@@ -13,6 +13,7 @@ import {
   docMatchesPreferences,
   selectedGenreLabels,
   selectedLanguageCodes,
+  sortDocsByGenrePreference,
 } from "@/lib/preferenceMatch";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
@@ -42,8 +43,10 @@ function toDateString(date) {
 }
 
 function mapDocsToItems(docs, preferences) {
-  return docs
-    .filter((doc) => docMatchesPreferences(doc, preferences))
+  return sortDocsByGenrePreference(
+    docs.filter((doc) => docMatchesPreferences(doc, preferences)),
+    preferences
+  )
     .map((doc) => mapContentDocToItem(doc))
     .filter((item) => {
       if (item.type === "movie" && isBlockedMovieTmdbId(String(item.id))) {
@@ -82,7 +85,7 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
   const hasStrictPrefs =
     selectedGenreLabels(preferences).length > 0 ||
     selectedLanguageCodes(preferences).length > 0;
-  const fetchLimit = hasStrictPrefs ? Math.min(144, limit * 3) : limit;
+  const fetchLimit = hasStrictPrefs ? Math.min(192, limit * 4) : limit;
   const todayIso = catalogTodayIsoUtc();
 
   const client = await clientPromise;

@@ -22,7 +22,7 @@ import {
   fetchSearchResults,
 } from '@/lib/pageDataCache';
 import { fetchPersonalizedExploreBundle } from '@/lib/explorePageData';
-import { contentItemMatchesPreferences } from '@/lib/preferenceMatch';
+import { contentItemMatchesPreferences, sortContentItemsByGenrePreference } from '@/lib/preferenceMatch';
 import { useUserData } from '@/contexts/userDataContext';
 import { hasUserPreferences } from '@/types/user';
 import { clearLegacySearchResultCache } from '@/lib/clientDayCache';
@@ -85,11 +85,17 @@ function SearchContent() {
           const bundle = await fetchPersonalizedExploreBundle(preferences);
           if (bundle) {
             return {
-              popularMovies: bundle.popularMovies.filter((item) =>
-                contentItemMatchesPreferences(item, preferences)
+              popularMovies: sortContentItemsByGenrePreference(
+                bundle.popularMovies.filter((item) =>
+                  contentItemMatchesPreferences(item, preferences)
+                ),
+                preferences
               ),
-              popularTv: bundle.popularTv.filter((item) =>
-                contentItemMatchesPreferences(item, preferences)
+              popularTv: sortContentItemsByGenrePreference(
+                bundle.popularTv.filter((item) =>
+                  contentItemMatchesPreferences(item, preferences)
+                ),
+                preferences
               ),
             };
           }

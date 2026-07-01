@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.3.92",
+    "date": "2026-07-01",
+    "title": "Softer genre ranking",
+    "summary": "Titles with extra genres you did not pick can still appear, but they rank below perfect genre matches in personalized rails.",
+    "tags": ["Explore", "Preferences"],
+    "changes": [
+      "A Drama + Documentary title still shows when you picked Drama, but pure Drama picks appear higher in Popular and personalized lists.",
+      "Titles with no overlap on your selected genres are still excluded.",
+      "Language and region filtering stay strict."
+    ]
+  },
+  {
     "version": "2.3.91",
     "date": "2026-07-01",
     "title": "Fix preferences being wiped on sign-in",
