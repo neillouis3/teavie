@@ -218,12 +218,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           onboarding_completed: options?.completeOnboarding === true,
         }),
       });
-      if (res.ok) {
-        const json = (await res.json()) as { profile: UserProfile };
-        setProfile(json.profile);
-        clearGuestPreferences();
-        notifyPreferencesChanged();
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(json?.error ?? "Could not save preferences");
       }
+      const json = (await res.json()) as { profile: UserProfile };
+      setProfile(json.profile);
+      clearGuestPreferences();
+      notifyPreferencesChanged();
     },
     [user]
   );

@@ -37,6 +37,7 @@ import {
   uploadUserAvatar,
 } from "@/lib/uploadUserAvatar";
 import type { UserPreferences } from "@/types/user";
+import { hasUserPreferences } from "@/types/user";
 import { MODAL_GLASS_CLASS } from "@/components/ui/navGlass";
 
 const MAINTENANCE_STORAGE_KEY = "teavie:maintenance-announcement-seen:v3";
@@ -258,8 +259,14 @@ export default function OnboardingModal() {
       return;
     }
 
+    const draft = preferencesFromState(
+      categories,
+      genres,
+      languages,
+      preferences.anime_audio
+    );
     await savePreferences(
-      preferencesFromState(categories, genres, languages, preferences.anime_audio),
+      hasUserPreferences(draft) ? draft : preferences,
       {
         completeOnboarding: true,
       }
@@ -270,7 +277,7 @@ export default function OnboardingModal() {
     closeModal,
     genres,
     languages,
-    preferences.anime_audio,
+    preferences,
     savePreferences,
     user,
   ]);

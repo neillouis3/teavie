@@ -1,10 +1,6 @@
 import { listWatchHistory } from "@/lib/watchHistory";
 import { listWatchLater } from "@/lib/watchLater";
 import {
-  EMPTY_USER_PREFERENCES,
-  type UserPreferences,
-} from "@/types/user";
-import {
   loadWatchProgress,
   watchProgressStorageKey,
   WATCH_PROGRESS_VERSION,
@@ -17,7 +13,6 @@ import {
 export type LocalUserDataPayload = {
   watchHistory: ReturnType<typeof listWatchHistory>;
   watchLater: ReturnType<typeof listWatchLater>;
-  preferences: UserPreferences;
   progressRows: {
     catalogId: string;
     progress: Record<string, unknown>;
@@ -78,7 +73,6 @@ export function collectLocalUserData(): LocalUserDataPayload {
   return {
     watchHistory: listWatchHistory(),
     watchLater: listWatchLater(),
-    preferences: { ...EMPTY_USER_PREFERENCES },
     progressRows,
   };
 }

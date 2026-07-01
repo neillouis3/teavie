@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.3.91",
+    "date": "2026-07-01",
+    "title": "Fix preferences being wiped on sign-in",
+    "summary": "Stopped the login sync from overwriting saved taste preferences with empty local data.",
+    "tags": ["Accounts", "Preferences", "Bug fix"],
+    "changes": [
+      "Sign-in sync no longer sends or overwrites profile preferences; only watch later and playback progress sync from local storage.",
+      "Skipping or dismissing onboarding keeps your existing saved preferences instead of replacing them with an empty draft.",
+      "Preference save failures now surface an error instead of failing silently."
+    ]
+  },
+  {
     "version": "2.3.90",
     "date": "2026-07-01",
     "title": "Account-synced preferences",

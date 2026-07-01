@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { normalizeUserPreferences } from "@/types/user";
 
 export async function POST(req: Request) {
   try {
@@ -16,24 +15,12 @@ export async function POST(req: Request) {
 
     const body = (await req.json()) as {
       watchLater?: { catalogId: string; mediaType: "movie" | "tv"; addedAt?: number }[];
-      preferences?: unknown;
       progressRows?: {
         catalogId: string;
         progress?: Record<string, unknown>;
         moviePositionSeconds?: number;
       }[];
     };
-
-    if (body.preferences) {
-      await supabase.from("profiles").upsert(
-        {
-          id: user.id,
-          preferences: normalizeUserPreferences(body.preferences),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      );
-    }
 
     if (Array.isArray(body.watchLater) && body.watchLater.length > 0) {
       const rows = body.watchLater.map((entry) => ({
