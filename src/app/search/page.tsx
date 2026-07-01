@@ -307,10 +307,6 @@ function SearchContent() {
 
         {hasQuery && (
           <div className="space-y-4">
-            <span className="text-xs text-default-500">
-              for &ldquo;{qParam}&rdquo;{totalPages > 1 && ` · page ${pageParam} of ${totalPages}`}
-            </span>
-
             {error && (
               <p className="text-sm text-danger">{error}</p>
             )}
