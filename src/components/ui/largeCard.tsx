@@ -3,7 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
-import { SPOTLIGHT_CONTENT_INSET } from "@/components/ui/sidebarBleedRail";
+import {
+  SPOTLIGHT_CONTENT_INSET,
+  SPOTLIGHT_IMAGE_CLASS,
+} from "@/components/ui/sidebarBleedRail";
 import { tmdbImageUrlOr } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 
@@ -235,16 +238,19 @@ export default function LargeCard({
       : null;
 
   return (
-    <Link href={href} className={`block min-w-0 w-full ${hero ? "h-full" : ""}`}>
+    <Link href={href} className={`block h-full w-full ${hero ? "" : "min-w-0"}`}>
       <div
-        className={`group relative w-full overflow-hidden ${
-          hero ? "h-full min-h-[280px] rounded-none" : "aspect-video rounded-xl"
+        className={`group relative h-full w-full max-w-none overflow-hidden ${
+          hero ? "min-h-[280px] rounded-none" : "aspect-video min-w-0 rounded-xl"
         }`}
       >
         <img
           src={imageUrl}
           alt={title}
-          className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
+          className={cn(
+            "h-full w-full object-cover transition-all duration-500 group-hover:scale-105",
+            heroContentInset && SPOTLIGHT_IMAGE_CLASS
+          )}
         />
         {!showRichOverlay && (
           <>

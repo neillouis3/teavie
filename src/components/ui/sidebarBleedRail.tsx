@@ -43,9 +43,16 @@ export const SPOTLIGHT_SLIDE_CLASS =
 /** Explore spotlight: embla track (no default pl-4 gutter). */
 export const SPOTLIGHT_TRACK_CLASS = "!ml-0 h-full";
 
-/** Explore spotlight shell: true viewport width, shifted left from the main column. */
+/** Explore spotlight shell: content column + sidebar = full viewport width. */
 export const SPOTLIGHT_SHELL_WIDTH =
-  "lg:w-screen";
+  `lg:w-[calc(100%+var(--sidebar-w,16rem))] lg:max-w-none ${SIDEBAR_SYNC_TRANSITION}`;
+
+/**
+ * Spotlight backdrop fills the slide; object-position shifts the crop so the
+ * focal point aligns with the main content column (not the full page center).
+ */
+export const SPOTLIGHT_IMAGE_CLASS =
+  "h-full w-full max-w-none object-cover lg:[object-position:calc(50%+var(--sidebar-w)/2)_center]";
 
 /** Overlay / controls aligned to the main content column. */
 export const SPOTLIGHT_CONTENT_INSET =

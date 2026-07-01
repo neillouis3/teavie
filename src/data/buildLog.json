@@ -1,5 +1,29 @@
 [
   {
+    "version": "2.3.96",
+    "date": "2026-07-01",
+    "title": "Spotlight full-bleed restore",
+    "summary": "Explore spotlight again extends to the right screen edge and behind the sidebar with content-centered imagery.",
+    "tags": ["Explore", "UI"],
+    "changes": [
+      "Spotlight shell width is content plus sidebar so the hero reaches both screen edges.",
+      "Backdrop crop aligns with the main content column instead of the page center.",
+      "Layout overflow no longer clips the bleed on desktop."
+    ]
+  },
+  {
+    "version": "2.3.95",
+    "date": "2026-07-01",
+    "title": "Explore favorites and collapsed sidebar",
+    "summary": "Favorites appear on Explore for signed-in users, and the desktop sidebar starts collapsed by default.",
+    "tags": ["Explore", "UI"],
+    "changes": [
+      "Added a Favorites rail on Explore below Watch later.",
+      "Favorites update when you star or unstar titles without leaving the page.",
+      "Desktop sidebar now defaults to collapsed; your choice is still saved in a cookie."
+    ]
+  },
+  {
     "version": "2.3.94",
     "date": "2026-07-01",
     "title": "Spotlight preference ranking",

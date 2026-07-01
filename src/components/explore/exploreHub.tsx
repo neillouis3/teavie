@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PageSplash from "@/components/ui/pageSplash";
 import CatalogRail from "@/components/catalog/catalogRail";
 import TrendingHero, { EXPLORE_SPOTLIGHT_RESERVE } from "@/components/catalog/trendingHero";
@@ -10,6 +10,7 @@ import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import GenreRail from "@/components/explore/genreRail";
 import WatchHistoryRail from "@/components/explore/watchHistoryRail";
 import WatchLaterRail from "@/components/explore/watchLaterRail";
+import FavoritesRail from "@/components/explore/favoritesRail";
 import UpcomingRail from "@/components/explore/upcomingRail";
 import NewContentRail from "@/components/explore/newContentRail";
 import {
@@ -23,6 +24,8 @@ import {
   type UserRailRows,
 } from "@/lib/explorePageData";
 import { watchHistoryProgressLabel, WATCH_HISTORY_CHANGED_EVENT } from "@/lib/watchHistory";
+import { WATCH_LATER_CHANGED_EVENT } from "@/lib/watchLater";
+import { FAVORITES_CHANGED_EVENT } from "@/lib/favorites";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
@@ -52,7 +55,8 @@ function listSignature(entries: { catalogId: string; mediaType: string }[]) {
 
 export default function ExploreHub() {
   const { loading: authLoading } = useAuth();
-  const { preferences, watchHistoryEntries, watchLaterEntries } = useUserData();
+  const { preferences, watchHistoryEntries, watchLaterEntries, favoriteEntries } =
+    useUserData();
   const [core, setCore] = useState<ExploreCorePayload | null>(null);
   const [userRails, setUserRails] = useState<UserRailRows>(EMPTY_RAILS);
 
@@ -65,6 +69,26 @@ export default function ExploreHub() {
     () => listSignature(watchLaterEntries),
     [watchLaterEntries]
   );
+  const favoritesSig = useMemo(
+    () => listSignature(favoriteEntries),
+    [favoriteEntries]
+  );
+
+  const loadUserRails = useCallback(async () => {
+    const rails = await fetchUserRailRows({
+      historyEntries: watchHistoryEntries,
+      watchLaterEntries: watchLaterEntries.map((e) => ({
+        catalogId: e.catalogId,
+        mediaType: e.mediaType,
+      })),
+      favoriteEntries: favoriteEntries.map((e) => ({
+        catalogId: e.catalogId,
+        mediaType: e.mediaType,
+      })),
+      progressLabel: watchHistoryProgressLabel,
+    });
+    setUserRails(rails);
+  }, [watchHistoryEntries, watchLaterEntries, favoriteEntries]);
 
   const payload = useMemo<ExplorePagePayload | null>(
     () => (core ? { ...core, ...userRails } : null),
@@ -101,22 +125,20 @@ export default function ExploreHub() {
 
   useEffect(() => {
     if (authLoading) return;
-    let cancelled = false;
-    void fetchUserRailRows({
-      historyEntries: watchHistoryEntries,
-      watchLaterEntries: watchLaterEntries.map((e) => ({
-        catalogId: e.catalogId,
-        mediaType: e.mediaType,
-      })),
-      favoriteEntries: [],
-      progressLabel: watchHistoryProgressLabel,
-    }).then((rails) => {
-      if (!cancelled) setUserRails(rails);
-    });
+    void loadUserRails();
+  }, [authLoading, historySig, watchLaterSig, favoritesSig, loadUserRails]);
+
+  useEffect(() => {
+    const onUserRailsChange = () => void loadUserRails();
+    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onUserRailsChange);
+    window.addEventListener(WATCH_LATER_CHANGED_EVENT, onUserRailsChange);
+    window.addEventListener(FAVORITES_CHANGED_EVENT, onUserRailsChange);
     return () => {
-      cancelled = true;
+      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onUserRailsChange);
+      window.removeEventListener(WATCH_LATER_CHANGED_EVENT, onUserRailsChange);
+      window.removeEventListener(FAVORITES_CHANGED_EVENT, onUserRailsChange);
     };
-  }, [authLoading, historySig, watchLaterSig]);
+  }, [loadUserRails]);
 
   useEffect(() => {
     const refreshHistory = () => {
@@ -132,17 +154,7 @@ export default function ExploreHub() {
         if (projected) {
           return { ...prev, historyRows: projected };
         }
-        void fetchUserRailRows({
-          historyEntries: watchHistoryEntries,
-          watchLaterEntries: watchLaterEntries.map((e) => ({
-            catalogId: e.catalogId,
-            mediaType: e.mediaType,
-          })),
-          favoriteEntries: [],
-          progressLabel: watchHistoryProgressLabel,
-        }).then((rails) => {
-          setUserRails(rails);
-        });
+        void loadUserRails();
         return prev;
       });
     };
@@ -151,7 +163,7 @@ export default function ExploreHub() {
     return () => {
       window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, refreshHistory);
     };
-  }, [watchHistoryEntries, watchLaterEntries]);
+  }, [watchHistoryEntries, loadUserRails]);
 
   if (!core || !payload) {
     return <PageSplash ariaLabel="Loading Explore" />;
@@ -162,6 +174,7 @@ export default function ExploreHub() {
     genres,
     historyRows,
     watchLaterRows,
+    favoriteRows,
     recommendedRows,
     newContent,
     upcomingContent,
@@ -172,6 +185,7 @@ export default function ExploreHub() {
   const hasUpcoming = upcomingContent.length > 0;
   const hasNew = newContent.length > 0;
   const hasWatchLater = watchLaterRows.length > 0;
+  const hasFavorites = favoriteRows.length > 0;
   const hasRecommended = recommendedRows.length > 0;
 
   return (
@@ -179,8 +193,8 @@ export default function ExploreHub() {
       {hasTrending && (
         <section
           className={cn(
-            "relative z-0 -mt-2 mb-4 w-full overflow-hidden",
-            "lg:absolute lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:top-0 lg:mb-0 lg:max-w-none",
+            "relative z-0 -mt-2 mb-4 w-full overflow-x-visible overflow-y-hidden",
+            "lg:absolute lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:top-0 lg:mb-0",
             SIDEBAR_SYNC_TRANSITION,
             SPOTLIGHT_SHELL_WIDTH,
             "h-[calc(80vh+4.5rem)]"
@@ -216,6 +230,9 @@ export default function ExploreHub() {
         ) : null}
         {hasWatchLater ? (
           <WatchLaterRail items={watchLaterRows} maxItems={SECTION_MAX_ITEMS} />
+        ) : null}
+        {hasFavorites ? (
+          <FavoritesRail items={favoriteRows} maxItems={SECTION_MAX_ITEMS} />
         ) : null}
         <GenreRail genres={genres} preferredGenreSlugs={preferences.genres} />
       </div>
