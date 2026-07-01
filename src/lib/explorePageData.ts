@@ -352,6 +352,46 @@ function filterRailByPreferences(
   return sortContentItemsByPreferenceRank(filtered, preferences);
 }
 
+function interleaveTrending(
+  movies: ContentItem[],
+  tv: ContentItem[],
+  maxItems: number
+): ContentItem[] {
+  const out: ContentItem[] = [];
+  const n = Math.max(movies.length, tv.length);
+  for (let i = 0; i < n && out.length < maxItems; i++) {
+    if (i < movies.length && out.length < maxItems) {
+      out.push({ ...movies[i], type: movies[i].type ?? "movie" });
+    }
+    if (i < tv.length && out.length < maxItems) {
+      out.push({ ...tv[i], type: tv[i].type ?? "tv" });
+    }
+  }
+  return out;
+}
+
+/** Spotlight carousel: preference-ranked when signed in, movie/TV interleave for guests. */
+export function buildSpotlightItems(
+  movies: ContentItem[],
+  tv: ContentItem[],
+  preferences: UserPreferences | null,
+  maxItems = 24
+): ContentItem[] {
+  if (!preferences || !hasUserPreferences(preferences)) {
+    return interleaveTrending(movies, tv, maxItems);
+  }
+
+  const merged: ContentItem[] = [
+    ...movies.map((item) => ({ ...item, type: item.type ?? "movie" })),
+    ...tv.map((item) => ({ ...item, type: item.type ?? "tv" })),
+  ];
+
+  return sortContentItemsByPreferenceRank(
+    merged.filter((item) => contentItemMatchesPreferences(item, preferences)),
+    preferences
+  ).slice(0, maxItems);
+}
+
 function buildDiscoverFromPersonalized(
   bundle: ExploreBundle,
   personalized: PersonalizedExploreBundle | null,

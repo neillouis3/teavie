@@ -16,6 +16,7 @@ import {
   loadExploreCorePayload,
   fetchUserRailRows,
   projectExploreHistoryRows,
+  buildSpotlightItems,
   type ExploreCorePayload,
   type ExplorePagePayload,
   type TmdbDiscoverPayload,
@@ -68,6 +69,19 @@ export default function ExploreHub() {
   const payload = useMemo<ExplorePagePayload | null>(
     () => (core ? { ...core, ...userRails } : null),
     [core, userRails]
+  );
+
+  const spotlightItems = useMemo(
+    () =>
+      core
+        ? buildSpotlightItems(
+            core.discover.trendingMovies,
+            core.discover.trendingTv,
+            preferences,
+            SECTION_MAX_ITEMS
+          )
+        : [],
+    [core, preferencesSig, preferences]
   );
 
   useEffect(() => {
@@ -152,8 +166,7 @@ export default function ExploreHub() {
     newContent,
     upcomingContent,
   } = payload;
-  const hasTrending =
-    discover.trendingMovies.length > 0 || discover.trendingTv.length > 0;
+  const hasTrending = spotlightItems.length > 0;
   const hasPopular =
     discover.popularMovies.length > 0 || discover.popularTv.length > 0;
   const hasUpcoming = upcomingContent.length > 0;
@@ -180,6 +193,7 @@ export default function ExploreHub() {
             showDots={false}
             trendingMovies={discover.trendingMovies}
             trendingTv={discover.trendingTv}
+            spotlightItems={spotlightItems}
             maxItems={SECTION_MAX_ITEMS}
           />
         </section>

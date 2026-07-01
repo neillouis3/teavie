@@ -51,6 +51,8 @@ function interleaveTrending(
 interface TrendingHeroProps {
   trendingMovies: ContentItem[];
   trendingTv: ContentItem[];
+  /** Pre-ranked spotlight slides (Explore). Overrides movie/TV interleave. */
+  spotlightItems?: ContentItem[];
   maxItems?: number;
   /** Rounded carousel viewport (category hubs). */
   rounded?: boolean;
@@ -67,6 +69,7 @@ interface TrendingHeroProps {
 export default function TrendingHero({
   trendingMovies,
   trendingTv,
+  spotlightItems,
   maxItems = 24,
   rounded = false,
   showDots = true,
@@ -74,10 +77,12 @@ export default function TrendingHero({
   bleedUnderNav = false,
   flushLeft = false,
 }: TrendingHeroProps) {
-  const items = React.useMemo(
-    () => interleaveTrending(trendingMovies, trendingTv, maxItems),
-    [trendingMovies, trendingTv, maxItems]
-  );
+  const items = React.useMemo(() => {
+    if (variant === "spotlight" && spotlightItems && spotlightItems.length > 0) {
+      return spotlightItems;
+    }
+    return interleaveTrending(trendingMovies, trendingTv, maxItems);
+  }, [variant, spotlightItems, trendingMovies, trendingTv, maxItems]);
 
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);

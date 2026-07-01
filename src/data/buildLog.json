@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.3.94",
+    "date": "2026-07-01",
+    "title": "Spotlight preference ranking",
+    "summary": "The Explore spotlight carousel now uses the same genre and region ranking as Popular rails.",
+    "tags": ["Explore", "Preferences"],
+    "changes": [
+      "Spotlight slides are ranked globally by genre fit and region priority instead of alternating movies and TV.",
+      "US English productions can appear ahead of UK titles in the hero carousel when English is selected.",
+      "Guests still see the default movie/TV interleaved spotlight."
+    ]
+  },
+  {
     "version": "2.3.93",
     "date": "2026-07-01",
     "title": "English region ranking",
