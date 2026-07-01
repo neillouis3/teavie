@@ -14,9 +14,15 @@ import { createClient } from "@/utils/supabase/client";
 import { collectLocalUserData } from "@/lib/collectLocalUserData";
 import {
   normalizeUserPreferences,
+  hasUserPreferences,
   type UserPreferences,
   type UserProfile,
 } from "@/types/user";
+import {
+  clearGuestPreferences,
+  loadGuestPreferences,
+  notifyPreferencesChanged,
+} from "@/lib/userPreferences";
 
 type AuthContextValue = {
   user: User | null;
@@ -62,6 +68,28 @@ async function syncLocalUserData(): Promise<void> {
   });
 }
 
+async function migrateGuestPreferencesIfNeeded(
+  profile: UserProfile | null
+): Promise<UserProfile | null> {
+  if (!profile || hasUserPreferences(profile.preferences)) return profile;
+
+  const localPrefs = loadGuestPreferences();
+  if (!hasUserPreferences(localPrefs)) return profile;
+
+  const res = await fetch("/api/user/profile", {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ preferences: normalizeUserPreferences(localPrefs) }),
+  });
+  if (!res.ok) return profile;
+
+  clearGuestPreferences();
+  const json = (await res.json()) as { profile: UserProfile };
+  notifyPreferencesChanged();
+  return json.profile;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -92,7 +120,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(session?.user ?? null);
     if (session?.user) {
       const nextProfile = await refreshProfile();
-      if (nextProfile && !nextProfile.onboarding_completed_at) {
+      const migrated = await migrateGuestPreferencesIfNeeded(nextProfile);
+      if (migrated && migrated !== nextProfile) {
+        setProfile(migrated);
+      }
+      const activeProfile = migrated ?? nextProfile;
+      if (activeProfile && !activeProfile.onboarding_completed_at) {
         window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT));
       }
     } else {
@@ -118,7 +151,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
         const nextProfile = await refreshProfile();
-        if (nextProfile && !nextProfile.onboarding_completed_at) {
+        const migrated = await migrateGuestPreferencesIfNeeded(nextProfile);
+        if (migrated && migrated !== nextProfile) {
+          setProfile(migrated);
+        }
+        const activeProfile = migrated ?? nextProfile;
+        if (activeProfile && !activeProfile.onboarding_completed_at) {
           window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT));
         }
       }
@@ -183,6 +221,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const json = (await res.json()) as { profile: UserProfile };
         setProfile(json.profile);
+        clearGuestPreferences();
+        notifyPreferencesChanged();
       }
     },
     [user]

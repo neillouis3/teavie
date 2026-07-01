@@ -7,6 +7,7 @@ import {
 export const PREFERENCES_STORAGE_KEY = "teavie.preferences.v1";
 export const PREFERENCES_CHANGED_EVENT = "teavie-preferences-changed";
 
+/** Legacy guest localStorage prefs (migrated to account on sign-in). */
 export function loadGuestPreferences(): UserPreferences {
   if (typeof window === "undefined") return { ...EMPTY_USER_PREFERENCES };
   try {
@@ -18,12 +19,16 @@ export function loadGuestPreferences(): UserPreferences {
   }
 }
 
-export function saveGuestPreferences(preferences: UserPreferences): void {
+export function clearGuestPreferences(): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
-    window.dispatchEvent(new CustomEvent(PREFERENCES_CHANGED_EVENT));
+    localStorage.removeItem(PREFERENCES_STORAGE_KEY);
   } catch {
     /* quota / private mode */
   }
+}
+
+export function notifyPreferencesChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(PREFERENCES_CHANGED_EVENT));
 }

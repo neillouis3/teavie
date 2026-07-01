@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.3.90",
+    "date": "2026-07-01",
+    "title": "Account-synced preferences",
+    "summary": "Taste preferences are stored on your Supabase profile and follow you across devices, not localStorage.",
+    "tags": ["Accounts", "Preferences"],
+    "changes": [
+      "Signed-in users always load and save preferences from their account profile.",
+      "Personalized Explore, category, and genre APIs read preferences from the server session instead of stale client payloads.",
+      "Legacy guest localStorage preferences migrate into your account on sign-in when your profile is still empty."
+    ]
+  },
+  {
     "version": "2.3.89",
     "date": "2026-07-01",
     "title": "Language and region preference filtering",

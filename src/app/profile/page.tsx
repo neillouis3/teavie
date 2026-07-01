@@ -236,6 +236,7 @@ export default function ProfilePage() {
         {user ? (
           <PageCard
             title="Your preferences"
+            footer="Saved to your account and synced across devices."
             action={
               <Button
                 size="sm"

@@ -81,7 +81,7 @@ export default function OnboardingModal() {
     updateDisplayName,
     updateAvatarUrl,
   } = useAuth();
-  const { preferences, savePreferencesLocal } = useUserData();
+  const { preferences } = useUserData();
   const [open, setOpen] = useState(false);
   const [isPreferenceEdit, setIsPreferenceEdit] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -234,7 +234,6 @@ export default function OnboardingModal() {
       preferences.anime_audio
     );
     try {
-      savePreferencesLocal(prefs);
       await savePreferences(prefs, { completeOnboarding: !isPreferenceEdit });
       closeModal();
     } catch (err) {
@@ -250,7 +249,6 @@ export default function OnboardingModal() {
     isPreferenceEdit,
     preferences.anime_audio,
     savePreferences,
-    savePreferencesLocal,
     user,
   ]);
 

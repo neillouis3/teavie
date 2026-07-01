@@ -1,32 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import {
   loadPersonalizedCatalog,
   loadPersonalizedExploreBundle,
 } from "@/lib/api/personalizedRails";
-import { normalizeUserPreferences, hasUserPreferences } from "@/types/user";
-
-async function resolvePreferences(body: { preferences?: unknown }) {
-  let preferences = normalizeUserPreferences(body.preferences);
-
-  if (!hasUserPreferences(preferences)) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user) {
-      const { data } = await supabase
-        .from("profiles")
-        .select("preferences")
-        .eq("id", user.id)
-        .maybeSingle();
-      preferences = normalizeUserPreferences(data?.preferences);
-    }
-  }
-
-  return preferences;
-}
+import { resolveRequestPreferences } from "@/lib/api/resolveRequestPreferences";
+import { hasUserPreferences } from "@/types/user";
 
 export async function POST(req: Request) {
   try {
@@ -34,7 +12,7 @@ export async function POST(req: Request) {
       preferences?: unknown;
       bundle?: boolean;
     };
-    const preferences = await resolvePreferences(body);
+    const preferences = await resolveRequestPreferences(body.preferences);
 
     if (!hasUserPreferences(preferences)) {
       return NextResponse.json({ items: [], bundle: null });

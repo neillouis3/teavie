@@ -57,7 +57,6 @@ type UserDataContextValue = {
   watchLaterEntries: WatchLaterEntry[];
   favoriteEntries: FavoriteEntry[];
   refreshUserData: () => Promise<void>;
-  savePreferencesLocal: (preferences: UserPreferences) => void;
   removeHistoryItem: (catalogId: string) => Promise<void>;
   syncHistoryTouch: (catalogId: string, payload: Omit<WatchHistoryEntry, "catalogId" | "lastWatchedAt">) => void;
   toggleWatchLater: (catalogId: string, mediaType: "movie" | "tv") => Promise<void>;
@@ -180,10 +179,6 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("storage", onHistory);
     };
   }, [user]);
-
-  const savePreferencesLocal = useCallback((_prefs: UserPreferences) => {
-    // Preferences are account-only; guests have none.
-  }, []);
 
   const removeHistoryItem = useCallback(async (catalogId: string) => {
     removeFromWatchHistory(catalogId);
@@ -383,7 +378,6 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       watchLaterEntries,
       favoriteEntries,
       refreshUserData,
-      savePreferencesLocal,
       removeHistoryItem,
       syncHistoryTouch,
       toggleWatchLater,
@@ -402,7 +396,6 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       watchLaterEntries,
       favoriteEntries,
       refreshUserData,
-      savePreferencesLocal,
       removeHistoryItem,
       syncHistoryTouch,
       toggleWatchLater,
