@@ -5,7 +5,6 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Button, Select, SelectItem } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
-import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
 import {
   IMDB_GENRES,
   imdbGenreSlugFromBrowseParam,
@@ -58,17 +57,7 @@ function yearChoices() {
   return out;
 }
 
-type SearchCatalogFiltersProps = {
-  total: number;
-  loading: boolean;
-  hasQuery: boolean;
-};
-
-export default function SearchCatalogFilters({
-  total,
-  loading,
-  hasQuery,
-}: SearchCatalogFiltersProps) {
+export default function SearchCatalogFilters() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -146,10 +135,6 @@ export default function SearchCatalogFilters({
       year_max: null,
       page: '1',
     });
-
-  const countLabel = loading
-    ? 'Searching…'
-    : `${total.toLocaleString()} result${total === 1 ? '' : 's'}`;
 
   return (
     <section className="w-full space-y-2" aria-label="Search filters">
@@ -236,12 +221,6 @@ export default function SearchCatalogFilters({
           Clear
         </Button>
       </div>
-
-      {hasQuery ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <ExploreSectionTitle>{countLabel}</ExploreSectionTitle>
-        </div>
-      ) : null}
     </section>
   );
 }

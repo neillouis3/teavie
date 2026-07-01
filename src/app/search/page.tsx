@@ -224,11 +224,7 @@ function SearchContent() {
               />
             </form>
 
-            <SearchCatalogFilters
-              total={0}
-              loading
-              hasQuery={hasQuery}
-            />
+            <SearchCatalogFilters />
           </div>
 
           {hasQuery ? (
@@ -287,11 +283,7 @@ function SearchContent() {
             />
           </form>
 
-          <SearchCatalogFilters
-            total={total}
-            loading={false}
-            hasQuery={hasQuery}
-          />
+          <SearchCatalogFilters />
         </div>
 
         {!hasQuery && (
