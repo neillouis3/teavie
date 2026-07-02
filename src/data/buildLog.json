@@ -1,5 +1,16 @@
 [
   {
+    "version": "2.4.0",
+    "date": "2026-07-01",
+    "title": "Sign-in redirect and form polish",
+    "summary": "Fixes post-login redirect flashing through profile and improves auth form readability in light mode.",
+    "tags": ["Auth", "UI", "Bug fix"],
+    "changes": [
+      "After sign-in, redirect goes straight to the page you came from instead of briefly visiting profile.",
+      "Auth inputs and panel use solid light-mode backgrounds for clearer contrast over the poster collage."
+    ]
+  },
+  {
     "version": "2.3.100",
     "date": "2026-07-01",
     "title": "You might like explore layout",

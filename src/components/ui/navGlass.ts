@@ -8,6 +8,10 @@ export const NAV_GLASS_CLASS =
 export const SIDEBAR_GLASS_CLASS =
   "bg-background/52 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/44 dark:bg-background/48 dark:supports-[backdrop-filter]:bg-background/40";
 
+/** Auth panel — opaque enough for readable forms over the poster collage. */
+export const AUTH_PANEL_GLASS_CLASS =
+  "bg-background/92 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/88 dark:bg-background/48 dark:supports-[backdrop-filter]:bg-background/40";
+
 /** Modal glass — same blur as sidebar, 75% background fill. */
 export const MODAL_GLASS_CLASS =
   "bg-background/75 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/75 dark:bg-background/75 dark:supports-[backdrop-filter]:bg-background/75";

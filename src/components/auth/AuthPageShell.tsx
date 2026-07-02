@@ -5,7 +5,7 @@ import Image from "next/image";
 import NextLink from "next/link";
 import { Divider, Link } from "@heroui/react";
 import AuthPosterCollage from "@/components/auth/AuthPosterCollage";
-import { SIDEBAR_GLASS_CLASS } from "@/components/ui/navGlass";
+import { AUTH_PANEL_GLASS_CLASS } from "@/components/ui/navGlass";
 import { TEAVIE_LOGO_ON_DARK } from "@/lib/brandAssets";
 
 type AuthPageShellProps = {
@@ -42,7 +42,7 @@ export default function AuthPageShell({
 
       <div className="relative z-10 ml-auto flex min-h-screen w-full flex-col lg:w-[40vw] lg:min-w-[22rem] lg:max-w-none">
         <div
-          className={`flex flex-1 items-center justify-center px-6 py-16 lg:px-12 lg:py-12 ${SIDEBAR_GLASS_CLASS}`}
+          className={`flex flex-1 items-center justify-center px-6 py-16 lg:px-12 lg:py-12 ${AUTH_PANEL_GLASS_CLASS}`}
         >
           <div className="w-full max-w-md">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">

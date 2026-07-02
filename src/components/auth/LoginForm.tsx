@@ -2,15 +2,12 @@
 
 import React, { useState } from "react";
 import NextLink from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Form, Input, Link } from "@heroui/react";
 import { useAuth } from "@/contexts/authContext";
 import { authErrorMessage } from "@/lib/authErrors";
 import { authFieldDefaults } from "@/components/auth/authFieldStyles";
 
 export default function LoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const { signInWithPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,11 +23,6 @@ export default function LoginForm() {
     setError(null);
     try {
       await signInWithPassword(trimmedEmail, password);
-      const next = searchParams.get("next");
-      const destination =
-        next && next.startsWith("/") && !next.startsWith("//") ? next : "/explore";
-      router.push(destination);
-      router.refresh();
     } catch (err) {
       console.error("Sign in failed", err);
       setError(authErrorMessage(err));
