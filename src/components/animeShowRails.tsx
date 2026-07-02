@@ -9,6 +9,17 @@ import {
   CATALOG_GRID_VERTICAL_SEARCH,
 } from "@/lib/catalogGrid";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
+import SidebarBleedRail, {
+  SIDEBAR_BLEED_CAROUSEL_OPTS,
+  SidebarBleedStartSpacer,
+  sidebarBleedViewportClass,
+} from "@/components/ui/sidebarBleedRail";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import {
   clearLegacyAnimeShowRailsCache,
   readClientDayCache,
@@ -46,6 +57,11 @@ type YmlItem = {
 
 const RELATED_CACHE_PREFIX = "teavie.cache.anime-related.v1:";
 const YML_CACHE_PREFIX = "teavie.cache.anime-yml.v1:";
+
+const CAROUSEL_ITEM_VERTICAL =
+  "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
+const CAROUSEL_ITEM_HORIZONTAL =
+  "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 
 async function fetchRelatedAnime(
   idMal: number,
@@ -249,47 +265,56 @@ export default function AnimeShowRails({
       ) : null}
 
       {showYml ? (
-        <section className={`${related.length > 0 || relatedLoading ? "mt-10" : ""} w-full pt-8`}>
-          <ExploreSectionTitle className="mb-4">You might like</ExploreSectionTitle>
+        <section
+          className={`flex w-full flex-col gap-3 ${
+            related.length > 0 || relatedLoading ? "mt-10 pt-8" : "pt-6"
+          }`}
+          aria-label="You might like"
+        >
+          <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
           {youMightLike.length > 0 ? (
-            <ul className={`${gridClass} items-start`}>
-              {youMightLike.map((item) => (
-                <li key={`${item.catalogId}-${item.malId ?? "na"}`} className="min-w-0">
-                  {horizontal ? (
-                    <HorizontalCatalogCard
-                      id={item.catalogId}
-                      title={item.title}
-                      year={item.year}
-                      type="tv"
-                      posterPath={item.posterPath || ""}
-                      backdropPath={item.backdropPath || ""}
-                    />
-                  ) : (
-                    <SmallCard
-                      id={item.catalogId}
-                      title={item.title}
-                      year={item.year}
-                      type="tv"
-                      runtimeSeconds={item.runtimeSeconds ?? undefined}
-                      seasonAmount={item.seasonAmount ?? 0}
-                      numberOfEpisodes={item.numberOfEpisodes ?? undefined}
-                      posterPath={item.posterPath || ""}
-                    />
-                  )}
-                </li>
-              ))}
-            </ul>
+            <SidebarBleedRail>
+              <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+                <CarouselContent
+                  viewportClassName={sidebarBleedViewportClass()}
+                  className="-ml-3"
+                >
+                  <SidebarBleedStartSpacer />
+                  {youMightLike.map((item) => (
+                    <CarouselItem
+                      key={`${item.catalogId}-${item.malId ?? "na"}`}
+                      className={horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL}
+                    >
+                      {horizontal ? (
+                        <HorizontalCatalogCard
+                          id={item.catalogId}
+                          title={item.title}
+                          year={item.year}
+                          type="tv"
+                          posterPath={item.posterPath || ""}
+                          backdropPath={item.backdropPath || ""}
+                        />
+                      ) : (
+                        <SmallCard
+                          id={item.catalogId}
+                          title={item.title}
+                          year={item.year}
+                          type="tv"
+                          runtimeSeconds={item.runtimeSeconds ?? undefined}
+                          seasonAmount={item.seasonAmount ?? 0}
+                          numberOfEpisodes={item.numberOfEpisodes ?? undefined}
+                          posterPath={item.posterPath || ""}
+                        />
+                      )}
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+            </SidebarBleedRail>
           ) : (
-            <div className="flex gap-3 overflow-hidden opacity-60">
-              {Array.from({ length: horizontal ? 4 : 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`shrink-0 animate-pulse rounded-lg bg-muted ${
-                    horizontal ? "h-24 w-44" : "h-52 w-36"
-                  }`}
-                />
-              ))}
-            </div>
+            <SidebarBleedRail>
+              <CatalogRailSkeleton horizontal={horizontal} />
+            </SidebarBleedRail>
           )}
         </section>
       ) : null}

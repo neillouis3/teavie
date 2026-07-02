@@ -3,17 +3,27 @@
 import React, { useEffect, useState } from 'react';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import SmallCard from '@/components/ui/smallCard';
-import HorizontalCatalogCardLoading from '@/components/ui/horizontalCatalogCardLoading';
-import SmallCardLoading from '@/components/ui/smallCardLoading';
 import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
 import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
+import SidebarBleedRail, {
+  SIDEBAR_BLEED_CAROUSEL_OPTS,
+  SidebarBleedStartSpacer,
+  sidebarBleedViewportClass,
+} from '@/components/ui/sidebarBleedRail';
 import {
-  CATALOG_GRID_HORIZONTAL_SEARCH,
-  CATALOG_GRID_VERTICAL_SEARCH,
-} from '@/lib/catalogGrid';
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from '@/components/ui/carousel';
+import { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
 
 const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
 const YOU_MIGHT_LIKE_MAX_VERTICAL = 14;
+
+const CAROUSEL_ITEM_VERTICAL =
+  'basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]';
+const CAROUSEL_ITEM_HORIZONTAL =
+  'basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4';
 
 type RecItem = {
   keyId: number;
@@ -46,6 +56,7 @@ export default function YouMightLike({
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === 'horizontal';
   const maxItems = horizontal ? YOU_MIGHT_LIKE_MAX_HORIZONTAL : YOU_MIGHT_LIKE_MAX_VERTICAL;
+  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -174,23 +185,13 @@ export default function YouMightLike({
     return () => controller.abort();
   }, [mediaType, id, isAnime, idMal, maxItems]);
 
-  const gridClass = horizontal
-    ? CATALOG_GRID_HORIZONTAL_SEARCH
-    : CATALOG_GRID_VERTICAL_SEARCH;
-
   if (loading) {
     return (
-      <section className="mt-10 w-full pt-8">
-        <ExploreSectionTitle className="mb-4">You might like</ExploreSectionTitle>
-        <div className={`${gridClass} items-start`}>
-          {Array.from({ length: maxItems }).map((_, i) =>
-            horizontal ? (
-              <HorizontalCatalogCardLoading key={i} />
-            ) : (
-              <SmallCardLoading key={i} />
-            )
-          )}
-        </div>
+      <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="You might like">
+        <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
+        <SidebarBleedRail>
+          <CatalogRailSkeleton horizontal={horizontal} />
+        </SidebarBleedRail>
       </section>
     );
   }
@@ -198,37 +199,48 @@ export default function YouMightLike({
   if (items.length === 0) return null;
 
   return (
-    <section className="mt-10 w-full pt-8">
-      <ExploreSectionTitle className="mb-4">You might like</ExploreSectionTitle>
-      <ul className={`${gridClass} items-start`}>
-        {items.map((item) => (
-          <li key={`${item.keyId}-${item.linkId}`} className="min-w-0">
-            {horizontal ? (
-              <HorizontalCatalogCard
-                id={item.linkId}
-                title={item.title}
-                year={item.year}
-                type={mediaType}
-                posterPath={item.poster_path || ''}
-                backdropPath={item.backdrop_path || ''}
-                href={item.href ?? undefined}
-              />
-            ) : (
-              <SmallCard
-                id={item.linkId}
-                title={item.title}
-                year={item.year}
-                type={mediaType}
-                runtimeSeconds={item.runtimeSeconds ?? undefined}
-                seasonAmount={item.seasonAmount ?? 0}
-                numberOfEpisodes={item.numberOfEpisodes ?? undefined}
-                posterPath={item.poster_path || ''}
-                linkHref={item.href ?? undefined}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
+    <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="You might like">
+      <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
+      <SidebarBleedRail>
+        <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+          <CarouselContent
+            viewportClassName={sidebarBleedViewportClass()}
+            className="-ml-3"
+          >
+            <SidebarBleedStartSpacer />
+            {items.map((item) => (
+              <CarouselItem
+                key={`${item.keyId}-${item.linkId}`}
+                className={itemClass}
+              >
+                {horizontal ? (
+                  <HorizontalCatalogCard
+                    id={item.linkId}
+                    title={item.title}
+                    year={item.year}
+                    type={mediaType}
+                    posterPath={item.poster_path || ''}
+                    backdropPath={item.backdrop_path || ''}
+                    href={item.href ?? undefined}
+                  />
+                ) : (
+                  <SmallCard
+                    id={item.linkId}
+                    title={item.title}
+                    year={item.year}
+                    type={mediaType}
+                    runtimeSeconds={item.runtimeSeconds ?? undefined}
+                    seasonAmount={item.seasonAmount ?? 0}
+                    numberOfEpisodes={item.numberOfEpisodes ?? undefined}
+                    posterPath={item.poster_path || ''}
+                    linkHref={item.href ?? undefined}
+                  />
+                )}
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </SidebarBleedRail>
     </section>
   );
 }

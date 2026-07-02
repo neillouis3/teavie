@@ -1,5 +1,16 @@
 [
   {
+    "version": "2.3.100",
+    "date": "2026-07-01",
+    "title": "You might like explore layout",
+    "summary": "You might like on watch pages now uses Explore-style section icons and horizontal bleed carousels.",
+    "tags": ["UI", "Recommendations"],
+    "changes": [
+      "Section title uses the same explore icon styling as Favorites and Popular rails.",
+      "Recommendations scroll in a full-bleed horizontal carousel instead of a static grid."
+    ]
+  },
+  {
     "version": "2.3.99",
     "date": "2026-07-01",
     "title": "Tea Party mid-join polish",
