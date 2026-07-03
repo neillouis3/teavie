@@ -1,5 +1,16 @@
 [
   {
+    "version": "2.4.2",
+    "date": "2026-07-03",
+    "title": "Sports card artwork fix",
+    "summary": "Sports cards now show event posters or fitted team badges instead of cropped, zoomed-in images.",
+    "tags": ["Sports", "UI", "Bug fix"],
+    "changes": [
+      "Use the event poster when available, shown in full instead of cropped.",
+      "Fall back to centered team badges, then the event title when no image exists."
+    ]
+  },
+  {
     "version": "2.4.1",
     "date": "2026-07-03",
     "title": "Dynamic sports and Movies icon",
