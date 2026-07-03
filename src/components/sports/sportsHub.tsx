@@ -4,12 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Input, Spinner } from '@heroui/react';
 import Header from '@/components/ui/header';
 import HorizontalSportsCard from '@/components/ui/horizontalSportsCard';
-import VerticalSportsCard from '@/components/ui/verticalSportsCard';
-import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
-import {
-  CATALOG_GRID_HORIZONTAL,
-  CATALOG_GRID_VERTICAL,
-} from '@/lib/catalogGrid';
+import { CATALOG_GRID_HORIZONTAL } from '@/lib/catalogGrid';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
 import {
   filterMatches,
@@ -46,8 +41,6 @@ function emptyMessage(view: SportsViewFilter): string {
 }
 
 export default function SportsHub() {
-  const { mode } = useCatalogCardStyle();
-  const horizontal = mode === 'horizontal';
   const [sports, setSports] = useState<StreamedSport[]>([]);
   const [sportId, setSportId] = useState('all');
   const [view, setView] = useState<SportsViewFilter>('popular');
@@ -99,8 +92,6 @@ export default function SportsHub() {
     () => filterMatches(query, matches),
     [query, matches]
   );
-
-  const gridClass = horizontal ? CATALOG_GRID_HORIZONTAL : CATALOG_GRID_VERTICAL;
 
   return (
     <div className="min-h-screen w-full bg-main">
@@ -190,23 +181,21 @@ export default function SportsHub() {
             {emptyMessage(view)}
           </p>
         ) : (
-          <div className={`${gridClass} items-start`}>
+          <div className={`${CATALOG_GRID_HORIZONTAL} items-start`}>
             {visibleMatches.map((match) => {
               const badges = matchCardBadges(match);
-              const props = {
-                matchId: match.id,
-                title: match.title,
-                description: matchDescription(match),
-                posterUrl: matchCardPosterUrl(match),
-                homeBadgeUrl: badges.home,
-                awayBadgeUrl: badges.away,
-                category: match.category,
-                isLive: isMatchLive(match),
-              };
-              return horizontal ? (
-                <HorizontalSportsCard key={match.id} {...props} />
-              ) : (
-                <VerticalSportsCard key={match.id} {...props} />
+              return (
+                <HorizontalSportsCard
+                  key={match.id}
+                  matchId={match.id}
+                  title={match.title}
+                  description={matchDescription(match)}
+                  posterUrl={matchCardPosterUrl(match)}
+                  homeBadgeUrl={badges.home}
+                  awayBadgeUrl={badges.away}
+                  category={match.category}
+                  isLive={isMatchLive(match)}
+                />
               );
             })}
           </div>
