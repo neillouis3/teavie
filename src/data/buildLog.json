@@ -1,5 +1,16 @@
 [
   {
+    "version": "2.4.3",
+    "date": "2026-07-03",
+    "title": "Sports artwork fallbacks",
+    "summary": "Sports cards resolve poster art more reliably and gracefully fall back through badges to the event title, so tiles are never blank.",
+    "tags": ["Sports", "UI", "Bug fix"],
+    "changes": [
+      "Broaden poster URL resolution to match Streamed's proxy and poster paths.",
+      "Broken poster or badge images now fall through to the next artwork option instead of showing an empty tile."
+    ]
+  },
+  {
     "version": "2.4.2",
     "date": "2026-07-03",
     "title": "Sports card artwork fix",
