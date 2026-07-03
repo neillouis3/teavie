@@ -3,6 +3,7 @@ import {
   Home01Icon,
   Film02Icon,
   Tv01Icon,
+  FootballIcon,
   OrangeIcon,
   LoveKoreanFingerIcon,
 } from '@hugeicons/core-free-icons';
@@ -31,6 +32,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
       { key: "explore", label: "Explore", href: "/explore", icon: Home01Icon },
       { key: "movies", label: "Movies", href: "/movies/all", icon: Film02Icon },
       { key: "shows", label: "TV Shows", href: "/shows/all", icon: Tv01Icon },
+      { key: "sports", label: "Sports", href: "/sports", icon: FootballIcon },
     ],
   },
   {

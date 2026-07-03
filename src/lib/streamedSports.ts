@@ -257,6 +257,16 @@ export function isMatchUpcoming(match: StreamedMatch, now = Date.now()): boolean
   return Boolean(match.date && match.date > now);
 }
 
+export function matchMetaChips(match: StreamedMatch): string[] {
+  const chips: string[] = [];
+  if (match.category) chips.push(sportLabel(match.category));
+  const when = formatMatchDate(match.date);
+  if (when && when !== '—') chips.push(when);
+  if (isMatchLive(match)) chips.push('Live');
+  else if (isMatchUpcoming(match)) chips.push('Upcoming');
+  return chips;
+}
+
 export function matchDescription(match: StreamedMatch): string {
   const parts = [sportLabel(match.category), formatMatchDate(match.date)];
   if (isMatchLive(match)) parts.push('Live now');

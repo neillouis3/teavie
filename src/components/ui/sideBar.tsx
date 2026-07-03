@@ -51,7 +51,9 @@ export default function SideBar() {
               ? "kdrama"
               : pathname.startsWith("/shows")
                 ? "shows"
-                : null;
+                : pathname.startsWith("/sports")
+                  ? "sports"
+                  : null;
 
   return (
     <div
