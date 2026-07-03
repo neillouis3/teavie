@@ -96,9 +96,6 @@ export default function SportsHub() {
     <div className="min-h-screen w-full bg-main">
       <Header pageName="Sports" />
       <div className={`space-y-5 pb-8 pt-2 ${CONTENT_INSET_X}`}>
-        <p className="max-w-3xl text-sm text-default-500">
-          Stream live and upcoming sports events from around the world.
-        </p>
 
         <Input
           type="search"
@@ -117,7 +114,7 @@ export default function SportsHub() {
             type="button"
             onClick={() => setSportId('all')}
             className={cn(
-              'rounded-full px-4 py-2 text-sm transition-colors',
+              'rounded-full px-4 py-2 text-xs transition-colors',
               sportId === 'all'
                 ? 'bg-success text-success-foreground'
                 : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
@@ -138,7 +135,7 @@ export default function SportsHub() {
                   type="button"
                   onClick={() => setSportId(sport.id)}
                   className={cn(
-                    'rounded-full px-4 py-2 text-sm transition-colors',
+                    'rounded-full px-4 py-2 text-xs transition-colors',
                     sportId === sport.id
                       ? 'bg-success text-success-foreground'
                       : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
@@ -156,7 +153,7 @@ export default function SportsHub() {
               type="button"
               onClick={() => setView(tab.id)}
               className={cn(
-                'rounded-full px-4 py-2 text-sm transition-colors',
+                'rounded-full px-4 py-2 text-xs transition-colors',
                 view === tab.id
                   ? 'bg-foreground text-background'
                   : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
