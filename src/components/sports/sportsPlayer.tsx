@@ -1,19 +1,20 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Button, Chip, Select, SelectItem, Spinner } from '@heroui/react';
+import { Button, Spinner } from '@heroui/react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  FullSignalIcon,
+  Refresh01Icon,
+} from '@hugeicons/core-free-icons';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
+import SportsMatchPanel from '@/components/sports/sportsMatchPanel';
+import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+import { WatchPlayerShell } from '@/components/ui/playerEmbedSkeleton';
 import {
   fetchMatchById,
   fetchStreamsGrouped,
-  formatMatchDate,
-  isMatchLive,
-  matchCardImageUrl,
-  sourceLabel,
-  sportLabel,
-  streamLabel,
-  streamedBadgeUrl,
   type StreamedMatch,
   type StreamedStream,
 } from '@/lib/streamedSports';
@@ -22,6 +23,48 @@ import { cn } from '@/lib/utils';
 type SportsPlayerProps = {
   matchId: string;
 };
+
+function NoActiveServersState({
+  onRetry,
+  retrying,
+}: {
+  onRetry: () => void;
+  retrying: boolean;
+}) {
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-default-100/60 dark:bg-default-100/15">
+        <HugeiconsIcon
+          icon={FullSignalIcon}
+          size={28}
+          className="text-default-500"
+          strokeWidth={1.5}
+        />
+      </div>
+      <div className="flex max-w-sm flex-col items-center gap-2">
+        <h2 className="text-lg font-semibold text-foreground sm:text-xl">
+          No active servers
+        </h2>
+        <p className="text-sm leading-relaxed text-default-500 sm:text-[15px]">
+          No servers have active streams for this match
+        </p>
+      </div>
+      <Button
+        variant="bordered"
+        className="mt-1 border-default-300 text-foreground dark:border-default-500/60"
+        onPress={onRetry}
+        isLoading={retrying}
+        startContent={
+          !retrying ? (
+            <HugeiconsIcon icon={Refresh01Icon} size={16} className="shrink-0" />
+          ) : undefined
+        }
+      >
+        Check Again
+      </Button>
+    </div>
+  );
+}
 
 export default function SportsPlayer({ matchId }: SportsPlayerProps) {
   const [match, setMatch] = useState<StreamedMatch | null>(null);
@@ -64,32 +107,34 @@ export default function SportsPlayer({ matchId }: SportsPlayerProps) {
   }, [matchId]);
 
   useEffect(() => {
+    if (match?.title) {
+      document.title = `${match.title} - Sports - Teavie`;
+    }
+  }, [match?.title]);
+
+  const loadStreams = useCallback(async () => {
     if (!match) return;
-    let cancelled = false;
-    void (async () => {
-      setLoadingStreams(true);
-      setError(null);
-      try {
-        const grouped = await fetchStreamsGrouped(match);
-        if (cancelled) return;
-        setStreamsBySource(grouped);
-        const firstSource = Object.keys(grouped)[0] ?? '';
-        setSelectedSource(firstSource);
-        const firstStream = firstSource ? grouped[firstSource]?.[0] : undefined;
-        setSelectedStreamNo(firstStream?.streamNo ?? 1);
-      } catch {
-        if (!cancelled) {
-          setStreamsBySource({});
-          setError('Could not load stream servers for this event.');
-        }
-      } finally {
-        if (!cancelled) setLoadingStreams(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    setLoadingStreams(true);
+    setError(null);
+    try {
+      const grouped = await fetchStreamsGrouped(match);
+      setStreamsBySource(grouped);
+      const firstSource = Object.keys(grouped)[0] ?? '';
+      setSelectedSource(firstSource);
+      const firstStream = firstSource ? grouped[firstSource]?.[0] : undefined;
+      setSelectedStreamNo(firstStream?.streamNo ?? 1);
+    } catch {
+      setStreamsBySource({});
+      setError('Could not load stream servers for this event.');
+    } finally {
+      setLoadingStreams(false);
+    }
   }, [match]);
+
+  useEffect(() => {
+    if (!match) return;
+    void loadStreams();
+  }, [match, loadStreams]);
 
   const sourceKeys = useMemo(
     () => Object.keys(streamsBySource).filter((key) => streamsBySource[key]?.length),
@@ -110,51 +155,39 @@ export default function SportsPlayer({ matchId }: SportsPlayerProps) {
   }, [activeStream?.embedUrl]);
 
   if (loadingMatch) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Spinner color="success" />
-      </div>
-    );
+    return <WatchPageSkeleton />;
   }
 
   if (!match) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4">
-        <p className="text-center text-sm text-default-500">
-          {error ?? 'This event was not found.'}
-        </p>
-        <Button as={Link} href="/sports" color="success" variant="flat">
-          Back to Sports
-        </Button>
+      <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col items-center justify-center bg-background px-6 py-12 text-center lg:min-h-[100dvh]">
+        <div className="flex max-w-md flex-col items-center gap-4">
+          <p className="text-sm leading-relaxed text-default-500 sm:text-[15px]">
+            {error ?? 'This event was not found.'}
+          </p>
+          <Button
+            as={Link}
+            href="/sports"
+            variant="bordered"
+            className="border-default-300 text-foreground dark:border-default-500/60"
+          >
+            Back to Sports
+          </Button>
+        </div>
       </div>
     );
   }
 
-  const live = isMatchLive(match);
-  const poster = matchCardImageUrl(match);
-
   return (
-    <div className="flex min-h-full w-full flex-col bg-background pb-32">
+    <div className="flex h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
       <div className="flex w-full flex-col gap-6">
-        <div className="px-0">
-          <Button
-            as={Link}
-            href="/sports"
-            variant="light"
-            size="sm"
-            className="mb-2 text-default-500"
-          >
-            ← Back to Sports
-          </Button>
-        </div>
-
-        <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
-          <div className="relative h-full min-h-0 w-full overflow-hidden bg-black">
-            {loadingStreams || !activeStream?.embedUrl ? (
-              <div className="absolute inset-0 flex items-center justify-center">
+        <WatchPlayerShell>
+          <div className="relative h-full min-h-0 w-full overflow-hidden rounded-xl bg-black ring-1 ring-white/10">
+            {loadingStreams ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-default-200 dark:bg-default-100/20">
                 <Spinner color="success" />
               </div>
-            ) : (
+            ) : activeStream?.embedUrl ? (
               <>
                 <VideoEmbedFrame
                   key={activeStream.embedUrl}
@@ -167,119 +200,35 @@ export default function SportsPlayer({ matchId }: SportsPlayerProps) {
                   )}
                 />
                 {iframeLoading ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                     <Spinner color="success" />
                   </div>
                 ) : null}
               </>
+            ) : (
+              <NoActiveServersState
+                onRetry={() => void loadStreams()}
+                retrying={loadingStreams}
+              />
             )}
           </div>
-        </div>
+        </WatchPlayerShell>
 
-        <div className="flex w-full flex-col gap-4">
-          <section className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              {match.teams?.home?.badge ? (
-                <img
-                  src={streamedBadgeUrl(match.teams.home.badge)}
-                  alt=""
-                  className="h-10 w-10 object-contain"
-                />
-              ) : null}
-              <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                {match.title}
-              </h1>
-              {match.teams?.away?.badge ? (
-                <img
-                  src={streamedBadgeUrl(match.teams.away.badge)}
-                  alt=""
-                  className="h-10 w-10 object-contain"
-                />
-              ) : null}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {live ? (
-                <Chip color="success" size="md" variant="flat" className="font-medium">
-                  Live
-                </Chip>
-              ) : (
-                <Chip size="md" variant="flat" className="font-medium">
-                  {formatMatchDate(match.date)}
-                </Chip>
-              )}
-              <Chip size="md" variant="flat" className="font-medium">
-                {sportLabel(match.category)}
-              </Chip>
-            </div>
-
-            {poster ? (
-              <p className="text-sm text-default-500">
-                {match.teams?.home?.name && match.teams?.away?.name
-                  ? `${match.teams.home.name} vs ${match.teams.away.name}`
-                  : null}
-              </p>
-            ) : null}
-          </section>
-
-          {sourceKeys.length > 0 ? (
-            <section className="flex flex-col gap-3 rounded-xl border border-default-200 bg-default-50/80 p-4 dark:border-white/10 dark:bg-default-100/10">
-              <p className="text-sm font-medium text-foreground">Stream servers</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Select
-                  label="Source"
-                  selectedKeys={selectedSource ? [selectedSource] : []}
-                  onSelectionChange={(keys) => {
-                    const next = Array.from(keys)[0];
-                    if (typeof next !== 'string' || !next) return;
-                    setSelectedSource(next);
-                    const first = streamsBySource[next]?.[0];
-                    setSelectedStreamNo(first?.streamNo ?? 1);
-                  }}
-                  radius="sm"
-                  variant="bordered"
-                  classNames={{
-                    trigger:
-                      'border-default-300 bg-background dark:border-white/10',
-                  }}
-                >
-                  {sourceKeys.map((source) => (
-                    <SelectItem key={source}>{sourceLabel(source)}</SelectItem>
-                  ))}
-                </Select>
-
-                <Select
-                  label="Server"
-                  selectedKeys={
-                    activeStream ? [String(activeStream.streamNo)] : []
-                  }
-                  onSelectionChange={(keys) => {
-                    const next = Number(Array.from(keys)[0]);
-                    if (Number.isFinite(next) && next > 0) setSelectedStreamNo(next);
-                  }}
-                  radius="sm"
-                  variant="bordered"
-                  isDisabled={streamsForSource.length === 0}
-                  classNames={{
-                    trigger:
-                      'border-default-300 bg-background dark:border-white/10',
-                  }}
-                >
-                  {streamsForSource.map((stream) => (
-                    <SelectItem key={String(stream.streamNo)}>
-                      {streamLabel(stream)}
-                    </SelectItem>
-                  ))}
-                </Select>
-              </div>
-            </section>
-          ) : !loadingStreams ? (
-            <p className="text-sm text-default-500">
-              No stream servers are available for this event right now.
-            </p>
-          ) : null}
-
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
+        <div className="w-full">
+          <SportsMatchPanel
+            match={match}
+            sourceKeys={sourceKeys}
+            streamsBySource={streamsBySource}
+            selectedSource={selectedSource}
+            selectedStreamNo={selectedStreamNo}
+            onSourceChange={(source) => {
+              setSelectedSource(source);
+              const first = streamsBySource[source]?.[0];
+              setSelectedStreamNo(first?.streamNo ?? 1);
+            }}
+            onStreamChange={setSelectedStreamNo}
+          />
+          {error ? <p className="mt-4 text-sm text-danger">{error}</p> : null}
         </div>
       </div>
     </div>

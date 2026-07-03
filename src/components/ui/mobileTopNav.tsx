@@ -55,7 +55,9 @@ export default function MobileTopNav() {
               ? 'kdrama'
               : pathname.startsWith('/shows')
                 ? 'shows'
-                : null;
+                : pathname.startsWith('/sports')
+                  ? 'sports'
+                  : null;
 
   const settingsActive = pathname.startsWith('/settings');
   const profileActive = pathname.startsWith('/profile');

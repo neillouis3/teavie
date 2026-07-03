@@ -11,9 +11,8 @@ import {
   loadSportsMatches,
   matchCardBadges,
   matchCardPosterUrl,
-  matchDescription,
+  matchMetaChips,
   fetchStreamedSports,
-  isMatchLive,
   type SportsViewFilter,
   type StreamedMatch,
   type StreamedSport,
@@ -189,12 +188,11 @@ export default function SportsHub() {
                   key={match.id}
                   matchId={match.id}
                   title={match.title}
-                  description={matchDescription(match)}
+                  metaChips={matchMetaChips(match)}
                   posterUrl={matchCardPosterUrl(match)}
                   homeBadgeUrl={badges.home}
                   awayBadgeUrl={badges.away}
                   category={match.category}
-                  isLive={isMatchLive(match)}
                 />
               );
             })}

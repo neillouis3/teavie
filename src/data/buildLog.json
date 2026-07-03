@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.4.4",
+    "date": "2026-07-03",
+    "title": "Sports player and nav polish",
+    "summary": "Sports returns to the sidebar, cards use vertical-style meta chips, and the match player page matches the movie and TV watch layout.",
+    "tags": ["Sports", "UI", "Navigation"],
+    "changes": [
+      "Sports link with FootballIcon in the main sidebar and mobile nav.",
+      "Sports cards show meta chips and titles like vertical catalog tiles.",
+      "Match player uses the watch-page shell, media panel, stream controls, and no-servers empty state."
+    ]
+  },
+  {
     "version": "2.4.3",
     "date": "2026-07-03",
     "title": "Sports artwork fallbacks",
