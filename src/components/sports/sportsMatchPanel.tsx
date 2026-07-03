@@ -84,9 +84,25 @@ export default function SportsMatchPanel({
 
   const titleAndStats = (
     <>
-      <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-        {match.title}
-      </h1>
+      <div className="flex flex-wrap items-center gap-3">
+        {badges.home ? (
+          <img
+            src={badges.home}
+            alt=""
+            className="h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11"
+          />
+        ) : null}
+        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          {match.title}
+        </h1>
+        {badges.away ? (
+          <img
+            src={badges.away}
+            alt=""
+            className="h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11"
+          />
+        ) : null}
+      </div>
       <p className="mt-1.5 text-sm text-default-500">{sportsSubtitleLine(match)}</p>
       <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         {live ? (
@@ -118,12 +134,13 @@ export default function SportsMatchPanel({
     <Image
       src={posterUrl}
       alt={match.title}
-      className="aspect-[2/3] w-full rounded-lg object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
+      className="aspect-[16/10] w-full rounded-lg object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
     />
   ) : (
-    <div className="aspect-[2/3] w-full overflow-hidden rounded-lg ring-1 ring-default-200/35 dark:ring-default-100/15">
+    <div className="aspect-[16/10] w-full overflow-hidden rounded-lg bg-default-200 ring-1 ring-default-200/35 dark:bg-default-100/20 dark:ring-default-100/15">
       <SportsMatchPoster
         title={match.title}
+        posterUrl={posterUrl}
         homeBadgeUrl={badges.home}
         awayBadgeUrl={badges.away}
         category={match.category}
@@ -179,15 +196,14 @@ export default function SportsMatchPanel({
 
   return (
     <div className="w-full space-y-5">
-      <div className="min-w-0 sm:hidden">{titleAndStats}</div>
-
-      <div className="flex gap-4 sm:hidden">
-        <div className="w-28 shrink-0">{posterEl}</div>
-        <div className="min-w-0 flex-1 pt-0.5">{overviewBlock}</div>
+      <div className="min-w-0 sm:hidden">
+        <div className="mb-4">{posterEl}</div>
+        {titleAndStats}
+        <div className="mt-4">{overviewBlock}</div>
       </div>
 
-      <div className="hidden gap-5 sm:flex sm:flex-row">
-        <div className="w-32 shrink-0 md:w-36 lg:w-40">{posterEl}</div>
+      <div className="hidden gap-5 sm:flex sm:flex-row sm:items-start">
+        <div className="w-48 shrink-0 md:w-56 lg:w-64">{posterEl}</div>
         <div className="min-w-0 flex-1">
           {titleAndStats}
           <div className="mt-4 sm:mt-5">{overviewBlock}</div>
