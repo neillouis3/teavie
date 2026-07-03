@@ -114,7 +114,7 @@ export default function SportsHub() {
             type="button"
             onClick={() => setSportId('all')}
             className={cn(
-              'rounded-full px-4 py-2 text-xs transition-colors',
+              'rounded-lg px-2 py-1 text-xs transition-colors',
               sportId === 'all'
                 ? 'bg-success text-success-foreground'
                 : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
@@ -135,7 +135,7 @@ export default function SportsHub() {
                   type="button"
                   onClick={() => setSportId(sport.id)}
                   className={cn(
-                    'rounded-full px-4 py-2 text-xs transition-colors',
+                    'rounded-lg px-2 py-1 text-xs transition-colors',
                     sportId === sport.id
                       ? 'bg-success text-success-foreground'
                       : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
@@ -153,7 +153,7 @@ export default function SportsHub() {
               type="button"
               onClick={() => setView(tab.id)}
               className={cn(
-                'rounded-full px-4 py-2 text-xs transition-colors',
+                'rounded-lg px-2 py-1 text-xs transition-colors',
                 view === tab.id
                   ? 'bg-foreground text-background'
                   : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
