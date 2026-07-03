@@ -21,6 +21,7 @@ export type StreamedMatch = {
   category: string;
   date: number;
   status?: string | null;
+  poster?: string | null;
   teams?: {
     home?: StreamedTeam;
     away?: StreamedTeam;
@@ -175,12 +176,40 @@ export function streamedBadgeUrl(badge?: string | null): string {
   return `${STREAMED_BASE}/api/images/badge/${stem}.webp`;
 }
 
+export function streamedPosterUrl(poster?: string | null): string {
+  if (!poster) return '';
+  const trimmed = poster.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('http')) return trimmed;
+  if (trimmed.startsWith('/api/images/')) return `${STREAMED_BASE}${trimmed}`;
+  if (trimmed.includes('/api/images/proxy/')) {
+    const tail = trimmed.split('/api/images/proxy/')[1];
+    return tail ? `${STREAMED_BASE}/api/images/proxy/${tail}` : '';
+  }
+
+  const stem = trimmed.replace(/\.(webp|png|jpg|jpeg)$/i, '');
+  return `${STREAMED_BASE}/api/images/poster/${stem}.webp`;
+}
+
+export function matchCardPosterUrl(match: StreamedMatch): string {
+  return streamedPosterUrl(match.poster);
+}
+
+export function matchCardBadges(match: StreamedMatch): {
+  home: string;
+  away: string;
+} {
+  return {
+    home: streamedBadgeUrl(match.teams?.home?.badge),
+    away: streamedBadgeUrl(match.teams?.away?.badge),
+  };
+}
+
+/** @deprecated Use matchCardBadges — single badge URLs crop badly as poster art. */
 export function matchCardImageUrl(match: StreamedMatch): string {
-  const home = streamedBadgeUrl(match.teams?.home?.badge);
-  if (home) return home;
-  const away = streamedBadgeUrl(match.teams?.away?.badge);
-  if (away) return away;
-  return '';
+  const { home, away } = matchCardBadges(match);
+  return home || away;
 }
 
 export function sportLabel(category: string): string {

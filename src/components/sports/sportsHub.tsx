@@ -14,7 +14,8 @@ import { CONTENT_INSET_X } from '@/lib/contentInset';
 import {
   filterMatches,
   loadSportsMatches,
-  matchCardImageUrl,
+  matchCardBadges,
+  matchCardPosterUrl,
   matchDescription,
   fetchStreamedSports,
   isMatchLive,
@@ -191,11 +192,15 @@ export default function SportsHub() {
         ) : (
           <div className={`${gridClass} items-start`}>
             {visibleMatches.map((match) => {
+              const badges = matchCardBadges(match);
               const props = {
                 matchId: match.id,
                 title: match.title,
                 description: matchDescription(match),
-                imageUrl: matchCardImageUrl(match),
+                posterUrl: matchCardPosterUrl(match),
+                homeBadgeUrl: badges.home,
+                awayBadgeUrl: badges.away,
+                category: match.category,
                 isLive: isMatchLive(match),
               };
               return horizontal ? (

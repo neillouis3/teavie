@@ -2,32 +2,36 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import SportsMatchPoster from '@/components/sports/sportsMatchPoster';
 
 export type VerticalSportsCardProps = {
   matchId: string;
   title: string;
   description: string;
-  imageUrl: string;
+  posterUrl?: string;
+  homeBadgeUrl?: string;
+  awayBadgeUrl?: string;
+  category?: string;
   isLive?: boolean;
 };
 
 const livePill =
   'rounded-sm bg-black/55 px-2.5 py-1 text-[10px] text-white backdrop-blur-sm tabular-nums';
 
-/**
- * Poster-style tile aligned with {@link SmallCard}: 2/3 image, meta row, title;
- * “Live” badge on the poster (top-right), center pill “Sports”.
- */
 export default function VerticalSportsCard({
   matchId,
   title,
   description,
-  imageUrl,
+  homeBadgeUrl,
+  awayBadgeUrl,
+  posterUrl,
+  category,
   isLive = true,
 }: VerticalSportsCardProps) {
   const href = `/sports/player/${matchId}`;
-  const hasPoster = Boolean(imageUrl?.trim());
+  const hasArtwork = Boolean(
+    posterUrl?.trim() || homeBadgeUrl?.trim() || awayBadgeUrl?.trim()
+  );
 
   const displayTitle =
     title.length > 25 ? `${title.slice(0, Math.ceil(title.length / 1.5))}…` : title;
@@ -36,28 +40,25 @@ export default function VerticalSportsCard({
     <div className="group flex min-w-0 w-full flex-col rounded-xl">
       <Link href={href} className="block w-full shrink-0" aria-label={`${title}, live stream`}>
         <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-default-200">
-          {hasPoster ? (
-            <Image
-              src={imageUrl}
-              alt=""
-              aria-hidden
-              fill
-              unoptimized
-              sizes="(max-width: 640px) 45vw, (max-width: 1024px) 20vw, 140px"
-              className="object-cover transition-opacity duration-300 group-hover:opacity-50"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-default-500">
-              No image
-            </div>
-          )}
-          {hasPoster && (
+          <SportsMatchPoster
+            title={title}
+            posterUrl={posterUrl}
+            homeBadgeUrl={homeBadgeUrl}
+            awayBadgeUrl={awayBadgeUrl}
+            category={category}
+            className="h-full"
+          />
+          {hasArtwork ? (
             <>
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
               <div className="absolute right-2 top-2">
                 <span className={livePill}>{isLive ? 'Live' : 'Sports'}</span>
               </div>
             </>
+          ) : (
+            <div className="absolute right-2 top-2">
+              <span className={livePill}>{isLive ? 'Live' : 'Sports'}</span>
+            </div>
           )}
         </div>
       </Link>
