@@ -21,6 +21,30 @@ import {
   type StreamedStream,
 } from '@/lib/streamedSports';
 
+const BORDERED_FIELD =
+  'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
+
+const SOURCE_SELECT_BASE =
+  'w-full min-w-0 sm:w-32 sm:min-w-32 sm:max-w-32 sm:shrink-0';
+
+/** Server labels run longer — 2.5× the source select width on sm+. */
+const SERVER_SELECT_BASE =
+  'w-full min-w-0 sm:w-[20rem] sm:min-w-[20rem] sm:max-w-[20rem] sm:shrink-0';
+
+const sourceSelectClassNames = {
+  base: SOURCE_SELECT_BASE,
+  value: 'font-normal text-foreground',
+  selectorIcon: 'text-default-400',
+  trigger: BORDERED_FIELD,
+} as const;
+
+const serverSelectClassNames = {
+  base: SERVER_SELECT_BASE,
+  value: 'font-normal text-foreground',
+  selectorIcon: 'text-default-400',
+  trigger: BORDERED_FIELD,
+} as const;
+
 function MetaDot() {
   return (
     <span className="text-default-400" aria-hidden>
@@ -140,22 +164,20 @@ export default function SportsMatchPanel({
 
   const streamControls =
     sourceKeys.length > 0 ? (
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex w-full flex-wrap items-end gap-2">
         <Select
-          label="Source"
-          size="md"
-          className="w-[11rem] max-w-full"
+          aria-label="Source"
+          placeholder="Source"
+          size="sm"
           selectedKeys={selectedSource ? [selectedSource] : []}
           onSelectionChange={(keys) => {
             const next = Array.from(keys)[0];
             if (typeof next !== 'string' || !next) return;
             onSourceChange(next);
           }}
-          radius="md"
+          radius="sm"
           variant="bordered"
-          classNames={{
-            trigger: 'border-default-300 bg-background dark:border-white/10',
-          }}
+          classNames={sourceSelectClassNames}
         >
           {sourceKeys.map((source) => (
             <SelectItem key={source}>{sourceLabel(source)}</SelectItem>
@@ -163,20 +185,18 @@ export default function SportsMatchPanel({
         </Select>
 
         <Select
-          label="Server"
-          size="md"
-          className="w-[11rem] max-w-full"
+          aria-label="Server"
+          placeholder="Server"
+          size="sm"
           selectedKeys={[String(selectedStreamNo)]}
           onSelectionChange={(keys) => {
             const next = Number(Array.from(keys)[0]);
             if (Number.isFinite(next) && next > 0) onStreamChange(next);
           }}
-          radius="md"
+          radius="sm"
           variant="bordered"
           isDisabled={streamsForSource.length === 0}
-          classNames={{
-            trigger: 'border-default-300 bg-background dark:border-white/10',
-          }}
+          classNames={serverSelectClassNames}
         >
           {streamsForSource.map((stream) => (
             <SelectItem key={String(stream.streamNo)}>
