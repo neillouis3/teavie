@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.4.1",
+    "date": "2026-07-03",
+    "title": "Dynamic sports and Movies icon",
+    "summary": "Sports now loads live events and stream servers from Streamed, and Movies uses the Film02 icon in nav and Explore.",
+    "tags": ["Sports", "UI"],
+    "changes": [
+      "Sports hub lists events from Streamed with Popular, Live, All, and Today filters plus search.",
+      "Match player picks source and server embeds like RabbitMeow-style sports pages.",
+      "Movies nav and Popular movies rail use Film02Icon."
+    ]
+  },
+  {
     "version": "2.4.0",
     "date": "2026-07-01",
     "title": "Sign-in redirect and form polish",

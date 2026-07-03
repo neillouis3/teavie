@@ -5,10 +5,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export type VerticalSportsCardProps = {
-  slug: string;
+  matchId: string;
   title: string;
   description: string;
   imageUrl: string;
+  isLive?: boolean;
 };
 
 const livePill =
@@ -19,12 +20,13 @@ const livePill =
  * “Live” badge on the poster (top-right), center pill “Sports”.
  */
 export default function VerticalSportsCard({
-  slug,
+  matchId,
   title,
   description,
   imageUrl,
+  isLive = true,
 }: VerticalSportsCardProps) {
-  const href = `/sports/${slug}`;
+  const href = `/sports/player/${matchId}`;
   const hasPoster = Boolean(imageUrl?.trim());
 
   const displayTitle =
@@ -53,7 +55,7 @@ export default function VerticalSportsCard({
             <>
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
               <div className="absolute right-2 top-2">
-                <span className={livePill}>Live</span>
+                <span className={livePill}>{isLive ? 'Live' : 'Sports'}</span>
               </div>
             </>
           )}
@@ -66,7 +68,9 @@ export default function VerticalSportsCard({
           <div className="shrink-0 rounded-2xl border border-gray-500 px-2 py-0.5 text-center text-xs transition-colors duration-300 group-hover:border-success group-hover:text-success">
             Sports
           </div>
-          <p className="flex-1 truncate text-end text-xs text-default-500">Live</p>
+          <p className="flex-1 truncate text-end text-xs text-default-500">
+            {isLive ? 'Live' : 'Upcoming'}
+          </p>
         </div>
         <h2
           className="text-md truncate transition-colors duration-300 group-hover:text-success"

@@ -5,10 +5,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export type HorizontalSportsCardProps = {
-  slug: string;
+  matchId: string;
   title: string;
   description: string;
   imageUrl: string;
+  isLive?: boolean;
 };
 
 const pill =
@@ -19,12 +20,13 @@ const pill =
  * sports variant shows “Live” top-right and description under the image.
  */
 export default function HorizontalSportsCard({
-  slug,
+  matchId,
   title,
   description,
   imageUrl,
+  isLive = true,
 }: HorizontalSportsCardProps) {
-  const href = `/sports/${slug}`;
+  const href = `/sports/player/${matchId}`;
   const src = imageUrl?.trim() || '';
 
   return (
@@ -50,7 +52,7 @@ export default function HorizontalSportsCard({
           <>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
             <div className="absolute right-2 top-2 sm:right-2.5 sm:top-2.5">
-              <span className={pill}>Live</span>
+              <span className={pill}>{isLive ? 'Live' : 'Sports'}</span>
             </div>
             <div className="absolute bottom-2 left-2 right-3 max-w-[85%] sm:bottom-2.5 sm:left-2.5 sm:right-4">
               <p className="line-clamp-2 text-left text-xs font-semibold leading-snug text-white drop-shadow-md sm:text-sm">

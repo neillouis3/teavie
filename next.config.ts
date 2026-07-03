@@ -71,6 +71,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'ia.media-imdb.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'streamed.pk',
+        pathname: '/api/images/**',
+      },
     ],
   },
 };

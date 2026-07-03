@@ -1,7 +1,7 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import {
   Home01Icon,
-  FilmRoll02Icon,
+  Film02Icon,
   Tv01Icon,
   OrangeIcon,
   LoveKoreanFingerIcon,
@@ -29,7 +29,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     title: null,
     items: [
       { key: "explore", label: "Explore", href: "/explore", icon: Home01Icon },
-      { key: "movies", label: "Movies", href: "/movies/all", icon: FilmRoll02Icon },
+      { key: "movies", label: "Movies", href: "/movies/all", icon: Film02Icon },
       { key: "shows", label: "TV Shows", href: "/shows/all", icon: Tv01Icon },
     ],
   },

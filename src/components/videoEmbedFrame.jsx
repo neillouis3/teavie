@@ -12,6 +12,7 @@ import { parseMegaPlayMessage } from '@/lib/megaPlayProgress';
  * @param {string} [props.className]
  * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
  * @param {(msg: import('@/lib/megaPlayProgress').MegaPlayMessage) => void} [props.onMegaPlayMessage]
+ * @param {() => void} [props.onLoad]
  */
 export default function VideoEmbedFrame({
   src,
@@ -19,6 +20,7 @@ export default function VideoEmbedFrame({
   className = '',
   onVideasyProgress,
   onMegaPlayMessage,
+  onLoad,
 }) {
   useEffect(() => {
     if (!onVideasyProgress && !onMegaPlayMessage) return undefined;
@@ -45,6 +47,7 @@ export default function VideoEmbedFrame({
       allow={EMBED_IFRAME_ALLOW}
       referrerPolicy="no-referrer-when-downgrade"
       className={className}
+      onLoad={onLoad}
     />
   );
 }
