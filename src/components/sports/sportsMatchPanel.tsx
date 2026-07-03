@@ -4,7 +4,6 @@ import React from 'react';
 import { Image, Select, SelectItem } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  Calendar03Icon,
   FootballIcon,
   LiveStreaming02Icon,
 } from '@hugeicons/core-free-icons';
@@ -22,22 +21,12 @@ import {
   type StreamedStream,
 } from '@/lib/streamedSports';
 
-const DETAIL_META_CARD =
-  'w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35';
-
-const DETAIL_META_CARD_INNER =
-  'bg-default-50 px-4 py-5 dark:bg-default-50/10 sm:px-6 sm:py-6';
-
 function MetaDot() {
   return (
     <span className="text-default-400" aria-hidden>
       •
     </span>
   );
-}
-
-function ColumnHeading({ label }: { label: string }) {
-  return <h3 className="text-xs font-medium text-default-500">{label}</h3>;
 }
 
 export function sportsSubtitleLine(match: StreamedMatch): string {
@@ -151,16 +140,18 @@ export default function SportsMatchPanel({
 
   const streamControls =
     sourceKeys.length > 0 ? (
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="flex flex-wrap items-end gap-3">
         <Select
           label="Source"
+          size="md"
+          className="w-[11rem] max-w-full"
           selectedKeys={selectedSource ? [selectedSource] : []}
           onSelectionChange={(keys) => {
             const next = Array.from(keys)[0];
             if (typeof next !== 'string' || !next) return;
             onSourceChange(next);
           }}
-          radius="sm"
+          radius="md"
           variant="bordered"
           classNames={{
             trigger: 'border-default-300 bg-background dark:border-white/10',
@@ -173,12 +164,14 @@ export default function SportsMatchPanel({
 
         <Select
           label="Server"
+          size="md"
+          className="w-[11rem] max-w-full"
           selectedKeys={[String(selectedStreamNo)]}
           onSelectionChange={(keys) => {
             const next = Number(Array.from(keys)[0]);
             if (Number.isFinite(next) && next > 0) onStreamChange(next);
           }}
-          radius="sm"
+          radius="md"
           variant="bordered"
           isDisabled={streamsForSource.length === 0}
           classNames={{
@@ -211,61 +204,6 @@ export default function SportsMatchPanel({
       </div>
 
       {streamControls ? <div className="space-y-4">{streamControls}</div> : null}
-
-      <section className={DETAIL_META_CARD}>
-        <div className={DETAIL_META_CARD_INNER}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
-            <div className="min-w-0 flex-1">
-              <ColumnHeading label="Sport" />
-              <p className="mt-2.5 text-sm text-foreground">{sportLabel(match.category)}</p>
-            </div>
-            <div className="min-w-0 flex-[2]">
-              <ColumnHeading label="Info" />
-              <ul className="mt-2.5 grid w-full max-w-full grid-cols-1 gap-x-4 gap-y-2 text-sm text-foreground sm:max-w-[85%] sm:grid-cols-2">
-                <li className="flex items-start gap-2 leading-snug">
-                  <HugeiconsIcon
-                    icon={Calendar03Icon}
-                    size={15}
-                    className="mt-0.5 shrink-0 text-default-500"
-                  />
-                  <span>{formatMatchDate(match.date)}</span>
-                </li>
-                <li className="flex items-start gap-2 leading-snug">
-                  <HugeiconsIcon
-                    icon={LiveStreaming02Icon}
-                    size={15}
-                    className="mt-0.5 shrink-0 text-default-500"
-                  />
-                  <span>
-                    {live ? 'Live now' : upcoming ? 'Upcoming' : 'Scheduled'}
-                  </span>
-                </li>
-                {match.teams?.home?.name ? (
-                  <li className="flex items-start gap-2 leading-snug sm:col-span-2">
-                    <HugeiconsIcon
-                      icon={FootballIcon}
-                      size={15}
-                      className="mt-0.5 shrink-0 text-default-500"
-                    />
-                    <span>
-                      {match.teams.home.name}
-                      {match.teams.away?.name ? ` vs ${match.teams.away.name}` : ''}
-                    </span>
-                  </li>
-                ) : null}
-              </ul>
-            </div>
-            <div className="min-w-0 flex-1">
-              <ColumnHeading label="Streams" />
-              <p className="mt-2.5 text-sm text-foreground">
-                {sourceKeys.length > 0
-                  ? `${sourceKeys.length} source${sourceKeys.length === 1 ? '' : 's'} available`
-                  : 'No active streams'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
