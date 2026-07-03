@@ -29,7 +29,7 @@ const SOURCE_SELECT_BASE =
 
 /** Server labels run longer — 2.5× the source select width on sm+. */
 const SERVER_SELECT_BASE =
-  'w-full min-w-0 sm:w-[20rem] sm:min-w-[20rem] sm:max-w-[20rem] sm:shrink-0';
+  'w-full min-w-0 sm:w-72 sm:min-w-72 sm:max-w-72 sm:shrink-0';
 
 const sourceSelectClassNames = {
   base: SOURCE_SELECT_BASE,
