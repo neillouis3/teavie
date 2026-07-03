@@ -45,18 +45,13 @@ export default function SportsMatchPoster({
 
   if (showPoster) {
     return (
-      <div
-        className={cn(
-          'flex h-full w-full items-center justify-center bg-default-300/40 dark:bg-default-100/20',
-          className
-        )}
-      >
+      <div className={cn('relative h-full w-full overflow-hidden', className)}>
         <img
           src={poster}
           alt=""
           loading="lazy"
           onError={() => setPosterFailed(true)}
-          className="h-full w-full object-contain object-center"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
       </div>
     );
