@@ -176,19 +176,31 @@ export function streamedBadgeUrl(badge?: string | null): string {
   return `${STREAMED_BASE}/api/images/badge/${stem}.webp`;
 }
 
+/**
+ * Resolve a Streamed image reference to an absolute URL. Mirrors the source
+ * site logic: absolute URLs are proxied, existing paths pass through, and
+ * bare hashes become proxy or poster images.
+ */
 export function streamedPosterUrl(poster?: string | null): string {
   if (!poster) return '';
   const trimmed = poster.trim();
   if (!trimmed) return '';
 
-  if (trimmed.startsWith('http')) return trimmed;
-  if (trimmed.startsWith('/api/images/')) return `${STREAMED_BASE}${trimmed}`;
   if (trimmed.includes('/api/images/proxy/')) {
     const tail = trimmed.split('/api/images/proxy/')[1];
     return tail ? `${STREAMED_BASE}/api/images/proxy/${tail}` : '';
   }
+  if (trimmed.startsWith('http')) {
+    return `${STREAMED_BASE}/api/images/proxy/${encodeURIComponent(trimmed)}.webp`;
+  }
+  if (trimmed.startsWith('/api/images/')) return `${STREAMED_BASE}${trimmed}`;
+  if (trimmed.startsWith('/')) return `${STREAMED_BASE}${trimmed}`;
 
   const stem = trimmed.replace(/\.(webp|png|jpg|jpeg)$/i, '');
+  // Long opaque hashes are proxy refs; shorter ids are poster slugs.
+  if (stem.length > 30 && !stem.includes('/')) {
+    return `${STREAMED_BASE}/api/images/proxy/${stem}.webp`;
+  }
   return `${STREAMED_BASE}/api/images/poster/${stem}.webp`;
 }
 

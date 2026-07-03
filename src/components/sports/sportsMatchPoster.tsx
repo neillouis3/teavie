@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { sportLabel } from '@/lib/streamedSports';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,9 @@ type SportsMatchPosterProps = {
 };
 
 /**
- * Sports card artwork: event poster (fit, not crop), team badges, or title fallback.
+ * Sports card artwork with graceful degradation:
+ * event poster → team badges → title. Broken images fall through instead of
+ * leaving a blank tile.
  */
 export default function SportsMatchPoster({
   title,
@@ -28,7 +30,20 @@ export default function SportsMatchPoster({
   const home = homeBadgeUrl.trim();
   const away = awayBadgeUrl.trim();
 
-  if (poster) {
+  const [posterFailed, setPosterFailed] = useState(false);
+  const [homeFailed, setHomeFailed] = useState(false);
+  const [awayFailed, setAwayFailed] = useState(false);
+
+  useEffect(() => setPosterFailed(false), [poster]);
+  useEffect(() => setHomeFailed(false), [home]);
+  useEffect(() => setAwayFailed(false), [away]);
+
+  const showPoster = Boolean(poster) && !posterFailed;
+  const showHome = Boolean(home) && !homeFailed;
+  const showAway = Boolean(away) && !awayFailed;
+  const showBadges = showHome || showAway;
+
+  if (showPoster) {
     return (
       <div
         className={cn(
@@ -39,13 +54,15 @@ export default function SportsMatchPoster({
         <img
           src={poster}
           alt=""
+          loading="lazy"
+          onError={() => setPosterFailed(true)}
           className="h-full w-full object-contain object-center"
         />
       </div>
     );
   }
 
-  if (home || away) {
+  if (showBadges) {
     return (
       <div
         className={cn(
@@ -53,22 +70,26 @@ export default function SportsMatchPoster({
           className
         )}
       >
-        {home ? (
+        {showHome ? (
           <img
             src={home}
             alt=""
+            loading="lazy"
+            onError={() => setHomeFailed(true)}
             className="max-h-12 max-w-[4.25rem] shrink-0 object-contain sm:max-h-14 sm:max-w-20"
           />
         ) : null}
-        {home && away ? (
+        {showHome && showAway ? (
           <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-default-400 sm:text-xs">
             vs
           </span>
         ) : null}
-        {away ? (
+        {showAway ? (
           <img
             src={away}
             alt=""
+            loading="lazy"
+            onError={() => setAwayFailed(true)}
             className="max-h-12 max-w-[4.25rem] shrink-0 object-contain sm:max-h-14 sm:max-w-20"
           />
         ) : null}
