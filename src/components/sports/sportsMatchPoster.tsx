@@ -95,7 +95,7 @@ export default function SportsMatchPoster({
   return (
     <div
       className={cn(
-        'flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-default-300/40 to-default-100 p-4 text-center dark:from-default-100/20 dark:to-default-50/10',
+        'flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-emerald-400/40 via-emerald-300/25 to-emerald-100/10 p-4 text-center dark:from-emerald-500/25 dark:via-emerald-400/15 dark:to-emerald-300/10',
         className
       )}
     >

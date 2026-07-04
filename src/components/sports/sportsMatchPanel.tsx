@@ -4,7 +4,6 @@ import React from 'react';
 import { Image, Select, SelectItem } from '@heroui/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  Calendar03Icon,
   FootballIcon,
   LiveStreaming02Icon,
 } from '@hugeicons/core-free-icons';
@@ -22,11 +21,29 @@ import {
   type StreamedStream,
 } from '@/lib/streamedSports';
 
-const DETAIL_META_CARD =
-  'w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35';
+const BORDERED_FIELD =
+  'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
 
-const DETAIL_META_CARD_INNER =
-  'bg-default-50 px-4 py-5 dark:bg-default-50/10 sm:px-6 sm:py-6';
+const SOURCE_SELECT_BASE =
+  'w-full min-w-0 sm:w-32 sm:min-w-32 sm:max-w-32 sm:shrink-0';
+
+/** Server labels run longer — 2.5× the source select width on sm+. */
+const SERVER_SELECT_BASE =
+  'w-full min-w-0 sm:w-104 sm:min-w-104 sm:max-w-104 sm:shrink-0';
+
+const sourceSelectClassNames = {
+  base: SOURCE_SELECT_BASE,
+  value: 'font-normal text-foreground',
+  selectorIcon: 'text-default-400',
+  trigger: BORDERED_FIELD,
+} as const;
+
+const serverSelectClassNames = {
+  base: SERVER_SELECT_BASE,
+  value: 'font-normal text-foreground',
+  selectorIcon: 'text-default-400',
+  trigger: BORDERED_FIELD,
+} as const;
 
 function MetaDot() {
   return (
@@ -34,10 +51,6 @@ function MetaDot() {
       •
     </span>
   );
-}
-
-function ColumnHeading({ label }: { label: string }) {
-  return <h3 className="text-xs font-medium text-default-500">{label}</h3>;
 }
 
 export function sportsSubtitleLine(match: StreamedMatch): string {
@@ -151,9 +164,11 @@ export default function SportsMatchPanel({
 
   const streamControls =
     sourceKeys.length > 0 ? (
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="flex w-full flex-wrap items-end gap-2">
         <Select
-          label="Source"
+          aria-label="Source"
+          placeholder="Source"
+          size="sm"
           selectedKeys={selectedSource ? [selectedSource] : []}
           onSelectionChange={(keys) => {
             const next = Array.from(keys)[0];
@@ -162,9 +177,7 @@ export default function SportsMatchPanel({
           }}
           radius="sm"
           variant="bordered"
-          classNames={{
-            trigger: 'border-default-300 bg-background dark:border-white/10',
-          }}
+          classNames={sourceSelectClassNames}
         >
           {sourceKeys.map((source) => (
             <SelectItem key={source}>{sourceLabel(source)}</SelectItem>
@@ -172,7 +185,9 @@ export default function SportsMatchPanel({
         </Select>
 
         <Select
-          label="Server"
+          aria-label="Server"
+          placeholder="Server"
+          size="sm"
           selectedKeys={[String(selectedStreamNo)]}
           onSelectionChange={(keys) => {
             const next = Number(Array.from(keys)[0]);
@@ -181,9 +196,7 @@ export default function SportsMatchPanel({
           radius="sm"
           variant="bordered"
           isDisabled={streamsForSource.length === 0}
-          classNames={{
-            trigger: 'border-default-300 bg-background dark:border-white/10',
-          }}
+          classNames={serverSelectClassNames}
         >
           {streamsForSource.map((stream) => (
             <SelectItem key={String(stream.streamNo)}>
@@ -211,61 +224,6 @@ export default function SportsMatchPanel({
       </div>
 
       {streamControls ? <div className="space-y-4">{streamControls}</div> : null}
-
-      <section className={DETAIL_META_CARD}>
-        <div className={DETAIL_META_CARD_INNER}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
-            <div className="min-w-0 flex-1">
-              <ColumnHeading label="Sport" />
-              <p className="mt-2.5 text-sm text-foreground">{sportLabel(match.category)}</p>
-            </div>
-            <div className="min-w-0 flex-[2]">
-              <ColumnHeading label="Info" />
-              <ul className="mt-2.5 grid w-full max-w-full grid-cols-1 gap-x-4 gap-y-2 text-sm text-foreground sm:max-w-[85%] sm:grid-cols-2">
-                <li className="flex items-start gap-2 leading-snug">
-                  <HugeiconsIcon
-                    icon={Calendar03Icon}
-                    size={15}
-                    className="mt-0.5 shrink-0 text-default-500"
-                  />
-                  <span>{formatMatchDate(match.date)}</span>
-                </li>
-                <li className="flex items-start gap-2 leading-snug">
-                  <HugeiconsIcon
-                    icon={LiveStreaming02Icon}
-                    size={15}
-                    className="mt-0.5 shrink-0 text-default-500"
-                  />
-                  <span>
-                    {live ? 'Live now' : upcoming ? 'Upcoming' : 'Scheduled'}
-                  </span>
-                </li>
-                {match.teams?.home?.name ? (
-                  <li className="flex items-start gap-2 leading-snug sm:col-span-2">
-                    <HugeiconsIcon
-                      icon={FootballIcon}
-                      size={15}
-                      className="mt-0.5 shrink-0 text-default-500"
-                    />
-                    <span>
-                      {match.teams.home.name}
-                      {match.teams.away?.name ? ` vs ${match.teams.away.name}` : ''}
-                    </span>
-                  </li>
-                ) : null}
-              </ul>
-            </div>
-            <div className="min-w-0 flex-1">
-              <ColumnHeading label="Streams" />
-              <p className="mt-2.5 text-sm text-foreground">
-                {sourceKeys.length > 0
-                  ? `${sourceKeys.length} source${sourceKeys.length === 1 ? '' : 's'} available`
-                  : 'No active streams'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
