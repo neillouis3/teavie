@@ -59,9 +59,9 @@ const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
 const VISIBLE_EPISODE_SLOTS = 7;
 const EPISODE_CAROUSEL_OPTS = {
   align: "start" as const,
-  dragFree: true,
-  /** Embla scroll animation length — higher = smoother/slower programmatic scroll. */
-  duration: 55,
+  dragFree: false,
+  /** Embla scroll duration (ms) — used when scrollTo is called with jump=false. */
+  duration: 40,
 };
 /** Normal episode slot — 5 full cards + ⅔ peek at `lg`. */
 const EPISODE_CAROUSEL_ITEM_CLASS =
@@ -1160,10 +1160,6 @@ export function ShowEpisodePickerList() {
   }, [loading]);
 
   useEffect(() => {
-    episodeCarouselApi?.reInit();
-  }, [displayedEpisodes, episodeCarouselApi]);
-
-  useEffect(() => {
     if (!episodeCarouselApi || loading) return;
 
     const prev = alignContextRef.current;
@@ -1179,24 +1175,33 @@ export function ShowEpisodePickerList() {
       selectedEpisode,
     };
 
-    const alignToCurrent = () => {
-      scrollCarouselToSelectedSecond(
-        episodeCarouselApi,
-        displayedEpisodes,
-        selectedSeason,
-        selectedEpisode,
-        sortToggled
-      );
+    const jump = sortToggled;
+    let raf1 = 0;
+    let raf2 = 0;
+
+    const alignAfterLayout = () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      // Re-measure after React applies the active card width, then animate scroll.
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          scrollCarouselToSelectedSecond(
+            episodeCarouselApi,
+            displayedEpisodes,
+            selectedSeason,
+            selectedEpisode,
+            jump
+          );
+        });
+      });
     };
 
-    const onReInit = () => {
-      requestAnimationFrame(alignToCurrent);
-    };
-    episodeCarouselApi.on("reInit", onReInit);
-    onReInit();
+    episodeCarouselApi.reInit();
+    alignAfterLayout();
 
     return () => {
-      episodeCarouselApi.off("reInit", onReInit);
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
     };
   }, [
     episodeCarouselApi,
