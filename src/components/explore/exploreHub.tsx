@@ -32,7 +32,9 @@ import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 
 export type { TmdbDiscoverPayload };
 
-const SECTION_MAX_ITEMS = 24;
+import { EXPLORE_RAIL_MAX_ITEMS } from "@/lib/catalogGrid";
+
+const SECTION_MAX_ITEMS = EXPLORE_RAIL_MAX_ITEMS;
 
 const EMPTY_RAILS: UserRailRows = {
   historyRows: [],
@@ -219,7 +221,7 @@ export default function ExploreHub() {
           hasTrending ? cn("mt-2", EXPLORE_SPOTLIGHT_RESERVE) : "mt-2"
         )}
       >
-        <WatchHistoryRail items={historyRows} />
+        <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
         {hasRecommended ? (
           <CatalogRail
             title="Recommended for you"

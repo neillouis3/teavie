@@ -23,7 +23,7 @@ import {
   mongoMixedTvCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
 
-const DEFAULT_LIMIT = 24;
+const DEFAULT_LIMIT = 50;
 
 function popularityExpr() {
   const popDouble = {
@@ -81,7 +81,7 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
   const match = buildPreferenceMatch(preferences, { type: opts.type });
   if (!match) return [];
 
-  const limit = Math.min(48, Math.max(1, opts.limit ?? DEFAULT_LIMIT));
+  const limit = Math.min(50, Math.max(1, opts.limit ?? DEFAULT_LIMIT));
   const hasStrictPrefs =
     selectedGenreLabels(preferences).length > 0 ||
     selectedLanguageCodes(preferences).length > 0;
@@ -261,7 +261,7 @@ export async function loadPersonalizedCatalog(preferences, opts = {}) {
  * @param {{ limit?: number }} [opts]
  */
 export async function loadPersonalizedExploreBundle(preferences, opts = {}) {
-  const limit = Math.min(48, Math.max(1, opts.limit ?? DEFAULT_LIMIT));
+  const limit = Math.min(50, Math.max(1, opts.limit ?? DEFAULT_LIMIT));
 
   const [recommended, popularMovies, popularTv, newContent, upcomingContent] =
     await Promise.all([
@@ -277,7 +277,7 @@ export async function loadPersonalizedExploreBundle(preferences, opts = {}) {
         minVoteAverage: CATALOG_POPULAR_MIN_VOTE_AVERAGE,
       }),
       queryPersonalizedNew(preferences, 20),
-      queryPersonalizedUpcoming(preferences, 20),
+      queryPersonalizedUpcoming(preferences, 50),
     ]);
 
   return {

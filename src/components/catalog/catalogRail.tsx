@@ -11,6 +11,7 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
+import { EXPLORE_RAIL_MAX_ITEMS, RAIL_CAROUSEL_ITEM_VERTICAL } from "@/lib/catalogGrid";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import { formatReleasePhrase } from "@/lib/formatRelease";
@@ -24,7 +25,7 @@ import SidebarBleedRail, {
 type CatalogRailProps = {
   title: string;
   items: ContentItem[];
-  /** @default 24 */
+  /** @default 50 */
   maxItems?: number;
   moreHref?: string;
   moreLabel?: string;
@@ -34,8 +35,6 @@ type CatalogRailProps = {
   titleVariant?: "default" | "explore";
 };
 
-const CAROUSEL_ITEM_VERTICAL =
-  "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%] 2xl:basis-[10%]";
 const CAROUSEL_ITEM_HORIZONTAL =
   "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 
@@ -52,7 +51,7 @@ export function CatalogRailSkeleton({
   horizontal?: boolean;
   count?: number;
 }) {
-  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
+  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
   return (
     <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
       <CarouselContent
@@ -73,7 +72,7 @@ export function CatalogRailSkeleton({
 export default function CatalogRail({
   title,
   items,
-  maxItems = 24,
+  maxItems = EXPLORE_RAIL_MAX_ITEMS,
   moreHref,
   moreLabel = "More",
   showReleaseNote = false,
@@ -82,7 +81,7 @@ export default function CatalogRail({
 }: CatalogRailProps) {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === "horizontal";
-  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
+  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
 
   const slice = (items ?? []).slice(0, maxItems);
   if (!loading && slice.length === 0) return null;
