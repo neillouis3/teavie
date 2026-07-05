@@ -59,8 +59,12 @@ const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
 const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_ITEM_CLASS =
   "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)]";
+const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
+  "pl-3 shrink-0 grow-0 basis-[86%] sm:basis-[58%] md:basis-[46%] lg:basis-[calc(100%/3.15)]";
 const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px]";
+const EPISODE_CARD_HEIGHT_CURRENT = "h-[360px] sm:h-[400px]";
 const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px]";
+const EPISODE_CARD_STILL_HEIGHT_CURRENT = "h-[172px] sm:h-[196px]";
 const EPISODE_CARD_TITLE_CLASS =
   "shrink-0 overflow-hidden text-sm font-semibold leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
 const EPISODE_CARD_DESCRIPTION_CLASS =
@@ -1226,7 +1230,7 @@ export function ShowEpisodePickerList() {
               return (
                 <CarouselItem
                   key={`${row.season}-${row.episode}-${row.displayNumber ?? ""}`}
-                  className={EPISODE_CAROUSEL_ITEM_CLASS}
+                  className={active ? EPISODE_CAROUSEL_ITEM_CURRENT_CLASS : EPISODE_CAROUSEL_ITEM_CLASS}
                 >
                   <button
                     type="button"
@@ -1237,12 +1241,16 @@ export function ShowEpisodePickerList() {
                     }`}
                     aria-current={active ? "true" : undefined}
                     aria-disabled={upcoming ? true : undefined}
-                    className={`group relative flex ${EPISODE_CARD_HEIGHT} w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-colors ${episodeCardShellClass(cardState)} ${
+                    className={`group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-all duration-300 ${
+                      active ? EPISODE_CARD_HEIGHT_CURRENT : EPISODE_CARD_HEIGHT
+                    } ${episodeCardShellClass(cardState)} ${
                       upcoming ? "cursor-not-allowed" : ""
                     }`}
                   >
                     <div
-                      className={`relative ${EPISODE_CARD_STILL_HEIGHT} w-full shrink-0 overflow-hidden ${
+                      className={`relative w-full shrink-0 overflow-hidden ${
+                        active ? EPISODE_CARD_STILL_HEIGHT_CURRENT : EPISODE_CARD_STILL_HEIGHT
+                      } ${
                         stillUrl
                           ? "bg-default-200/80 dark:bg-default-100/15"
                           : episodeStillFallbackClass(row.season, row.episode)
@@ -1328,8 +1336,8 @@ export function ShowEpisodePickerList() {
                       <div className="flex flex-col gap-2">
                         <span
                           className={`${EPISODE_CARD_TITLE_CLASS} ${
-                            upcoming ? "text-default-500" : ""
-                          }`}
+                            active ? "text-base sm:text-[17px]" : ""
+                          } ${upcoming ? "text-default-500" : ""}`}
                         >
                           {row.name}
                         </span>
