@@ -59,7 +59,8 @@ const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
 const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_OPTS = {
   align: "start" as const,
-  dragFree: false,
+  dragFree: true,
+  containScroll: false,
   /** Embla scroll duration (ms) — used when scrollTo is called with jump=false. */
   duration: 40,
 };
@@ -1015,14 +1016,14 @@ function ShowEpisodePickerSeasonRow() {
           }}
           classNames={{
             base: manySeasons
-              ? "w-full min-w-0 max-w-full lg:w-[9.5rem]"
-              : "w-full min-w-0 max-w-full lg:w-auto",
+              ? "w-full min-w-0 max-w-full lg:w-[12rem]"
+              : "w-full min-w-0 max-w-full lg:w-[11rem]",
             trigger:
-              "h-8 min-h-8 border-default-300 px-2 dark:border-default-500/60",
+              "h-8 min-h-8 border-default-300 px-3 dark:border-default-500/60",
             value: "text-xs font-normal text-foreground",
             selectorIcon: "text-default-400",
           }}
-          popoverProps={{ classNames: { content: "min-w-[9rem]" } }}
+          popoverProps={{ classNames: { content: "min-w-[12rem]" } }}
         >
           {releasedSeasons.map((s) => (
             <SelectItem
