@@ -60,7 +60,6 @@ const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_OPTS = {
   align: "start" as const,
   dragFree: true,
-  containScroll: false,
   /** Embla scroll duration (ms) — used when scrollTo is called with jump=false. */
   duration: 40,
 };
