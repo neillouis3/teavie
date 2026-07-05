@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import Image from "next/image";
@@ -54,8 +55,8 @@ export type EpisodeCardRow = {
 
 export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
-/** Visible episode cards in the horizontal scroller (5 on desktop). */
-const VISIBLE_EPISODE_SLOTS = 5;
+/** Visible episode cards in the horizontal scroller (5 full + ⅓ peek on desktop). */
+const VISIBLE_EPISODE_SLOTS = 6;
 const EPISODE_CAROUSEL_OPTS = {
   align: "start" as const,
   dragFree: true,
@@ -63,9 +64,9 @@ const EPISODE_CAROUSEL_OPTS = {
   duration: 42,
 };
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.2)] lg:basis-[calc(100%/5)]";
+  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.3333333333)] lg:basis-[calc(100%/5.3333333333)]";
 const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[86%] sm:basis-[58%] md:basis-[calc(100%/2.85)] lg:basis-[calc(100%/5)]";
+  "pl-3 shrink-0 grow-0 basis-[86%] sm:basis-[58%] md:basis-[calc(100%/3.05)] lg:basis-[calc(100%/5.3333333333)]";
 const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px] xl:h-[340px]";
 const EPISODE_CARD_HEIGHT_CURRENT = "h-[360px] sm:h-[400px] xl:h-[380px]";
 const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px] xl:h-[150px]";
@@ -231,13 +232,14 @@ function scrollCarouselToSelectedSecond(
   api: CarouselApi | undefined,
   list: EpisodeCardRow[],
   season: number,
-  episode: number
+  episode: number,
+  jump = false
 ) {
   if (!api) return;
   const selectedIndex = selectedEpisodeIndex(list, season, episode);
   if (selectedIndex < 0) return;
   const targetIndex = Math.max(0, selectedIndex - 1);
-  api.scrollTo(targetIndex, false);
+  api.scrollTo(targetIndex, jump);
 }
 
 function episodeNavNumber(
@@ -1166,6 +1168,12 @@ export function ShowEpisodePickerList() {
   const [episodeCarouselApi, setEpisodeCarouselApi] = useState<CarouselApi | null>(
     null
   );
+  const alignContextRef = useRef({
+    sortLatestFirst: episodeSortLatestFirst,
+    episodesLength: episodes.length,
+    selectedSeason,
+    selectedEpisode,
+  });
 
   useEffect(() => {
     if (loading) setEpisodeCarouselApi(null);
@@ -1178,12 +1186,26 @@ export function ShowEpisodePickerList() {
   useEffect(() => {
     if (!episodeCarouselApi || loading) return;
 
+    const prev = alignContextRef.current;
+    const sortToggled =
+      prev.sortLatestFirst !== episodeSortLatestFirst &&
+      prev.episodesLength === episodes.length &&
+      prev.selectedSeason === selectedSeason &&
+      prev.selectedEpisode === selectedEpisode;
+    alignContextRef.current = {
+      sortLatestFirst: episodeSortLatestFirst,
+      episodesLength: episodes.length,
+      selectedSeason,
+      selectedEpisode,
+    };
+
     const alignToCurrent = () => {
       scrollCarouselToSelectedSecond(
         episodeCarouselApi,
         displayedEpisodes,
         selectedSeason,
-        selectedEpisode
+        selectedEpisode,
+        sortToggled
       );
     };
 
@@ -1207,6 +1229,8 @@ export function ShowEpisodePickerList() {
     episodeCarouselApi,
     loading,
     displayedEpisodes,
+    episodes.length,
+    episodeSortLatestFirst,
     selectedSeason,
     selectedEpisode,
   ]);
@@ -1302,12 +1326,14 @@ export function ShowEpisodePickerList() {
                     aria-disabled={upcoming ? true : undefined}
                     className={`group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-all duration-300 ${
                       active ? EPISODE_CARD_HEIGHT_CURRENT : EPISODE_CARD_HEIGHT
-                    } ${episodeCardShellClass(cardState)} ${
+                    } ${active ? "p-2" : ""} ${episodeCardShellClass(cardState)} ${
                       upcoming ? "cursor-not-allowed" : ""
                     }`}
                   >
                     <div
                       className={`relative w-full shrink-0 overflow-hidden ${
+                        active ? "rounded-lg" : ""
+                      } ${
                         active ? EPISODE_CARD_STILL_HEIGHT_CURRENT : EPISODE_CARD_STILL_HEIGHT
                       } ${
                         stillUrl
@@ -1366,7 +1392,9 @@ export function ShowEpisodePickerList() {
                         />
                       ) : null}
                     </div>
-                    <div className={EPISODE_CARD_BODY_CLASS}>
+                    <div
+                      className={`${EPISODE_CARD_BODY_CLASS} ${active ? "pt-2 pr-0 pl-0" : ""}`}
+                    >
                       <span
                         className={`mb-1 shrink-0 text-sm font-medium ${
                           active
