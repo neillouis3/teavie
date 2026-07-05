@@ -55,17 +55,21 @@ export type EpisodeCardRow = {
 
 export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
-/** Visible episode cards in the horizontal scroller (1 full + ⅓ peek). */
-const VISIBLE_EPISODE_SLOTS = 2;
+/** Visible episode cards in the horizontal scroller (5 full + ⅔ peek on desktop). */
+const VISIBLE_EPISODE_SLOTS = 7;
 const EPISODE_CAROUSEL_OPTS = {
   align: "start" as const,
   dragFree: true,
   /** Embla scroll animation length — higher = smoother/slower programmatic scroll. */
   duration: 55,
 };
+/** Normal episode slot — 5 full cards + ⅔ peek at `lg`. */
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[calc(100%/1.3333333333)]";
-const EPISODE_CARD_STILL_HEIGHT = "h-[200px] sm:h-[220px]";
+  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.3333333333)] lg:basis-[calc(100%/5.6666666667)]";
+/** Current episode slot — 1 + ⅓× a normal card width. */
+const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
+  "pl-3 shrink-0 grow-0 basis-[96%] sm:basis-[64%] md:basis-[calc(100%/2.5)] lg:basis-[calc(100%/4.25)]";
+const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px]";
 const EPISODE_CARD_TITLE_CLASS =
   "shrink-0 overflow-hidden text-sm font-normal leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
 const EPISODE_CARD_DESCRIPTION_CLASS =
@@ -203,8 +207,8 @@ function selectedEpisodeIndex(
   );
 }
 
-/** Scroll so the active episode is the primary visible card. */
-function scrollCarouselToSelected(
+/** Scroll so the active episode sits in the second visible slot when possible. */
+function scrollCarouselToSelectedSecond(
   api: CarouselApi | undefined,
   list: EpisodeCardRow[],
   season: number,
@@ -214,7 +218,8 @@ function scrollCarouselToSelected(
   if (!api) return;
   const selectedIndex = selectedEpisodeIndex(list, season, episode);
   if (selectedIndex < 0) return;
-  api.scrollTo(selectedIndex, jump);
+  const targetIndex = Math.max(0, selectedIndex - 1);
+  api.scrollTo(targetIndex, jump);
 }
 
 function episodeNavNumber(
@@ -1175,7 +1180,7 @@ export function ShowEpisodePickerList() {
     };
 
     const alignToCurrent = () => {
-      scrollCarouselToSelected(
+      scrollCarouselToSelectedSecond(
         episodeCarouselApi,
         displayedEpisodes,
         selectedSeason,
@@ -1278,7 +1283,7 @@ export function ShowEpisodePickerList() {
               return (
                 <CarouselItem
                   key={`${row.season}-${row.episode}-${row.displayNumber ?? ""}`}
-                  className={EPISODE_CAROUSEL_ITEM_CLASS}
+                  className={active ? EPISODE_CAROUSEL_ITEM_CURRENT_CLASS : EPISODE_CAROUSEL_ITEM_CLASS}
                 >
                   <button
                     type="button"
@@ -1311,7 +1316,7 @@ export function ShowEpisodePickerList() {
                           aria-hidden
                           fill
                           unoptimized
-                          sizes="75vw"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 320px"
                           quality={85}
                           className={`object-cover transition-transform duration-300 ${
                             upcoming ? "" : "group-hover:scale-105"
