@@ -21,6 +21,7 @@ import {
   type StreamedStream,
 } from '@/lib/streamedSports';
 import { stripEmojis } from '@/lib/stripEmojis';
+import { cn } from '@/lib/utils';
 
 const BORDERED_FIELD =
   'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
@@ -217,15 +218,20 @@ export default function SportsMatchPanel({
         <div className="mt-4">{overviewBlock}</div>
       </div>
 
-      <div className="hidden gap-5 sm:flex sm:flex-row sm:items-start">
-        <div className="w-48 shrink-0 md:w-56 lg:w-64">{posterEl}</div>
+      <div className="hidden gap-5 sm:flex sm:flex-row sm:items-start lg:gap-6 xl:gap-8">
+        <div className="w-48 shrink-0 md:w-56 lg:w-64 xl:w-72 2xl:w-80">{posterEl}</div>
         <div className="min-w-0 flex-1">
           {titleAndStats}
           <div className="mt-4 sm:mt-5">{overviewBlock}</div>
+          {streamControls ? (
+            <div className="mt-5 hidden xl:block">{streamControls}</div>
+          ) : null}
         </div>
       </div>
 
-      {streamControls ? <div className="space-y-4">{streamControls}</div> : null}
+      {streamControls ? (
+        <div className={cn('space-y-4', 'xl:hidden')}>{streamControls}</div>
+      ) : null}
     </div>
   );
 }
