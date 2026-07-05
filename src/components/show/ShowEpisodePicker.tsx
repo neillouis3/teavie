@@ -17,7 +17,6 @@ import {
   ArrowRight01Icon,
   ArrowUpDownIcon,
   Calendar03Icon,
-  CheckmarkCircle01Icon,
   PlayIcon,
 } from "@hugeicons/core-free-icons";
 import {
@@ -55,7 +54,7 @@ export type EpisodeCardRow = {
 
 export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
-/** Visible episode cards in the horizontal scroller (4 full + ⅓ peek). */
+/** Visible episode cards in the horizontal scroller (5 on desktop). */
 const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_OPTS = {
   align: "start" as const,
@@ -64,9 +63,9 @@ const EPISODE_CAROUSEL_OPTS = {
   duration: 42,
 };
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)] xl:basis-[calc(100%/5.3333333333)] 2xl:basis-[calc(100%/6.3333333333)]";
+  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.2)] lg:basis-[calc(100%/5)]";
 const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[86%] sm:basis-[58%] md:basis-[46%] lg:basis-[calc(100%/3.15)] xl:basis-[calc(100%/3.85)] 2xl:basis-[calc(100%/4.35)]";
+  "pl-3 shrink-0 grow-0 basis-[86%] sm:basis-[58%] md:basis-[calc(100%/2.85)] lg:basis-[calc(100%/5)]";
 const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px] xl:h-[340px]";
 const EPISODE_CARD_HEIGHT_CURRENT = "h-[360px] sm:h-[400px] xl:h-[380px]";
 const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px] xl:h-[150px]";
@@ -124,7 +123,7 @@ function EpisodeStateLegend() {
         Now playing
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <HugeiconsIcon icon={CheckmarkCircle01Icon} size={13} className="text-success" />
+        <span className="h-2 w-2 rounded-full bg-success ring-2 ring-success/25" aria-hidden />
         Watched
       </span>
       <span className="inline-flex items-center gap-1.5">
@@ -1362,11 +1361,9 @@ export function ShowEpisodePickerList() {
                       ) : null}
                       {watched && !active ? (
                         <span
-                          className="pointer-events-none absolute right-2 top-2 z-[2] flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-success shadow-sm backdrop-blur-sm"
+                          className="pointer-events-none absolute right-2 top-2 z-[2] h-2 w-2 rounded-full bg-success ring-2 ring-success/25 shadow-sm"
                           aria-hidden
-                        >
-                          <HugeiconsIcon icon={CheckmarkCircle01Icon} size={14} />
-                        </span>
+                        />
                       ) : null}
                     </div>
                     <div className={EPISODE_CARD_BODY_CLASS}>
