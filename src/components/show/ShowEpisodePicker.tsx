@@ -57,6 +57,12 @@ export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
 /** Visible episode cards in the horizontal scroller (4 full + ⅓ peek). */
 const VISIBLE_EPISODE_SLOTS = 5;
+const EPISODE_CAROUSEL_OPTS = {
+  align: "start" as const,
+  dragFree: true,
+  /** Embla scroll animation length — higher = smoother/slower programmatic scroll. */
+  duration: 42,
+};
 const EPISODE_CAROUSEL_ITEM_CLASS =
   "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)] xl:basis-[calc(100%/5.3333333333)] 2xl:basis-[calc(100%/6.3333333333)]";
 const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
@@ -226,14 +232,13 @@ function scrollCarouselToSelectedSecond(
   api: CarouselApi | undefined,
   list: EpisodeCardRow[],
   season: number,
-  episode: number,
-  jump: boolean
+  episode: number
 ) {
   if (!api) return;
   const selectedIndex = selectedEpisodeIndex(list, season, episode);
   if (selectedIndex < 0) return;
   const targetIndex = Math.max(0, selectedIndex - 1);
-  api.scrollTo(targetIndex, jump);
+  api.scrollTo(targetIndex, false);
 }
 
 function episodeNavNumber(
@@ -1062,28 +1067,28 @@ type EmblaCarouselApi = NonNullable<CarouselApi>;
 function scrollEpisodeCarouselPrev(api: EmblaCarouselApi) {
   const inView = api.slidesInView();
   if (inView.length === 0) {
-    api.scrollPrev();
+    api.scrollPrev(false);
     return;
   }
   const firstInView = Math.min(...inView);
   const step = Math.max(1, inView.length);
-  api.scrollTo(Math.max(0, firstInView - step));
+  api.scrollTo(Math.max(0, firstInView - step), false);
 }
 
 function scrollEpisodeCarouselNext(api: EmblaCarouselApi) {
   const inView = api.slidesInView();
   const snapCount = api.scrollSnapList().length;
   if (inView.length === 0) {
-    api.scrollNext();
+    api.scrollNext(false);
     return;
   }
   const lastInView = Math.max(...inView);
   const nextIndex = lastInView + 1;
   if (nextIndex < snapCount) {
-    api.scrollTo(nextIndex);
+    api.scrollTo(nextIndex, false);
     return;
   }
-  api.scrollNext();
+  api.scrollNext(false);
 }
 
 function EpisodeCarouselScrollArrows({ api }: { api: CarouselApi | null }) {
@@ -1173,16 +1178,32 @@ export function ShowEpisodePickerList() {
 
   useEffect(() => {
     if (!episodeCarouselApi || loading) return;
-    const frame = requestAnimationFrame(() => {
+
+    const alignToCurrent = () => {
       scrollCarouselToSelectedSecond(
         episodeCarouselApi,
         displayedEpisodes,
         selectedSeason,
-        selectedEpisode,
-        false
+        selectedEpisode
       );
-    });
-    return () => cancelAnimationFrame(frame);
+    };
+
+    let innerRaf = 0;
+    const scheduleAlign = () => {
+      cancelAnimationFrame(innerRaf);
+      innerRaf = requestAnimationFrame(() => {
+        innerRaf = requestAnimationFrame(alignToCurrent);
+      });
+    };
+
+    const onReInit = () => scheduleAlign();
+    episodeCarouselApi.on("reInit", onReInit);
+    scheduleAlign();
+
+    return () => {
+      episodeCarouselApi.off("reInit", onReInit);
+      cancelAnimationFrame(innerRaf);
+    };
   }, [
     episodeCarouselApi,
     loading,
@@ -1228,7 +1249,7 @@ export function ShowEpisodePickerList() {
         </div>
       </div>
       {loading ? (
-        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+        <Carousel opts={EPISODE_CAROUSEL_OPTS} className="w-full">
           <CarouselContent className="-ml-3">
             {Array.from({ length: VISIBLE_EPISODE_SLOTS }).map((_, i) => (
               <CarouselItem key={i} className={EPISODE_CAROUSEL_ITEM_CLASS}>
@@ -1245,7 +1266,7 @@ export function ShowEpisodePickerList() {
         </p>
       ) : (
         <Carousel
-          opts={{ align: "start", dragFree: true }}
+          opts={EPISODE_CAROUSEL_OPTS}
           setApi={setEpisodeCarouselApi}
           className="w-full"
         >
