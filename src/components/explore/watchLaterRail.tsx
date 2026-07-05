@@ -20,7 +20,7 @@ import type { ContentItem } from "@/types/content";
 const CAROUSEL_ITEM_VERTICAL =
   "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
 const CAROUSEL_ITEM_VERTICAL_PROFILE =
-  "basis-[45%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-[calc(100%/7)] xl:basis-[calc(100%/7)]";
+  "basis-[45%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-[calc(100%/7)] xl:basis-[calc(100%/8)] 2xl:basis-[calc(100%/10)]";
 const CAROUSEL_ITEM_HORIZONTAL =
   "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 

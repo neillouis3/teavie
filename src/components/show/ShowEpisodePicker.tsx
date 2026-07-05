@@ -58,13 +58,13 @@ const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
 /** Visible episode cards in the horizontal scroller (4 full + ⅓ peek). */
 const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)]";
+  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)] xl:basis-[calc(100%/5.3333333333)] 2xl:basis-[calc(100%/6.3333333333)]";
 const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[86%] sm:basis-[58%] md:basis-[46%] lg:basis-[calc(100%/3.15)]";
-const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px]";
-const EPISODE_CARD_HEIGHT_CURRENT = "h-[360px] sm:h-[400px]";
-const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px]";
-const EPISODE_CARD_STILL_HEIGHT_CURRENT = "h-[172px] sm:h-[196px]";
+  "pl-3 shrink-0 grow-0 basis-[86%] sm:basis-[58%] md:basis-[46%] lg:basis-[calc(100%/3.15)] xl:basis-[calc(100%/3.85)] 2xl:basis-[calc(100%/4.35)]";
+const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px] xl:h-[340px]";
+const EPISODE_CARD_HEIGHT_CURRENT = "h-[360px] sm:h-[400px] xl:h-[380px]";
+const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px] xl:h-[150px]";
+const EPISODE_CARD_STILL_HEIGHT_CURRENT = "h-[172px] sm:h-[196px] xl:h-[184px]";
 const EPISODE_CARD_TITLE_CLASS =
   "shrink-0 overflow-hidden text-sm font-semibold leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
 const EPISODE_CARD_DESCRIPTION_CLASS =
@@ -1160,11 +1160,14 @@ export function ShowEpisodePickerList() {
       className="flex w-full scroll-mt-6 flex-col gap-4"
       aria-label="Episodes"
     >
-      <div className="flex w-full min-w-0 items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
+      <div className="flex w-full min-w-0 flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           <ShowEpisodePickerSeasonRow />
+          {!loading && episodes.length > 0 ? (
+            <EpisodeStateLegend />
+          ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5 self-end xl:self-auto">
           {!loading && episodes.length > 1 ? (
             <Button
               size="sm"
@@ -1187,7 +1190,6 @@ export function ShowEpisodePickerList() {
           <EpisodeCarouselScrollArrows api={episodeCarouselApi} />
         </div>
       </div>
-      {!loading && episodes.length > 0 ? <EpisodeStateLegend /> : null}
       {loading ? (
         <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
           <CarouselContent className="-ml-3">
