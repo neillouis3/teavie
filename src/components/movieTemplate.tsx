@@ -32,6 +32,11 @@ import { isBlockedMovieTmdbId } from '@/lib/tmdbMovieContentPolicy';
 import CatalogUnavailable from './ui/catalogUnavailable';
 import WatchLaterButton from '@/components/watchLater/WatchLaterButton';
 import FavoriteButton from '@/components/favorites/FavoriteButton';
+import MovieCreditsStrip, {
+  type MovieCreditsPayload,
+} from '@/components/movie/MovieCreditsStrip';
+import MovieTrailerEmbed from '@/components/movie/MovieTrailerEmbed';
+import { pickYoutubeTrailerEmbedUrl, type TmdbVideosPayload } from '@/lib/tmdbVideos';
 
 interface Movie {
   id: number;
@@ -59,6 +64,8 @@ interface Movie {
   homepage?: string | null;
   imdb_id?: string | null;
   release_dates?: unknown;
+  credits?: MovieCreditsPayload;
+  videos?: TmdbVideosPayload;
 }
 
 export type MovieServerKey = StreamServerId;
@@ -349,6 +356,10 @@ export default function MovieTemplate({ id }: { id: string }) {
   }, [id, movie, loading, movieReleased]);
 
   const imageUrl = tmdbImageUrl(movie?.poster_path);
+  const trailerEmbedUrl =
+    movie && !movieReleased
+      ? pickYoutubeTrailerEmbedUrl(movie.videos)
+      : null;
 
   if (loading) {
     return <WatchPageSkeleton />;
@@ -371,12 +382,19 @@ export default function MovieTemplate({ id }: { id: string }) {
       <div className="w-full  flex flex-col gap-6">
         <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
           {movie && !movieReleased ? (
-            <CatalogComingSoon
-              title={movie.title}
-              posterUrl={imageUrl}
-              releaseDate={movie.release_date}
-              links={movieDetailLinks(movie)}
-            />
+            trailerEmbedUrl ? (
+              <MovieTrailerEmbed
+                src={trailerEmbedUrl}
+                title={`${movie.title} trailer`}
+              />
+            ) : (
+              <CatalogComingSoon
+                title={movie.title}
+                posterUrl={imageUrl}
+                releaseDate={movie.release_date}
+                links={movieDetailLinks(movie)}
+              />
+            )
           ) : (
             <MoviePlayer
               key={`movie-${id}-${playerEpoch}`}
@@ -396,7 +414,8 @@ export default function MovieTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        <div className="w-full">
+        <div className="flex w-full flex-col gap-6">
+          {movie && <MovieCreditsStrip credits={movie.credits} />}
           {movie && (
             <CatalogMediaPanel
                 posterUrl={imageUrl}
