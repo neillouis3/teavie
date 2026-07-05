@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Button } from "@heroui/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, PlayIcon } from "@hugeicons/core-free-icons";
 import ShowPlayer from "./showPlayer";
 import AnimePlayer from "./animePlayer";
 import MoviePlayer from "./moviePlayer";
@@ -68,6 +72,14 @@ import {
   animeReleaseDateYmdFromDoc,
   catalogTvPremiered,
 } from "@/lib/animeRelease.js";
+import MovieCreditsStrip, {
+  type MovieCreditsPayload,
+} from "@/components/movie/MovieCreditsStrip";
+import MovieTrailerEmbed from "@/components/movie/MovieTrailerEmbed";
+import {
+  pickYoutubeTrailerEmbedUrl,
+  type TmdbVideosPayload,
+} from "@/lib/tmdbVideos";
 
 interface Season {
   season_number: number;
@@ -128,6 +140,8 @@ interface Show {
     /** AniList total episode count (finished/airing cap); drives picker cap with TMDB season map. */
     episodes?: number | null;
   } | null;
+  aggregate_credits?: MovieCreditsPayload;
+  videos?: TmdbVideosPayload;
 }
 
 function catalogAnilistId(
@@ -506,14 +520,39 @@ async function fetchAnilistAndMerge(
 
 export type ShowServerKey = StreamServerId;
 
+export type ShowTemplateViewMode = "details" | "watch";
+
+function buildShowWatchHref(
+  catalogId: string,
+  options: {
+    season: number;
+    episode: number;
+    party?: string | null;
+  }
+): string {
+  const params = new URLSearchParams();
+  if (options.season > 1) params.set("season", String(options.season));
+  if (options.episode > 1) params.set("episode", String(options.episode));
+  if (options.party) params.set("party", options.party);
+  const base = `/shows/${encodeURIComponent(catalogId)}/watch`;
+  const q = params.toString();
+  return q ? `${base}?${q}` : base;
+}
+
+function buildShowDetailsHref(catalogId: string): string {
+  return `/shows/${encodeURIComponent(catalogId)}`;
+}
+
 export default function ShowTemplate({
   id,
   adminKey,
   adminPreview = false,
+  viewMode = "details",
 }: {
   id: string;
   adminKey?: string;
   adminPreview?: boolean;
+  viewMode?: ShowTemplateViewMode;
 }) {
   const { server } = useStreamingSource();
   const { audio: animeAudio } = useAnimeAudio();
@@ -580,12 +619,14 @@ export default function ShowTemplate({
 
     const saved = loadWatchProgress(String(id));
     const urlEpRaw = searchParams.get("episode");
+    const urlSeasonRaw = searchParams.get("season");
     const urlEp = urlEpRaw != null ? parseInt(urlEpRaw, 10) : NaN;
+    const urlSeason = urlSeasonRaw != null ? parseInt(urlSeasonRaw, 10) : NaN;
     const cap = catalogAnimeEpisodeCount(show, id);
 
     if (Number.isFinite(urlEp) && urlEp >= 1) {
       const ep = cap != null ? Math.min(urlEp, cap) : urlEp;
-      setSelectedSeason(1);
+      setSelectedSeason(Number.isFinite(urlSeason) && urlSeason >= 1 ? urlSeason : 1);
       setSelectedEpisode(ep);
     } else if (saved) {
       const list = tmdbSeasonsWithEpisodes(show.seasons);
@@ -885,11 +926,17 @@ export default function ShowTemplate({
     const displayName = showDisplayTitle(show);
     if (!show || !displayName) return;
     const year = show.first_air_date?.slice(0, 4);
+    if (viewMode === "details") {
+      document.title = year
+        ? `${displayName} (${year}) - Teavie`
+        : `${displayName} - Teavie`;
+      return;
+    }
     const seasonEpisode = `S${selectedSeason}E${selectedEpisode}`;
     document.title = year
       ? `${displayName} (${year}) ${seasonEpisode} - Teavie`
       : `${displayName} ${seasonEpisode} - Teavie`;
-  }, [show, selectedSeason, selectedEpisode]);
+  }, [show, selectedSeason, selectedEpisode, viewMode]);
 
   const releasedSeasonsForUi = show?.seasons?.filter((s) => s.season_number >= 1) ?? [];
   const resolvedIsNumeric = /^\d+$/.test(String(resolvedPlayerId));
@@ -945,8 +992,28 @@ export default function ShowTemplate({
     show?.is_anime && show ? animePosterFromDoc(show) : show?.poster_path
   );
   const title = show ? showDisplayTitle(show) : "";
+  const trailerEmbedUrl = pickYoutubeTrailerEmbedUrl(show?.videos);
 
   const partyRoomId = searchParams.get("party");
+  const watchHref = buildShowWatchHref(id, {
+    season: selectedSeason,
+    episode: selectedEpisode,
+    party: partyRoomId,
+  });
+  const detailsHref = buildShowDetailsHref(id);
+
+  useEffect(() => {
+    if (
+      viewMode !== "details" ||
+      !partyRoomId ||
+      loading ||
+      !show ||
+      !progressHydrated
+    ) {
+      return;
+    }
+    router.replace(watchHref);
+  }, [viewMode, partyRoomId, loading, show, progressHydrated, watchHref, router]);
 
   const applyGuestSync = useCallback((plan: GuestSyncPayload) => {
     setSelectedSeason(plan.season);
@@ -1126,7 +1193,7 @@ export default function ShowTemplate({
 
   const watchPartyNavRegistration = useMemo(
     () =>
-      canPlay && !isAnimeMovie
+      viewMode === "watch" && canPlay && !isAnimeMovie
         ? {
             canPlay: true,
             room: watchParty.room,
@@ -1146,6 +1213,7 @@ export default function ShowTemplate({
           }
         : null,
     [
+      viewMode,
       canPlay,
       isAnimeMovie,
       watchParty.room,
@@ -1210,6 +1278,21 @@ export default function ShowTemplate({
               <div className="flex flex-wrap items-center gap-2">
                 <FavoriteButton catalogId={String(id)} mediaType="tv" iconOnly />
                 <WatchLaterButton catalogId={String(id)} mediaType="tv" iconOnly />
+                {viewMode === "details" && (canPlay || isAnimeMovie) ? (
+                  <Button
+                    as={Link}
+                    href={watchHref}
+                    color="success"
+                    size="sm"
+                    radius="md"
+                    className="h-8 min-h-8 px-3 text-sm font-medium"
+                    startContent={
+                      <HugeiconsIcon icon={PlayIcon} size={16} className="shrink-0" />
+                    }
+                  >
+                    Watch
+                  </Button>
+                ) : null}
               </div>
             }
           />
@@ -1267,7 +1350,9 @@ export default function ShowTemplate({
   };
 
   if (loading) {
-    return <WatchPageSkeleton withSeasonPicker />;
+    return (
+      <WatchPageSkeleton withSeasonPicker={viewMode === "watch"} />
+    );
   }
 
   if (!show) {
@@ -1284,6 +1369,97 @@ export default function ShowTemplate({
     );
   }
 
+  const playerBlock = (
+    <div
+      id={SHOW_VIDEO_PLAYER_ID}
+      className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]"
+    >
+      {isAnimeMovie ? (
+        animeMovieResolving ? (
+          <PlayerEmbedSkeleton rounded="rounded-xl" />
+        ) : animeMovieTmdbId ? (
+          <MoviePlayer key={`movie-${id}`} videoId={animeMovieTmdbId} server={server} />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+            No playback source available for this page yet. Try again later.
+          </div>
+        )
+      ) : !canPlay ? (
+        show && !tmdbShowPremiered ? (
+          trailerEmbedUrl ? (
+            <MovieTrailerEmbed src={trailerEmbedUrl} title={`${title} trailer`} />
+          ) : (
+            <CatalogComingSoon
+              title={title}
+              posterUrl={imageUrl}
+              releaseDate={animeReleaseDateYmdFromDoc(show) ?? show.first_air_date}
+              links={showDetailLinks(show)}
+            />
+          )
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+            No playback source available for this page yet. Try again later.
+          </div>
+        )
+      ) : useTmdbSeasonAiringCapForPlayer && pickerEpisodesLoading ? (
+        <PlayerEmbedSkeleton />
+      ) : useTmdbSeasonAiringCapForPlayer && pickerPlayableCount < 1 ? (
+        <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
+          No released episodes to play in this season yet.
+        </div>
+      ) : (canPlayAnime || isAnimeCatalogRoute) && malIdForPlayer != null ? (
+        <AnimePlayer
+          key={`${malIdForPlayer}-${animeAbsoluteEpisode}-${animeAudio}-${playerEpoch}`}
+          malId={malIdForPlayer}
+          episode={animeAbsoluteEpisode}
+          audio={animeAudio}
+          startSeconds={playerStartSeconds}
+          onMegaPlayMessage={handleMegaPlayMessage}
+        />
+      ) : (
+        <ShowPlayer
+          key={`${id}-${playerCoords.season}-${playerCoords.episode}-${playerEpoch}`}
+          server={server}
+          videoId={resolvedPlayerId}
+          season={playerCoords.season}
+          episode={playerCoords.episode}
+          startSeconds={server === "videasy" ? playerStartSeconds : 0}
+          onVideasyProgress={server === "videasy" ? handleVideasyProgress : undefined}
+          onEmbedLoad={
+            server === "vidcore"
+              ? () =>
+                  markEpisodeWatched(playerCoords.season, playerCoords.episode)
+              : undefined
+          }
+        />
+      )}
+    </div>
+  );
+
+  if (viewMode === "details") {
+    return (
+      <div className="flex min-h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
+        {adminPreview && adminBypassActive ? (
+          <div className="mb-3 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-center text-xs text-warning-800 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">
+            Admin preview — content policy bypass active
+          </div>
+        ) : null}
+        <div className="flex w-full flex-col gap-6">
+          {showDetailsPanel}
+          {!isAnimeMovie ? (
+            <MovieCreditsStrip credits={show.aggregate_credits} />
+          ) : null}
+          {trailerEmbedUrl && (canPlay || !tmdbShowPremiered) ? (
+            <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[60vh] lg:max-h-[min(56vh,640px)]">
+              <MovieTrailerEmbed src={trailerEmbedUrl} title={`${title} trailer`} />
+            </div>
+          ) : null}
+          {showRelatedSections}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
       {adminPreview && adminBypassActive ? (
@@ -1291,85 +1467,31 @@ export default function ShowTemplate({
           Admin preview — content policy bypass active
         </div>
       ) : null}
-      <div className="w-full flex flex-col gap-6">
-
-        {/* ── Video Player (horizontal inset matches root py-4 / px-4) ── */}
-        <div
-          id={SHOW_VIDEO_PLAYER_ID}
-          className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]"
+      <div className="flex w-full flex-col gap-6">
+        <Button
+          as={Link}
+          href={detailsHref}
+          variant="light"
+          size="sm"
+          radius="md"
+          className="h-8 w-fit min-w-0 px-2 text-sm text-default-500"
+          startContent={
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={16} className="shrink-0" />
+          }
         >
-          {isAnimeMovie ? (
-            animeMovieResolving ? (
-              <PlayerEmbedSkeleton rounded="rounded-xl" />
-            ) : animeMovieTmdbId ? (
-              <MoviePlayer key={`movie-${id}`} videoId={animeMovieTmdbId} server={server} />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-                No playback source available for this page yet. Try again later.
-              </div>
-            )
-          ) : !canPlay ? (
-            show && !tmdbShowPremiered ? (
-              <CatalogComingSoon
-                title={title}
-                posterUrl={imageUrl}
-                releaseDate={animeReleaseDateYmdFromDoc(show) ?? show.first_air_date}
-                links={showDetailLinks(show)}
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-                No playback source available for this page yet. Try again later.
-              </div>
-            )
-          ) : useTmdbSeasonAiringCapForPlayer && pickerEpisodesLoading ? (
-            <PlayerEmbedSkeleton />
-          ) : useTmdbSeasonAiringCapForPlayer && pickerPlayableCount < 1 ? (
-            <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
-              No released episodes to play in this season yet.
-            </div>
-          ) : (canPlayAnime || isAnimeCatalogRoute) && malIdForPlayer != null ? (
-            <AnimePlayer
-              key={`${malIdForPlayer}-${animeAbsoluteEpisode}-${animeAudio}-${playerEpoch}`}
-              malId={malIdForPlayer}
-              episode={animeAbsoluteEpisode}
-              audio={animeAudio}
-              startSeconds={playerStartSeconds}
-              onMegaPlayMessage={handleMegaPlayMessage}
-            />
-          ) : (
-            <ShowPlayer
-              key={`${id}-${playerCoords.season}-${playerCoords.episode}-${playerEpoch}`}
-              server={server}
-              videoId={resolvedPlayerId}
-              season={playerCoords.season}
-              episode={playerCoords.episode}
-              startSeconds={server === "videasy" ? playerStartSeconds : 0}
-              onVideasyProgress={server === "videasy" ? handleVideasyProgress : undefined}
-              onEmbedLoad={
-                server === "vidcore"
-                  ? () =>
-                      markEpisodeWatched(playerCoords.season, playerCoords.episode)
-                  : undefined
-              }
-            />
-          )}
-        </div>
+          Back to details
+        </Button>
+
+        {playerBlock}
 
         {!isAnimeMovie ? (
           <ShowEpisodePickerProvider {...episodePickerProps}>
             <div className="flex w-full flex-col gap-6">
               <ShowEpisodePickerControls />
               <ShowEpisodePickerList />
-              {showDetailsPanel}
-              {showRelatedSections}
             </div>
           </ShowEpisodePickerProvider>
-        ) : (
-          <>
-            {showDetailsPanel}
-            {showRelatedSections}
-          </>
-        )}
+        ) : null}
       </div>
     </div>
   );
