@@ -55,20 +55,20 @@ export type EpisodeCardRow = {
 
 export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
-/** Visible episode cards in the horizontal scroller (5 full + ⅔ peek on desktop). */
-const VISIBLE_EPISODE_SLOTS = 7;
+/** Visible episode cards in the horizontal scroller (4 full + ½ peek on desktop). */
+const VISIBLE_EPISODE_SLOTS = 5;
 const EPISODE_CAROUSEL_OPTS = {
   align: "start" as const,
   dragFree: false,
   /** Embla scroll duration (ms) — used when scrollTo is called with jump=false. */
   duration: 40,
 };
-/** Normal episode slot — 5 full cards + ⅔ peek at `lg`. */
+/** Normal episode slot — 4 full cards + ½ peek at `lg`. */
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.3333333333)] lg:basis-[calc(100%/5.6666666667)]";
+  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.3333333333)] lg:basis-[calc(100%/4.5)]";
 /** Current episode slot — 1 + ⅓× a normal card width. */
 const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[96%] sm:basis-[64%] md:basis-[calc(100%/2.5)] lg:basis-[calc(100%/4.25)]";
+  "pl-3 shrink-0 grow-0 basis-[96%] sm:basis-[64%] md:basis-[calc(100%/2.5)] lg:basis-[calc(100%/3.375)]";
 const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px]";
 const EPISODE_CARD_TITLE_CLASS =
   "shrink-0 overflow-hidden text-sm font-normal leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
