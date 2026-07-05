@@ -1,5 +1,17 @@
 [
   {
+    "version": "2.4.5",
+    "date": "2026-07-05",
+    "title": "Episode picker states and sports title polish",
+    "summary": "Episode cards now clearly show now playing, watched, and upcoming states, and sports titles drop emoji clutter from cards and the watch page.",
+    "tags": ["TV", "Sports", "UI"],
+    "changes": [
+      "Episode viewer legend and distinct styling for current, watched, and upcoming episodes.",
+      "Upcoming episodes appear in the list with air dates but stay unplayable until release.",
+      "Sports cards without artwork use richer gradients and strip emojis from titles."
+    ]
+  },
+  {
     "version": "2.4.4",
     "date": "2026-07-03",
     "title": "Sports player and nav polish",

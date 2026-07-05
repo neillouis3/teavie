@@ -20,6 +20,7 @@ import {
   type StreamedMatch,
   type StreamedStream,
 } from '@/lib/streamedSports';
+import { stripEmojis } from '@/lib/stripEmojis';
 
 const BORDERED_FIELD =
   'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
@@ -65,7 +66,7 @@ function matchOverview(match: StreamedMatch): string {
   const home = match.teams?.home?.name?.trim();
   const away = match.teams?.away?.name?.trim();
   if (home && away) return `${home} vs ${away}`;
-  return match.title?.trim() || 'Live sports event';
+  return stripEmojis(match.title?.trim() || '') || 'Live sports event';
 }
 
 type SportsMatchPanelProps = {
@@ -87,6 +88,7 @@ export default function SportsMatchPanel({
   onSourceChange,
   onStreamChange,
 }: SportsMatchPanelProps) {
+  const displayTitle = stripEmojis(match.title);
   const live = isMatchLive(match);
   const upcoming = isMatchUpcoming(match);
   const posterUrl = matchCardPosterUrl(match);
@@ -106,7 +108,7 @@ export default function SportsMatchPanel({
           />
         ) : null}
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          {match.title}
+          {displayTitle}
         </h1>
         {badges.away ? (
           <img
@@ -146,13 +148,13 @@ export default function SportsMatchPanel({
   const posterEl = posterUrl ? (
     <Image
       src={posterUrl}
-      alt={match.title}
+      alt={displayTitle}
       className="aspect-[16/10] w-full rounded-lg object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
     />
   ) : (
     <div className="aspect-[16/10] w-full overflow-hidden rounded-lg bg-default-200 ring-1 ring-default-200/35 dark:bg-default-100/20 dark:ring-default-100/15">
       <SportsMatchPoster
-        title={match.title}
+        title={displayTitle}
         posterUrl={posterUrl}
         homeBadgeUrl={badges.home}
         awayBadgeUrl={badges.away}
