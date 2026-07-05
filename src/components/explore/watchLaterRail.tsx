@@ -20,6 +20,7 @@ import {
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE,
 } from "@/lib/catalogGrid";
+import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
 
 const CAROUSEL_ITEM_HORIZONTAL =
@@ -48,7 +49,7 @@ export default function WatchLaterRail({
       : RAIL_CAROUSEL_ITEM_VERTICAL;
 
   const visibleItems = useMemo(
-    () => items.slice(0, maxItems),
+    () => railContentItems(items, maxItems),
     [items, maxItems]
   );
 

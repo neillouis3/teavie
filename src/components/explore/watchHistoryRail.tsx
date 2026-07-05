@@ -21,6 +21,7 @@ import {
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE,
 } from "@/lib/catalogGrid";
+import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ExploreHistoryRow } from "@/lib/explorePageData";
 import { useUserData } from "@/contexts/userDataContext";
 
@@ -51,7 +52,7 @@ export default function WatchHistoryRail({
       : RAIL_CAROUSEL_ITEM_VERTICAL;
 
   const visibleItems = React.useMemo(
-    () => items.slice(0, maxItems),
+    () => railContentItems(items, maxItems),
     [items, maxItems]
   );
 
