@@ -27,6 +27,8 @@ export type CatalogMediaPanelProps = {
   links: CatalogDetailLink[];
   genreBrowseBase?: string;
   toolbar?: React.ReactNode;
+  /** Cast, directors, etc. — rendered below title/poster, above genre metadata. */
+  creditsSection?: React.ReactNode;
 };
 
 const DETAIL_META_CARD =
@@ -120,6 +122,7 @@ export default function CatalogMediaPanel({
   links,
   genreBrowseBase,
   toolbar,
+  creditsSection,
 }: CatalogMediaPanelProps) {
   const ratingLabel =
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
@@ -212,6 +215,8 @@ export default function CatalogMediaPanel({
       {seasonEpisodeSection ? (
         <div className="space-y-4">{seasonEpisodeSection}</div>
       ) : null}
+
+      {creditsSection ? <div className="w-full">{creditsSection}</div> : null}
 
       <section className={DETAIL_META_CARD}>
         <div className={DETAIL_META_CARD_INNER}>

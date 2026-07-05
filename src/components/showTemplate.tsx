@@ -1295,6 +1295,11 @@ export default function ShowTemplate({
                 ) : null}
               </div>
             }
+            creditsSection={
+              !isAnimeMovie ? (
+                <MovieCreditsStrip credits={show.aggregate_credits} />
+              ) : null
+            }
           />
       )}
     </div>
@@ -1446,9 +1451,6 @@ export default function ShowTemplate({
         ) : null}
         <div className="flex w-full flex-col gap-6">
           {showDetailsPanel}
-          {!isAnimeMovie ? (
-            <MovieCreditsStrip credits={show.aggregate_credits} />
-          ) : null}
           {trailerEmbedUrl && (canPlay || !tmdbShowPremiered) ? (
             <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[60vh] lg:max-h-[min(56vh,640px)]">
               <MovieTrailerEmbed src={trailerEmbedUrl} title={`${title} trailer`} />

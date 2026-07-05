@@ -415,7 +415,6 @@ export default function MovieTemplate({ id }: { id: string }) {
         </div>
 
         <div className="flex w-full flex-col gap-6">
-          {movie && <MovieCreditsStrip credits={movie.credits} />}
           {movie && (
             <CatalogMediaPanel
                 posterUrl={imageUrl}
@@ -440,6 +439,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                     <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
                   </div>
                 }
+                creditsSection={<MovieCreditsStrip credits={movie.credits} />}
               />
           )}
         </div>
