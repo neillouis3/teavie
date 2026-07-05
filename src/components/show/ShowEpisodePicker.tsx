@@ -66,7 +66,7 @@ const EPISODE_CARD_HEIGHT_CURRENT = "h-[360px] sm:h-[400px] xl:h-[380px]";
 const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px] xl:h-[150px]";
 const EPISODE_CARD_STILL_HEIGHT_CURRENT = "h-[172px] sm:h-[196px] xl:h-[184px]";
 const EPISODE_CARD_TITLE_CLASS =
-  "shrink-0 overflow-hidden text-sm font-semibold leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
+  "shrink-0 overflow-hidden text-sm font-normal leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
 const EPISODE_CARD_DESCRIPTION_CLASS =
   "h-[3.5rem] shrink-0 overflow-hidden text-sm leading-snug text-default-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]";
 const EPISODE_CARD_BODY_CLASS =
@@ -100,13 +100,13 @@ function episodeCardVisualState(
 function episodeCardShellClass(state: EpisodeCardVisualState): string {
   switch (state) {
     case "current":
-      return "border-2 border-success bg-success/5 shadow-sm shadow-success/10";
+      return "bg-success/5 shadow-sm shadow-success/10";
     case "watched":
-      return "border border-success/25 bg-default-50/50 dark:bg-default-100/5";
+      return "bg-default-50/50 dark:bg-default-100/5";
     case "upcoming":
-      return "border border-dashed border-default-300/80 bg-default-100/40 opacity-80 dark:border-white/10 dark:bg-default-100/10";
+      return "bg-default-100/40 opacity-80 dark:bg-default-100/10";
     default:
-      return "border border-transparent hover:border-default-200/80 dark:hover:border-white/10";
+      return "";
   }
 }
 
@@ -185,7 +185,6 @@ type ShowEpisodePickerProps = {
   flatMode?: boolean;
   flatEpisodeCap?: number | null;
   watchedKeys?: Set<string>;
-  onMarkWatched?: (season: number, episode: number) => void;
   onEpisodesLoadingChange?: (loading: boolean) => void;
   onPlayableEpisodeCountChange?: (count: number) => void;
   /** Anime: Sub/Dub selector at the start of episode controls. */
@@ -210,6 +209,30 @@ function useEpisodePicker() {
 
 function padEpisode(n: number) {
   return String(n).padStart(2, "0");
+}
+
+function selectedEpisodeIndex(
+  list: EpisodeCardRow[],
+  season: number,
+  episode: number
+): number {
+  return list.findIndex(
+    (row) => row.season === season && row.episode === episode
+  );
+}
+
+/** Scroll so the active episode sits in the second visible slot when possible. */
+function scrollCarouselToSelectedSecond(
+  api: CarouselApi,
+  list: EpisodeCardRow[],
+  season: number,
+  episode: number,
+  jump: boolean
+) {
+  const selectedIndex = selectedEpisodeIndex(list, season, episode);
+  if (selectedIndex < 0) return;
+  const targetIndex = Math.max(0, selectedIndex - 1);
+  api.scrollTo(targetIndex, jump);
 }
 
 function episodeNavNumber(
@@ -351,7 +374,6 @@ function useEpisodePickerState({
   flatMode = false,
   flatEpisodeCap = null,
   watchedKeys,
-  onMarkWatched,
   onEpisodesLoadingChange,
   onPlayableEpisodeCountChange,
   showAnimeAudio = false,
@@ -370,7 +392,7 @@ function useEpisodePickerState({
 
   const [jumpSeason, setJumpSeason] = useState(String(selectedSeason));
   const [jumpEpisode, setJumpEpisode] = useState(String(selectedEpisode));
-  const [episodeSortLatestFirst, setEpisodeSortLatestFirst] = useState(true);
+  const [episodeSortLatestFirst, setEpisodeSortLatestFirst] = useState(false);
 
   const releasedEpisodes = useMemo(
     () => filterReleasedEpisodes(episodes),
@@ -378,10 +400,7 @@ function useEpisodePickerState({
   );
 
   const displayedEpisodes = useMemo(
-    () =>
-      episodeSortLatestFirst
-        ? [...episodes].reverse()
-        : episodes,
+    () => (episodeSortLatestFirst ? [...episodes].reverse() : episodes),
     [episodes, episodeSortLatestFirst]
   );
 
@@ -600,7 +619,6 @@ function useEpisodePickerState({
     if (isEpisodeUpcoming(row.air_date)) return;
     onSeasonChange(row.season);
     onEpisodeChange(row.season, row.episode);
-    onMarkWatched?.(row.season, row.episode);
   };
 
   const currentEpisodeIndex = useMemo(() => {
@@ -711,7 +729,6 @@ function useEpisodePickerState({
     const lastEp = Math.max(1, prevSeason.episode_count ?? 1);
     onSeasonChange(prevSeason.season_number);
     onEpisodeChange(prevSeason.season_number, lastEp);
-    onMarkWatched?.(prevSeason.season_number, lastEp);
   };
 
   const goNextEpisode = () => {
@@ -730,7 +747,6 @@ function useEpisodePickerState({
     const nextSeason = releasedSeasons[seasonIdx + 1];
     onSeasonChange(nextSeason.season_number);
     onEpisodeChange(nextSeason.season_number, 1);
-    onMarkWatched?.(nextSeason.season_number, 1);
   };
 
   const applyJumpFromInputs = useCallback(
@@ -752,7 +768,6 @@ function useEpisodePickerState({
         }
         onSeasonChange(coords.season);
         onEpisodeChange(coords.season, coords.episode);
-        onMarkWatched?.(coords.season, coords.episode);
         return;
       }
 
@@ -763,7 +778,6 @@ function useEpisodePickerState({
       if (s === selectedSeason && ep === selectedEpisode) return;
       onSeasonChange(s);
       onEpisodeChange(s, ep);
-      onMarkWatched?.(s, ep);
     },
     [
       flatMode,
@@ -773,7 +787,6 @@ function useEpisodePickerState({
       selectedEpisode,
       onSeasonChange,
       onEpisodeChange,
-      onMarkWatched,
     ]
   );
 
@@ -804,6 +817,7 @@ function useEpisodePickerState({
     fallbackStillPath,
     watchedKeys,
     selectedSeason,
+    selectedEpisode,
     currentSeasonEpisodeLabel,
     hasPreviousEpisode,
     hasNextEpisode,
@@ -1140,6 +1154,8 @@ export function ShowEpisodePickerList() {
     fallbackStillPath,
     isSelected,
     handleSelect,
+    selectedSeason,
+    selectedEpisode,
   } = useEpisodePicker();
 
   const [episodeCarouselApi, setEpisodeCarouselApi] = useState<CarouselApi | null>(
@@ -1153,6 +1169,26 @@ export function ShowEpisodePickerList() {
   useEffect(() => {
     episodeCarouselApi?.reInit();
   }, [displayedEpisodes, episodeCarouselApi]);
+
+  useEffect(() => {
+    if (!episodeCarouselApi || loading) return;
+    const frame = requestAnimationFrame(() => {
+      scrollCarouselToSelectedSecond(
+        episodeCarouselApi,
+        displayedEpisodes,
+        selectedSeason,
+        selectedEpisode,
+        false
+      );
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [
+    episodeCarouselApi,
+    loading,
+    displayedEpisodes,
+    selectedSeason,
+    selectedEpisode,
+  ]);
 
   return (
     <section

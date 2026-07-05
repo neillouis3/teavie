@@ -597,12 +597,7 @@ export default function ShowTemplate({
       }
       setWatchedEpisodes(new Set(saved.watched));
     } else {
-      const list = tmdbSeasonsWithEpisodes(show.seasons);
-      const firstSeason =
-        list.find((s) => s.season_number >= 1 && (s.episode_count ?? 0) > 0) ??
-        list[0];
-      const seasonNum = firstSeason?.season_number ?? 1;
-      setWatchedEpisodes(new Set([formatWatchEpKey(seasonNum, 1)]));
+      setWatchedEpisodes(new Set());
     }
     progressAppliedForIdRef.current = id;
     setProgressHydrated(true);
@@ -977,10 +972,29 @@ export default function ShowTemplate({
     setPlayerEpoch((n) => n + 1);
   }, [id, selectedSeason, selectedEpisode, progressHydrated, watchParty.room]);
 
+  const markEpisodeWatched = useCallback((season: number, episode: number) => {
+    const key = formatWatchEpKey(season, episode);
+    setWatchedEpisodes((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  }, []);
+
+  const markEpisodeWatchedFromPlayback = useCallback(
+    (season: number, episode: number, seconds: number) => {
+      if (!Number.isFinite(seconds) || seconds < 1) return;
+      markEpisodeWatched(season, episode);
+    },
+    [markEpisodeWatched]
+  );
+
   const handleVideasyProgress = useCallback(
     (msg: VideasyProgressMessage) => {
       const s = msg.season ?? selectedSeason;
       const e = msg.episode ?? selectedEpisode;
+      markEpisodeWatchedFromPlayback(s, e, msg.timestamp);
       saveEpisodePlaybackPosition(String(id), s, e, msg.timestamp);
       watchParty.noteHostPlayback(msg.timestamp);
 
@@ -998,6 +1012,7 @@ export default function ShowTemplate({
       watchParty.isHost,
       watchParty.room,
       watchParty.broadcastPlayback,
+      markEpisodeWatchedFromPlayback,
     ]
   );
 
@@ -1035,11 +1050,13 @@ export default function ShowTemplate({
   const handleMegaPlayMessage = useCallback(
     (msg: MegaPlayMessage) => {
       if (msg.kind === "complete") {
+        markEpisodeWatched(selectedSeason, selectedEpisode);
         advanceAnimeEpisode();
         return;
       }
       if (msg.kind !== "progress") return;
       const sec = Math.floor(msg.currentTime);
+      markEpisodeWatchedFromPlayback(selectedSeason, selectedEpisode, sec);
       saveEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode, sec);
       watchParty.noteHostPlayback(sec);
       if (!watchParty.isHost || !watchParty.room) return;
@@ -1056,6 +1073,8 @@ export default function ShowTemplate({
       watchParty.room,
       watchParty.broadcastPlayback,
       advanceAnimeEpisode,
+      markEpisodeWatched,
+      markEpisodeWatchedFromPlayback,
     ]
   );
 
@@ -1157,14 +1176,6 @@ export default function ShowTemplate({
       ? resolveAnimePlayerCoords(show, selectedSeason, selectedEpisode)
       : { season: selectedSeason, episode: selectedEpisode };
 
-  const markEpisodeWatched = (season: number, episode: number) => {
-    setWatchedEpisodes((prev) => {
-      const next = new Set(prev);
-      next.add(formatWatchEpKey(season, episode));
-      return next;
-    });
-  };
-
   useEffect(() => {
     if (!show?.is_anime || !show.seasons?.length) return;
     const cap = catalogAnimeEpisodeCount(show, id);
@@ -1250,7 +1261,6 @@ export default function ShowTemplate({
     catalogAbsoluteEpisodes: false,
     flatEpisodeCap: animePickerEpisodeCap,
     watchedKeys: watchedEpisodes,
-    onMarkWatched: markEpisodeWatched,
     onEpisodesLoadingChange: setPickerEpisodesLoading,
     onPlayableEpisodeCountChange: setPickerPlayableCount,
     showAnimeAudio: Boolean(show?.is_anime) && canPlayAnime,
@@ -1335,6 +1345,12 @@ export default function ShowTemplate({
               episode={playerCoords.episode}
               startSeconds={server === "videasy" ? playerStartSeconds : 0}
               onVideasyProgress={server === "videasy" ? handleVideasyProgress : undefined}
+              onEmbedLoad={
+                server === "vidcore"
+                  ? () =>
+                      markEpisodeWatched(playerCoords.season, playerCoords.episode)
+                  : undefined
+              }
             />
           )}
         </div>
