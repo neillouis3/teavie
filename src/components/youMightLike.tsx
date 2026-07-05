@@ -16,12 +16,14 @@ import {
   CarouselItem,
 } from '@/components/ui/carousel';
 import { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
+import {
+  EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_VERTICAL,
+} from '@/lib/catalogGrid';
 
 const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
-const YOU_MIGHT_LIKE_MAX_VERTICAL = 14;
+const YOU_MIGHT_LIKE_MAX_VERTICAL = EXPLORE_RAIL_MAX_ITEMS;
 
-const CAROUSEL_ITEM_VERTICAL =
-  'basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%] 2xl:basis-[10%]';
 const CAROUSEL_ITEM_HORIZONTAL =
   'basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4';
 
@@ -56,7 +58,7 @@ export default function YouMightLike({
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === 'horizontal';
   const maxItems = horizontal ? YOU_MIGHT_LIKE_MAX_HORIZONTAL : YOU_MIGHT_LIKE_MAX_VERTICAL;
-  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
+  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
 
   useEffect(() => {
     const controller = new AbortController();

@@ -66,7 +66,7 @@ const EPISODE_CAROUSEL_OPTS = {
 const EPISODE_CAROUSEL_ITEM_CLASS =
   "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.3333333333)] lg:basis-[calc(100%/5.3333333333)]";
 const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[86%] sm:basis-[58%] md:basis-[calc(100%/3.05)] lg:basis-[calc(100%/5.3333333333)]";
+  "pl-3 shrink-0 grow-0 basis-[88%] sm:basis-[60%] md:basis-[calc(100%/2.95)] lg:basis-[calc(100%/4.85)]";
 const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px] xl:h-[340px]";
 const EPISODE_CARD_HEIGHT_CURRENT = "h-[360px] sm:h-[400px] xl:h-[380px]";
 const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px] xl:h-[150px]";
@@ -114,25 +114,6 @@ function episodeCardShellClass(state: EpisodeCardVisualState): string {
     default:
       return "";
   }
-}
-
-function EpisodeStateLegend() {
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-default-500">
-      <span className="inline-flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-success ring-2 ring-success/25" aria-hidden />
-        Now playing
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-success ring-2 ring-success/25" aria-hidden />
-        Watched
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <HugeiconsIcon icon={Calendar03Icon} size={13} className="text-default-400" />
-        Upcoming
-      </span>
-    </div>
-  );
 }
 
 function scrollToPlayerBottom() {
@@ -1242,11 +1223,8 @@ export function ShowEpisodePickerList() {
       aria-label="Episodes"
     >
       <div className="flex w-full min-w-0 flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="min-w-0 flex-1">
           <ShowEpisodePickerSeasonRow />
-          {!loading && episodes.length > 0 ? (
-            <EpisodeStateLegend />
-          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1.5 self-end xl:self-auto">
           {!loading && episodes.length > 1 ? (
@@ -1421,8 +1399,8 @@ export function ShowEpisodePickerList() {
                       <div className="flex flex-col gap-2">
                         <span
                           className={`${EPISODE_CARD_TITLE_CLASS} ${
-                            active ? "text-base sm:text-[17px]" : ""
-                          } ${upcoming ? "text-default-500" : ""}`}
+                            upcoming ? "text-default-500" : ""
+                          }`}
                         >
                           {row.name}
                         </span>

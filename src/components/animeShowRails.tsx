@@ -7,6 +7,8 @@ import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
+  EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_VERTICAL,
 } from "@/lib/catalogGrid";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
@@ -58,8 +60,6 @@ type YmlItem = {
 const RELATED_CACHE_PREFIX = "teavie.cache.anime-related.v1:";
 const YML_CACHE_PREFIX = "teavie.cache.anime-yml.v1:";
 
-const CAROUSEL_ITEM_VERTICAL =
-  "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%] 2xl:basis-[10%]";
 const CAROUSEL_ITEM_HORIZONTAL =
   "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 
@@ -109,7 +109,7 @@ export default function AnimeShowRails({
   const [ymlLoading, setYmlLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === "horizontal";
-  const ymlMax = horizontal ? 8 : 14;
+  const ymlMax = horizontal ? 8 : EXPLORE_RAIL_MAX_ITEMS;
 
   useEffect(() => {
     clearLegacyAnimeShowRailsCache();
@@ -283,7 +283,7 @@ export default function AnimeShowRails({
                   {youMightLike.map((item) => (
                     <CarouselItem
                       key={`${item.catalogId}-${item.malId ?? "na"}`}
-                      className={horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL}
+                      className={horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL}
                     >
                       {horizontal ? (
                         <HorizontalCatalogCard
