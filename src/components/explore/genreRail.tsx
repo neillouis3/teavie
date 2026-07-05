@@ -26,7 +26,7 @@ type GenreRailProps = {
 };
 
 const CAROUSEL_ITEM =
-  "basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-[calc(100%/7.3333333333)]";
+  "basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-[calc(100%/7.5)]";
 
 export default function GenreRail({ genres, preferredGenreSlugs = [] }: GenreRailProps) {
   const railGenres = useMemo(

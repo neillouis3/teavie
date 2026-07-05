@@ -12,6 +12,7 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { EXPLORE_RAIL_MAX_ITEMS, RAIL_CAROUSEL_ITEM_VERTICAL } from "@/lib/catalogGrid";
+import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import { formatReleasePhrase } from "@/lib/formatRelease";
@@ -83,7 +84,7 @@ export default function CatalogRail({
   const horizontal = mode === "horizontal";
   const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
 
-  const slice = (items ?? []).slice(0, maxItems);
+  const slice = railContentItems(items ?? [], maxItems);
   if (!loading && slice.length === 0) return null;
 
   return (

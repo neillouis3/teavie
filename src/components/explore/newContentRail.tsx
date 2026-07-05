@@ -16,6 +16,7 @@ import {
   NEW_ON_TEAVIE_MAX_ITEMS,
   RAIL_CAROUSEL_ITEM_VERTICAL,
 } from '@/lib/catalogGrid';
+import { railContentItems } from '@/lib/dedupeContentItems';
 import type { ContentItem } from '@/types/content';
 
 type NewContentRailProps = {
@@ -28,7 +29,7 @@ export default function NewContentRail({
   maxItems = NEW_ON_TEAVIE_MAX_ITEMS,
 }: NewContentRailProps) {
   const visibleItems = useMemo(
-    () => items.slice(0, maxItems),
+    () => railContentItems(items, maxItems),
     [items, maxItems]
   );
 

@@ -1,6 +1,4 @@
-/**
- * TMDB-ordered catalog discover rails (shared by /api/tmdb/discover and /api/explore).
- */
+import { dedupeContentItems } from "@/lib/dedupeContentItems";
 
 import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
@@ -12,7 +10,7 @@ import {
 } from "@/lib/catalogPopularity";
 import { tmdbAuth, buildTmdbRequest } from "@/lib/tmdbAuth";
 
-const LIMIT = 20;
+const LIMIT = 50;
 const SOURCE_PAGES = 3;
 const POPULAR_SOURCE_PAGES = 5;
 
@@ -146,7 +144,7 @@ async function fetchTmdbPaged(url, auth, pages = SOURCE_PAGES) {
 }
 
 function capOrdered(items, cap = LIMIT) {
-  return (items ?? []).slice(0, cap);
+  return dedupeContentItems(items).slice(0, cap);
 }
 
 export async function loadTmdbDiscoverRails() {

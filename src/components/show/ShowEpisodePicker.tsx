@@ -55,28 +55,23 @@ export type EpisodeCardRow = {
 
 export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
-/** Visible episode cards in the horizontal scroller (5 full + ⅓ peek on desktop). */
-const VISIBLE_EPISODE_SLOTS = 6;
+/** Visible episode cards in the horizontal scroller (1 full + ⅓ peek). */
+const VISIBLE_EPISODE_SLOTS = 2;
 const EPISODE_CAROUSEL_OPTS = {
   align: "start" as const,
   dragFree: true,
   /** Embla scroll animation length — higher = smoother/slower programmatic scroll. */
-  duration: 42,
+  duration: 55,
 };
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.3333333333)] lg:basis-[calc(100%/5.3333333333)]";
-const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[88%] sm:basis-[60%] md:basis-[calc(100%/2.95)] lg:basis-[calc(100%/4.85)]";
-const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px] xl:h-[340px]";
-const EPISODE_CARD_HEIGHT_CURRENT = "h-[360px] sm:h-[400px] xl:h-[380px]";
-const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px] xl:h-[150px]";
-const EPISODE_CARD_STILL_HEIGHT_CURRENT = "h-[172px] sm:h-[196px] xl:h-[184px]";
+  "pl-3 shrink-0 grow-0 basis-[calc(100%/1.3333333333)]";
+const EPISODE_CARD_STILL_HEIGHT = "h-[200px] sm:h-[220px]";
 const EPISODE_CARD_TITLE_CLASS =
   "shrink-0 overflow-hidden text-sm font-normal leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
 const EPISODE_CARD_DESCRIPTION_CLASS =
-  "h-[3.5rem] shrink-0 overflow-hidden text-sm leading-snug text-default-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]";
+  "max-h-[3.75rem] shrink-0 overflow-hidden text-sm leading-snug text-default-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]";
 const EPISODE_CARD_BODY_CLASS =
-  "flex min-h-0 flex-1 flex-col overflow-hidden py-3 pr-6 pl-0";
+  "flex min-h-0 flex-col overflow-hidden py-3 pr-6 pl-0";
 
 function episodeStillFallbackClass(season: number, episode: number): string {
   const palettes = [
@@ -131,7 +126,7 @@ function episodeStillUrl(stillPath: string | null | undefined) {
 function EpisodeCardSkeleton() {
   return (
     <div
-      className={`flex ${EPISODE_CARD_HEIGHT} w-full min-w-0 flex-col overflow-hidden rounded-xl`}
+      className="flex w-full min-w-0 flex-col overflow-hidden rounded-xl"
       aria-hidden
     >
       <div
@@ -208,8 +203,8 @@ function selectedEpisodeIndex(
   );
 }
 
-/** Scroll so the active episode sits in the second visible slot when possible. */
-function scrollCarouselToSelectedSecond(
+/** Scroll so the active episode is the primary visible card. */
+function scrollCarouselToSelected(
   api: CarouselApi | undefined,
   list: EpisodeCardRow[],
   season: number,
@@ -219,8 +214,7 @@ function scrollCarouselToSelectedSecond(
   if (!api) return;
   const selectedIndex = selectedEpisodeIndex(list, season, episode);
   if (selectedIndex < 0) return;
-  const targetIndex = Math.max(0, selectedIndex - 1);
-  api.scrollTo(targetIndex, jump);
+  api.scrollTo(selectedIndex, jump);
 }
 
 function episodeNavNumber(
@@ -1181,7 +1175,7 @@ export function ShowEpisodePickerList() {
     };
 
     const alignToCurrent = () => {
-      scrollCarouselToSelectedSecond(
+      scrollCarouselToSelected(
         episodeCarouselApi,
         displayedEpisodes,
         selectedSeason,
@@ -1190,21 +1184,14 @@ export function ShowEpisodePickerList() {
       );
     };
 
-    let innerRaf = 0;
-    const scheduleAlign = () => {
-      cancelAnimationFrame(innerRaf);
-      innerRaf = requestAnimationFrame(() => {
-        innerRaf = requestAnimationFrame(alignToCurrent);
-      });
+    const onReInit = () => {
+      requestAnimationFrame(alignToCurrent);
     };
-
-    const onReInit = () => scheduleAlign();
     episodeCarouselApi.on("reInit", onReInit);
-    scheduleAlign();
+    onReInit();
 
     return () => {
       episodeCarouselApi.off("reInit", onReInit);
-      cancelAnimationFrame(innerRaf);
     };
   }, [
     episodeCarouselApi,
@@ -1291,7 +1278,7 @@ export function ShowEpisodePickerList() {
               return (
                 <CarouselItem
                   key={`${row.season}-${row.episode}-${row.displayNumber ?? ""}`}
-                  className={active ? EPISODE_CAROUSEL_ITEM_CURRENT_CLASS : EPISODE_CAROUSEL_ITEM_CLASS}
+                  className={EPISODE_CAROUSEL_ITEM_CLASS}
                 >
                   <button
                     type="button"
@@ -1302,18 +1289,16 @@ export function ShowEpisodePickerList() {
                     }`}
                     aria-current={active ? "true" : undefined}
                     aria-disabled={upcoming ? true : undefined}
-                    className={`group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-all duration-300 ${
-                      active ? EPISODE_CARD_HEIGHT_CURRENT : EPISODE_CARD_HEIGHT
-                    } ${active ? "p-2" : ""} ${episodeCardShellClass(cardState)} ${
+                    className={`group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-colors duration-200 ${
+                      active ? "p-2" : ""
+                    } ${episodeCardShellClass(cardState)} ${
                       upcoming ? "cursor-not-allowed" : ""
                     }`}
                   >
                     <div
                       className={`relative w-full shrink-0 overflow-hidden ${
                         active ? "rounded-lg" : ""
-                      } ${
-                        active ? EPISODE_CARD_STILL_HEIGHT_CURRENT : EPISODE_CARD_STILL_HEIGHT
-                      } ${
+                      } ${EPISODE_CARD_STILL_HEIGHT} ${
                         stillUrl
                           ? "bg-default-200/80 dark:bg-default-100/15"
                           : episodeStillFallbackClass(row.season, row.episode)
@@ -1326,7 +1311,7 @@ export function ShowEpisodePickerList() {
                           aria-hidden
                           fill
                           unoptimized
-                          sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 320px"
+                          sizes="75vw"
                           quality={85}
                           className={`object-cover transition-transform duration-300 ${
                             upcoming ? "" : "group-hover:scale-105"
