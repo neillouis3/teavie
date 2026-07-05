@@ -223,12 +223,13 @@ function selectedEpisodeIndex(
 
 /** Scroll so the active episode sits in the second visible slot when possible. */
 function scrollCarouselToSelectedSecond(
-  api: CarouselApi,
+  api: CarouselApi | undefined,
   list: EpisodeCardRow[],
   season: number,
   episode: number,
   jump: boolean
 ) {
+  if (!api) return;
   const selectedIndex = selectedEpisodeIndex(list, season, episode);
   if (selectedIndex < 0) return;
   const targetIndex = Math.max(0, selectedIndex - 1);
