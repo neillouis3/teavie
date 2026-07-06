@@ -3,7 +3,7 @@
 import React from "react";
 
 const PLAYER_SHELL_CLASS =
-  "aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]";
+  "aspect-video w-full min-h-[200px] shrink-0 touch-auto rounded-xl bg-default-200 [touch-action:pan-x_pan-y_pinch-zoom] sm:min-h-[240px] md:min-h-[280px] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh] lg:overflow-hidden";
 
 /** Pulse placeholder for movie/TV/anime embed iframes. */
 export function PlayerEmbedSkeleton({
@@ -15,7 +15,7 @@ export function PlayerEmbedSkeleton({
 }) {
   return (
     <div
-      className={`relative h-full min-h-0 w-full overflow-hidden bg-black ring-1 ring-white/10 ${rounded} ${className}`}
+      className={`relative h-full min-h-0 w-full touch-auto bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden ${rounded} ${className}`}
       aria-hidden
     >
       <div className="absolute inset-0 animate-pulse bg-default-200/90 dark:bg-default-100/15" />

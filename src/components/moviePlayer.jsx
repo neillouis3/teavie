@@ -37,7 +37,7 @@ export const MOVIE_SERVERS = {
  */
 const MoviePlayer = ({
   videoId,
-  server = 'videasy',
+  server = 'vidcore',
   streamQuality: streamQualityProp,
   startSeconds = 0,
   onVideasyProgress,
@@ -52,7 +52,7 @@ const MoviePlayer = ({
   );
 
   const playerUrl = useMemo(() => {
-    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.videasy;
+    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.vidcore;
     const path = config.path(videoId);
     let suffix = typeof config.suffix === 'function' ? config.suffix() : '';
     if (config.supportsProgress && startSeconds > 0) {
@@ -93,7 +93,7 @@ const MoviePlayer = ({
   }, [videoId, streamQualityProp]);
 
   return (
-    <div className="relative h-full min-h-0 w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+    <div className="relative h-full min-h-0 w-full touch-auto rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
       {streamQuality ? <StreamQualityBadge quality={streamQuality} /> : null}
       {playerUrl ? (
         <VideoEmbedFrame

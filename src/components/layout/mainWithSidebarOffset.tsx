@@ -17,7 +17,7 @@ export default function MainWithSidebarOffset({
 
   return (
     <div
-      className={`relative flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden lg:overflow-x-visible ${
+      className={`relative flex min-h-screen w-full min-w-0 flex-col overflow-x-clip lg:overflow-x-visible ${
         heroBleed ? "pt-0" : "pt-14"
       }`}
     >
@@ -26,7 +26,7 @@ export default function MainWithSidebarOffset({
         className={`min-h-0 min-w-0 flex-1 pl-0 ${
           heroBleed
             ? "relative overflow-x-visible"
-            : "overflow-x-hidden lg:overflow-x-visible"
+            : "overflow-x-clip lg:overflow-x-visible"
         }`}
       >
         {children}

@@ -22,6 +22,7 @@ import CatalogMediaPanel, {
   movieSubtitleLine,
 } from './ui/catalogMediaPanel';
 import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+import { PLAYER_SHELL_CLASS } from '@/components/ui/playerEmbedSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { recordMovieInWatchHistory } from '@/lib/watchHistory';
@@ -32,6 +33,11 @@ import { isBlockedMovieTmdbId } from '@/lib/tmdbMovieContentPolicy';
 import CatalogUnavailable from './ui/catalogUnavailable';
 import WatchLaterButton from '@/components/watchLater/WatchLaterButton';
 import FavoriteButton from '@/components/favorites/FavoriteButton';
+import MovieCreditsStrip, {
+  type MovieCreditsPayload,
+} from '@/components/movie/MovieCreditsStrip';
+import MovieTrailerEmbed from '@/components/movie/MovieTrailerEmbed';
+import { pickYoutubeTrailerEmbedUrl, type TmdbVideosPayload } from '@/lib/tmdbVideos';
 
 interface Movie {
   id: number;
@@ -59,6 +65,8 @@ interface Movie {
   homepage?: string | null;
   imdb_id?: string | null;
   release_dates?: unknown;
+  credits?: MovieCreditsPayload;
+  videos?: TmdbVideosPayload;
 }
 
 export type MovieServerKey = StreamServerId;
@@ -349,6 +357,10 @@ export default function MovieTemplate({ id }: { id: string }) {
   }, [id, movie, loading, movieReleased]);
 
   const imageUrl = tmdbImageUrl(movie?.poster_path);
+  const trailerEmbedUrl =
+    movie && !movieReleased
+      ? pickYoutubeTrailerEmbedUrl(movie.videos)
+      : null;
 
   if (loading) {
     return <WatchPageSkeleton />;
@@ -369,14 +381,21 @@ export default function MovieTemplate({ id }: { id: string }) {
   return (
     <div className="flex h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
       <div className="w-full  flex flex-col gap-6">
-        <div className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-lg bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]">
+        <div className={PLAYER_SHELL_CLASS}>
           {movie && !movieReleased ? (
-            <CatalogComingSoon
-              title={movie.title}
-              posterUrl={imageUrl}
-              releaseDate={movie.release_date}
-              links={movieDetailLinks(movie)}
-            />
+            trailerEmbedUrl ? (
+              <MovieTrailerEmbed
+                src={trailerEmbedUrl}
+                title={`${movie.title} trailer`}
+              />
+            ) : (
+              <CatalogComingSoon
+                title={movie.title}
+                posterUrl={imageUrl}
+                releaseDate={movie.release_date}
+                links={movieDetailLinks(movie)}
+              />
+            )
           ) : (
             <MoviePlayer
               key={`movie-${id}-${playerEpoch}`}
@@ -396,7 +415,7 @@ export default function MovieTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        <div className="w-full">
+        <div className="flex w-full flex-col gap-6">
           {movie && (
             <CatalogMediaPanel
                 posterUrl={imageUrl}
@@ -421,11 +440,12 @@ export default function MovieTemplate({ id }: { id: string }) {
                     <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
                   </div>
                 }
+                creditsSection={<MovieCreditsStrip credits={movie.credits} />}
               />
           )}
         </div>
 
-        <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} />
+        <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} bleed={false} />
       </div>
     </div>
   );
