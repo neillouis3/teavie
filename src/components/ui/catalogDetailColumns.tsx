@@ -36,6 +36,7 @@ type CatalogDetailColumnsProps = {
   genres: CatalogGenre[];
   infoLines: CatalogInfoLine[];
   links: CatalogDetailLink[];
+  networkTags?: string[];
   /** When set, genre chips link to this browse base (e.g. `/kdrama/all`). */
   genreBrowseBase?: string;
   className?: string;
@@ -68,6 +69,7 @@ export default function CatalogDetailColumns({
   genres,
   infoLines,
   links,
+  networkTags = [],
   genreBrowseBase,
   className = "",
 }: CatalogDetailColumnsProps) {
@@ -77,78 +79,103 @@ export default function CatalogDetailColumns({
 
   const infoItems = infoLines.filter((line) => String(line?.label ?? "").trim());
   const linkItems = links.filter((l) => l?.href && l?.label);
+  const networks = networkTags.filter((tag) => String(tag).trim());
 
   return (
-    <div
-      className={`flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4 ${className}`}
-    >
-      <div className="min-w-0 flex-1">
-        <ColumnHeading label="Genre" />
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          {sortedGenres.length > 0 ? (
-            sortedGenres.map((genre) => (
-              <Link
-                key={genre.slug}
-                href={genreBrowseHref(mediaType, genre.slug, genreBrowseBase)}
-                className="inline-flex max-w-full items-center rounded-full border border-default-200/80 bg-default-100/80 px-2.5 py-1 text-sm leading-snug text-foreground transition-colors hover:border-success/40 hover:bg-success/10 dark:border-default-100/30 dark:bg-default-100/20"
-              >
-                {genre.name}
-              </Link>
-            ))
-          ) : (
-            <span className="text-sm text-foreground/70">—</span>
-          )}
+    <div className={`flex flex-col gap-6 ${className}`}>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,0.85fr)] lg:gap-8">
+        <div className="min-w-0">
+          <ColumnHeading label="Genre" />
+          <div className="mt-2.5 flex flex-wrap gap-2 text-sm text-foreground">
+            {sortedGenres.length > 0 ? (
+              sortedGenres.map((genre) => (
+                <Link
+                  key={genre.slug}
+                  href={genreBrowseHref(mediaType, genre.slug, genreBrowseBase)}
+                  className="inline-flex max-w-full items-center rounded-full border border-default-200/80 bg-default-100/80 px-2.5 py-0.5 text-inherit leading-snug transition-colors hover:border-success/40 hover:bg-success/10 dark:border-default-100/30 dark:bg-default-100/20"
+                >
+                  {genre.name}
+                </Link>
+              ))
+            ) : (
+              <span className="text-foreground/70">—</span>
+            )}
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <ColumnHeading label="Details" />
+          <ul className="mt-2.5 grid w-full max-w-full grid-cols-1 gap-x-4 gap-y-2.5 text-sm text-foreground sm:grid-cols-2">
+            {infoItems.length > 0 ? (
+              infoItems.map((line, index) => (
+                <li key={`${line.label}-${index}`} className="flex items-start gap-2 leading-snug">
+                  <HugeiconsIcon
+                    icon={line.icon}
+                    size={15}
+                    className="mt-0.5 shrink-0 text-default-500"
+                  />
+                  <span>{line.label}</span>
+                </li>
+              ))
+            ) : (
+              <li className="col-span-2 text-foreground/70">—</li>
+            )}
+          </ul>
+        </div>
+
+        <div className="min-w-0">
+          <ColumnHeading label="Links" />
+          <ul className="mt-2.5 flex flex-col gap-2">
+            {linkItems.length > 0 ? (
+              linkItems.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 transition-colors hover:text-success hover:underline"
+                  >
+                    {link.label}
+                    <HugeiconsIcon
+                      icon={link.icon ?? LinkSquare02Icon}
+                      size={14}
+                      className="shrink-0 opacity-80"
+                    />
+                  </a>
+                </li>
+              ))
+            ) : (
+              <li className="text-sm text-foreground/70">—</li>
+            )}
+          </ul>
         </div>
       </div>
 
-      <div className="min-w-0 flex-[2]">
-        <ColumnHeading label="Info" />
-        <ul className="mt-2.5 grid w-full max-w-full grid-cols-1 gap-x-4 gap-y-2 text-sm text-foreground sm:max-w-[85%] sm:grid-cols-2">
-          {infoItems.length > 0 ? (
-            infoItems.map((line, index) => (
-              <li key={`${line.label}-${index}`} className="flex items-start gap-2 leading-snug">
-                <HugeiconsIcon
-                  icon={line.icon}
-                  size={15}
-                  className="mt-0.5 shrink-0 text-default-500"
-                />
-                <span>{line.label}</span>
-              </li>
-            ))
-          ) : (
-            <li className="col-span-2 text-foreground/70">—</li>
-          )}
-        </ul>
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <ColumnHeading label="Links" />
-        <ul className="mt-2.5 flex flex-col gap-2">
-          {linkItems.length > 0 ? (
-            linkItems.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 transition-colors hover:text-success hover:underline"
-                >
-                  {link.label}
-                  <HugeiconsIcon
-                    icon={link.icon ?? LinkSquare02Icon}
-                    size={14}
-                    className="shrink-0 opacity-80"
-                  />
-                </a>
-              </li>
-            ))
-          ) : (
-            <li className="text-sm text-foreground/70">—</li>
-          )}
-        </ul>
-      </div>
+      {networks.length > 0 ? (
+        <div className="min-w-0 border-t border-default-200/60 pt-5 dark:border-default-100/20">
+          <ColumnHeading label="Networks & studios" />
+          <div className="mt-2.5 flex flex-wrap gap-2 text-sm text-foreground">
+            {networks.map((name) => (
+              <span
+                key={name}
+                className="inline-flex items-center rounded-md border border-default-200/70 bg-background/80 px-2.5 py-0.5 text-inherit leading-snug dark:border-default-100/25"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+const MAX_DETAIL_LOCATION_COUNTRIES = 2;
+
+function formatCountryList(names: string[]): string | null {
+  const unique = [...new Set(names.map((n) => String(n).trim()).filter(Boolean))];
+  if (unique.length === 0) return null;
+  return unique.slice(0, MAX_DETAIL_LOCATION_COUNTRIES).join(", ");
 }
 
 export function countryNamesFromCodes(codes: string[] | undefined): string | null {
@@ -158,9 +185,9 @@ export function countryNamesFromCodes(codes: string[] | undefined): string | nul
     const names = codes
       .map((c) => dn.of(String(c).toUpperCase()) ?? String(c).trim())
       .filter(Boolean);
-    return names.length ? [...new Set(names)].join(", ") : null;
+    return formatCountryList(names);
   } catch {
-    return codes.map((c) => String(c).trim()).filter(Boolean).join(", ");
+    return formatCountryList(codes.map((c) => String(c).trim()).filter(Boolean));
   }
 }
 
@@ -212,7 +239,7 @@ function countryLabelFromShow(show: {
   const prodNames = (show.production_countries ?? [])
     .map((p) => String(p?.name ?? "").trim())
     .filter(Boolean);
-  if (prodNames.length > 0) return [...new Set(prodNames)].join(", ");
+  if (prodNames.length > 0) return formatCountryList(prodNames);
   return countryNamesFromCodes(show.origin_country);
 }
 
@@ -220,8 +247,8 @@ export function buildMovieInfoLines(movie: {
   production_companies?: { name?: string }[];
   production_countries?: { iso_3166_1?: string; name?: string }[];
   origin_country?: string[];
-  original_language?: string;
-  release_date?: string;
+  original_language?: string | null;
+  release_date?: string | null;
 }): CatalogInfoLine[] {
   const lines: CatalogInfoLine[] = [];
   const studio = sortedCompanyNames(movie.production_companies, 1)[0] ?? null;
@@ -232,7 +259,7 @@ export function buildMovieInfoLines(movie: {
         const names = prod
           .map((p) => String(p?.name ?? "").trim())
           .filter(Boolean);
-        if (names.length > 0) return [...new Set(names)].join(", ");
+        if (names.length > 0) return formatCountryList(names);
       }
       const codes = movie.origin_country;
       if (Array.isArray(codes) && codes.length > 0) {
@@ -259,8 +286,8 @@ export function buildShowInfoLines(show: {
   studios?: { name?: string }[];
   production_countries?: { name?: string }[];
   origin_country?: string[];
-  original_language?: string;
-  first_air_date?: string;
+  original_language?: string | null;
+  first_air_date?: string | null;
 }): CatalogInfoLine[] {
   const lines: CatalogInfoLine[] = [];
   const primary = primaryStudioOrNetwork(show);

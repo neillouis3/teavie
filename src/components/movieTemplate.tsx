@@ -444,7 +444,7 @@ export default function MovieTemplate({ id }: { id: string }) {
           )}
         </div>
 
-        <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} />
+        <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} bleed={false} />
       </div>
     </div>
   );

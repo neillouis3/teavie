@@ -35,7 +35,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode, startSeconds } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.vidcore;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -67,7 +67,7 @@ export default function ShowPlayer({
   videoId,
   season,
   episode,
-  server = 'videasy',
+  server = 'vidcore',
   startSeconds = 0,
   onVideasyProgress,
   onEmbedLoad,

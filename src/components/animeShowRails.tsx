@@ -11,10 +11,11 @@ import {
   RAIL_CAROUSEL_ITEM_VERTICAL,
 } from "@/lib/catalogGrid";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import SidebarBleedRail, {
+import {
+  CatalogRailShell,
   SIDEBAR_BLEED_CAROUSEL_OPTS,
   SidebarBleedStartSpacer,
-  sidebarBleedViewportClass,
+  catalogRailViewportClass,
 } from "@/components/ui/sidebarBleedRail";
 import {
   Carousel,
@@ -100,8 +101,11 @@ async function fetchYouMightLike(idMal: number, limit: number): Promise<YmlItem[
 
 export default function AnimeShowRails({
   idMal,
+  bleed = true,
 }: {
   idMal: number;
+  /** Extend carousel under the sidebar (Explore). Detail pages should pass false. */
+  bleed?: boolean;
 }) {
   const [related, setRelated] = useState<RelatedItem[]>([]);
   const [youMightLike, setYouMightLike] = useState<YmlItem[]>([]);
@@ -273,13 +277,13 @@ export default function AnimeShowRails({
         >
           <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
           {youMightLike.length > 0 ? (
-            <SidebarBleedRail>
+            <CatalogRailShell bleed={bleed}>
               <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
                 <CarouselContent
-                  viewportClassName={sidebarBleedViewportClass()}
+                  viewportClassName={catalogRailViewportClass(bleed)}
                   className="-ml-3"
                 >
-                  <SidebarBleedStartSpacer />
+                  {bleed ? <SidebarBleedStartSpacer /> : null}
                   {youMightLike.map((item) => (
                     <CarouselItem
                       key={`${item.catalogId}-${item.malId ?? "na"}`}
@@ -310,11 +314,11 @@ export default function AnimeShowRails({
                   ))}
                 </CarouselContent>
               </Carousel>
-            </SidebarBleedRail>
+            </CatalogRailShell>
           ) : (
-            <SidebarBleedRail>
-              <CatalogRailSkeleton horizontal={horizontal} />
-            </SidebarBleedRail>
+            <CatalogRailShell bleed={bleed}>
+              <CatalogRailSkeleton horizontal={horizontal} bleed={bleed} />
+            </CatalogRailShell>
           )}
         </section>
       ) : null}

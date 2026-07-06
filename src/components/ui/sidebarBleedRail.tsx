@@ -47,12 +47,97 @@ export const SPOTLIGHT_TRACK_CLASS = "!ml-0 h-full";
 export const SPOTLIGHT_SHELL_WIDTH =
   `lg:w-[calc(100%+var(--sidebar-w,16rem))] lg:max-w-none ${SIDEBAR_SYNC_TRANSITION}`;
 
+/** Inline full-bleed shell (sidebar → viewport left). Prefer over Tailwind arbitrary bleed classes. */
+export function sidebarBleedShellStyle(active: boolean): React.CSSProperties {
+  if (!active) return {};
+  return {
+    marginLeft: "calc(-1 * var(--sidebar-w, 16rem))",
+    width: "100vw",
+    maxWidth: "none",
+  };
+}
+
+const HERO_COVER_IMG_CLASS =
+  "h-full w-full min-h-full min-w-full max-w-none object-cover object-center";
+
+/** @deprecated Use {@link HeroBleedCoverImage}. */
+export const HERO_COVER_IMAGE_CLASS =
+  `absolute inset-0 ${HERO_COVER_IMG_CLASS}`;
+
+/** @deprecated Use {@link HeroBleedCoverImage}. */
+export const SPOTLIGHT_IMAGE_CLASS = HERO_COVER_IMAGE_CLASS;
+
+type HeroBleedCoverImageProps = {
+  src: string;
+  alt: string;
+  sizes?: string;
+  /** When true (desktop), crop centers on the content column, not the viewport. */
+  alignToContentColumn?: boolean;
+  imgClassName?: string;
+  className?: string;
+};
+
 /**
- * Spotlight backdrop fills the slide; object-position shifts the crop so the
- * focal point aligns with the main content column (not the full page center).
+ * Full-bleed hero image: fills edge-to-edge (no sidebar gap) while centering the
+ * crop on the main content column via a slightly wider inner frame + object-center.
  */
-export const SPOTLIGHT_IMAGE_CLASS =
-  "h-full w-full max-w-none object-cover lg:[object-position:calc(50%+var(--sidebar-w)/2)_center]";
+export function HeroBleedCoverImage({
+  src,
+  alt,
+  sizes,
+  alignToContentColumn = true,
+  imgClassName,
+  className,
+}: HeroBleedCoverImageProps) {
+  const sidebarBleed = useSidebarBleedOffset();
+  const useColumnFrame = alignToContentColumn && sidebarBleed;
+
+  if (!useColumnFrame) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        sizes={sizes}
+        aria-hidden={alt === "" ? true : undefined}
+        className={cn(
+          "absolute inset-0",
+          HERO_COVER_IMG_CLASS,
+          imgClassName,
+          className
+        )}
+      />
+    );
+  }
+
+  return (
+    <div className={cn("absolute inset-0 overflow-hidden", className)}>
+      <div
+        className={cn("absolute inset-y-0 left-0", SIDEBAR_SYNC_TRANSITION)}
+        style={{ width: "calc(100% + var(--sidebar-w))" }}
+      >
+        <img
+          src={src}
+          alt={alt}
+          sizes={sizes}
+          aria-hidden={alt === "" ? true : undefined}
+          className={cn(HERO_COVER_IMG_CLASS, imgClassName)}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** @deprecated Use {@link HeroBleedCoverImage}. */
+export function heroContentColumnObjectStyle(
+  active: boolean
+): React.CSSProperties {
+  if (!active) {
+    return { objectPosition: "center center" };
+  }
+  return {
+    objectPosition: "calc(50% + var(--sidebar-w) / 2) center",
+  };
+}
 
 /** Overlay / controls aligned to the main content column. */
 export const SPOTLIGHT_CONTENT_INSET =
@@ -77,6 +162,27 @@ export function sidebarBleedViewportClass(
   ...extra: (string | false | null | undefined)[]
 ) {
   return cn(SIDEBAR_BLEED_SHELL, extra);
+}
+
+/** Catalog rail viewport — full-bleed on Explore, contained width on detail pages. */
+export function catalogRailViewportClass(
+  bleed = true,
+  ...extra: (string | false | null | undefined)[]
+) {
+  return bleed
+    ? sidebarBleedViewportClass(...extra)
+    : cn("w-full overflow-hidden", ...extra);
+}
+
+export function CatalogRailShell({
+  bleed = true,
+  children,
+}: {
+  bleed?: boolean;
+  children: React.ReactNode;
+}) {
+  if (!bleed) return <>{children}</>;
+  return <SidebarBleedRail>{children}</SidebarBleedRail>;
 }
 
 /** Embla viewport: 100vw under the sidebar (Explore spotlight). */

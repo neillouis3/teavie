@@ -17,10 +17,11 @@ import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import { formatReleasePhrase } from "@/lib/formatRelease";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import SidebarBleedRail, {
+import {
+  CatalogRailShell,
   SIDEBAR_BLEED_CAROUSEL_OPTS,
   SidebarBleedStartSpacer,
-  sidebarBleedViewportClass,
+  catalogRailViewportClass,
 } from "@/components/ui/sidebarBleedRail";
 
 type CatalogRailProps = {
@@ -48,18 +49,20 @@ function releaseNoteForItem(item: ContentItem): string | undefined {
 export function CatalogRailSkeleton({
   horizontal = false,
   count = 8,
+  bleed = true,
 }: {
   horizontal?: boolean;
   count?: number;
+  bleed?: boolean;
 }) {
   const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
   return (
     <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
       <CarouselContent
-        viewportClassName={sidebarBleedViewportClass()}
+        viewportClassName={catalogRailViewportClass(bleed)}
         className="-ml-3"
       >
-        <SidebarBleedStartSpacer />
+        {bleed ? <SidebarBleedStartSpacer /> : null}
         {Array.from({ length: count }).map((_, i) => (
           <CarouselItem key={i} className={itemClass}>
             {horizontal ? <HorizontalCatalogCardLoading /> : <SmallCardLoading />}
@@ -101,14 +104,14 @@ export default function CatalogRail({
         ) : null}
       </div>
       {loading ? (
-        <SidebarBleedRail>
+        <CatalogRailShell>
           <CatalogRailSkeleton horizontal={horizontal} />
-        </SidebarBleedRail>
+        </CatalogRailShell>
       ) : (
-        <SidebarBleedRail>
+        <CatalogRailShell>
           <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
             <CarouselContent
-              viewportClassName={sidebarBleedViewportClass()}
+              viewportClassName={catalogRailViewportClass()}
               className="-ml-3"
             >
               <SidebarBleedStartSpacer />
@@ -150,7 +153,7 @@ export default function CatalogRail({
               })}
             </CarouselContent>
           </Carousel>
-        </SidebarBleedRail>
+        </CatalogRailShell>
       )}
     </div>
   );
