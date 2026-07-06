@@ -182,7 +182,7 @@ export default function SportsPlayer({ matchId }: SportsPlayerProps) {
     <div className="flex h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
       <div className="flex w-full flex-col gap-6">
         <WatchPlayerShell>
-          <div className="relative h-full min-h-0 w-full overflow-hidden rounded-xl bg-black ring-1 ring-white/10">
+          <div className="relative h-full min-h-0 w-full touch-auto rounded-xl bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
             {loadingStreams ? (
               <div className="absolute inset-0 flex items-center justify-center bg-default-200 dark:bg-default-100/20">
                 <Spinner color="success" />

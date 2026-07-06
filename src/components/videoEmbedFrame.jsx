@@ -1,9 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { EMBED_IFRAME_ALLOW } from '@/lib/embedPlayerIframe';
+import {
+  EMBED_IFRAME_ALLOW,
+  EMBED_IFRAME_CLASS,
+} from '@/lib/embedPlayerIframe';
 import { parseVideasyProgressMessage } from '@/lib/videasyProgress';
 import { parseMegaPlayMessage } from '@/lib/megaPlayProgress';
+import { cn } from '@/lib/utils';
 
 /**
  * @param {object} props
@@ -45,8 +49,9 @@ export default function VideoEmbedFrame({
       title={title}
       src={src}
       allow={EMBED_IFRAME_ALLOW}
+      allowFullScreen
       referrerPolicy="no-referrer-when-downgrade"
-      className={className}
+      className={cn(EMBED_IFRAME_CLASS, className)}
       onLoad={onLoad}
     />
   );

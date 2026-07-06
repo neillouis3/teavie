@@ -116,7 +116,7 @@ export default function AnimePlayer({
   }
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+    <div className="relative flex h-full min-h-0 w-full touch-auto flex-col rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
       <StreamQualityBadge quality="hd" />
       <div className="relative min-h-0 flex-1">
         {loading ? (

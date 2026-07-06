@@ -7,4 +7,8 @@
  * delegation breaks (e.g. videasy.net → .to).
  */
 export const EMBED_IFRAME_ALLOW =
-  'fullscreen; autoplay; encrypted-media; gyroscope; accelerometer';
+  'fullscreen; autoplay; encrypted-media; picture-in-picture; gyroscope; accelerometer';
+
+/** Default iframe classes — keep touch gestures available on mobile/tablet. */
+export const EMBED_IFRAME_CLASS =
+  'absolute inset-0 h-full w-full touch-auto border-0 [touch-action:pan-x_pan-y_pinch-zoom]';

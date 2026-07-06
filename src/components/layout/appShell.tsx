@@ -18,11 +18,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative z-10 min-h-screen w-full overflow-x-hidden lg:overflow-x-visible lg:grid lg:grid-cols-[var(--sidebar-w,16rem)_minmax(0,1fr)]">
+    <div className="relative z-10 min-h-screen w-full overflow-x-clip lg:overflow-x-visible lg:grid lg:grid-cols-[var(--sidebar-w,16rem)_minmax(0,1fr)]">
       <div className="pointer-events-none hidden min-h-screen bg-transparent lg:block" aria-hidden>
         <SideBar />
       </div>
-      <div className="min-w-0 overflow-x-hidden lg:overflow-x-visible">
+      <div className="min-w-0 overflow-x-clip lg:overflow-x-visible">
         <MainWithSidebarOffset>{children}</MainWithSidebarOffset>
       </div>
     </div>

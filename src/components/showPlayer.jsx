@@ -35,7 +35,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode, startSeconds } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.vidcore;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -61,14 +61,16 @@ function buildEmbedUrl(p) {
  * @param {string} [props.server]
  * @param {number} [props.startSeconds] Videasy resume position
  * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
+ * @param {() => void} [props.onEmbedLoad]
  */
 export default function ShowPlayer({
   videoId,
   season,
   episode,
-  server = 'videasy',
+  server = 'vidcore',
   startSeconds = 0,
   onVideasyProgress,
+  onEmbedLoad,
 }) {
   const progressHandler = useCallback(
     (msg) => {
@@ -98,7 +100,7 @@ export default function ShowPlayer({
   }
 
   return (
-    <div className="relative h-full min-h-0 w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+    <div className="relative h-full min-h-0 w-full touch-auto rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
       <StreamQualityBadge quality="hd" />
       {url ? (
         <VideoEmbedFrame
@@ -107,6 +109,7 @@ export default function ShowPlayer({
           src={url}
           className="absolute inset-0 h-full w-full border-0"
           onVideasyProgress={server === 'videasy' ? progressHandler : undefined}
+          onLoad={onEmbedLoad}
         />
       ) : (
         <PlayerEmbedSkeleton />
