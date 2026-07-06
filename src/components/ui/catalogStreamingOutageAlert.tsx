@@ -1,50 +1,91 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Alert } from "@heroui/react";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@heroui/react";
 import {
   CATALOG_STREAMING_OUTAGE_ACTIVE,
   pathShowsCatalogStreamingOutage,
 } from "@/lib/streamingOutage";
-import { cn } from "@/lib/utils";
 
-type CatalogStreamingOutageAlertProps = {
-  className?: string;
-};
+const STORAGE_KEY = "teavie:streaming-outage-notice-seen:v1";
 
-export default function CatalogStreamingOutageAlert({
-  className,
-}: CatalogStreamingOutageAlertProps) {
-  if (!CATALOG_STREAMING_OUTAGE_ACTIVE) return null;
-
-  return (
-    <Alert
-      color="warning"
-      variant="flat"
-      title="Streaming service notice"
-      description="Movie and TV show playback is temporarily unavailable because global streaming servers are currently down. Anime continues to play normally. We are working to find the problem and apologize for the inconvenience."
-      className={cn("w-full", className)}
-    />
-  );
-}
-
-/** Site-wide banner for catalog routes (excludes anime and sports). */
-export function CatalogStreamingOutageBanner() {
+export default function CatalogStreamingOutageModal() {
   const pathname = usePathname() ?? "";
-  const heroBleed =
-    pathname === "/explore" || /^\/shows\/([^/]+)\/?$/.test(pathname);
+  const [open, setOpen] = useState(false);
 
-  if (!pathShowsCatalogStreamingOutage(pathname)) return null;
+  const shouldOffer =
+    CATALOG_STREAMING_OUTAGE_ACTIVE &&
+    pathShowsCatalogStreamingOutage(pathname);
+
+  useEffect(() => {
+    if (!shouldOffer) {
+      setOpen(false);
+      return;
+    }
+
+    try {
+      const seen = localStorage.getItem(STORAGE_KEY) === "1";
+      if (!seen) setOpen(true);
+    } catch {
+      setOpen(true);
+    }
+  }, [shouldOffer, pathname]);
+
+  const handleClose = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, "1");
+    } catch {
+      // Ignore storage errors and close anyway.
+    }
+    setOpen(false);
+  };
+
+  if (!shouldOffer || !open) return null;
 
   return (
-    <div
-      className={cn(
-        "relative z-30 ml-4 w-[calc(100%-1rem)]",
-        heroBleed ? "pt-14" : "pt-3"
-      )}
+    <Modal
+      isOpen={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) handleClose();
+      }}
+      size="md"
+      backdrop="blur"
+      placement="center"
+      isDismissable
+      isKeyboardDismissDisabled={false}
+      hideCloseButton
+      classNames={{
+        base: "border border-warning-200/60 dark:border-warning-500/25",
+      }}
     >
-      <CatalogStreamingOutageAlert className="rounded-none" />
-    </div>
+      <ModalContent>
+        <ModalHeader className="pb-1 text-warning-800 dark:text-warning-200">
+          Streaming service notice
+        </ModalHeader>
+        <ModalBody className="gap-3">
+          <p className="text-sm leading-relaxed text-foreground/85">
+            Movie and TV show playback is temporarily unavailable because global
+            streaming servers are currently down.
+          </p>
+          <p className="text-sm leading-relaxed text-foreground/85">
+            Anime continues to play normally. We are working to find the
+            problem and apologize for the inconvenience.
+          </p>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="warning" variant="flat" onPress={handleClose}>
+            Understood
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }

@@ -16,6 +16,7 @@ import TeaPartyModal from "@/components/watchParty/TeaPartyModal";
 import TeaPartyHostSyncListener from "@/components/watchParty/TeaPartyHostSyncListener";
 import { Suspense } from "react";
 import MaintenanceAnnouncementModal from "@/components/ui/maintenanceAnnouncementModal";
+import CatalogStreamingOutageModal from "@/components/ui/catalogStreamingOutageAlert";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import { AuthProvider } from "@/contexts/authContext";
 import { UserDataProvider } from "@/contexts/userDataContext";
@@ -58,6 +59,7 @@ export function Providers({ children }: ProvidersProps) {
               <AnimeAudioProvider>
               <WatchPartyNavProvider>
               <MaintenanceAnnouncementModal />
+              <CatalogStreamingOutageModal />
               <OnboardingModal />
               <TeaPartyModal />
               <TeaPartyHostSyncListener />
