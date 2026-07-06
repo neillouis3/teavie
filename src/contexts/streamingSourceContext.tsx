@@ -13,9 +13,9 @@ import { MOVIE_SERVERS } from '@/components/moviePlayer';
 export type StreamServerId = keyof typeof MOVIE_SERVERS;
 
 const STORAGE_KEY = 'teavie-streaming-server';
-const DEFAULT_SERVER: StreamServerId = 'videasy';
+const DEFAULT_SERVER: StreamServerId = 'vidcore';
 
-const ORDER: StreamServerId[] = ['videasy', 'vidcore'];
+const ORDER: StreamServerId[] = ['vidcore', 'videasy'];
 
 export function streamServerLabel(id: StreamServerId): string {
   switch (id) {

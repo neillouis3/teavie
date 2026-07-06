@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
 import DesktopTopNav from "@/components/ui/desktopTopNav";
 import Footer from "@/components/ui/footer";
+import { CatalogStreamingOutageBanner } from "@/components/ui/catalogStreamingOutageAlert";
 
 /** Main column beside the sidebar grid track (desktop) or full width (mobile). */
 export default function MainWithSidebarOffset({
@@ -22,13 +23,8 @@ export default function MainWithSidebarOffset({
       }`}
     >
       <DesktopTopNav />
-      <div
-        className={`min-h-0 min-w-0 flex-1 pl-0 ${
-          heroBleed
-            ? "relative overflow-x-visible"
-            : "overflow-x-hidden lg:overflow-x-visible"
-        }`}
-      >
+      <CatalogStreamingOutageBanner />
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden pl-0">
         {children}
       </div>
       <Footer />

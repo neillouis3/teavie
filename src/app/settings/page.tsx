@@ -31,6 +31,7 @@ import {
 } from '@/contexts/streamingSourceContext';
 import { animeAudioLabel } from '@/lib/animePlayEmbed';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
+import CatalogStreamingOutageAlert from '@/components/ui/catalogStreamingOutageAlert';
 import { cn } from '@/lib/utils';
 
 function SegmentControl<T extends string>({
@@ -140,6 +141,9 @@ export default function SettingsPage() {
           title="Playback"
           footer="Third-party players may show ads we don't control. Settings are saved on this device."
         >
+          <div className="px-4 pb-2 pt-1 sm:px-6">
+            <CatalogStreamingOutageAlert />
+          </div>
           <PageCardRow label="Movies & TV">
             <SegmentControl
               options={STREAM_SERVER_OPTIONS}

@@ -5,10 +5,11 @@ import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import SmallCard from '@/components/ui/smallCard';
 import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
 import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
-import SidebarBleedRail, {
+import {
+  CatalogRailShell,
   SIDEBAR_BLEED_CAROUSEL_OPTS,
   SidebarBleedStartSpacer,
-  sidebarBleedViewportClass,
+  catalogRailViewportClass,
 } from '@/components/ui/sidebarBleedRail';
 import {
   Carousel,
@@ -46,12 +47,15 @@ export default function YouMightLike({
   id,
   isAnime,
   idMal,
+  bleed = true,
 }: {
   mediaType: 'movie' | 'tv';
   id: string;
   isAnime?: boolean;
   /** MAL id from `/shows/anime_{malId}` or doc — required for anime recommendations (Jikan). */
   idMal?: number | null;
+  /** Extend carousel under the sidebar (Explore). Detail pages should pass false. */
+  bleed?: boolean;
 }) {
   const [items, setItems] = useState<RecItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,9 +195,9 @@ export default function YouMightLike({
     return (
       <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="You might like">
         <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
-        <SidebarBleedRail>
-          <CatalogRailSkeleton horizontal={horizontal} />
-        </SidebarBleedRail>
+        <CatalogRailShell bleed={bleed}>
+          <CatalogRailSkeleton horizontal={horizontal} bleed={bleed} />
+        </CatalogRailShell>
       </section>
     );
   }
@@ -203,13 +207,13 @@ export default function YouMightLike({
   return (
     <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="You might like">
       <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
-      <SidebarBleedRail>
+      <CatalogRailShell bleed={bleed}>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
-            viewportClassName={sidebarBleedViewportClass()}
+            viewportClassName={catalogRailViewportClass(bleed)}
             className="-ml-3"
           >
-            <SidebarBleedStartSpacer />
+            {bleed ? <SidebarBleedStartSpacer /> : null}
             {items.map((item) => (
               <CarouselItem
                 key={`${item.keyId}-${item.linkId}`}
@@ -242,7 +246,7 @@ export default function YouMightLike({
             ))}
           </CarouselContent>
         </Carousel>
-      </SidebarBleedRail>
+      </CatalogRailShell>
     </section>
   );
 }

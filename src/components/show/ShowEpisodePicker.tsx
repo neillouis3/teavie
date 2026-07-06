@@ -193,6 +193,39 @@ function useEpisodePicker() {
   return ctx;
 }
 
+function useEpisodePickerOptional() {
+  return useContext(EpisodePickerContext);
+}
+
+function currentEpisodeSubtitle(ctx: EpisodePickerContextValue): string {
+  const row =
+    ctx.releasedEpisodes.find((episode) => ctx.isSelected(episode)) ??
+    ctx.episodes.find((episode) => ctx.isSelected(episode));
+  const episodeNumber = row
+    ? episodeNavNumber(row, ctx.flatMode, ctx.catalogAbsoluteEpisodes)
+    : ctx.selectedEpisode;
+  const name = row?.name?.trim();
+  return name
+    ? `Episode ${episodeNumber}: ${name}`
+    : `Episode ${episodeNumber}`;
+}
+
+export function ShowWatchPlayerHeading({ title }: { title: string }) {
+  const picker = useEpisodePickerOptional();
+  const episodeSubtitle = picker ? currentEpisodeSubtitle(picker) : null;
+
+  return (
+    <div className="flex w-full min-w-0 flex-col gap-1">
+      <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        {title}
+      </h1>
+      {episodeSubtitle ? (
+        <p className="text-sm text-default-500">{episodeSubtitle}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function padEpisode(n: number) {
   return String(n).padStart(2, "0");
 }
@@ -1424,7 +1457,7 @@ export function ShowEpisodePickerList() {
 export default function ShowEpisodePicker(props: ShowEpisodePickerProps) {
   return (
     <ShowEpisodePickerProvider {...props}>
-      <section className="flex w-full flex-col gap-4" aria-label="Episodes">
+      <section className="flex w-full flex-col gap-2" aria-label="Episodes">
         <ShowEpisodePickerControls />
         <ShowEpisodePickerList />
       </section>

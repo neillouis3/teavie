@@ -41,8 +41,13 @@ function embeddedAnilistPoster(doc) {
 }
 
 /** @param {unknown} doc */
+function embeddedAnilistBanner(doc) {
+  return pickString(doc?.anilist?.bannerImage);
+}
+
+/** @param {unknown} doc */
 function embeddedAnilistBackdrop(doc, posterFallback) {
-  return pickString(doc?.anilist?.bannerImage) || posterFallback;
+  return embeddedAnilistBanner(doc) || posterFallback;
 }
 
 /**
@@ -55,14 +60,11 @@ export function animePosterFromDoc(doc) {
   }
 
   const fromAni = embeddedAnilistPoster(doc);
+  if (fromAni) return fromAni;
+
   const stored = pickString(doc?.poster_path);
-
-  if (fromAni) {
-    if (!stored || stored !== fromAni || isSharedOmdbAnimePoster(stored)) return fromAni;
-  }
-
   if (stored && !isSharedOmdbAnimePoster(stored)) return stored;
-  return fromAni ?? stored ?? null;
+  return stored ?? null;
 }
 
 /**
@@ -76,12 +78,9 @@ export function animeBackdropFromDoc(doc) {
 
   const poster = animePosterFromDoc(doc);
   const fromAni = embeddedAnilistBackdrop(doc, poster);
+  if (fromAni) return fromAni;
+
   const stored = pickString(doc?.backdrop_path);
-
-  if (fromAni) {
-    if (!stored || stored !== fromAni || isSharedOmdbAnimePoster(stored)) return fromAni;
-  }
-
   if (stored && !isSharedOmdbAnimePoster(stored)) return stored;
-  return fromAni ?? stored ?? poster ?? null;
+  return poster ?? stored ?? null;
 }

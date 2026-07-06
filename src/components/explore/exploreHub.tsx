@@ -3,8 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PageSplash from "@/components/ui/pageSplash";
 import CatalogRail from "@/components/catalog/catalogRail";
-import TrendingHero, { EXPLORE_SPOTLIGHT_RESERVE } from "@/components/catalog/trendingHero";
-import { SPOTLIGHT_SHELL_WIDTH, SIDEBAR_SYNC_TRANSITION } from "@/components/ui/sidebarBleedRail";
+import TrendingHero from "@/components/catalog/trendingHero";
 import { cn } from "@/lib/utils";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import GenreRail from "@/components/explore/genreRail";
@@ -194,13 +193,7 @@ export default function ExploreHub() {
     <div className="flex w-full flex-col bg-background">
       {hasTrending && (
         <section
-          className={cn(
-            "relative z-0 -mt-2 mb-4 w-full overflow-x-visible overflow-y-hidden",
-            "lg:absolute lg:left-[calc(-1*var(--sidebar-w,16rem))] lg:top-0 lg:mb-0",
-            SIDEBAR_SYNC_TRANSITION,
-            SPOTLIGHT_SHELL_WIDTH,
-            "h-[calc(80vh+4.5rem)]"
-          )}
+          className="relative z-0 -mt-14 mb-4 w-full overflow-hidden rounded-tl-2xl"
           aria-label="Spotlight"
         >
           <TrendingHero
@@ -218,7 +211,7 @@ export default function ExploreHub() {
       <div
         className={cn(
           `w-full ${MOBILE_CONTENT_INSET_LEFT}`,
-          hasTrending ? cn("mt-2", EXPLORE_SPOTLIGHT_RESERVE) : "mt-2"
+          "mt-2"
         )}
       >
         <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />

@@ -3,10 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
-import {
-  SPOTLIGHT_CONTENT_INSET,
-  SPOTLIGHT_IMAGE_CLASS,
-} from "@/components/ui/sidebarBleedRail";
 import { tmdbImageUrlOr } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +24,6 @@ type LargeCardProps = {
   overview?: string | null;
   /** Fill parent height (Explore trending hero carousel). */
   hero?: boolean;
-  /** Inset hero overlay to the main content column (Explore spotlight). */
-  heroContentInset?: boolean;
   /** Smaller hero overlay type (category featured row). */
   heroCompact?: boolean;
   /** Rich Explore-style overlay on standard aspect-video cards (Discover upcoming). */
@@ -91,7 +85,6 @@ function HeroCardOverlay({
   overview,
   compact = false,
   releaseDateStyle = "short",
-  contentInset = false,
 }: {
   title: string;
   type: "movie" | "tv";
@@ -105,7 +98,6 @@ function HeroCardOverlay({
   overview?: string | null;
   compact?: boolean;
   releaseDateStyle?: "short" | "phrase";
-  contentInset?: boolean;
 }) {
   const dateLabel =
     releaseDateStyle === "phrase"
@@ -140,19 +132,16 @@ function HeroCardOverlay({
         "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent",
         compact
           ? "px-4 pb-4 pt-16 sm:px-5 sm:pb-5 sm:pt-20"
-          : contentInset
-            ? "pr-5 pb-8 pt-24 sm:pr-8 sm:pb-10 sm:pt-32"
-            : "px-5 pb-8 pt-24 sm:px-8 sm:pb-10 sm:pt-32",
-        contentInset && SPOTLIGHT_CONTENT_INSET
+          : "px-5 pb-8 pt-24 sm:px-8 sm:pb-10 sm:pt-32"
       )}
     >
       <div className="flex max-w-3xl flex-col gap-3">
         {genres.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-white/70 sm:text-sm">
             {genres.slice(0, 2).map((genre) => (
               <span
                 key={genre}
-                className="rounded-md bg-white/10 px-2 py-0.5 text-white/95 backdrop-blur-sm"
+                className="rounded-md bg-white/10 px-2 py-0.5 text-inherit text-white/95 backdrop-blur-sm"
               >
                 {genre}
               </span>
@@ -220,7 +209,6 @@ export default function LargeCard({
   certification,
   overview,
   hero = false,
-  heroContentInset = false,
   heroCompact = false,
   richOverlay = false,
   releaseDateStyle = "short",
@@ -249,7 +237,7 @@ export default function LargeCard({
           alt={title}
           className={cn(
             "h-full w-full object-cover transition-all duration-500 group-hover:scale-105",
-            heroContentInset && SPOTLIGHT_IMAGE_CLASS
+            hero && "absolute inset-0"
           )}
         />
         {!showRichOverlay && (
@@ -293,7 +281,6 @@ export default function LargeCard({
             overview={overview}
             compact={!hero || heroCompact}
             releaseDateStyle={releaseDateStyle}
-            contentInset={heroContentInset}
           />
         )}
       </div>

@@ -37,7 +37,7 @@ export const MOVIE_SERVERS = {
  */
 const MoviePlayer = ({
   videoId,
-  server = 'videasy',
+  server = 'vidcore',
   streamQuality: streamQualityProp,
   startSeconds = 0,
   onVideasyProgress,
@@ -52,7 +52,7 @@ const MoviePlayer = ({
   );
 
   const playerUrl = useMemo(() => {
-    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.videasy;
+    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.vidcore;
     const path = config.path(videoId);
     let suffix = typeof config.suffix === 'function' ? config.suffix() : '';
     if (config.supportsProgress && startSeconds > 0) {
