@@ -10,10 +10,19 @@ import {
   withVideasyProgress,
 } from '@/lib/videasyPlayer';
 
+/** Peachify — https://peachify.pro (TMDB ids) */
+const PEACHIFY_BASE = 'https://peachify.pro';
+
 /** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
 const VIDCORE_TV_QUERY = '?theme=22c55e&autoPlay=true';
 
 export const SHOW_SERVERS = {
+  peachify: {
+    base: PEACHIFY_BASE,
+    path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
+    suffix: () => '',
+    supportsProgress: false,
+  },
   videasy: {
     base: VIDEASY_PLAYER_BASE,
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
@@ -35,7 +44,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode, startSeconds } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.videasy;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.peachify;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -66,7 +75,7 @@ export default function ShowPlayer({
   videoId,
   season,
   episode,
-  server = 'videasy',
+  server = 'peachify',
   startSeconds = 0,
   onVideasyProgress,
 }) {
