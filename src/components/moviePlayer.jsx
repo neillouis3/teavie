@@ -9,10 +9,19 @@ import {
   withVideasyProgress,
 } from '@/lib/videasyPlayer';
 
+/** Peachify — https://peachify.pro (TMDB ids) */
+const PEACHIFY_BASE = 'https://peachify.pro';
+
 /** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
 const VIDCORE_QUERY = '?theme=22c55e&autoPlay=true';
 
 export const MOVIE_SERVERS = {
+  peachify: {
+    base: PEACHIFY_BASE,
+    path: (id) => `/embed/movie/${id}`,
+    suffix: () => '',
+    supportsProgress: false,
+  },
   videasy: {
     base: VIDEASY_PLAYER_BASE,
     path: (id) => `/movie/${id}`,
@@ -37,7 +46,7 @@ export const MOVIE_SERVERS = {
  */
 const MoviePlayer = ({
   videoId,
-  server = 'videasy',
+  server = 'peachify',
   streamQuality: streamQualityProp,
   startSeconds = 0,
   onVideasyProgress,
@@ -52,7 +61,7 @@ const MoviePlayer = ({
   );
 
   const playerUrl = useMemo(() => {
-    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.videasy;
+    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.peachify;
     const path = config.path(videoId);
     let suffix = typeof config.suffix === 'function' ? config.suffix() : '';
     if (config.supportsProgress && startSeconds > 0) {

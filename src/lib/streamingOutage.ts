@@ -1,5 +1,5 @@
 /** When true, show a notice that TMDB movie/TV streaming is temporarily unavailable. */
-export const CATALOG_STREAMING_OUTAGE_ACTIVE = true;
+export const CATALOG_STREAMING_OUTAGE_ACTIVE = false;
 
 const ANIME_SHOW_ID_RE = /^anime_/i;
 
