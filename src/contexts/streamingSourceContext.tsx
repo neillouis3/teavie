@@ -13,12 +13,14 @@ import { MOVIE_SERVERS } from '@/components/moviePlayer';
 export type StreamServerId = keyof typeof MOVIE_SERVERS;
 
 const STORAGE_KEY = 'teavie-streaming-server';
-const DEFAULT_SERVER: StreamServerId = 'peachify';
+const DEFAULT_SERVER: StreamServerId = 'movies111';
 
-const ORDER: StreamServerId[] = ['peachify', 'vidcore', 'videasy'];
+const ORDER: StreamServerId[] = ['movies111', 'peachify', 'vidcore', 'videasy'];
 
 export function streamServerLabel(id: StreamServerId): string {
   switch (id) {
+    case 'movies111':
+      return '111movies';
     case 'peachify':
       return 'Peachify';
     case 'videasy':
