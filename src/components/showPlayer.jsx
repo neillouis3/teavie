@@ -10,6 +10,9 @@ import {
   withVideasyProgress,
 } from '@/lib/videasyPlayer';
 
+/** 111movies — https://111movies.net (TMDB or IMDb ids) */
+const MOVIES111_BASE = 'https://111movies.net';
+
 /** Peachify — https://peachify.pro (TMDB ids) */
 const PEACHIFY_BASE = 'https://peachify.pro';
 
@@ -17,6 +20,12 @@ const PEACHIFY_BASE = 'https://peachify.pro';
 const VIDCORE_TV_QUERY = '?theme=22c55e&autoPlay=true';
 
 export const SHOW_SERVERS = {
+  movies111: {
+    base: MOVIES111_BASE,
+    path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
+    suffix: () => '',
+    supportsProgress: false,
+  },
   peachify: {
     base: PEACHIFY_BASE,
     path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
@@ -44,7 +53,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode, startSeconds } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.peachify;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.movies111;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -75,7 +84,7 @@ export default function ShowPlayer({
   videoId,
   season,
   episode,
-  server = 'peachify',
+  server = 'movies111',
   startSeconds = 0,
   onVideasyProgress,
 }) {
