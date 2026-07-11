@@ -9,8 +9,8 @@ import {
   withVideasyProgress,
 } from '@/lib/videasyPlayer';
 
-/** 111movies — https://111movies.net (TMDB or IMDb ids) */
-const MOVIES111_BASE = 'https://111movies.net';
+/** 111movies — embed must use the final player host (111movies.net 302s and breaks fullscreen). */
+const MOVIES111_BASE = 'https://player.vidlove.cc';
 
 /** Peachify — https://peachify.pro (TMDB ids) */
 const PEACHIFY_BASE = 'https://peachify.pro';
@@ -21,7 +21,7 @@ const VIDCORE_QUERY = '?theme=22c55e&autoPlay=true';
 export const MOVIE_SERVERS = {
   movies111: {
     base: MOVIES111_BASE,
-    path: (id) => `/movie/${id}`,
+    path: (id) => `/embed/movie/${id}`,
     suffix: () => '',
     supportsProgress: false,
   },
