@@ -10,6 +10,9 @@ import {
 } from "@/lib/catalogPopularity";
 import { catalogMoviePolicyClause } from "@/lib/catalogQuery";
 
+const RAIL_FEED_LIMIT = 50;
+const NEW_CONTENT_LIMIT = 20;
+
 async function loadNewContent() {
   const client = await clientPromise;
   const contentCollection = client.db("teavie").collection("content");
@@ -20,7 +23,7 @@ async function loadNewContent() {
   const toDateString = (d) => d.toISOString().split("T")[0];
   const startDate = toDateString(past);
   const endDate = toDateString(now);
-  const limit = 20;
+  const limit = NEW_CONTENT_LIMIT;
 
   const filter = {
     $or: [
@@ -59,7 +62,7 @@ async function loadNewContent() {
 async function loadUpdatedContent() {
   const client = await clientPromise;
   const contentCollection = client.db("teavie").collection("content");
-  const limit = 20;
+  const limit = RAIL_FEED_LIMIT;
 
   const results = await contentCollection
     .find({})
@@ -80,7 +83,7 @@ async function loadUpdatedContent() {
 async function loadUpcomingContent() {
   const client = await clientPromise;
   const contentCollection = client.db("teavie").collection("content");
-  const limit = 20;
+  const limit = RAIL_FEED_LIMIT;
 
   const now = new Date();
   const oneMonthAhead = new Date();

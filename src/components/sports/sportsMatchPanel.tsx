@@ -20,6 +20,8 @@ import {
   type StreamedMatch,
   type StreamedStream,
 } from '@/lib/streamedSports';
+import { stripEmojis } from '@/lib/stripEmojis';
+import { cn } from '@/lib/utils';
 
 const BORDERED_FIELD =
   'border-default-200/80 shadow-none dark:border-white/10 bg-transparent';
@@ -65,7 +67,7 @@ function matchOverview(match: StreamedMatch): string {
   const home = match.teams?.home?.name?.trim();
   const away = match.teams?.away?.name?.trim();
   if (home && away) return `${home} vs ${away}`;
-  return match.title?.trim() || 'Live sports event';
+  return stripEmojis(match.title?.trim() || '') || 'Live sports event';
 }
 
 type SportsMatchPanelProps = {
@@ -87,6 +89,7 @@ export default function SportsMatchPanel({
   onSourceChange,
   onStreamChange,
 }: SportsMatchPanelProps) {
+  const displayTitle = stripEmojis(match.title);
   const live = isMatchLive(match);
   const upcoming = isMatchUpcoming(match);
   const posterUrl = matchCardPosterUrl(match);
@@ -106,7 +109,7 @@ export default function SportsMatchPanel({
           />
         ) : null}
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          {match.title}
+          {displayTitle}
         </h1>
         {badges.away ? (
           <img
@@ -146,13 +149,13 @@ export default function SportsMatchPanel({
   const posterEl = posterUrl ? (
     <Image
       src={posterUrl}
-      alt={match.title}
+      alt={displayTitle}
       className="aspect-[16/10] w-full rounded-lg object-cover ring-1 ring-default-200/35 dark:ring-default-100/15"
     />
   ) : (
     <div className="aspect-[16/10] w-full overflow-hidden rounded-lg bg-default-200 ring-1 ring-default-200/35 dark:bg-default-100/20 dark:ring-default-100/15">
       <SportsMatchPoster
-        title={match.title}
+        title={displayTitle}
         posterUrl={posterUrl}
         homeBadgeUrl={badges.home}
         awayBadgeUrl={badges.away}
@@ -215,15 +218,20 @@ export default function SportsMatchPanel({
         <div className="mt-4">{overviewBlock}</div>
       </div>
 
-      <div className="hidden gap-5 sm:flex sm:flex-row sm:items-start">
-        <div className="w-48 shrink-0 md:w-56 lg:w-64">{posterEl}</div>
+      <div className="hidden gap-5 sm:flex sm:flex-row sm:items-start lg:gap-6 xl:gap-8">
+        <div className="w-48 shrink-0 md:w-56 lg:w-64 xl:w-72 2xl:w-80">{posterEl}</div>
         <div className="min-w-0 flex-1">
           {titleAndStats}
           <div className="mt-4 sm:mt-5">{overviewBlock}</div>
+          {streamControls ? (
+            <div className="mt-5 hidden xl:block">{streamControls}</div>
+          ) : null}
         </div>
       </div>
 
-      {streamControls ? <div className="space-y-4">{streamControls}</div> : null}
+      {streamControls ? (
+        <div className={cn('space-y-4', 'xl:hidden')}>{streamControls}</div>
+      ) : null}
     </div>
   );
 }

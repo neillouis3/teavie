@@ -10,22 +10,14 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
-import {
-  SPOTLIGHT_ARROW_PREV,
-  SPOTLIGHT_ARROW_NEXT,
-  SPOTLIGHT_SLIDE_CLASS,
-  SPOTLIGHT_TRACK_CLASS,
-} from "@/components/ui/sidebarBleedRail";
 import { cn } from "@/lib/utils";
 import type { ContentItem } from "@/types/content";
 
 const TRENDING_CAROUSEL_H =
   "h-[min(52vh,400px)] sm:h-[min(62vh,480px)] lg:h-[calc(80vh-2rem)]";
 
-const SPOTLIGHT_BLEED_H = "h-[calc(80vh+4.5rem)]";
-
-/** Layout reserve under absolute desktop spotlight (Explore). */
-export const EXPLORE_SPOTLIGHT_RESERVE = "lg:pt-[calc(80vh+4.5rem)]";
+const SPOTLIGHT_UNDER_NAV_H =
+  "h-[calc(min(52vh,400px)+3.5rem)] sm:h-[calc(min(62vh,480px)+3.5rem)] lg:h-[calc(80vh-2rem+3.5rem)]";
 
 const TRENDING_ARROW_CLASS =
   "top-1/2 z-20 h-10 w-10 -translate-y-1/2 border-none bg-black/45 text-white backdrop-blur-sm hover:bg-black/60 disabled:opacity-40";
@@ -58,7 +50,7 @@ interface TrendingHeroProps {
   rounded?: boolean;
   /** Pagination dots under the carousel. @default true */
   showDots?: boolean;
-  /** Full-bleed single-slide spotlight (Explore). */
+  /** Full-width single-slide spotlight (Explore). */
   variant?: "carousel" | "spotlight";
   /** Extend spotlight behind the fixed top nav (Explore). */
   bleedUnderNav?: boolean;
@@ -114,7 +106,6 @@ export default function TrendingHero({
     return (
       <LargeCard
         hero
-        heroContentInset={variant === "spotlight"}
         id={item.id}
         title={title}
         year={year}
@@ -135,7 +126,7 @@ export default function TrendingHero({
 
   const carouselItemClass =
     variant === "spotlight"
-      ? SPOTLIGHT_SLIDE_CLASS
+      ? "h-full basis-full pl-0"
       : flushLeft
         ? "h-full basis-full pl-0"
         : "h-full basis-full";
@@ -167,9 +158,12 @@ export default function TrendingHero({
     ) : null;
 
   if (variant === "spotlight") {
-    const spotlightHeight = bleedUnderNav ? SPOTLIGHT_BLEED_H : TRENDING_CAROUSEL_H;
+    const spotlightHeight = bleedUnderNav ? SPOTLIGHT_UNDER_NAV_H : TRENDING_CAROUSEL_H;
     return (
-      <div className={cn("flex h-full w-full flex-col", spotlightHeight)} aria-label="Spotlight">
+      <div
+        className={cn("flex w-full flex-col", spotlightHeight)}
+        aria-label="Spotlight"
+      >
         <Carousel
           opts={{ align: "start", loop: true }}
           className="relative h-full w-full [&>div]:h-full"
@@ -177,19 +171,19 @@ export default function TrendingHero({
         >
           <CarouselContent
             viewportClassName="h-full w-full overflow-hidden"
-            className={SPOTLIGHT_TRACK_CLASS}
+            className="!ml-0 h-full"
           >
             {carouselSlides}
           </CarouselContent>
           <CarouselPrevious
             variant="flat"
             aria-label="Previous spotlight title"
-            className={cn(TRENDING_ARROW_CLASS, SPOTLIGHT_ARROW_PREV)}
+            className={cn(TRENDING_ARROW_CLASS, "left-4")}
           />
           <CarouselNext
             variant="flat"
             aria-label="Next spotlight title"
-            className={cn(TRENDING_ARROW_CLASS, SPOTLIGHT_ARROW_NEXT)}
+            className={cn(TRENDING_ARROW_CLASS, "right-4")}
           />
         </Carousel>
         {paginationDots}

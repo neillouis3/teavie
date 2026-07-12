@@ -9,7 +9,7 @@ export async function GET(req) {
     }
 
     const data = await tmdbFetchJson(
-      `https://api.themoviedb.org/3/tv/${id}?language=en-US&append_to_response=content_ratings`
+      `https://api.themoviedb.org/3/tv/${id}?language=en-US&append_to_response=content_ratings,aggregate_credits,videos`
     );
 
     return Response.json(data, {

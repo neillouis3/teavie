@@ -12,6 +12,9 @@ const MEDIA_SELECTION = `
           format
           startDate { year month day }
           title { romaji english native }
+          coverImage { color extraLarge large medium }
+          bannerImage
+          trailer { id site thumbnail }
 `;
 
 const QUERY_BY_ANILIST_ID = `query ($id: Int) {
@@ -86,6 +89,9 @@ export async function GET(req) {
     const start = startDateToIso(m.startDate);
     const overview = stripHtml(m.description || "");
 
+    const cover = m.coverImage && typeof m.coverImage === "object" ? m.coverImage : null;
+    const trailer = m.trailer && typeof m.trailer === "object" ? m.trailer : null;
+
     return Response.json({
       id: m.id,
       idMal: m.idMal ?? null,
@@ -102,6 +108,22 @@ export async function GET(req) {
         english: m.title?.english ?? null,
         native: m.title?.native ?? null,
       },
+      coverImage: cover
+        ? {
+            color: typeof cover.color === "string" ? cover.color : null,
+            extraLarge: cover.extraLarge ?? null,
+            large: cover.large ?? null,
+            medium: cover.medium ?? null,
+          }
+        : null,
+      bannerImage: typeof m.bannerImage === "string" ? m.bannerImage : null,
+      trailer: trailer
+        ? {
+            id: trailer.id ?? null,
+            site: trailer.site ?? null,
+            thumbnail: trailer.thumbnail ?? null,
+          }
+        : null,
     });
   } catch (err) {
     console.error(err);

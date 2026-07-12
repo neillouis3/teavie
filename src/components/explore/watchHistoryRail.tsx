@@ -16,13 +16,15 @@ import {
 } from "@/components/ui/carousel";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import { watchHistoryMetaChips } from "@/lib/watchHistory";
+import {
+  EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_VERTICAL,
+  RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE,
+} from "@/lib/catalogGrid";
+import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ExploreHistoryRow } from "@/lib/explorePageData";
 import { useUserData } from "@/contexts/userDataContext";
 
-const CAROUSEL_ITEM_VERTICAL =
-  "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
-const CAROUSEL_ITEM_VERTICAL_PROFILE =
-  "basis-[45%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-[calc(100%/7)] xl:basis-[calc(100%/7)]";
 const CAROUSEL_ITEM_HORIZONTAL =
   "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 
@@ -36,7 +38,7 @@ type WatchHistoryRailProps = {
 export default function WatchHistoryRail({
   items,
   layout = "explore",
-  maxItems,
+  maxItems = EXPLORE_RAIL_MAX_ITEMS,
   className = "",
 }: WatchHistoryRailProps) {
   const { mode } = useCatalogCardStyle();
@@ -46,12 +48,13 @@ export default function WatchHistoryRail({
   const itemClass = horizontal
     ? CAROUSEL_ITEM_HORIZONTAL
     : profile
-      ? CAROUSEL_ITEM_VERTICAL_PROFILE
-      : CAROUSEL_ITEM_VERTICAL;
+      ? RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE
+      : RAIL_CAROUSEL_ITEM_VERTICAL;
 
-  const visibleItems = React.useMemo(() => {
-    return maxItems != null ? items.slice(0, maxItems) : items;
-  }, [items, maxItems]);
+  const visibleItems = React.useMemo(
+    () => railContentItems(items, maxItems),
+    [items, maxItems]
+  );
 
   const progressById = React.useMemo(() => {
     return new Map(watchHistoryEntries.map((e) => [e.catalogId, e] as const));

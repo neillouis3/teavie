@@ -79,6 +79,7 @@ function buildEmbedUrl(p) {
  * @param {string} [props.server]
  * @param {number} [props.startSeconds] Videasy resume position
  * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
+ * @param {() => void} [props.onEmbedLoad]
  */
 export default function ShowPlayer({
   videoId,
@@ -87,6 +88,7 @@ export default function ShowPlayer({
   server = 'movies111',
   startSeconds = 0,
   onVideasyProgress,
+  onEmbedLoad,
 }) {
   const progressHandler = useCallback(
     (msg) => {
@@ -125,6 +127,7 @@ export default function ShowPlayer({
           src={url}
           className="absolute inset-0 h-full w-full border-0"
           onVideasyProgress={server === 'videasy' ? progressHandler : undefined}
+          onLoad={onEmbedLoad}
         />
       ) : (
         <PlayerEmbedSkeleton />

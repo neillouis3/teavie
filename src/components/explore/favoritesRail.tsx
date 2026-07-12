@@ -15,12 +15,14 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
+import {
+  EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_VERTICAL,
+  RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE,
+} from "@/lib/catalogGrid";
+import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
 
-const CAROUSEL_ITEM_VERTICAL =
-  "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]";
-const CAROUSEL_ITEM_VERTICAL_PROFILE =
-  "basis-[45%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-[calc(100%/7)] xl:basis-[calc(100%/7)]";
 const CAROUSEL_ITEM_HORIZONTAL =
   "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 
@@ -34,7 +36,7 @@ type FavoritesRailProps = {
 export default function FavoritesRail({
   items,
   layout = "explore",
-  maxItems = 24,
+  maxItems = EXPLORE_RAIL_MAX_ITEMS,
   className = "",
 }: FavoritesRailProps) {
   const { mode } = useCatalogCardStyle();
@@ -43,11 +45,11 @@ export default function FavoritesRail({
   const itemClass = horizontal
     ? CAROUSEL_ITEM_HORIZONTAL
     : profile
-      ? CAROUSEL_ITEM_VERTICAL_PROFILE
-      : CAROUSEL_ITEM_VERTICAL;
+      ? RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE
+      : RAIL_CAROUSEL_ITEM_VERTICAL;
 
   const visibleItems = useMemo(
-    () => items.slice(0, maxItems),
+    () => railContentItems(items, maxItems),
     [items, maxItems]
   );
 
