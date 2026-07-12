@@ -17,7 +17,7 @@ export async function GET(req) {
     }
 
     const data = await tmdbFetchJson(
-      `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=release_dates`
+      `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=release_dates,credits,videos`
     );
 
     return Response.json(data, {

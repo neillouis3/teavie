@@ -27,6 +27,14 @@ export type CatalogMediaPanelProps = {
   links: CatalogDetailLink[];
   genreBrowseBase?: string;
   toolbar?: React.ReactNode;
+  /** Cast, directors, etc. — rendered below genre and other metadata. */
+  creditsSection?: React.ReactNode;
+  /** Quick facts shown under the title (shows / anime). */
+  statPills?: string[];
+  /** Alternate titles for anime and localized names. */
+  alternateTitles?: string[];
+  /** Network / studio tags in the details card. */
+  networkTags?: string[];
 };
 
 const DETAIL_META_CARD =
@@ -120,6 +128,10 @@ export default function CatalogMediaPanel({
   links,
   genreBrowseBase,
   toolbar,
+  creditsSection,
+  statPills,
+  alternateTitles,
+  networkTags,
 }: CatalogMediaPanelProps) {
   const ratingLabel =
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
@@ -127,7 +139,7 @@ export default function CatalogMediaPanel({
 
   const titleAndStats = (
     <>
-      <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+      <h1 className="text-2xl tracking-tight text-foreground sm:text-3xl">
         {title}
       </h1>
       <p className="mt-1.5 text-sm text-default-500">{subtitleLine}</p>
@@ -164,11 +176,31 @@ export default function CatalogMediaPanel({
         </div>
       )}
       {toolbar ? <div className="mt-3">{toolbar}</div> : null}
+      {statPills && statPills.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {statPills.map((pill) => (
+            <span
+              key={pill}
+              className="inline-flex items-center rounded-md border border-default-200/70 bg-default-100/70 px-2.5 py-0.5 text-xs text-foreground dark:border-default-100/25 dark:bg-default-100/10"
+            >
+              {pill}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {alternateTitles && alternateTitles.length > 0 ? (
+        <p className="mt-2.5 text-xs leading-relaxed text-default-500">
+          Also known as {alternateTitles.join(" · ")}
+        </p>
+      ) : null}
     </>
   );
 
   const overviewBlock = (
-    <>
+    <div className="w-full max-w-[75%]">
+      <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-default-500">
+        Synopsis
+      </h2>
       <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
         {overview?.trim() ? overview : "No overview available."}
       </p>
@@ -177,7 +209,7 @@ export default function CatalogMediaPanel({
           &ldquo;{tagline.trim()}&rdquo;
         </p>
       ) : null}
-    </>
+    </div>
   );
 
   const posterEl = posterUrl ? (
@@ -220,10 +252,20 @@ export default function CatalogMediaPanel({
             genres={genres}
             infoLines={infoLines}
             links={links}
+            networkTags={networkTags}
             genreBrowseBase={genreBrowseBase}
           />
         </div>
       </section>
+
+      {creditsSection ? (
+        <section className="w-full space-y-3" aria-label="Cast and crew">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-default-500">
+            Cast & crew
+          </h2>
+          {creditsSection}
+        </section>
+      ) : null}
     </div>
   );
 }

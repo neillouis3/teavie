@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import Image from "next/image";
@@ -16,6 +17,7 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   ArrowUpDownIcon,
+  Calendar03Icon,
   PlayIcon,
 } from "@hugeicons/core-free-icons";
 import {
@@ -31,7 +33,7 @@ import { tmdbSeasonEpisodeFromAbsolute } from "@/lib/cumulativeTvEpisode";
 import { useAnimeAudio } from "@/contexts/animeAudioContext";
 import { animeAudioLabel, ANIME_AUDIO_OPTIONS } from "@/lib/animePlayEmbed";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
-import { filterReleasedEpisodes } from "@/lib/episodeRelease";
+import { filterReleasedEpisodes, formatEpisodeAirDate, isEpisodeUpcoming } from "@/lib/episodeRelease";
 
 export type ShowEpisodePickerSeason = {
   season_number: number;
@@ -53,18 +55,65 @@ export type EpisodeCardRow = {
 
 export const SHOW_VIDEO_PLAYER_ID = "show-video-player";
 const EPISODE_PICKER_LIST_ID = "show-episode-picker-list";
-/** Visible episode cards in the horizontal scroller (4 full + ⅓ peek). */
+/** Visible episode cards in the horizontal scroller (4 full + ½ peek on desktop). */
 const VISIBLE_EPISODE_SLOTS = 5;
+const EPISODE_CAROUSEL_OPTS = {
+  align: "start" as const,
+  dragFree: true,
+  /** Embla scroll duration (ms) — used when scrollTo is called with jump=false. */
+  duration: 40,
+};
+/** Normal episode slot — 4 full cards + ½ peek at `lg`. */
 const EPISODE_CAROUSEL_ITEM_CLASS =
-  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[38%] lg:basis-[calc(100%/4.3333333333)]";
-const EPISODE_CARD_HEIGHT = "h-[320px] sm:h-[360px]";
+  "pl-3 shrink-0 grow-0 basis-[72%] sm:basis-[48%] md:basis-[calc(100%/3.3333333333)] lg:basis-[calc(100%/4.5)]";
+/** Current episode slot — 1 + ⅓× a normal card width. */
+const EPISODE_CAROUSEL_ITEM_CURRENT_CLASS =
+  "pl-3 shrink-0 grow-0 basis-[96%] sm:basis-[64%] md:basis-[calc(100%/2.5)] lg:basis-[calc(100%/3.375)]";
 const EPISODE_CARD_STILL_HEIGHT = "h-[140px] sm:h-[160px]";
 const EPISODE_CARD_TITLE_CLASS =
-  "shrink-0 overflow-hidden text-sm font-semibold leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
+  "shrink-0 overflow-hidden text-sm font-normal leading-tight text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
 const EPISODE_CARD_DESCRIPTION_CLASS =
-  "h-[3.5rem] shrink-0 overflow-hidden text-sm leading-snug text-default-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]";
+  "max-h-[3.75rem] shrink-0 overflow-hidden text-sm leading-snug text-default-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]";
 const EPISODE_CARD_BODY_CLASS =
-  "flex min-h-0 flex-1 flex-col overflow-hidden py-3 pr-6 pl-0";
+  "flex min-h-0 flex-col overflow-hidden py-3 pr-6 pl-0";
+
+function episodeStillFallbackClass(season: number, episode: number): string {
+  const palettes = [
+    "from-violet-500/40 via-indigo-400/20 to-default-100",
+    "from-sky-500/40 via-cyan-400/20 to-default-100",
+    "from-emerald-500/40 via-teal-400/20 to-default-100",
+    "from-amber-500/35 via-orange-400/15 to-default-100",
+    "from-rose-500/35 via-pink-400/15 to-default-100",
+  ];
+  const idx = (season * 31 + episode) % palettes.length;
+  return `bg-gradient-to-br ${palettes[idx]} dark:from-opacity-30 dark:via-opacity-20 dark:to-default-100/10`;
+}
+
+type EpisodeCardVisualState = "current" | "watched" | "upcoming" | "default";
+
+function episodeCardVisualState(
+  row: EpisodeCardRow,
+  active: boolean,
+  watched: boolean
+): EpisodeCardVisualState {
+  if (isEpisodeUpcoming(row.air_date)) return "upcoming";
+  if (active) return "current";
+  if (watched) return "watched";
+  return "default";
+}
+
+function episodeCardShellClass(state: EpisodeCardVisualState): string {
+  switch (state) {
+    case "current":
+      return "bg-success/5 shadow-sm shadow-success/10";
+    case "watched":
+      return "bg-default-50/50 dark:bg-default-100/5";
+    case "upcoming":
+      return "bg-default-100/40 opacity-80 dark:bg-default-100/10";
+    default:
+      return "";
+  }
+}
 
 function scrollToPlayerBottom() {
   const player = document.getElementById(SHOW_VIDEO_PLAYER_ID);
@@ -81,7 +130,7 @@ function episodeStillUrl(stillPath: string | null | undefined) {
 function EpisodeCardSkeleton() {
   return (
     <div
-      className={`flex ${EPISODE_CARD_HEIGHT} w-full min-w-0 flex-col overflow-hidden rounded-xl`}
+      className="flex w-full min-w-0 flex-col overflow-hidden rounded-xl"
       aria-hidden
     >
       <div
@@ -122,7 +171,6 @@ type ShowEpisodePickerProps = {
   flatMode?: boolean;
   flatEpisodeCap?: number | null;
   watchedKeys?: Set<string>;
-  onMarkWatched?: (season: number, episode: number) => void;
   onEpisodesLoadingChange?: (loading: boolean) => void;
   onPlayableEpisodeCountChange?: (count: number) => void;
   /** Anime: Sub/Dub selector at the start of episode controls. */
@@ -145,8 +193,66 @@ function useEpisodePicker() {
   return ctx;
 }
 
+function useEpisodePickerOptional() {
+  return useContext(EpisodePickerContext);
+}
+
+function currentEpisodeSubtitle(ctx: EpisodePickerContextValue): string {
+  const row =
+    ctx.releasedEpisodes.find((episode) => ctx.isSelected(episode)) ??
+    ctx.episodes.find((episode) => ctx.isSelected(episode));
+  const episodeNumber = row
+    ? episodeNavNumber(row, ctx.flatMode, ctx.catalogAbsoluteEpisodes)
+    : ctx.selectedEpisode;
+  const name = row?.name?.trim();
+  return name
+    ? `Episode ${episodeNumber}: ${name}`
+    : `Episode ${episodeNumber}`;
+}
+
+export function ShowWatchPlayerHeading({ title }: { title: string }) {
+  const picker = useEpisodePickerOptional();
+  const episodeSubtitle = picker ? currentEpisodeSubtitle(picker) : null;
+
+  return (
+    <div className="flex w-full min-w-0 flex-col gap-1">
+      <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        {title}
+      </h1>
+      {episodeSubtitle ? (
+        <p className="text-sm text-default-500">{episodeSubtitle}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function padEpisode(n: number) {
   return String(n).padStart(2, "0");
+}
+
+function selectedEpisodeIndex(
+  list: EpisodeCardRow[],
+  season: number,
+  episode: number
+): number {
+  return list.findIndex(
+    (row) => row.season === season && row.episode === episode
+  );
+}
+
+/** Scroll so the active episode sits in the second visible slot when possible. */
+function scrollCarouselToSelectedSecond(
+  api: CarouselApi | undefined,
+  list: EpisodeCardRow[],
+  season: number,
+  episode: number,
+  jump = false
+) {
+  if (!api) return;
+  const selectedIndex = selectedEpisodeIndex(list, season, episode);
+  if (selectedIndex < 0) return;
+  const targetIndex = Math.max(0, selectedIndex - 1);
+  api.scrollTo(targetIndex, jump);
 }
 
 function episodeNavNumber(
@@ -288,7 +394,6 @@ function useEpisodePickerState({
   flatMode = false,
   flatEpisodeCap = null,
   watchedKeys,
-  onMarkWatched,
   onEpisodesLoadingChange,
   onPlayableEpisodeCountChange,
   showAnimeAudio = false,
@@ -307,7 +412,7 @@ function useEpisodePickerState({
 
   const [jumpSeason, setJumpSeason] = useState(String(selectedSeason));
   const [jumpEpisode, setJumpEpisode] = useState(String(selectedEpisode));
-  const [episodeSortLatestFirst, setEpisodeSortLatestFirst] = useState(true);
+  const [episodeSortLatestFirst, setEpisodeSortLatestFirst] = useState(false);
 
   const releasedEpisodes = useMemo(
     () => filterReleasedEpisodes(episodes),
@@ -315,11 +420,8 @@ function useEpisodePickerState({
   );
 
   const displayedEpisodes = useMemo(
-    () =>
-      episodeSortLatestFirst
-        ? [...releasedEpisodes].reverse()
-        : releasedEpisodes,
-    [releasedEpisodes, episodeSortLatestFirst]
+    () => (episodeSortLatestFirst ? [...episodes].reverse() : episodes),
+    [episodes, episodeSortLatestFirst]
   );
 
   const toggleEpisodeSort = useCallback(() => {
@@ -370,19 +472,13 @@ function useEpisodePickerState({
                 fetchLimit,
                 controller.signal
               );
-              const released = filterReleasedEpisodes(
-                rows.map((row) => ({ ...row, season: seasonNum }))
-              );
+              const released = rows.map((row) => ({ ...row, season: seasonNum }));
               if (!cancelled) setEpisodes(released);
               return;
             } catch {
               if (!cancelled) {
                 if (count > 0) {
-                  setEpisodes(
-                    filterReleasedEpisodes(
-                      fallbackEpisodes(seasonNum, count)
-                    )
-                  );
+                  setEpisodes(fallbackEpisodes(seasonNum, count));
                   setError(false);
                 } else {
                   setEpisodes([]);
@@ -418,14 +514,14 @@ function useEpisodePickerState({
                 displayNumber: abs,
               });
             }
-            if (!cancelled) setEpisodes(filterReleasedEpisodes(rows));
+            if (!cancelled) setEpisodes(rows);
           } else {
             const seasonObj = releasedSeasons.find(
               (s) => s.season_number === selectedSeason
             );
             const count = seasonObj?.episode_count ?? 0;
             if (!cancelled) {
-              setEpisodes(filterReleasedEpisodes(fallbackEpisodes(selectedSeason, count)));
+              setEpisodes(fallbackEpisodes(selectedSeason, count));
             }
           }
           return;
@@ -456,7 +552,7 @@ function useEpisodePickerState({
                 episode: ep.displayNumber ?? ep.episode,
               }))
             : capped;
-          if (!cancelled) setEpisodes(filterReleasedEpisodes(finalRows));
+          if (!cancelled) setEpisodes(finalRows);
           return;
         }
 
@@ -465,18 +561,14 @@ function useEpisodePickerState({
           selectedSeason,
           controller.signal
         );
-        if (!cancelled) setEpisodes(filterReleasedEpisodes(rows));
+        if (!cancelled) setEpisodes(rows);
       } catch {
         if (!cancelled) {
           setError(true);
           const seasonObj = releasedSeasons.find(
             (s) => s.season_number === selectedSeason
           );
-          setEpisodes(
-            filterReleasedEpisodes(
-              fallbackEpisodes(selectedSeason, seasonObj?.episode_count ?? 0)
-            )
-          );
+          setEpisodes(fallbackEpisodes(selectedSeason, seasonObj?.episode_count ?? 0));
         }
       } finally {
         if (!cancelled) {
@@ -544,9 +636,9 @@ function useEpisodePickerState({
   );
 
   const handleSelect = (row: EpisodeCardRow) => {
+    if (isEpisodeUpcoming(row.air_date)) return;
     onSeasonChange(row.season);
     onEpisodeChange(row.season, row.episode);
-    onMarkWatched?.(row.season, row.episode);
   };
 
   const currentEpisodeIndex = useMemo(() => {
@@ -657,7 +749,6 @@ function useEpisodePickerState({
     const lastEp = Math.max(1, prevSeason.episode_count ?? 1);
     onSeasonChange(prevSeason.season_number);
     onEpisodeChange(prevSeason.season_number, lastEp);
-    onMarkWatched?.(prevSeason.season_number, lastEp);
   };
 
   const goNextEpisode = () => {
@@ -676,7 +767,6 @@ function useEpisodePickerState({
     const nextSeason = releasedSeasons[seasonIdx + 1];
     onSeasonChange(nextSeason.season_number);
     onEpisodeChange(nextSeason.season_number, 1);
-    onMarkWatched?.(nextSeason.season_number, 1);
   };
 
   const applyJumpFromInputs = useCallback(
@@ -698,7 +788,6 @@ function useEpisodePickerState({
         }
         onSeasonChange(coords.season);
         onEpisodeChange(coords.season, coords.episode);
-        onMarkWatched?.(coords.season, coords.episode);
         return;
       }
 
@@ -709,7 +798,6 @@ function useEpisodePickerState({
       if (s === selectedSeason && ep === selectedEpisode) return;
       onSeasonChange(s);
       onEpisodeChange(s, ep);
-      onMarkWatched?.(s, ep);
     },
     [
       flatMode,
@@ -719,7 +807,6 @@ function useEpisodePickerState({
       selectedEpisode,
       onSeasonChange,
       onEpisodeChange,
-      onMarkWatched,
     ]
   );
 
@@ -735,7 +822,8 @@ function useEpisodePickerState({
 
   return {
     releasedSeasons,
-    episodes: releasedEpisodes,
+    episodes,
+    releasedEpisodes,
     displayedEpisodes,
     episodeSortLatestFirst,
     toggleEpisodeSort,
@@ -749,6 +837,7 @@ function useEpisodePickerState({
     fallbackStillPath,
     watchedKeys,
     selectedSeason,
+    selectedEpisode,
     currentSeasonEpisodeLabel,
     hasPreviousEpisode,
     hasNextEpisode,
@@ -959,14 +1048,14 @@ function ShowEpisodePickerSeasonRow() {
           }}
           classNames={{
             base: manySeasons
-              ? "w-full min-w-0 max-w-full lg:w-[9.5rem]"
-              : "w-full min-w-0 max-w-full lg:w-auto",
+              ? "w-full min-w-0 max-w-full lg:w-[12rem]"
+              : "w-full min-w-0 max-w-full lg:w-[11rem]",
             trigger:
-              "h-8 min-h-8 border-default-300 px-2 dark:border-default-500/60",
+              "h-8 min-h-8 border-default-300 px-3 dark:border-default-500/60",
             value: "text-xs font-normal text-foreground",
             selectorIcon: "text-default-400",
           }}
-          popoverProps={{ classNames: { content: "min-w-[9rem]" } }}
+          popoverProps={{ classNames: { content: "min-w-[12rem]" } }}
         >
           {releasedSeasons.map((s) => (
             <SelectItem
@@ -992,28 +1081,28 @@ type EmblaCarouselApi = NonNullable<CarouselApi>;
 function scrollEpisodeCarouselPrev(api: EmblaCarouselApi) {
   const inView = api.slidesInView();
   if (inView.length === 0) {
-    api.scrollPrev();
+    api.scrollPrev(false);
     return;
   }
   const firstInView = Math.min(...inView);
   const step = Math.max(1, inView.length);
-  api.scrollTo(Math.max(0, firstInView - step));
+  api.scrollTo(Math.max(0, firstInView - step), false);
 }
 
 function scrollEpisodeCarouselNext(api: EmblaCarouselApi) {
   const inView = api.slidesInView();
   const snapCount = api.scrollSnapList().length;
   if (inView.length === 0) {
-    api.scrollNext();
+    api.scrollNext(false);
     return;
   }
   const lastInView = Math.max(...inView);
   const nextIndex = lastInView + 1;
   if (nextIndex < snapCount) {
-    api.scrollTo(nextIndex);
+    api.scrollTo(nextIndex, false);
     return;
   }
-  api.scrollNext();
+  api.scrollNext(false);
 }
 
 function EpisodeCarouselScrollArrows({ api }: { api: CarouselApi | null }) {
@@ -1085,19 +1174,77 @@ export function ShowEpisodePickerList() {
     fallbackStillPath,
     isSelected,
     handleSelect,
+    selectedSeason,
+    selectedEpisode,
   } = useEpisodePicker();
 
   const [episodeCarouselApi, setEpisodeCarouselApi] = useState<CarouselApi | null>(
     null
   );
+  const alignContextRef = useRef({
+    sortLatestFirst: episodeSortLatestFirst,
+    episodesLength: episodes.length,
+    selectedSeason,
+    selectedEpisode,
+  });
 
   useEffect(() => {
     if (loading) setEpisodeCarouselApi(null);
   }, [loading]);
 
   useEffect(() => {
-    episodeCarouselApi?.reInit();
-  }, [displayedEpisodes, episodeCarouselApi]);
+    if (!episodeCarouselApi || loading) return;
+
+    const prev = alignContextRef.current;
+    const sortToggled =
+      prev.sortLatestFirst !== episodeSortLatestFirst &&
+      prev.episodesLength === episodes.length &&
+      prev.selectedSeason === selectedSeason &&
+      prev.selectedEpisode === selectedEpisode;
+    alignContextRef.current = {
+      sortLatestFirst: episodeSortLatestFirst,
+      episodesLength: episodes.length,
+      selectedSeason,
+      selectedEpisode,
+    };
+
+    const jump = sortToggled;
+    let raf1 = 0;
+    let raf2 = 0;
+
+    const alignAfterLayout = () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      // Re-measure after React applies the active card width, then animate scroll.
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          scrollCarouselToSelectedSecond(
+            episodeCarouselApi,
+            displayedEpisodes,
+            selectedSeason,
+            selectedEpisode,
+            jump
+          );
+        });
+      });
+    };
+
+    episodeCarouselApi.reInit();
+    alignAfterLayout();
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [
+    episodeCarouselApi,
+    loading,
+    displayedEpisodes,
+    episodes.length,
+    episodeSortLatestFirst,
+    selectedSeason,
+    selectedEpisode,
+  ]);
 
   return (
     <section
@@ -1105,11 +1252,11 @@ export function ShowEpisodePickerList() {
       className="flex w-full scroll-mt-6 flex-col gap-4"
       aria-label="Episodes"
     >
-      <div className="flex w-full min-w-0 items-start justify-between gap-2">
+      <div className="flex w-full min-w-0 flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
           <ShowEpisodePickerSeasonRow />
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5 self-end xl:self-auto">
           {!loading && episodes.length > 1 ? (
             <Button
               size="sm"
@@ -1133,7 +1280,7 @@ export function ShowEpisodePickerList() {
         </div>
       </div>
       {loading ? (
-        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+        <Carousel opts={EPISODE_CAROUSEL_OPTS} className="w-full">
           <CarouselContent className="-ml-3">
             {Array.from({ length: VISIBLE_EPISODE_SLOTS }).map((_, i) => (
               <CarouselItem key={i} className={EPISODE_CAROUSEL_ITEM_CLASS}>
@@ -1150,7 +1297,7 @@ export function ShowEpisodePickerList() {
         </p>
       ) : (
         <Carousel
-          opts={{ align: "start", dragFree: true }}
+          opts={EPISODE_CAROUSEL_OPTS}
           setApi={setEpisodeCarouselApi}
           className="w-full"
         >
@@ -1163,27 +1310,42 @@ export function ShowEpisodePickerList() {
                   : row.episode;
               const watchKey = formatWatchEpKey(row.season, row.episode);
               const watched = watchedKeys?.has(watchKey) ?? false;
+              const upcoming = isEpisodeUpcoming(row.air_date);
+              const cardState = episodeCardVisualState(row, active, watched);
               const runtime = formatRuntimeLabel(row.runtime);
               const stillUrl =
                 episodeStillUrl(row.still_path) ??
                 episodeStillUrl(fallbackStillPath);
+              const airDateLabel = formatEpisodeAirDate(row.air_date);
 
               return (
                 <CarouselItem
                   key={`${row.season}-${row.episode}-${row.displayNumber ?? ""}`}
-                  className={EPISODE_CAROUSEL_ITEM_CLASS}
+                  className={active ? EPISODE_CAROUSEL_ITEM_CURRENT_CLASS : EPISODE_CAROUSEL_ITEM_CLASS}
                 >
                   <button
                     type="button"
                     onClick={() => handleSelect(row)}
-                    aria-label={`Episode ${labelNum}: ${row.name}${watched ? ", watched" : ""}`}
+                    disabled={upcoming}
+                    aria-label={`Episode ${labelNum}: ${row.name}${
+                      active ? ", now playing" : watched ? ", watched" : upcoming ? ", upcoming" : ""
+                    }`}
                     aria-current={active ? "true" : undefined}
-                    className={`group relative flex ${EPISODE_CARD_HEIGHT} w-full min-w-0 flex-col overflow-hidden rounded-xl text-left`}
+                    aria-disabled={upcoming ? true : undefined}
+                    className={`group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl text-left transition-colors duration-200 ${
+                      active ? "p-2" : ""
+                    } ${episodeCardShellClass(cardState)} ${
+                      upcoming ? "cursor-not-allowed" : ""
+                    }`}
                   >
                     <div
-                      className={`relative ${EPISODE_CARD_STILL_HEIGHT} w-full shrink-0 overflow-hidden bg-default-200/80 dark:bg-default-100/15 ${
-                        active ? "ring-2 ring-inset ring-foreground" : ""
-                      }`}
+                      className={`relative w-full shrink-0 overflow-hidden ${
+                        active ? "rounded-lg" : ""
+                      } ${EPISODE_CARD_STILL_HEIGHT} ${
+                        stillUrl
+                          ? "bg-default-200/80 dark:bg-default-100/15"
+                          : episodeStillFallbackClass(row.season, row.episode)
+                      } ${upcoming ? "grayscale-[0.35]" : ""}`}
                     >
                       {stillUrl ? (
                         <Image
@@ -1194,35 +1356,60 @@ export function ShowEpisodePickerList() {
                           unoptimized
                           sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 320px"
                           quality={85}
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          className={`object-cover transition-transform duration-300 ${
+                            upcoming ? "" : "group-hover:scale-105"
+                          } ${watched && !active ? "opacity-90" : ""}`}
                         />
                       ) : null}
                       <div
                         className={`absolute inset-0 z-[1] flex items-center justify-center transition-opacity duration-200 ${
-                          stillUrl
+                          stillUrl && !upcoming
                             ? "opacity-0 group-hover:bg-black/40 group-hover:opacity-100"
                             : ""
                         }`}
                       >
-                        <HugeiconsIcon
-                          icon={PlayIcon}
-                          size={stillUrl ? 24 : 28}
-                          className={
-                            stillUrl
-                              ? "text-white drop-shadow-md"
-                              : "text-secondary"
-                          }
-                        />
+                        {!upcoming ? (
+                          <HugeiconsIcon
+                            icon={PlayIcon}
+                            size={stillUrl ? 24 : 28}
+                            className={
+                              stillUrl
+                                ? "text-white drop-shadow-md"
+                                : "text-foreground/70"
+                            }
+                          />
+                        ) : null}
                       </div>
-                      {watched ? (
+                      {active ? (
+                        <span className="pointer-events-none absolute left-2 top-2 z-[2] rounded-md bg-success px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success-foreground">
+                          Now playing
+                        </span>
+                      ) : null}
+                      {upcoming && airDateLabel ? (
+                        <span className="pointer-events-none absolute left-2 top-2 z-[2] inline-flex items-center gap-1 rounded-md bg-background/85 px-2 py-0.5 text-[10px] font-medium text-default-600 backdrop-blur-sm dark:bg-background/70 dark:text-default-300">
+                          <HugeiconsIcon icon={Calendar03Icon} size={11} className="shrink-0" />
+                          {airDateLabel}
+                        </span>
+                      ) : null}
+                      {watched && !active ? (
                         <span
-                          className="pointer-events-none absolute right-2 top-2 z-[2] h-1.5 w-1.5 rounded-full bg-success ring-2 ring-background"
+                          className="pointer-events-none absolute right-2 top-2 z-[2] h-2 w-2 rounded-full bg-success ring-2 ring-success/25 shadow-sm"
                           aria-hidden
                         />
                       ) : null}
                     </div>
-                    <div className={EPISODE_CARD_BODY_CLASS}>
-                      <span className="mb-1 shrink-0 text-sm font-medium text-default-500">
+                    <div
+                      className={`${EPISODE_CARD_BODY_CLASS} ${active ? "pt-2 pr-0 pl-0" : ""}`}
+                    >
+                      <span
+                        className={`mb-1 shrink-0 text-sm font-medium ${
+                          active
+                            ? "text-success"
+                            : upcoming
+                              ? "text-default-400"
+                              : "text-default-500"
+                        }`}
+                      >
                         E{padEpisode(labelNum)}
                         {runtime ? (
                           <>
@@ -1230,11 +1417,27 @@ export function ShowEpisodePickerList() {
                             {runtime}
                           </>
                         ) : null}
+                        {upcoming ? (
+                          <>
+                            <span aria-hidden> · </span>
+                            Upcoming
+                          </>
+                        ) : null}
                       </span>
                       <div className="flex flex-col gap-2">
-                        <span className={EPISODE_CARD_TITLE_CLASS}>{row.name}</span>
+                        <span
+                          className={`${EPISODE_CARD_TITLE_CLASS} ${
+                            upcoming ? "text-default-500" : ""
+                          }`}
+                        >
+                          {row.name}
+                        </span>
                         {row.overview?.trim() ? (
-                          <p className={EPISODE_CARD_DESCRIPTION_CLASS}>
+                          <p
+                            className={`${EPISODE_CARD_DESCRIPTION_CLASS} ${
+                              upcoming ? "text-default-400" : ""
+                            }`}
+                          >
                             {row.overview}
                           </p>
                         ) : null}
@@ -1254,7 +1457,7 @@ export function ShowEpisodePickerList() {
 export default function ShowEpisodePicker(props: ShowEpisodePickerProps) {
   return (
     <ShowEpisodePickerProvider {...props}>
-      <section className="flex w-full flex-col gap-4" aria-label="Episodes">
+      <section className="flex w-full flex-col gap-2" aria-label="Episodes">
         <ShowEpisodePickerControls />
         <ShowEpisodePickerList />
       </section>

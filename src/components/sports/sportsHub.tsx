@@ -95,26 +95,47 @@ export default function SportsHub() {
   return (
     <div className="min-h-screen w-full bg-main">
       <Header pageName="Sports" />
-      <div className={`space-y-5 pb-8 pt-2 ${CONTENT_INSET_X}`}>
+      <div className={`space-y-4 pb-8 pt-2 xl:space-y-5 ${CONTENT_INSET_X}`}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+          <Input
+            type="search"
+            placeholder="Search teams or events…"
+            value={query}
+            onValueChange={setQuery}
+            radius="sm"
+            variant="bordered"
+            className="w-full lg:max-w-sm xl:max-w-md"
+            classNames={{
+              inputWrapper:
+                'border-default-300 bg-default-50 dark:border-white/10 dark:bg-default-100/10',
+            }}
+          />
 
-        <Input
-          type="search"
-          placeholder="Search teams or events…"
-          value={query}
-          onValueChange={setQuery}
-          radius="sm"
-          variant="bordered"
-          classNames={{
-            inputWrapper: 'border-default-300 bg-default-50 dark:border-white/10 dark:bg-default-100/10',
-          }}
-        />
+          <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
+            {VIEW_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setView(tab.id)}
+                className={cn(
+                  'rounded-lg px-2 py-1 text-xs transition-colors',
+                  view === tab.id
+                    ? 'bg-foreground text-background'
+                    : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 lg:flex-wrap lg:overflow-visible">
           <button
             type="button"
             onClick={() => setSportId('all')}
             className={cn(
-              'rounded-lg px-2 py-1 text-xs transition-colors',
+              'shrink-0 rounded-lg px-2 py-1 text-xs transition-colors',
               sportId === 'all'
                 ? 'bg-success text-success-foreground'
                 : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
@@ -126,7 +147,7 @@ export default function SportsHub() {
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-9 w-24 animate-pulse rounded-full bg-default-200"
+                  className="h-7 w-24 shrink-0 animate-pulse rounded-lg bg-default-200"
                 />
               ))
             : sports.map((sport) => (
@@ -135,7 +156,7 @@ export default function SportsHub() {
                   type="button"
                   onClick={() => setSportId(sport.id)}
                   className={cn(
-                    'rounded-lg px-2 py-1 text-xs transition-colors',
+                    'shrink-0 rounded-lg px-2 py-1 text-xs transition-colors',
                     sportId === sport.id
                       ? 'bg-success text-success-foreground'
                       : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
@@ -144,24 +165,6 @@ export default function SportsHub() {
                   {sport.name}
                 </button>
               ))}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {VIEW_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setView(tab.id)}
-              className={cn(
-                'rounded-lg px-2 py-1 text-xs transition-colors',
-                view === tab.id
-                  ? 'bg-foreground text-background'
-                  : 'border border-default-300 text-foreground hover:bg-default-100 dark:border-white/10'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
         </div>
 
         {error ? (

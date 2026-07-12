@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import SportsMatchPoster from '@/components/sports/sportsMatchPoster';
+import { stripEmojis } from '@/lib/stripEmojis';
 
 export type HorizontalSportsCardProps = {
   matchId: string;
@@ -32,12 +33,13 @@ export default function HorizontalSportsCard({
   category,
 }: HorizontalSportsCardProps) {
   const href = `/sports/player/${matchId}`;
+  const displayTitle = stripEmojis(title);
 
   return (
     <Link
       href={href}
       className="group flex min-w-0 w-full flex-col gap-1.5"
-      aria-label={`${title}, live stream`}
+      aria-label={`${displayTitle}, live stream`}
     >
       <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden rounded-lg bg-default-200 ring-1 ring-white/10">
         <SportsMatchPoster
@@ -59,9 +61,9 @@ export default function HorizontalSportsCard({
         ) : null}
         <p
           className="normal-case min-w-0 line-clamp-2 text-sm leading-snug text-foreground transition-colors duration-300 group-hover:text-success sm:text-[15px]"
-          title={title}
+          title={displayTitle}
         >
-          {title}
+          {displayTitle}
         </p>
       </div>
     </Link>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { sportLabel } from '@/lib/streamedSports';
+import { stripEmojis } from '@/lib/stripEmojis';
 import { cn } from '@/lib/utils';
 
 type SportsMatchPosterProps = {
@@ -26,6 +27,7 @@ export default function SportsMatchPoster({
   category,
   className = '',
 }: SportsMatchPosterProps) {
+  const displayTitle = stripEmojis(title);
   const poster = posterUrl.trim();
   const home = homeBadgeUrl.trim();
   const away = awayBadgeUrl.trim();
@@ -100,7 +102,7 @@ export default function SportsMatchPoster({
       )}
     >
       <p className="line-clamp-4 text-sm font-semibold leading-snug text-foreground sm:text-base">
-        {title}
+        {displayTitle}
       </p>
       {category ? (
         <p className="text-xs text-default-500">{sportLabel(category)}</p>

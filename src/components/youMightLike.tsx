@@ -5,10 +5,11 @@ import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import SmallCard from '@/components/ui/smallCard';
 import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
 import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
-import SidebarBleedRail, {
+import {
+  CatalogRailShell,
   SIDEBAR_BLEED_CAROUSEL_OPTS,
   SidebarBleedStartSpacer,
-  sidebarBleedViewportClass,
+  catalogRailViewportClass,
 } from '@/components/ui/sidebarBleedRail';
 import {
   Carousel,
@@ -16,12 +17,14 @@ import {
   CarouselItem,
 } from '@/components/ui/carousel';
 import { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
+import {
+  EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_VERTICAL,
+} from '@/lib/catalogGrid';
 
 const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
-const YOU_MIGHT_LIKE_MAX_VERTICAL = 14;
+const YOU_MIGHT_LIKE_MAX_VERTICAL = EXPLORE_RAIL_MAX_ITEMS;
 
-const CAROUSEL_ITEM_VERTICAL =
-  'basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-[14%] xl:basis-[12%]';
 const CAROUSEL_ITEM_HORIZONTAL =
   'basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4';
 
@@ -44,19 +47,22 @@ export default function YouMightLike({
   id,
   isAnime,
   idMal,
+  bleed = true,
 }: {
   mediaType: 'movie' | 'tv';
   id: string;
   isAnime?: boolean;
   /** MAL id from `/shows/anime_{malId}` or doc — required for anime recommendations (Jikan). */
   idMal?: number | null;
+  /** Extend carousel under the sidebar (Explore). Detail pages should pass false. */
+  bleed?: boolean;
 }) {
   const [items, setItems] = useState<RecItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === 'horizontal';
   const maxItems = horizontal ? YOU_MIGHT_LIKE_MAX_HORIZONTAL : YOU_MIGHT_LIKE_MAX_VERTICAL;
-  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : CAROUSEL_ITEM_VERTICAL;
+  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -189,9 +195,9 @@ export default function YouMightLike({
     return (
       <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="You might like">
         <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
-        <SidebarBleedRail>
-          <CatalogRailSkeleton horizontal={horizontal} />
-        </SidebarBleedRail>
+        <CatalogRailShell bleed={bleed}>
+          <CatalogRailSkeleton horizontal={horizontal} bleed={bleed} />
+        </CatalogRailShell>
       </section>
     );
   }
@@ -201,13 +207,13 @@ export default function YouMightLike({
   return (
     <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="You might like">
       <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
-      <SidebarBleedRail>
+      <CatalogRailShell bleed={bleed}>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
-            viewportClassName={sidebarBleedViewportClass()}
+            viewportClassName={catalogRailViewportClass(bleed)}
             className="-ml-3"
           >
-            <SidebarBleedStartSpacer />
+            {bleed ? <SidebarBleedStartSpacer /> : null}
             {items.map((item) => (
               <CarouselItem
                 key={`${item.keyId}-${item.linkId}`}
@@ -240,7 +246,7 @@ export default function YouMightLike({
             ))}
           </CarouselContent>
         </Carousel>
-      </SidebarBleedRail>
+      </CatalogRailShell>
     </section>
   );
 }

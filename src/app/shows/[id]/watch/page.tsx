@@ -5,20 +5,20 @@ import { useParams } from 'next/navigation';
 import ShowTemplate from '@/components/showTemplate';
 import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
 
-function ShowPageInner() {
+function ShowWatchPageInner() {
   const params = useParams();
 
   if (!params || typeof params.id !== 'string') {
     return <div>Error: Invalid show ID</div>;
   }
 
-  return <ShowTemplate id={params.id} viewMode="details" />;
+  return <ShowTemplate id={params.id} viewMode="watch" />;
 }
 
-const ShowPage = () => (
-  <Suspense fallback={<WatchPageSkeleton />}>
-    <ShowPageInner />
+const ShowWatchPage = () => (
+  <Suspense fallback={<WatchPageSkeleton withSeasonPicker />}>
+    <ShowWatchPageInner />
   </Suspense>
 );
 
-export default ShowPage;
+export default ShowWatchPage;
