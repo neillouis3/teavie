@@ -13,8 +13,8 @@ import {
 /** 111movies — embed must use the final player host (111movies.net 302s and breaks fullscreen). */
 const MOVIES111_BASE = 'https://player.vidlove.cc';
 
-/** Peachify — https://peachify.pro (TMDB ids) */
-const PEACHIFY_BASE = 'https://peachify.pro';
+/** Peachify — embed on peachify.top (docs host; .pro breaks fullscreen). */
+const PEACHIFY_BASE = 'https://peachify.top';
 
 /** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
 const VIDCORE_TV_QUERY = '?theme=22c55e&autoPlay=true';
