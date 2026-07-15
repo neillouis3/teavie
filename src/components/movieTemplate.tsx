@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { Button } from '@heroui/react';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
 import { useWatchParty } from '@/hooks/useWatchParty';
@@ -37,7 +39,12 @@ import MovieCreditsStrip, {
   type MovieCreditsPayload,
 } from '@/components/movie/MovieCreditsStrip';
 import MovieTrailerEmbed from '@/components/movie/MovieTrailerEmbed';
+import ShowDetailsHero, {
+  SHOW_DETAILS_HERO_OVERLAP,
+} from '@/components/show/ShowDetailsHero';
+import { ShowWatchPlayerHeading } from '@/components/show/ShowEpisodePicker';
 import { pickYoutubeTrailerEmbedUrl, type TmdbVideosPayload } from '@/lib/tmdbVideos';
+import { MOVIE_CONTENT_INSET_X } from '@/lib/contentInset';
 
 interface Movie {
   id: number;
@@ -60,6 +67,7 @@ interface Movie {
   imdb_genres?: string[];
   omdb?: { genre?: string | null };
   poster_path: string;
+  backdrop_path?: string | null;
   vote_average: number;
   tagline: string;
   homepage?: string | null;
@@ -70,9 +78,10 @@ interface Movie {
 }
 
 export type MovieServerKey = StreamServerId;
+export type MovieTemplateViewMode = 'details' | 'watch';
 
 function isReleasedByDate(releaseDate: string | undefined | null): boolean {
-  const d = String(releaseDate ?? "").trim();
+  const d = String(releaseDate ?? '').trim();
   if (d.length < 10) return true;
   const ymd = d.slice(0, 10);
   return ymd <= new Date().toISOString().slice(0, 10);
@@ -83,17 +92,40 @@ function movieDetailLinks(movie: Movie): CatalogDetailLink[] {
   if (movie.imdb_id && /^tt\d+/i.test(movie.imdb_id)) {
     links.push({
       href: `https://www.imdb.com/title/${movie.imdb_id}/`,
-      label: "IMDb",
+      label: 'IMDb',
     });
   }
-  const homepage = String(movie.homepage ?? "").trim();
+  const homepage = String(movie.homepage ?? '').trim();
   if (homepage) {
-    links.push({ href: homepage, label: "Official site" });
+    links.push({ href: homepage, label: 'Official site' });
   }
   return links;
 }
 
-export default function MovieTemplate({ id }: { id: string }) {
+function buildMovieWatchHref(
+  catalogId: string,
+  opts?: { party?: string | null }
+): string {
+  const base = `/movies/${encodeURIComponent(catalogId)}/watch`;
+  const party = opts?.party?.trim();
+  if (!party) return base;
+  const params = new URLSearchParams({ party });
+  return `${base}?${params.toString()}`;
+}
+
+function resolveMovieDetailsBannerUrl(movie: Movie): string | null {
+  const backdrop = tmdbImageUrl(movie.backdrop_path);
+  if (backdrop) return backdrop;
+  return tmdbImageUrl(movie.poster_path) || null;
+}
+
+export default function MovieTemplate({
+  id,
+  viewMode = 'details',
+}: {
+  id: string;
+  viewMode?: MovieTemplateViewMode;
+}) {
   const { server } = useStreamingSource();
   const router = useRouter();
   const pathname = usePathname();
@@ -113,6 +145,7 @@ export default function MovieTemplate({ id }: { id: string }) {
   }, []);
 
   const partyRoomId = searchParams.get('party');
+  const watchHref = buildMovieWatchHref(id, { party: partyRoomId });
 
   const watchParty = useWatchParty({
     catalogId: id,
@@ -124,9 +157,10 @@ export default function MovieTemplate({ id }: { id: string }) {
 
   useEffect(() => {
     if (watchParty.room) return;
+    if (viewMode !== 'watch') return;
     setPlayerStartSeconds(loadMoviePlaybackPosition(String(id)));
     setPlayerEpoch((n) => n + 1);
-  }, [id, watchParty.room]);
+  }, [id, watchParty.room, viewMode]);
 
   const handleVideasyProgress = useCallback(
     (msg: VideasyProgressMessage) => {
@@ -138,11 +172,7 @@ export default function MovieTemplate({ id }: { id: string }) {
       partyPlaybackBroadcastRef.current = now;
       void watchParty.broadcastPlayback(msg.timestamp);
     },
-    [
-      id,
-      server,
-      watchParty,
-    ]
+    [id, server, watchParty]
   );
 
   const handleCreateParty = useCallback(
@@ -151,20 +181,28 @@ export default function MovieTemplate({ id }: { id: string }) {
       if (!roomId) return null;
       const params = new URLSearchParams(searchParams.toString());
       params.set('party', roomId);
-      router.replace(`${pathname}?${params.toString()}`);
+      const path =
+        viewMode === 'watch'
+          ? pathname
+          : `/movies/${encodeURIComponent(id)}/watch`;
+      router.replace(`${path}?${params.toString()}`);
       return roomId;
     },
-    [watchParty, searchParams, pathname, router]
+    [watchParty, searchParams, pathname, router, viewMode, id]
   );
 
   const handleJoinParty = useCallback(
     (code: string, nickname: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('party', code.trim().toUpperCase());
-      router.replace(`${pathname}?${params.toString()}`);
+      const path =
+        viewMode === 'watch'
+          ? pathname
+          : `/movies/${encodeURIComponent(id)}/watch`;
+      router.replace(`${path}?${params.toString()}`);
       void watchParty.joinRoom(code.trim().toUpperCase(), nickname);
     },
-    [watchParty, searchParams, pathname, router]
+    [watchParty, searchParams, pathname, router, viewMode, id]
   );
 
   const handleLeaveParty = useCallback(() => {
@@ -184,7 +222,7 @@ export default function MovieTemplate({ id }: { id: string }) {
 
   const watchPartyNavRegistration = useMemo(
     () =>
-      movieReleased
+      movieReleased && viewMode === 'watch'
         ? {
             canPlay: true,
             room: watchParty.room,
@@ -205,6 +243,7 @@ export default function MovieTemplate({ id }: { id: string }) {
         : null,
     [
       movieReleased,
+      viewMode,
       watchParty.room,
       watchParty.isHost,
       watchParty.loading,
@@ -214,6 +253,7 @@ export default function MovieTemplate({ id }: { id: string }) {
       watchParty.updateSettings,
       watchParty.releaseSyncCheckpoint,
       watchParty.guestJoinSyncRole,
+      movie?.title,
       handleCreateParty,
       handleJoinParty,
       handleLeaveParty,
@@ -221,6 +261,19 @@ export default function MovieTemplate({ id }: { id: string }) {
   );
 
   useRegisterWatchPartyNav(watchPartyNavRegistration);
+
+  useEffect(() => {
+    if (
+      viewMode !== 'details' ||
+      !partyRoomId ||
+      loading ||
+      !movie ||
+      !movieReleased
+    ) {
+      return;
+    }
+    router.replace(watchHref);
+  }, [viewMode, partyRoomId, loading, movie, movieReleased, watchHref, router]);
 
   useEffect(() => {
     const fetchMovieDetails = async () => {
@@ -257,6 +310,7 @@ export default function MovieTemplate({ id }: { id: string }) {
           release_date?: string;
           overview?: string;
           poster_path?: string | null;
+          backdrop_path?: string | null;
           vote_average?: number;
           status?: string;
           imdb_genres?: string[];
@@ -279,6 +333,9 @@ export default function MovieTemplate({ id }: { id: string }) {
           if (catalogFallback?.omdb) {
             data.omdb = catalogFallback.omdb;
           }
+          if (!data.backdrop_path && catalogFallback?.backdrop_path) {
+            data.backdrop_path = catalogFallback.backdrop_path;
+          }
           return data;
         };
 
@@ -291,6 +348,7 @@ export default function MovieTemplate({ id }: { id: string }) {
               status: catalogFallback.status ?? 'Released',
               overview: catalogFallback.overview ?? '',
               poster_path: catalogFallback.poster_path ?? '',
+              backdrop_path: catalogFallback.backdrop_path ?? null,
               vote_average: catalogFallback.vote_average ?? 0,
               tagline: '',
               genres: [],
@@ -318,6 +376,7 @@ export default function MovieTemplate({ id }: { id: string }) {
               status: catalogFallback.status ?? 'Released',
               overview: catalogFallback.overview ?? '',
               poster_path: catalogFallback.poster_path ?? '',
+              backdrop_path: catalogFallback.backdrop_path ?? null,
               vote_average: catalogFallback.vote_average ?? 0,
               tagline: '',
               genres: [],
@@ -345,22 +404,29 @@ export default function MovieTemplate({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
-    if (movie?.title) {
-      const year = movie.release_date?.slice(0, 4);
-      document.title = year ? `${movie.title} (${year}) - Teavie` : `${movie.title} - Teavie`;
+    if (!movie?.title) return;
+    const year = movie.release_date?.slice(0, 4);
+    if (viewMode === 'details') {
+      document.title = year
+        ? `${movie.title} (${year}) - Teavie`
+        : `${movie.title} - Teavie`;
+      return;
     }
-  }, [movie]);
+    document.title = year
+      ? `Watch ${movie.title} (${year}) - Teavie`
+      : `Watch ${movie.title} - Teavie`;
+  }, [movie, viewMode]);
 
   useEffect(() => {
+    if (viewMode !== 'watch') return;
     if (!movie || loading || !movieReleased) return;
     recordMovieInWatchHistory(String(id));
-  }, [id, movie, loading, movieReleased]);
+  }, [id, movie, loading, movieReleased, viewMode]);
 
   const imageUrl = tmdbImageUrl(movie?.poster_path);
-  const trailerEmbedUrl =
-    movie && !movieReleased
-      ? pickYoutubeTrailerEmbedUrl(movie.videos)
-      : null;
+  const trailerEmbedUrl = movie
+    ? pickYoutubeTrailerEmbedUrl(movie.videos)
+    : null;
 
   if (loading) {
     return <WatchPageSkeleton />;
@@ -378,11 +444,88 @@ export default function MovieTemplate({ id }: { id: string }) {
     );
   }
 
+  const movieDetailsPanel = (
+    <div className="w-full">
+      <CatalogMediaPanel
+        posterUrl={imageUrl}
+        posterAlt={movie.title}
+        title={movie.title}
+        subtitleLine={movieSubtitleLine(movie)}
+        rating={movie.vote_average}
+        certification={usCertificationFromDoc(movie)}
+        status={movie.status}
+        overview={movie.overview}
+        tagline={movie.tagline}
+        mediaType="movie"
+        genres={catalogGenresForDisplay({
+          imdb_genres: movie.imdb_genres,
+          omdb: movie.omdb,
+          genres: movie.genres,
+        })}
+        infoLines={buildMovieInfoLines(movie)}
+        links={movieDetailLinks(movie)}
+        toolbar={
+          <div className="flex flex-wrap items-center gap-2">
+            <FavoriteButton catalogId={String(id)} mediaType="movie" iconOnly />
+            <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
+            {viewMode === 'details' && movieReleased ? (
+              <Button
+                as={Link}
+                href={watchHref}
+                color="success"
+                size="sm"
+                radius="md"
+                className="h-8 min-h-8 px-3 text-sm font-medium"
+              >
+                Watch
+              </Button>
+            ) : null}
+          </div>
+        }
+        creditsSection={<MovieCreditsStrip credits={movie.credits} />}
+      />
+    </div>
+  );
+
+  if (viewMode === 'details') {
+    const detailsBannerUrl = resolveMovieDetailsBannerUrl(movie);
+    const hasDetailsHero = Boolean(detailsBannerUrl);
+
+    return (
+      <div className="flex w-full flex-col overflow-x-hidden bg-background pb-32">
+        {hasDetailsHero ? (
+          <ShowDetailsHero
+            bannerUrl={detailsBannerUrl!}
+            title={movie.title}
+          />
+        ) : null}
+        <div
+          className={`relative z-10 flex w-full flex-col gap-6 ${MOVIE_CONTENT_INSET_X} ${
+            hasDetailsHero
+              ? SHOW_DETAILS_HERO_OVERLAP
+              : 'bg-background/92 dark:bg-background/88'
+          }`}
+        >
+          {movieDetailsPanel}
+          {trailerEmbedUrl ? (
+            <MovieTrailerEmbed
+              variant="details"
+              src={trailerEmbedUrl}
+              title={`${movie.title} trailer`}
+            />
+          ) : null}
+          <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} bleed={false} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
-      <div className="w-full  flex flex-col gap-6">
+    <div className="flex min-h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
+      <div className={`flex w-full flex-col gap-6 ${MOVIE_CONTENT_INSET_X}`}>
+        <ShowWatchPlayerHeading title={movie.title} />
         <div className={PLAYER_SHELL_CLASS}>
-          {movie && !movieReleased ? (
+          {!movieReleased ? (
             trailerEmbedUrl ? (
               <MovieTrailerEmbed
                 src={trailerEmbedUrl}
@@ -402,50 +545,17 @@ export default function MovieTemplate({ id }: { id: string }) {
               videoId={id}
               server={server}
               startSeconds={server === 'videasy' ? playerStartSeconds : 0}
-              onVideasyProgress={server === 'videasy' ? handleVideasyProgress : undefined}
-              streamQuality={
-                movie
-                  ? inferMovieStreamQuality(
-                      movie.release_dates,
-                      movie.release_date
-                    )
-                  : undefined
+              onVideasyProgress={
+                server === 'videasy' ? handleVideasyProgress : undefined
               }
+              streamQuality={inferMovieStreamQuality(
+                movie.release_dates,
+                movie.release_date
+              )}
             />
           )}
         </div>
-
-        <div className="flex w-full flex-col gap-6">
-          {movie && (
-            <CatalogMediaPanel
-                posterUrl={imageUrl}
-                posterAlt={movie.title}
-                title={movie.title}
-                subtitleLine={movieSubtitleLine(movie)}
-                rating={movie.vote_average}
-                certification={usCertificationFromDoc(movie)}
-                status={movie.status}
-                overview={movie.overview}
-                tagline={movie.tagline}
-                mediaType="movie"
-                genres={catalogGenresForDisplay({
-                  imdb_genres: movie.imdb_genres,
-                  omdb: movie.omdb,
-                  genres: movie.genres,
-                })}
-                infoLines={buildMovieInfoLines(movie)}
-                links={movieDetailLinks(movie)}
-                toolbar={
-                  <div className="flex flex-wrap items-center gap-2">
-                    <FavoriteButton catalogId={String(id)} mediaType="movie" iconOnly />
-                    <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
-                  </div>
-                }
-                creditsSection={<MovieCreditsStrip credits={movie.credits} />}
-              />
-          )}
-        </div>
-
+        {movieDetailsPanel}
         <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} bleed={false} />
       </div>
     </div>
