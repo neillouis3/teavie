@@ -18,6 +18,7 @@ import {
   tvSeasonCountFromDoc,
 } from "@/lib/mapContentDocToItem";
 import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster";
+import { enrichAnimeDocsWithTmdbBackdrops } from "@/lib/animeTmdbArt";
 import { IMDB_GENRES, orderGenreRowsByPreference } from "@/lib/imdbGenres";
 import { getCatalogCategory } from "@/lib/catalogCategories";
 import { mergeWithPreferenceFilter } from "@/lib/preferenceMatch";
@@ -152,6 +153,7 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
         { $project: { _catalogPop: 0 } },
       ])
       .toArray();
+    if (anime) await enrichAnimeDocsWithTmdbBackdrops(rows);
     return rows.map((doc) => mapTvRow(doc, { anime }));
   }
 
@@ -172,6 +174,7 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
         { $project: { _vote: 0 } },
       ])
       .toArray();
+    if (anime) await enrichAnimeDocsWithTmdbBackdrops(rows);
     return rows.map((doc) => mapTvRow(doc, { anime }));
   }
 
@@ -180,6 +183,7 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
     .sort({ first_air_date: -1, _id: -1 })
     .limit(limit)
     .toArray();
+  if (anime) await enrichAnimeDocsWithTmdbBackdrops(rows);
   return rows.map((doc) => mapTvRow(doc, { anime }));
 }
 
@@ -309,6 +313,7 @@ export async function fetchCategoryDiscover(col, slug, preferences = null) {
     rankCategoryGenres(col, baseFilter),
   ]);
 
+  if (anime) await enrichAnimeDocsWithTmdbBackdrops(featuredDocs);
   const featured = featuredDocs.map((doc) => mapTvRow(doc, { anime }));
 
   return {
