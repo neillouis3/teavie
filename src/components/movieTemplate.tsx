@@ -431,6 +431,7 @@ export default function MovieTemplate({ id }: { id: string }) {
                 genres={catalogGenresForDisplay({
                   imdb_genres: movie.imdb_genres,
                   omdb: movie.omdb,
+                  genres: movie.genres,
                 })}
                 infoLines={buildMovieInfoLines(movie)}
                 links={movieDetailLinks(movie)}

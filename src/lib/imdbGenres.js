@@ -313,6 +313,55 @@ export function imdbGenresFromAnimeSources(doc) {
 }
 
 /**
+ * Map TMDB genre names (e.g. "Action & Adventure") to IMDb labels for display.
+ * Prefer OMDb / `imdb_genres` for stored catalog; use this when those are missing.
+ * @param {unknown} genres
+ * @returns {string[]}
+ */
+export function imdbGenresFromTmdbGenres(genres) {
+  if (!Array.isArray(genres) || genres.length === 0) return [];
+
+  /** @type {Record<string, string[]>} */
+  const TMDB_COMPOUND = {
+    "action & adventure": ["Action", "Adventure"],
+    "sci-fi & fantasy": ["Sci-Fi", "Fantasy"],
+    "war & politics": ["War"],
+  };
+
+  const out = [];
+  for (const entry of genres) {
+    const raw =
+      typeof entry === "string"
+        ? entry
+        : entry && typeof entry === "object"
+          ? String(/** @type {{ name?: unknown }} */ (entry).name ?? "")
+          : "";
+    const name = raw.trim();
+    if (!name) continue;
+
+    const compound = TMDB_COMPOUND[name.toLowerCase()];
+    if (compound) {
+      out.push(...compound);
+      continue;
+    }
+
+    const mapped = imdbLabelFromRawGenreName(name);
+    if (mapped) {
+      out.push(mapped);
+      continue;
+    }
+
+    // TMDB "Kids" / "Reality" / "Talk" / "Soap"
+    if (/^kids$/i.test(name)) out.push("Family");
+    else if (/^reality$/i.test(name)) out.push("Reality-TV");
+    else if (/^talk$/i.test(name)) out.push("Talk-Show");
+    else if (/^soap$/i.test(name)) out.push("Drama");
+  }
+
+  return [...new Set(out)];
+}
+
+/**
  * Canonical IMDb genre labels for a catalog doc (OMDb → stored → anime only).
  * @param {Record<string, unknown>} doc
  * @returns {string[]}
@@ -337,7 +386,8 @@ export function imdbGenresForDoc(doc) {
 
   const idStr = String(doc.id ?? "");
   if (idStr.startsWith("anime_") || doc.is_anime === true) {
-    return imdbGenresFromAnimeSources(doc);
+    const fromAnime = imdbGenresFromAnimeSources(doc);
+    if (fromAnime.length > 0) return fromAnime;
   }
 
   return [];
@@ -345,6 +395,7 @@ export function imdbGenresForDoc(doc) {
 
 /**
  * Resolve IMDb genre labels for UI (detail pages, chips).
+ * Falls back to TMDB `genres` when OMDb / stored labels are missing.
  * @param {unknown} source
  * @returns {string[]}
  */
@@ -353,8 +404,10 @@ export function imdbGenresForDisplayInput(source) {
 
   if (typeof source === "object" && !Array.isArray(source)) {
     const doc = /** @type {Record<string, unknown>} */ (source);
-    if ("imdb_genres" in doc || "omdb" in doc) {
-      return imdbGenresForDoc(doc);
+    if ("imdb_genres" in doc || "omdb" in doc || "genres" in doc) {
+      const fromDoc = imdbGenresForDoc(doc);
+      if (fromDoc.length > 0) return fromDoc;
+      return imdbGenresFromTmdbGenres(doc.genres);
     }
   }
 
@@ -368,6 +421,14 @@ export function imdbGenresForDisplayInput(source) {
           .filter(Boolean)
       ),
     ];
+  }
+
+  if (
+    typeof source[0] === "object" &&
+    source[0] != null &&
+    "name" in /** @type {object} */ (source[0])
+  ) {
+    return imdbGenresFromTmdbGenres(source);
   }
 
   return [];

@@ -1465,6 +1465,7 @@ export default function ShowTemplate({
             genres={catalogGenresForDisplay({
               imdb_genres: show.imdb_genres,
               omdb: show.omdb,
+              genres: show.genres,
             })}
             infoLines={buildExtendedShowInfoLines(show, isAnimeShowPage(show, id))}
             links={buildShowDetailLinks(show)}
