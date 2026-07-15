@@ -5,20 +5,20 @@ import { useParams } from 'next/navigation';
 import MovieTemplate from '@/components/movieTemplate';
 import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
 
-function MoviePageInner() {
+function MovieWatchPageInner() {
   const params = useParams();
 
   if (!params || typeof params.id !== 'string') {
     return <div>Error: Invalid movie ID</div>;
   }
 
-  return <MovieTemplate id={params.id} viewMode="details" />;
+  return <MovieTemplate id={params.id} viewMode="watch" />;
 }
 
-const MoviePage = () => (
+const MovieWatchPage = () => (
   <Suspense fallback={<WatchPageSkeleton />}>
-    <MoviePageInner />
+    <MovieWatchPageInner />
   </Suspense>
 );
 
-export default MoviePage;
+export default MovieWatchPage;

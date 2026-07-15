@@ -33,7 +33,9 @@ export default function CatalogStreamingOutageAlert({
 export function CatalogStreamingOutageBanner() {
   const pathname = usePathname() ?? "";
   const heroBleed =
-    pathname === "/explore" || /^\/shows\/([^/]+)\/?$/.test(pathname);
+    pathname === "/explore" ||
+    /^\/shows\/([^/]+)\/?$/.test(pathname) ||
+    /^\/movies\/([^/]+)\/?$/.test(pathname);
 
   if (!pathShowsCatalogStreamingOutage(pathname)) return null;
 
