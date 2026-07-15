@@ -122,6 +122,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
   const hasTrending = data.trending.length > 0;
   const hasFeatured = data.featured.length > 0;
+  const isAnimeHub = category.slug === "anime";
 
   return (
     <div className="bg-background min-h-screen w-full">
@@ -138,6 +139,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             maxItems={16}
             rounded
             flushLeft
+            preserveImageAspect={isAnimeHub}
           />
         </section>
       )}
@@ -190,6 +192,8 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                       genres={item.genres ?? item.imdb_genres ?? []}
                       voteAverage={item.vote_average ?? null}
                       certification={item.certification ?? null}
+                      imageFit={isAnimeHub ? "contain" : "cover"}
+                      preferPoster={isAnimeHub}
                     />
                   </div>
                 );

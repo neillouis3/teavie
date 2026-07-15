@@ -56,6 +56,11 @@ interface TrendingHeroProps {
   bleedUnderNav?: boolean;
   /** Align carousel to the page’s left edge (category hubs). */
   flushLeft?: boolean;
+  /**
+   * Anime hub: keep poster aspect (no landscape crop/zoom).
+   * Prefer poster art and fit with object-contain.
+   */
+  preserveImageAspect?: boolean;
 }
 
 export default function TrendingHero({
@@ -68,6 +73,7 @@ export default function TrendingHero({
   variant = "carousel",
   bleedUnderNav = false,
   flushLeft = false,
+  preserveImageAspect = false,
 }: TrendingHeroProps) {
   const items = React.useMemo(() => {
     if (variant === "spotlight" && spotlightItems && spotlightItems.length > 0) {
@@ -120,6 +126,8 @@ export default function TrendingHero({
         voteAverage={item.vote_average}
         certification={item.certification}
         overview={item.overview}
+        imageFit={preserveImageAspect ? "contain" : "cover"}
+        preferPoster={preserveImageAspect}
       />
     );
   }
