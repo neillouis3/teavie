@@ -29,10 +29,11 @@ export function preferHighResAnimeImageUrl(url) {
   if (isTmdbImagePath(raw)) return raw;
   let out = raw;
 
-  // AniList cover/large (~460px) → extraLarge for hero/featured crops.
+  // AniList's coverImage.extraLarge field already points at `/cover/large/...`.
+  // Rewriting that segment to `/cover/extraLarge/` 404s — repair any broken URLs.
   out = out.replace(
-    /\/media\/anime\/cover\/large\//gi,
-    "/media/anime/cover/extraLarge/"
+    /\/media\/anime\/cover\/extraLarge\//gi,
+    "/media/anime/cover/large/"
   );
 
   // OMDb / Amazon thumbs: SX300 is soft when blown up.
