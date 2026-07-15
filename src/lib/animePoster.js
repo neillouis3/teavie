@@ -1,9 +1,21 @@
 /**
  * Prefer per-season AniList/Jikan art over shared OMDb/Amazon series posters on `anime_*` rows.
+ * Widescreen heroes prefer TMDB `backdrop_path` when enrichment (or storage) provides it.
  */
 
 function pickString(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+/**
+ * @param {unknown} path
+ * @returns {boolean}
+ */
+export function isTmdbImagePath(path) {
+  const p = String(path ?? "").trim();
+  if (!p) return false;
+  if (p.startsWith("/") && !p.startsWith("//")) return true;
+  return /image\.tmdb\.org\/t\/p\//i.test(p);
 }
 
 /**
@@ -14,6 +26,7 @@ function pickString(value) {
 export function preferHighResAnimeImageUrl(url) {
   const raw = pickString(url);
   if (!raw) return null;
+  if (isTmdbImagePath(raw)) return raw;
   let out = raw;
 
   // AniList cover/large (~460px) → extraLarge for hero/featured crops.
@@ -79,11 +92,6 @@ function embeddedAnilistBanner(doc) {
   return preferHighResAnimeImageUrl(doc?.anilist?.bannerImage);
 }
 
-/** @param {unknown} doc */
-function embeddedAnilistBackdrop(doc, posterFallback) {
-  return embeddedAnilistBanner(doc) || posterFallback;
-}
-
 /**
  * @param {unknown} doc
  * @returns {string | null}
@@ -93,14 +101,16 @@ export function animePosterFromDoc(doc) {
     return preferHighResAnimeImageUrl(doc?.poster_path) ?? pickString(doc?.poster_path);
   }
 
+  const storedPoster = pickString(doc?.poster_path);
+  if (isTmdbImagePath(storedPoster)) return storedPoster;
+
   const fromAni = embeddedAnilistPoster(doc);
   if (fromAni) return fromAni;
 
-  const stored = pickString(doc?.poster_path);
-  if (stored && !isSharedOmdbAnimePoster(stored)) {
-    return preferHighResAnimeImageUrl(stored) ?? stored;
+  if (storedPoster && !isSharedOmdbAnimePoster(storedPoster)) {
+    return preferHighResAnimeImageUrl(storedPoster) ?? storedPoster;
   }
-  return preferHighResAnimeImageUrl(stored) ?? stored ?? null;
+  return preferHighResAnimeImageUrl(storedPoster) ?? storedPoster ?? null;
 }
 
 /**
@@ -118,13 +128,17 @@ export function animeBackdropFromDoc(doc) {
     );
   }
 
-  const poster = animePosterFromDoc(doc);
-  const fromAni = embeddedAnilistBackdrop(doc, null);
-  if (fromAni) return fromAni;
-
   const stored = pickString(doc?.backdrop_path);
-  if (stored && !isSharedOmdbAnimePoster(stored)) {
+  // TMDB widescreen backdrops first (from enrichment or catalog).
+  if (isTmdbImagePath(stored)) return stored;
+
+  const fromAniBanner = embeddedAnilistBanner(doc);
+  if (fromAniBanner) return fromAniBanner;
+
+  if (stored && !isSharedOmdbAnimePoster(stored) && stored !== pickString(doc?.poster_path)) {
     return preferHighResAnimeImageUrl(stored) ?? stored;
   }
+
+  const poster = animePosterFromDoc(doc);
   return poster ?? preferHighResAnimeImageUrl(stored) ?? stored ?? null;
 }
