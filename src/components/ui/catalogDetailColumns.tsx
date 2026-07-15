@@ -312,6 +312,8 @@ export function catalogGenresForDisplay(
         name?: string;
         imdb_genres?: string[];
         omdb?: { genre?: string | null };
+        /** TMDB genres — display fallback when IMDb/OMDb are missing. */
+        genres?: { id?: number; name?: string }[] | string[];
       }
     | { name?: string }[]
     | string[]
