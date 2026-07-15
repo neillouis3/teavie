@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
+import { preferHighResAnimeImageUrl } from "@/lib/animePoster";
 import { tmdbImageUrlOr } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 
@@ -217,7 +218,10 @@ export default function LargeCard({
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const showRichOverlay = hero || richOverlay;
 
-  const imageUrl = tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, "/placeholder.jpg"));
+  const imageUrl =
+    preferHighResAnimeImageUrl(
+      tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, ""))
+    ) || tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, "/placeholder.jpg"));
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
   const when =

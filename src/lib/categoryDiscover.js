@@ -17,6 +17,7 @@ import {
   tvEpisodeCountFromDoc,
   tvSeasonCountFromDoc,
 } from "@/lib/mapContentDocToItem";
+import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster";
 import { IMDB_GENRES, orderGenreRowsByPreference } from "@/lib/imdbGenres";
 import { getCatalogCategory } from "@/lib/catalogCategories";
 import { mergeWithPreferenceFilter } from "@/lib/preferenceMatch";
@@ -49,6 +50,10 @@ function popularityExpr(anime = false) {
 
 function mapTvRow(doc, { anime = false } = {}) {
   const release_date = catalogDocReleaseDateString(doc);
+  const useAnimeArt =
+    anime ||
+    doc?.is_anime === true ||
+    String(doc?.id ?? "").startsWith("anime_");
   return {
     id: doc.id.toString(),
     title: doc.title ?? doc.name,
@@ -58,9 +63,14 @@ function mapTvRow(doc, { anime = false } = {}) {
     number_of_episodes: tvEpisodeCountFromDoc(doc),
     popularity: catalogPopularityScore(doc, { anime }),
     vote_average: catalogDisplayVoteAverage(doc),
-    poster_path: doc.poster_path ?? null,
-    backdrop_path: doc.backdrop_path ?? null,
+    poster_path: useAnimeArt
+      ? animePosterFromDoc(doc)
+      : doc.poster_path ?? null,
+    backdrop_path: useAnimeArt
+      ? animeBackdropFromDoc(doc)
+      : doc.backdrop_path ?? null,
     type: "tv",
+    is_anime: useAnimeArt || undefined,
   };
 }
 

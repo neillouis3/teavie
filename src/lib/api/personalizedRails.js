@@ -138,6 +138,9 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
           origin_country: 1,
           production_countries: 1,
           is_anime: 1,
+          /** Needed so animePoster/backdrop helpers can prefer AniList banner + extraLarge. */
+          anilist: 1,
+          mal_id: 1,
         },
       },
     ])
