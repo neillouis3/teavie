@@ -7,6 +7,10 @@ import {
   CATALOG_STREAMING_OUTAGE_ACTIVE,
   pathShowsCatalogStreamingOutage,
 } from "@/lib/streamingOutage";
+import {
+  pathUsesMovieDetailHeroBleed,
+  pathUsesShowDetailHeroBleed,
+} from "@/lib/heroBleedPaths";
 import { cn } from "@/lib/utils";
 
 type CatalogStreamingOutageAlertProps = {
@@ -34,8 +38,8 @@ export function CatalogStreamingOutageBanner() {
   const pathname = usePathname() ?? "";
   const heroBleed =
     pathname === "/explore" ||
-    /^\/shows\/([^/]+)\/?$/.test(pathname) ||
-    /^\/movies\/([^/]+)\/?$/.test(pathname);
+    pathUsesShowDetailHeroBleed(pathname) ||
+    pathUsesMovieDetailHeroBleed(pathname);
 
   if (!pathShowsCatalogStreamingOutage(pathname)) return null;
 
