@@ -31,6 +31,13 @@ type LargeCardProps = {
   richOverlay?: boolean;
   /** `phrase` = “Releases …”; `short` = “Jun 4, 2026”. */
   releaseDateStyle?: "short" | "phrase";
+  /**
+   * How the art fills the card. `contain` keeps the source aspect (no crop/zoom) —
+   * preferred for anime posters in landscape hero frames.
+   */
+  imageFit?: "cover" | "contain";
+  /** Prefer poster over backdrop (anime covers are usually portrait). */
+  preferPoster?: boolean;
 };
 
 function MetaDot() {
@@ -213,15 +220,21 @@ export default function LargeCard({
   heroCompact = false,
   richOverlay = false,
   releaseDateStyle = "short",
+  imageFit = "cover",
+  preferPoster = false,
 }: LargeCardProps) {
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
   const showRichOverlay = hero || richOverlay;
+  const contain = imageFit === "contain";
 
+  const primaryPath = preferPoster
+    ? tmdbImageUrlOr(posterPath, tmdbImageUrlOr(backdropPath, ""))
+    : tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, ""));
   const imageUrl =
-    preferHighResAnimeImageUrl(
-      tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, ""))
-    ) || tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, "/placeholder.jpg"));
+    preferHighResAnimeImageUrl(primaryPath) ||
+    primaryPath ||
+    "/placeholder.jpg";
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
   const when =
@@ -234,13 +247,14 @@ export default function LargeCard({
       <div
         className={`group relative h-full w-full max-w-none overflow-hidden ${
           hero ? "min-h-[280px] rounded-none" : "aspect-video min-w-0 rounded-xl"
-        }`}
+        } ${contain ? "bg-black" : ""}`}
       >
         <img
           src={imageUrl}
           alt={title}
           className={cn(
-            "h-full w-full object-cover transition-all duration-500 group-hover:scale-105",
+            "h-full w-full transition-all duration-500",
+            contain ? "object-contain" : "object-cover group-hover:scale-105",
             hero && "absolute inset-0"
           )}
         />
