@@ -139,7 +139,7 @@ export async function fetchCategoryDiscover(
   preferences: UserPreferences | null = null
 ): Promise<CategoryDiscoverPayload> {
   const prefKey = preferencesCacheKey(preferences);
-  return withDayCache(`${PREFIX}.category-discover.v2:${slug}:${prefKey}`, async () => {
+  return withDayCache(`${PREFIX}.category-discover.v3:${slug}:${prefKey}`, async () => {
     try {
       const res = hasUserPreferences(preferences)
         ? await fetch(`/api/category/${slug}/discover`, {
