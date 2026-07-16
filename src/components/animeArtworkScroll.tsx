@@ -13,7 +13,7 @@ type ArtworkItem = {
   label?: string;
 };
 
-const CACHE_PREFIX = "teavie.cache.anime-artwork.v1:";
+const CACHE_PREFIX = "teavie.cache.anime-artwork.v2:";
 
 async function fetchArtwork(idMal: number): Promise<ArtworkItem[]> {
   const qs = new URLSearchParams({ idMal: String(idMal) });
@@ -84,36 +84,34 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
       >
         <ExploreSectionTitle variant="explore">Artwork</ExploreSectionTitle>
         {items.length > 0 ? (
-          <div className="max-h-[28rem] overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]">
-            <ul className="m-0 columns-3 gap-2 p-0 sm:gap-2.5 [column-fill:_balance]">
-              {items.map((item, index) => (
-                <li
-                  key={`${item.url}-${index}`}
-                  className="mb-2 break-inside-avoid sm:mb-2.5"
+          <ul className="m-0 columns-3 gap-2 p-0 sm:gap-2.5">
+            {items.map((item, index) => (
+              <li
+                key={`${item.url}-${index}`}
+                className="mb-2 break-inside-avoid sm:mb-2.5"
+              >
+                <button
+                  type="button"
+                  onClick={() => setActive(item)}
+                  className="group relative block w-full overflow-hidden rounded-lg bg-muted text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={
+                    item.label
+                      ? `View artwork: ${item.label}`
+                      : `View artwork ${index + 1}`
+                  }
                 >
-                  <button
-                    type="button"
-                    onClick={() => setActive(item)}
-                    className="group relative block w-full overflow-hidden rounded-lg bg-muted text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    aria-label={
-                      item.label
-                        ? `View artwork: ${item.label}`
-                        : `View artwork ${index + 1}`
-                    }
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.url}
-                      alt={item.label || "Artwork"}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-auto w-full object-cover transition duration-200 group-hover:opacity-90"
-                    />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.url}
+                    alt={item.label || "Artwork"}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-auto w-full object-cover transition duration-200 group-hover:opacity-90"
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
         ) : (
           <div className="columns-3 gap-2 opacity-60">
             {Array.from({ length: 9 }).map((_, i) => (
