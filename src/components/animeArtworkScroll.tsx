@@ -6,6 +6,7 @@ import {
   readClientDayCache,
   writeClientDayCache,
 } from "@/lib/clientDayCache";
+import { cn } from "@/lib/utils";
 
 type ArtworkItem = {
   url: string;
@@ -32,11 +33,79 @@ async function fetchArtwork(idMal: number): Promise<ArtworkItem[]> {
   );
 }
 
+function ArtworkTile({
+  item,
+  index,
+  onOpen,
+}: {
+  item: ArtworkItem;
+  index: number;
+  onOpen: () => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    setLoaded(false);
+    setFailed(false);
+  }, [item.url]);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) setLoaded(true);
+  }, [item.url]);
+
+  if (failed) return null;
+
+  return (
+    <li className="mb-2 break-inside-avoid sm:mb-2.5">
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={!loaded}
+        className="group relative block w-full overflow-hidden rounded-lg bg-muted text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default"
+        aria-label={
+          item.label
+            ? `View artwork: ${item.label}`
+            : `View artwork ${index + 1}`
+        }
+      >
+        {!loaded ? (
+          <div
+            className="w-full animate-pulse bg-default-200/70 dark:bg-white/10"
+            style={{
+              aspectRatio:
+                index % 3 === 0 ? "2 / 3" : index % 3 === 1 ? "3 / 4" : "1 / 1",
+            }}
+            aria-hidden
+          />
+        ) : null}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          ref={imgRef}
+          src={item.url}
+          alt={item.label || "Artwork"}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+          className={cn(
+            "h-auto w-full object-cover transition duration-300 group-hover:opacity-90",
+            loaded ? "relative opacity-100" : "absolute inset-0 h-full w-full opacity-0"
+          )}
+        />
+      </button>
+    </li>
+  );
+}
+
 export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
   const [items, setItems] = useState<ArtworkItem[]>([]);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<ArtworkItem | null>(null);
+  const [lightboxLoaded, setLightboxLoaded] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -76,6 +145,7 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
 
   useEffect(() => {
     if (!active) return;
+    setLightboxLoaded(false);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setActive(null);
     };
@@ -117,38 +187,16 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
           <>
             <ul className="m-0 columns-3 gap-2 p-0 sm:gap-2.5">
               {visible.map((item, index) => (
-                <li
+                <ArtworkTile
                   key={`${item.url}-${index}`}
-                  className="mb-2 break-inside-avoid sm:mb-2.5"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setActive(item)}
-                    className="group relative block w-full overflow-hidden rounded-lg bg-muted text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    aria-label={
-                      item.label
-                        ? `View artwork: ${item.label}`
-                        : `View artwork ${index + 1}`
-                    }
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.url}
-                      alt={item.label || "Artwork"}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-auto w-full object-cover transition duration-200 group-hover:opacity-90"
-                    />
-                  </button>
-                </li>
+                  item={item}
+                  index={index}
+                  onOpen={() => setActive(item)}
+                />
               ))}
             </ul>
             {hasMore ? (
-              <div
-                ref={sentinelRef}
-                className="h-8 w-full"
-                aria-hidden
-              />
+              <div ref={sentinelRef} className="h-8 w-full" aria-hidden />
             ) : null}
           </>
         ) : (
@@ -180,17 +228,27 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
             Close
           </button>
           <div
-            className="relative max-h-[90vh] max-w-[min(96vw,56rem)]"
+            className="relative flex min-h-[12rem] min-w-[12rem] max-h-[90vh] max-w-[min(96vw,56rem)] items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
+            {!lightboxLoaded ? (
+              <div
+                className="absolute inset-8 animate-pulse rounded-lg bg-white/10"
+                aria-hidden
+              />
+            ) : null}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={active.url}
               alt={active.label || "Artwork"}
-              className="max-h-[90vh] w-auto max-w-full rounded-lg object-contain"
+              onLoad={() => setLightboxLoaded(true)}
+              className={cn(
+                "max-h-[90vh] w-auto max-w-full rounded-lg object-contain transition-opacity duration-300",
+                lightboxLoaded ? "opacity-100" : "opacity-0"
+              )}
             />
-            {active.label ? (
-              <p className="mt-2 text-center text-sm text-white/80">
+            {active.label && lightboxLoaded ? (
+              <p className="absolute -bottom-8 left-0 right-0 text-center text-sm text-white/80">
                 {active.label}
               </p>
             ) : null}
