@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import AnimeArtworkScroll from "@/components/animeArtworkScroll";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 import SmallCard from "@/components/ui/smallCard";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
@@ -203,15 +204,6 @@ export default function AnimeShowRails({
   const showRelated = related.length > 0 || relatedLoading;
   const showYml = youMightLike.length > 0 || ymlLoading;
 
-  if (
-    !relatedLoading &&
-    !ymlLoading &&
-    related.length === 0 &&
-    youMightLike.length === 0
-  ) {
-    return null;
-  }
-
   return (
     <>
       {showRelated ? (
@@ -322,6 +314,8 @@ export default function AnimeShowRails({
           )}
         </section>
       ) : null}
+
+      <AnimeArtworkScroll idMal={idMal} />
     </>
   );
 }

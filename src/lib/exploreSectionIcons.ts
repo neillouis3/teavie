@@ -7,6 +7,7 @@ import {
   Film02Icon,
   FireIcon,
   GridViewIcon,
+  Image02Icon,
   OrangeIcon,
   PopcornIcon,
   SparklesIcon,
@@ -34,6 +35,7 @@ const SECTION_TITLE_ICONS: Record<string, IconSvgElement> = {
   "top rated": ChartIncreaseIcon,
   "you might like": SparklesIcon,
   "related anime": OrangeIcon,
+  artwork: Image02Icon,
 };
 
 export function exploreSectionIcon(title: string): IconSvgElement | undefined {
