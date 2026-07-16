@@ -1,8 +1,8 @@
 import { loadAnimeArtwork } from "@/lib/api/animeArtwork";
 
 /**
- * Anime artwork gallery (MAL pictures, AniList fallback).
- * GET `?idMal=`
+ * Anime promo artwork gallery (MAL pictures, TMDB/AniZip key art).
+ * Character portraits are excluded. GET `?idMal=`
  */
 export async function GET(req) {
   try {
