@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import {
   readClientDayCache,
@@ -14,6 +14,10 @@ type ArtworkItem = {
 };
 
 const CACHE_PREFIX = "teavie.cache.anime-artwork.v2:";
+/** First paint: ~4 rows × 3 columns. */
+const INITIAL_VISIBLE = 12;
+/** Extra images revealed each time the bottom sentinel enters view. */
+const PAGE_SIZE = 9;
 
 async function fetchArtwork(idMal: number): Promise<ArtworkItem[]> {
   const qs = new URLSearchParams({ idMal: String(idMal) });
@@ -30,13 +34,17 @@ async function fetchArtwork(idMal: number): Promise<ArtworkItem[]> {
 
 export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
   const [items, setItems] = useState<ArtworkItem[]>([]);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<ArtworkItem | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const cacheKey = `${CACHE_PREFIX}${idMal}`;
     const cached = readClientDayCache<ArtworkItem[]>(cacheKey);
+
+    setVisibleCount(INITIAL_VISIBLE);
 
     if (cached?.length) {
       setItems(cached);
@@ -50,6 +58,7 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
       .then((next) => {
         if (cancelled) return;
         setItems(next);
+        setVisibleCount(INITIAL_VISIBLE);
         if (next.length > 0) writeClientDayCache(cacheKey, next);
       })
       .catch(() => {
@@ -74,7 +83,28 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [active]);
 
+  const hasMore = visibleCount < items.length;
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setVisibleCount((n) => Math.min(n + PAGE_SIZE, items.length));
+      },
+      { root: null, rootMargin: "240px 0px", threshold: 0 }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, items.length, visibleCount]);
+
   if (!loading && items.length === 0) return null;
+
+  const visible = items.slice(0, visibleCount);
 
   return (
     <>
@@ -84,34 +114,43 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
       >
         <ExploreSectionTitle variant="explore">Artwork</ExploreSectionTitle>
         {items.length > 0 ? (
-          <ul className="m-0 columns-3 gap-2 p-0 sm:gap-2.5">
-            {items.map((item, index) => (
-              <li
-                key={`${item.url}-${index}`}
-                className="mb-2 break-inside-avoid sm:mb-2.5"
-              >
-                <button
-                  type="button"
-                  onClick={() => setActive(item)}
-                  className="group relative block w-full overflow-hidden rounded-lg bg-muted text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  aria-label={
-                    item.label
-                      ? `View artwork: ${item.label}`
-                      : `View artwork ${index + 1}`
-                  }
+          <>
+            <ul className="m-0 columns-3 gap-2 p-0 sm:gap-2.5">
+              {visible.map((item, index) => (
+                <li
+                  key={`${item.url}-${index}`}
+                  className="mb-2 break-inside-avoid sm:mb-2.5"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.url}
-                    alt={item.label || "Artwork"}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-auto w-full object-cover transition duration-200 group-hover:opacity-90"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
+                  <button
+                    type="button"
+                    onClick={() => setActive(item)}
+                    className="group relative block w-full overflow-hidden rounded-lg bg-muted text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-label={
+                      item.label
+                        ? `View artwork: ${item.label}`
+                        : `View artwork ${index + 1}`
+                    }
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.url}
+                      alt={item.label || "Artwork"}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-auto w-full object-cover transition duration-200 group-hover:opacity-90"
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {hasMore ? (
+              <div
+                ref={sentinelRef}
+                className="h-8 w-full"
+                aria-hidden
+              />
+            ) : null}
+          </>
         ) : (
           <div className="columns-3 gap-2 opacity-60">
             {Array.from({ length: 9 }).map((_, i) => (
