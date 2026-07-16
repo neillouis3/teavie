@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import {
   readClientDayCache,
@@ -14,7 +14,10 @@ type ArtworkItem = {
   label?: string;
 };
 
+type ArtworkEntry = ArtworkItem & { index: number };
+
 const CACHE_PREFIX = "teavie.cache.anime-artwork.v2:";
+const COLUMN_COUNT = 3;
 /** First paint: ~4 rows × 3 columns. */
 const INITIAL_VISIBLE = 12;
 /** Extra images revealed each time the bottom sentinel enters view. */
@@ -31,6 +34,18 @@ async function fetchArtwork(idMal: number): Promise<ArtworkItem[]> {
   return items.filter(
     (it: ArtworkItem) => typeof it?.url === "string" && it.url.trim().length > 0
   );
+}
+
+/** Stable column assignment: item N always stays in column N % 3. */
+function splitIntoColumns(entries: ArtworkEntry[]): ArtworkEntry[][] {
+  const columns: ArtworkEntry[][] = Array.from(
+    { length: COLUMN_COUNT },
+    () => []
+  );
+  for (const entry of entries) {
+    columns[entry.index % COLUMN_COUNT].push(entry);
+  }
+  return columns;
 }
 
 function ArtworkTile({
@@ -59,7 +74,7 @@ function ArtworkTile({
   if (failed) return null;
 
   return (
-    <li className="mb-2 break-inside-avoid sm:mb-2.5">
+    <li className="mb-2 list-none last:mb-0 sm:mb-2.5">
       <button
         type="button"
         onClick={onOpen}
@@ -92,7 +107,9 @@ function ArtworkTile({
           onError={() => setFailed(true)}
           className={cn(
             "h-auto w-full object-cover transition duration-300 group-hover:opacity-90",
-            loaded ? "relative opacity-100" : "absolute inset-0 h-full w-full opacity-0"
+            loaded
+              ? "relative opacity-100"
+              : "absolute inset-0 h-full w-full opacity-0"
           )}
         />
       </button>
@@ -172,9 +189,14 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
     return () => observer.disconnect();
   }, [hasMore, items.length, visibleCount]);
 
-  if (!loading && items.length === 0) return null;
+  const columns = useMemo(() => {
+    const visible = items
+      .slice(0, visibleCount)
+      .map((item, index) => ({ ...item, index }));
+    return splitIntoColumns(visible);
+  }, [items, visibleCount]);
 
-  const visible = items.slice(0, visibleCount);
+  if (!loading && items.length === 0) return null;
 
   return (
     <>
@@ -185,28 +207,39 @@ export default function AnimeArtworkScroll({ idMal }: { idMal: number }) {
         <ExploreSectionTitle variant="explore">Artwork</ExploreSectionTitle>
         {items.length > 0 ? (
           <>
-            <ul className="m-0 columns-3 gap-2 p-0 sm:gap-2.5">
-              {visible.map((item, index) => (
-                <ArtworkTile
-                  key={`${item.url}-${index}`}
-                  item={item}
-                  index={index}
-                  onOpen={() => setActive(item)}
-                />
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+              {columns.map((column, colIndex) => (
+                <ul
+                  key={`artwork-col-${colIndex}`}
+                  className="m-0 flex min-w-0 flex-col p-0"
+                >
+                  {column.map((entry) => (
+                    <ArtworkTile
+                      key={`${entry.url}-${entry.index}`}
+                      item={entry}
+                      index={entry.index}
+                      onOpen={() => setActive(entry)}
+                    />
+                  ))}
+                </ul>
               ))}
-            </ul>
+            </div>
             {hasMore ? (
               <div ref={sentinelRef} className="h-8 w-full" aria-hidden />
             ) : null}
           </>
         ) : (
-          <div className="columns-3 gap-2 opacity-60">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div
-                key={i}
-                className="mb-2 break-inside-avoid animate-pulse rounded-lg bg-muted"
-                style={{ height: `${7 + (i % 3) * 2.5}rem` }}
-              />
+          <div className="grid grid-cols-3 gap-2 opacity-60 sm:gap-2.5">
+            {Array.from({ length: COLUMN_COUNT }).map((_, col) => (
+              <div key={col} className="flex flex-col gap-2 sm:gap-2.5">
+                {Array.from({ length: 3 }).map((__, row) => (
+                  <div
+                    key={row}
+                    className="animate-pulse rounded-lg bg-muted"
+                    style={{ height: `${7 + ((col + row) % 3) * 2.5}rem` }}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         )}
