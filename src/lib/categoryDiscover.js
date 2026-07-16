@@ -94,16 +94,68 @@ function categoryReleasedFilter(kind) {
   };
 }
 
+/** ISO date `years` ago (UTC), for featured recency filters. */
+function catalogIsoYearsAgo(years) {
+  const d = new Date();
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  return d.toISOString().slice(0, 10);
+}
+
+function recentFirstAirClause(years) {
+  return {
+    first_air_date: {
+      $type: "string",
+      $regex: /^\d{4}-\d{2}-\d{2}/,
+      $gte: catalogIsoYearsAgo(years),
+    },
+  };
+}
+
+const HAS_ANIME_ART = {
+  $or: [
+    { backdrop_path: { $type: "string", $regex: /\S/ } },
+    { poster_path: { $type: "string", $regex: /\S/ } },
+    { "anilist.coverImage.extraLarge": { $type: "string", $regex: /\S/ } },
+    { "anilist.coverImage.large": { $type: "string", $regex: /\S/ } },
+    { "anilist.bannerImage": { $type: "string", $regex: /\S/ } },
+  ],
+};
+
 async function pickFeatured(col, filter, { anime = false } = {}) {
-  const popExpr = popularityExpr(anime);
+  // Anime used a raw `popularity / 1000` sort that favored all-time MAL classics.
+  const popExpr = anime
+    ? mongoAnimeCatalogPopularityExpr()
+    : popularityExpr(false);
+  const voteExpr = anime
+    ? {
+        $max: [
+          {
+            $convert: {
+              input: "$vote_average",
+              to: "double",
+              onError: 0,
+              onNull: 0,
+            },
+          },
+          {
+            $cond: {
+              if: { $gt: [{ $ifNull: ["$anilist.averageScore", 0] }, 0] },
+              then: { $divide: ["$anilist.averageScore", 10] },
+              else: 0,
+            },
+          },
+        ],
+      }
+    : {
+        $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
+      };
+
   const baseStages = [
     { $match: filter },
     {
       $addFields: {
         _pop: popExpr,
-        _vote: {
-          $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
-        },
+        _vote: voteExpr,
       },
     },
   ];
@@ -121,12 +173,28 @@ async function pickFeatured(col, filter, { anime = false } = {}) {
       .toArray();
   }
 
-  const tiers = [
-    { $and: [HAS_POSTER_OR_BACKDROP, HAS_IMDB_ID, { _vote: { $gte: 6 } }] },
-    { $and: [HAS_POSTER_OR_BACKDROP, HAS_IMDB_ID] },
-    HAS_POSTER_OR_BACKDROP,
-    {},
-  ];
+  // Anime hub featured: prefer currently relevant titles (last ~2–4 years),
+  // not all-time classics. Skip IMDb-id gate — many anime_* rows lack it.
+  const tiers = anime
+    ? [
+        {
+          $and: [
+            HAS_ANIME_ART,
+            recentFirstAirClause(2),
+            { _vote: { $gte: 6 } },
+          ],
+        },
+        { $and: [HAS_ANIME_ART, recentFirstAirClause(2)] },
+        { $and: [HAS_ANIME_ART, recentFirstAirClause(4)] },
+        HAS_ANIME_ART,
+        {},
+      ]
+    : [
+        { $and: [HAS_POSTER_OR_BACKDROP, HAS_IMDB_ID, { _vote: { $gte: 6 } }] },
+        { $and: [HAS_POSTER_OR_BACKDROP, HAS_IMDB_ID] },
+        HAS_POSTER_OR_BACKDROP,
+        {},
+      ];
 
   for (const tier of tiers) {
     const docs = await sample(tier);
