@@ -147,7 +147,7 @@ export default function CatalogMediaPanel({
 
   const titleAndStats = (
     <>
-      <h1 className="text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
+      <h1 className="text-2xl !font-normal tracking-tight text-foreground sm:text-3xl">
         {title}
       </h1>
       <p className="mt-1.5 text-sm text-default-500">{subtitleLine}</p>
@@ -165,7 +165,7 @@ export default function CatalogMediaPanel({
           ) : null}
           {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
           {certification ? (
-            <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-medium text-foreground/90">
+            <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-normal text-foreground/90">
               {certification}
             </span>
           ) : null}

@@ -517,7 +517,7 @@ export default function MovieTemplate({
               variant="flat"
               size="sm"
               radius="md"
-              className="h-8 min-h-8 px-3 text-sm"
+              className="h-8 min-h-8 px-3 text-sm font-normal"
             >
               Details
             </Button>
