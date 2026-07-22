@@ -217,7 +217,7 @@ export default function ExploreHub() {
       <div
         className={cn(
           `w-full ${MOBILE_CONTENT_INSET_LEFT}`,
-          "mt-2"
+          hasTrending ? "mt-0" : "mt-2"
         )}
       >
         <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />

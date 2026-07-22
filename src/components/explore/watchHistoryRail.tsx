@@ -67,7 +67,7 @@ export default function WatchHistoryRail({
   return (
     <section
       className={`flex w-full flex-col gap-3 ${
-        profile ? "mt-0 mb-8" : "mt-12 mb-8"
+        profile ? "mt-0 mb-8" : "mt-4 mb-8"
       } ${className}`}
       aria-label="Watch history"
     >
