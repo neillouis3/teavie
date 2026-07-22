@@ -1,54 +1,46 @@
 import Link from "next/link";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
-import { TEAVIE_LOGO } from "@/lib/brandAssets";
 
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className={`mt-auto w-full pt-10 pb-4 ${CONTENT_INSET_X}`}>
-      <div className="flex w-full flex-col gap-2 text-left">
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-          <Link href="/" className="inline-flex shrink-0" aria-label="Teavie home">
-            <img
-              src={TEAVIE_LOGO.icon}
-              alt=""
-              className="h-9 w-9 rounded-md"
-            />
-          </Link>
-
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-default-500">
-            <span>
-              © {year}{" "}
-              <Link
-                href="/"
-                className="underline underline-offset-2 transition-colors hover:text-default-400"
-              >
-                teavie.ca
-              </Link>
-            </span>
-            <span className="text-default-600" aria-hidden>
-              ·
-            </span>
-            <span>
-              Design and built by{" "}
-              <span className="font-semibold text-white">neillouis3</span>
-            </span>
-            <span className="text-default-600" aria-hidden>
-              ·
-            </span>
+    <footer
+      className={`mt-auto w-full border-t border-default-200/40 pt-8 pb-6 dark:border-white/10 ${CONTENT_INSET_X}`}
+    >
+      <div className="flex w-full flex-col gap-2 text-left text-sm text-default-500">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>
+            © {year}{" "}
             <Link
-              href="/build-log"
-              className="underline underline-offset-2 transition-colors hover:text-default-400"
+              href="/"
+              className="text-default-500 transition-colors hover:text-foreground"
             >
-              Build log
+              teavie.ca
             </Link>
-          </div>
-        </div>
-
-        <p className="max-w-3xl text-xs leading-relaxed text-default-200">
-          This website does not retain any files on its server. Rather, it solely
-          provides links to media content hosted by third-party services.
+          </span>
+          <span aria-hidden>·</span>
+          <span>
+            Designed and built by{" "}
+            <a
+              href="https://x.com/neillouis3dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-default-500 transition-colors hover:text-foreground"
+            >
+              neillouis3
+            </a>
+          </span>
+          <span aria-hidden>·</span>
+          <Link
+            href="/build-log"
+            className="text-default-500 transition-colors hover:text-foreground"
+          >
+            Build log
+          </Link>
+        </p>
+        <p className="max-w-2xl text-xs leading-relaxed text-default-400">
+          Teavie does not host media files. Links point to third-party sources.
         </p>
       </div>
     </footer>
