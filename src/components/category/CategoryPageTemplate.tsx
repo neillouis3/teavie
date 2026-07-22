@@ -211,7 +211,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                 {categoryGenres.map((genre, i) => (
                   <CarouselItem
                     key={genre.slug}
-                    className="basis-[42%] pl-3 sm:basis-[30%] md:basis-1/4 lg:basis-[calc(100%/7.5)]"
+                    className="basis-[48%] pl-3 sm:basis-[34%] md:basis-[22%] lg:basis-[calc(100%/6.5)]"
                   >
                     <GenreCatalogTile
                       genre={genre}
