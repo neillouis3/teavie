@@ -265,9 +265,11 @@ export default function AnimeShowRails({
           className={`flex w-full flex-col gap-3 ${
             related.length > 0 || relatedLoading ? "mt-10 pt-8" : "pt-6"
           }`}
-          aria-label="You might like"
+          aria-label="More like this"
         >
-          <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
+          <ExploreSectionTitle variant="explore" hideIcon>
+            More like this
+          </ExploreSectionTitle>
           {youMightLike.length > 0 ? (
             <CatalogRailShell bleed={bleed}>
               <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">

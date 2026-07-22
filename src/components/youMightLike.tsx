@@ -193,8 +193,10 @@ export default function YouMightLike({
 
   if (loading) {
     return (
-      <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="You might like">
-        <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
+      <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="More like this">
+        <ExploreSectionTitle variant="explore" hideIcon>
+          More like this
+        </ExploreSectionTitle>
         <CatalogRailShell bleed={bleed}>
           <CatalogRailSkeleton horizontal={horizontal} bleed={bleed} />
         </CatalogRailShell>
@@ -205,8 +207,10 @@ export default function YouMightLike({
   if (items.length === 0) return null;
 
   return (
-    <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="You might like">
-      <ExploreSectionTitle variant="explore">You might like</ExploreSectionTitle>
+    <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="More like this">
+      <ExploreSectionTitle variant="explore" hideIcon>
+        More like this
+      </ExploreSectionTitle>
       <CatalogRailShell bleed={bleed}>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
