@@ -80,6 +80,21 @@ function ClockIcon() {
   );
 }
 
+function StarIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="shrink-0 text-warning"
+      aria-hidden
+    >
+      <path d="M12 2.5 14.9 8.4l6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5L2.6 9.3l6.5-.9L12 2.5Z" />
+    </svg>
+  );
+}
+
 function HeroCardOverlay({
   title,
   type,
@@ -188,7 +203,12 @@ function HeroCardOverlay({
             </span>
           )}
           {(dateLabel || runtimeLabel) && ratingLabel && <MetaDot />}
-          {ratingLabel && <span>{ratingLabel}</span>}
+          {ratingLabel && (
+            <span className="inline-flex items-center gap-1.5 font-medium text-white">
+              <StarIcon />
+              {ratingLabel}
+            </span>
+          )}
           {ratingLabel && certification && <MetaDot />}
           {certification && (
             <span className="rounded border border-white/35 px-1.5 py-0.5 text-[11px] font-medium text-white/90 sm:text-xs">
