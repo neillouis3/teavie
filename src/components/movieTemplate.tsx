@@ -481,7 +481,11 @@ export default function MovieTemplate({
             ) : null}
           </div>
         }
-        creditsSection={<MovieCreditsStrip credits={movie.credits} />}
+        creditsSection={
+          viewMode === 'details' ? (
+            <MovieCreditsStrip credits={movie.credits} />
+          ) : null
+        }
       />
     </div>
   );

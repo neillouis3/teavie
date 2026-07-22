@@ -1491,7 +1491,7 @@ export default function ShowTemplate({
               </div>
             }
             creditsSection={
-              !isAnimeMovie ? (
+              viewMode === "details" && !isAnimeMovie ? (
                 <MovieCreditsStrip
                   variant="show"
                   credits={show.aggregate_credits}
