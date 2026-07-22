@@ -231,11 +231,31 @@ export default function CatalogMediaPanel({
   );
 
   if (compact) {
+    const synopsis = overview?.trim() || "";
+    const quote = tagline?.trim() || "";
     return (
-      <div className="w-full">
-        <div className="flex gap-4">
-          <div className="w-24 shrink-0 sm:w-28 md:w-32">{posterEl}</div>
-          <div className="min-w-0 flex-1">{titleAndStats}</div>
+      <div className="w-full rounded-xl border border-default-200/55 bg-default-50/60 p-4 dark:border-default-100/25 dark:bg-default-50/10 sm:p-5">
+        <div className="flex gap-4 sm:gap-5">
+          <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-44">
+            {posterEl}
+          </div>
+          <div className="min-w-0 flex-1">
+            {titleAndStats}
+            {synopsis || quote ? (
+              <div className="mt-4 max-w-3xl space-y-2">
+                {synopsis ? (
+                  <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
+                    {synopsis}
+                  </p>
+                ) : null}
+                {quote ? (
+                  <p className="text-sm italic text-default-500">
+                    &ldquo;{quote}&rdquo;
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     );
