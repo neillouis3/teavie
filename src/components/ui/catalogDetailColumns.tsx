@@ -299,9 +299,6 @@ export function buildShowInfoLines(show: {
   const language = languageDisplayName(show.original_language);
   if (language) lines.push({ icon: LanguageCircleIcon, label: language });
 
-  const year = show.first_air_date?.slice(0, 4);
-  if (year) lines.push({ icon: Calendar03Icon, label: `Since ${year}` });
-
   return lines;
 }
 
