@@ -234,7 +234,7 @@ export default function CatalogMediaPanel({
     const synopsis = overview?.trim() || "";
     const quote = tagline?.trim() || "";
     return (
-      <div className="w-full rounded-xl border border-default-200/55 bg-default-50/60 p-4 dark:border-default-100/25 dark:bg-default-50/10 sm:p-5">
+      <div className="w-full">
         <div className="flex gap-4 sm:gap-5">
           <div className="w-28 shrink-0 sm:w-36 md:w-40 lg:w-44">
             {posterEl}
