@@ -219,7 +219,7 @@ export function ShowWatchPlayerHeading({ title }: { title: string }) {
       {episodeSubtitle ? (
         <p className="text-sm text-default-500">{episodeSubtitle}</p>
       ) : null}
-      <h1 className="text-xl font-normal tracking-tight text-foreground sm:text-2xl">
+      <h1 className="text-xl !font-normal tracking-tight text-foreground sm:text-2xl">
         {title}
       </h1>
     </div>
