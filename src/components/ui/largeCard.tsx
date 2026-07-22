@@ -164,19 +164,6 @@ function HeroCardOverlay({
       )}
     >
       <div className="flex max-w-3xl flex-col gap-3">
-        {genres.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-white/70 sm:text-sm">
-            {genres.slice(0, 2).map((genre) => (
-              <span
-                key={genre}
-                className="rounded-md bg-white/10 px-2 py-0.5 text-inherit text-white/95 backdrop-blur-sm"
-              >
-                {genre}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
         {logoUrl ? (
           <div
             className={cn(
@@ -206,6 +193,19 @@ function HeroCardOverlay({
           <p className="w-full min-w-0 text-sm leading-snug text-white/75 line-clamp-2 sm:line-clamp-3">
             {overviewText}
           </p>
+        ) : null}
+
+        {genres.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-white/70 sm:text-sm">
+            {genres.slice(0, 2).map((genre) => (
+              <span
+                key={genre}
+                className="rounded-md bg-white/10 px-2 py-0.5 text-inherit text-white/95 backdrop-blur-sm"
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/70 sm:text-sm">
