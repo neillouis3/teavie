@@ -1381,7 +1381,7 @@ export function ShowEpisodePickerList() {
                         ) : null}
                       </div>
                       {active ? (
-                        <span className="pointer-events-none absolute left-2 top-2 z-[2] rounded-md bg-success px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success-foreground">
+                        <span className="pointer-events-none absolute left-2 top-2 z-[2] rounded-md bg-success px-2 py-0.5 text-[10px] font-semibold tracking-wide text-success-foreground">
                           Now playing
                         </span>
                       ) : null}

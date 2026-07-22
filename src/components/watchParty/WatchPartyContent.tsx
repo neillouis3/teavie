@@ -139,7 +139,7 @@ function TeaPartySettingsPanel({
 }) {
   return (
     <div className="rounded-xl border border-default-200/80 bg-default-50/50 p-3 dark:border-white/10 dark:bg-white/5">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-default-500">
+      <p className="mb-2 text-xs font-semibold tracking-wide text-default-500">
         Party options
       </p>
 
@@ -258,7 +258,7 @@ export function WatchPartyContent({
 
         {displayTitle ? (
           <div className="rounded-xl border border-default-200/80 bg-default-50/80 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+            <p className="text-[11px] font-medium tracking-wide text-default-500">
               Watching
             </p>
             <p className="mt-0.5 line-clamp-2 text-sm font-medium text-foreground">

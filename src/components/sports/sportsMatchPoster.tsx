@@ -77,7 +77,7 @@ export default function SportsMatchPoster({
           />
         ) : null}
         {showHome && showAway ? (
-          <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-default-400 sm:text-xs">
+          <span className="shrink-0 text-[10px] font-medium tracking-wide text-default-400 sm:text-xs">
             vs
           </span>
         ) : null}
