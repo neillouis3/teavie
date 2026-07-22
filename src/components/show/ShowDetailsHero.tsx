@@ -29,7 +29,7 @@ export default function ShowDetailsHero({
         src={bannerUrl}
         alt=""
         aria-hidden
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover object-top"
       />
       {tint ? (
         <div
