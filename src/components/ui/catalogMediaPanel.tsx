@@ -35,6 +35,11 @@ export type CatalogMediaPanelProps = {
   alternateTitles?: string[];
   /** Network / studio tags in the details card. */
   networkTags?: string[];
+  /**
+   * Watch pages: poster, title, rating, and actions only —
+   * no synopsis / genre / details / links.
+   */
+  compact?: boolean;
 };
 
 const DETAIL_META_CARD =
@@ -134,14 +139,15 @@ export default function CatalogMediaPanel({
   statPills,
   alternateTitles,
   networkTags,
+  compact = false,
 }: CatalogMediaPanelProps) {
   const ratingLabel =
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
-  const statusDisplay = formatStatusDisplay(status);
+  const statusDisplay = compact ? null : formatStatusDisplay(status);
 
   const titleAndStats = (
     <>
-      <h1 className="text-2xl tracking-tight text-foreground sm:text-3xl">
+      <h1 className="text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
         {title}
       </h1>
       <p className="mt-1.5 text-sm text-default-500">{subtitleLine}</p>
@@ -178,7 +184,7 @@ export default function CatalogMediaPanel({
         </div>
       )}
       {toolbar ? <div className="mt-3">{toolbar}</div> : null}
-      {statPills && statPills.length > 0 ? (
+      {!compact && statPills && statPills.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {statPills.map((pill) => (
             <span
@@ -190,7 +196,7 @@ export default function CatalogMediaPanel({
           ))}
         </div>
       ) : null}
-      {alternateTitles && alternateTitles.length > 0 ? (
+      {!compact && alternateTitles && alternateTitles.length > 0 ? (
         <p className="mt-2.5 text-xs leading-relaxed text-default-500">
           Also known as {alternateTitles.join(" · ")}
         </p>
@@ -223,6 +229,17 @@ export default function CatalogMediaPanel({
   ) : (
     <div className="aspect-[2/3] w-full rounded-lg bg-default-200/80 ring-1 ring-default-200/35 dark:bg-default-100/20 dark:ring-default-100/15" />
   );
+
+  if (compact) {
+    return (
+      <div className="w-full">
+        <div className="flex gap-4">
+          <div className="w-24 shrink-0 sm:w-28 md:w-32">{posterEl}</div>
+          <div className="min-w-0 flex-1">{titleAndStats}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-5">

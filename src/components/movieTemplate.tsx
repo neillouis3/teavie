@@ -486,10 +486,31 @@ export default function MovieTemplate({
             ) : null}
           </div>
         }
-        creditsSection={
-          viewMode === 'details' ? (
-            <MovieCreditsStrip credits={movie.credits} />
-          ) : null
+        creditsSection={<MovieCreditsStrip credits={movie.credits} />}
+      />
+    </div>
+  );
+
+  const movieWatchSummary = (
+    <div className="w-full">
+      <CatalogMediaPanel
+        compact
+        posterUrl={imageUrl}
+        posterAlt={movie.title}
+        title={movie.title}
+        subtitleLine={movieSubtitleLine(movie)}
+        rating={movie.vote_average}
+        certification={usCertificationFromDoc(movie)}
+        overview=""
+        mediaType="movie"
+        genres={[]}
+        infoLines={[]}
+        links={[]}
+        toolbar={
+          <div className="flex flex-wrap items-center gap-2">
+            <FavoriteButton catalogId={String(id)} mediaType="movie" iconOnly />
+            <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
+          </div>
         }
       />
     </div>
@@ -562,7 +583,7 @@ export default function MovieTemplate({
             />
           )}
         </div>
-        {movieDetailsPanel}
+        {movieWatchSummary}
         <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} bleed={false} />
       </div>
     </div>
