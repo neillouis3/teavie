@@ -33,7 +33,6 @@ const SECTION_TITLE_ICONS: Record<string, IconSvgElement> = {
   "browse by genre": GridViewIcon,
   featured: StarIcon,
   "top rated": ChartIncreaseIcon,
-  "you might like": SparklesIcon,
   "related anime": OrangeIcon,
   artwork: Image02Icon,
 };
