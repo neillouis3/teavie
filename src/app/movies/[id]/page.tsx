@@ -3,7 +3,7 @@
 import React, { Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import MovieTemplate from '@/components/movieTemplate';
-import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 
 function MoviePageInner() {
   const params = useParams();
@@ -16,7 +16,7 @@ function MoviePageInner() {
 }
 
 const MoviePage = () => (
-  <Suspense fallback={<WatchPageSkeleton />}>
+  <Suspense fallback={<CatalogDetailsSkeleton />}>
     <MoviePageInner />
   </Suspense>
 );
