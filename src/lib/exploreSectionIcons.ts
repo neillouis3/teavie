@@ -12,6 +12,7 @@ import {
   PopcornIcon,
   SparklesIcon,
   StarIcon,
+  Time04Icon,
   Tv01Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -21,6 +22,7 @@ function normalizeSectionTitle(title: string): string {
 
 const SECTION_TITLE_ICONS: Record<string, IconSvgElement> = {
   "continue watching": Clock02Icon,
+  "watch history": Time04Icon,
   favorites: StarIcon,
   "watch later": Bookmark02Icon,
   popular: FireIcon,

@@ -12,10 +12,14 @@ import React, {
 import { useAuth } from "@/contexts/authContext";
 import {
   listWatchHistory,
+  listWatchHistoryLog,
+  mergeWatchHistoryLog,
   removeFromWatchHistory,
+  removeFromWatchHistoryLog,
   touchWatchHistory,
   type WatchHistoryEntry,
   WATCH_HISTORY_CHANGED_EVENT,
+  WATCH_HISTORY_LOG_CHANGED_EVENT,
 } from "@/lib/watchHistory";
 import {
   addToWatchLater,
@@ -54,10 +58,13 @@ import {
 type UserDataContextValue = {
   preferences: UserPreferences;
   watchHistoryEntries: WatchHistoryEntry[];
+  watchHistoryLogEntries: WatchHistoryEntry[];
+  watchedMovieIds: string[];
   watchLaterEntries: WatchLaterEntry[];
   favoriteEntries: FavoriteEntry[];
   refreshUserData: () => Promise<void>;
   removeHistoryItem: (catalogId: string) => Promise<void>;
+  removeHistoryLogItem: (catalogId: string) => Promise<void>;
   syncHistoryTouch: (catalogId: string, payload: Omit<WatchHistoryEntry, "catalogId" | "lastWatchedAt">) => void;
   toggleWatchLater: (catalogId: string, mediaType: "movie" | "tv") => Promise<void>;
   toggleFavorite: (catalogId: string, mediaType: "movie" | "tv") => Promise<void>;
@@ -101,13 +108,31 @@ async function fetchRemoteFavorites(): Promise<FavoriteEntry[]> {
   }));
 }
 
+async function fetchRemoteWatchHistory(): Promise<WatchHistoryEntry[]> {
+  const res = await fetch("/api/user/watch-history", { credentials: "include" });
+  if (!res.ok) return [];
+  const json = (await res.json()) as { entries?: WatchHistoryEntry[] };
+  return (json.entries ?? []).filter(
+    (e) => e && typeof e.catalogId === "string" && e.catalogId.length > 0
+  );
+}
+
 function watchLaterEntriesSignature(entries: WatchLaterEntry[]): string {
   return entries.map((e) => `${e.mediaType}:${e.catalogId}`).sort().join("|");
+}
+
+function refreshLocalHistoryState(
+  setContinue: (entries: WatchHistoryEntry[]) => void,
+  setLog: (entries: WatchHistoryEntry[]) => void
+) {
+  setContinue(listWatchHistory());
+  setLog(listWatchHistoryLog());
 }
 
 export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, loading: authLoading } = useAuth();
   const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>([]);
+  const [watchHistoryLogEntries, setWatchHistoryLogEntries] = useState<WatchHistoryEntry[]>([]);
   const [watchLaterEntries, setWatchLaterEntries] = useState<WatchLaterEntry[]>([]);
   const [favoriteEntries, setFavoriteEntries] = useState<FavoriteEntry[]>([]);
 
@@ -118,11 +143,20 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     return EMPTY_USER_PREFERENCES;
   }, [user, profile]);
 
+  const watchedMovieIds = useMemo(
+    () =>
+      watchHistoryLogEntries
+        .filter((e) => e.mediaType === "movie")
+        .map((e) => e.catalogId),
+    [watchHistoryLogEntries]
+  );
+
   const usingRemoteData = Boolean(user);
   const watchLaterSigRef = useRef("");
+  const historyHydratedRef = useRef<string | null>(null);
 
   const refreshUserData = useCallback(async () => {
-    setWatchHistoryEntries(listWatchHistory());
+    refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
     if (user) {
       const [later, favorites] = await Promise.all([
         fetchRemoteWatchLater(),
@@ -155,8 +189,36 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   }, [authLoading, user?.id, refreshUserData]);
 
   useEffect(() => {
+    if (!user?.id) {
+      historyHydratedRef.current = null;
+      return;
+    }
+    if (historyHydratedRef.current === user.id) return;
+    historyHydratedRef.current = user.id;
+    void (async () => {
+      const remote = await fetchRemoteWatchHistory();
+      if (remote.length > 0) {
+        mergeWatchHistoryLog(remote);
+      }
+      refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
+    })();
+  }, [user?.id]);
+
+  useEffect(() => {
     const onHistory = () => {
-      setWatchHistoryEntries(listWatchHistory());
+      refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
+    };
+    const onHistoryLog = () => {
+      refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
+      if (!user) return;
+      const log = listWatchHistoryLog();
+      if (log.length === 0) return;
+      void fetch("/api/user/watch-history", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entries: log }),
+      });
     };
     const onLater = () => {
       if (user) {
@@ -169,11 +231,13 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       if (!user) setFavoriteEntries(listFavorites());
     };
     window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistory);
+    window.addEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, onHistoryLog);
     window.addEventListener(WATCH_LATER_CHANGED_EVENT, onLater);
     window.addEventListener(FAVORITES_CHANGED_EVENT, onFavorites);
     window.addEventListener("storage", onHistory);
     return () => {
       window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistory);
+      window.removeEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, onHistoryLog);
       window.removeEventListener(WATCH_LATER_CHANGED_EVENT, onLater);
       window.removeEventListener(FAVORITES_CHANGED_EVENT, onFavorites);
       window.removeEventListener("storage", onHistory);
@@ -188,13 +252,30 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
         credentials: "include",
       });
     }
-    setWatchHistoryEntries(listWatchHistory());
+    refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
+  }, [user]);
+
+  const removeHistoryLogItem = useCallback(async (catalogId: string) => {
+    removeFromWatchHistoryLog(catalogId);
+    if (user) {
+      await Promise.all([
+        fetch(`/api/user/watch-history?catalogId=${encodeURIComponent(catalogId)}`, {
+          method: "DELETE",
+          credentials: "include",
+        }),
+        fetch(`/api/user/watch-progress?catalogId=${encodeURIComponent(catalogId)}`, {
+          method: "DELETE",
+          credentials: "include",
+        }),
+      ]);
+    }
+    refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
   }, [user]);
 
   const syncHistoryTouch = useCallback(
     (catalogId: string, payload: Omit<WatchHistoryEntry, "catalogId" | "lastWatchedAt">) => {
       touchWatchHistory(catalogId, payload);
-      setWatchHistoryEntries(listWatchHistory());
+      refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
     },
     []
   );
@@ -375,10 +456,13 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     () => ({
       preferences,
       watchHistoryEntries,
+      watchHistoryLogEntries,
+      watchedMovieIds,
       watchLaterEntries,
       favoriteEntries,
       refreshUserData,
       removeHistoryItem,
+      removeHistoryLogItem,
       syncHistoryTouch,
       toggleWatchLater,
       toggleFavorite,
@@ -393,10 +477,13 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     [
       preferences,
       watchHistoryEntries,
+      watchHistoryLogEntries,
+      watchedMovieIds,
       watchLaterEntries,
       favoriteEntries,
       refreshUserData,
       removeHistoryItem,
+      removeHistoryLogItem,
       syncHistoryTouch,
       toggleWatchLater,
       toggleFavorite,

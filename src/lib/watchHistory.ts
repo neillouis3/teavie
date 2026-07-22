@@ -5,7 +5,9 @@ import { formatHeroRuntime } from "@/lib/formatRelease";
 
 export const WATCH_HISTORY_VERSION = 1 as const;
 export const WATCH_HISTORY_INDEX_KEY = `teavie.watch-history.v${WATCH_HISTORY_VERSION}`;
+export const WATCH_HISTORY_LOG_KEY = `teavie.watch-history-log.v${WATCH_HISTORY_VERSION}`;
 export const WATCH_HISTORY_MAX = 24;
+export const WATCH_HISTORY_LOG_MAX = 100;
 /** Remove continue-watching rows not opened in this window. */
 export const WATCH_HISTORY_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -20,12 +22,21 @@ export type WatchHistoryEntry = {
 };
 
 export const WATCH_HISTORY_CHANGED_EVENT = "teavie-watch-history-changed";
+export const WATCH_HISTORY_LOG_CHANGED_EVENT = "teavie-watch-history-log-changed";
 
-function readIndex(): WatchHistoryEntry[] {
-  if (typeof window === "undefined") return [];
+function normalizeEntry(e: WatchHistoryEntry): WatchHistoryEntry {
+  return {
+    catalogId: e.catalogId,
+    mediaType: e.mediaType,
+    lastWatchedAt: Number(e.lastWatchedAt),
+    lastSeason: Math.max(1, Math.floor(Number(e.lastSeason)) || 1),
+    lastEpisode: Math.max(1, Math.floor(Number(e.lastEpisode)) || 1),
+  };
+}
+
+function parseEntries(raw: string | null): WatchHistoryEntry[] {
+  if (!raw) return [];
   try {
-    const raw = localStorage.getItem(WATCH_HISTORY_INDEX_KEY);
-    if (!raw) return [];
     const data = JSON.parse(raw) as Partial<{ v: number; entries: WatchHistoryEntry[] }>;
     if (data.v !== WATCH_HISTORY_VERSION || !Array.isArray(data.entries)) return [];
     return data.entries
@@ -37,13 +48,16 @@ function readIndex(): WatchHistoryEntry[] {
           (e.mediaType === "movie" || e.mediaType === "tv") &&
           Number.isFinite(Number(e.lastWatchedAt))
       )
-      .map((e) => ({
-        catalogId: e.catalogId,
-        mediaType: e.mediaType,
-        lastWatchedAt: Number(e.lastWatchedAt),
-        lastSeason: Math.max(1, Math.floor(Number(e.lastSeason)) || 1),
-        lastEpisode: Math.max(1, Math.floor(Number(e.lastEpisode)) || 1),
-      }));
+      .map(normalizeEntry);
+  } catch {
+    return [];
+  }
+}
+
+function readIndex(): WatchHistoryEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return parseEntries(localStorage.getItem(WATCH_HISTORY_INDEX_KEY));
   } catch {
     return [];
   }
@@ -60,6 +74,72 @@ function writeIndex(entries: WatchHistoryEntry[]): void {
   } catch {
     /* quota / private mode */
   }
+}
+
+function readLogRaw(): WatchHistoryEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return parseEntries(localStorage.getItem(WATCH_HISTORY_LOG_KEY));
+  } catch {
+    return [];
+  }
+}
+
+function writeLog(entries: WatchHistoryEntry[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      WATCH_HISTORY_LOG_KEY,
+      JSON.stringify({ v: WATCH_HISTORY_VERSION, entries })
+    );
+    window.dispatchEvent(new CustomEvent(WATCH_HISTORY_LOG_CHANGED_EVENT));
+    window.dispatchEvent(new CustomEvent(WATCH_HISTORY_CHANGED_EVENT));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function upsertLogEntry(entry: WatchHistoryEntry): void {
+  const prev = readLogRaw().filter((e) => e.catalogId !== entry.catalogId);
+  writeLog([entry, ...prev].slice(0, WATCH_HISTORY_LOG_MAX));
+}
+
+/** Durable watch history (no TTL) for Activity + recommendation exclusion. */
+export function listWatchHistoryLog(): WatchHistoryEntry[] {
+  let log = readLogRaw();
+  if (log.length === 0) {
+    const seeded = readIndex();
+    if (seeded.length > 0) {
+      writeLog(seeded.slice(0, WATCH_HISTORY_LOG_MAX));
+      log = seeded.slice(0, WATCH_HISTORY_LOG_MAX);
+    }
+  }
+  return log;
+}
+
+/** Merge remote/local log entries, keeping the newest per catalog id. */
+export function mergeWatchHistoryLog(entries: WatchHistoryEntry[]): WatchHistoryEntry[] {
+  const byId = new Map(listWatchHistoryLog().map((e) => [e.catalogId, e]));
+  for (const raw of entries) {
+    const entry = normalizeEntry(raw);
+    if (!entry.catalogId) continue;
+    const prev = byId.get(entry.catalogId);
+    if (!prev || entry.lastWatchedAt >= prev.lastWatchedAt) {
+      byId.set(entry.catalogId, entry);
+    }
+  }
+  const merged = [...byId.values()]
+    .sort((a, b) => b.lastWatchedAt - a.lastWatchedAt)
+    .slice(0, WATCH_HISTORY_LOG_MAX);
+  writeLog(merged);
+  return merged;
+}
+
+/** Catalog ids for movies the user has already watched. */
+export function listWatchedMovieCatalogIds(): string[] {
+  return listWatchHistoryLog()
+    .filter((e) => e.mediaType === "movie")
+    .map((e) => e.catalogId);
 }
 
 /** Record or bump a title in watch history (called when playback progress is saved). */
@@ -85,6 +165,7 @@ export function touchWatchHistory(
 
   const prev = readIndex().filter((e) => e.catalogId !== id);
   writeIndex([next, ...prev].slice(0, WATCH_HISTORY_MAX));
+  upsertLogEntry(next);
 }
 
 /** Mark a movie as recently watched (continue-watching rail). */
@@ -103,7 +184,7 @@ export function recordMovieInWatchHistory(catalogId: string): void {
   });
 }
 
-/** Newest-first watch history; drops stale, expired, or progress-less rows. */
+/** Newest-first continue watching; drops stale, expired, or progress-less rows. */
 export function listWatchHistory(): WatchHistoryEntry[] {
   const now = Date.now();
   const index = readIndex();
@@ -124,7 +205,7 @@ export function listWatchHistory(): WatchHistoryEntry[] {
   return kept;
 }
 
-/** Remove a title from continue watching and clear saved progress. */
+/** Remove a title from continue watching and clear saved progress. Keeps durable log. */
 export function removeFromWatchHistory(catalogId: string): void {
   const id = String(catalogId ?? "").trim();
   if (!id) return;
@@ -133,8 +214,22 @@ export function removeFromWatchHistory(catalogId: string): void {
   clearWatchProgress(id);
 }
 
+/** Remove a title from durable watch history (and continue watching). */
+export function removeFromWatchHistoryLog(catalogId: string): void {
+  const id = String(catalogId ?? "").trim();
+  if (!id) return;
+  writeLog(readLogRaw().filter((e) => e.catalogId !== id));
+  removeFromWatchHistory(id);
+}
+
 export function watchHistoryProgressLabel(entry: WatchHistoryEntry): string {
   if (entry.mediaType === "movie") return "Continue watching";
+  if (entry.lastSeason <= 1) return `Episode ${entry.lastEpisode}`;
+  return `S${entry.lastSeason} · E${entry.lastEpisode}`;
+}
+
+export function watchHistoryLogLabel(entry: WatchHistoryEntry): string {
+  if (entry.mediaType === "movie") return "Watched";
   if (entry.lastSeason <= 1) return `Episode ${entry.lastEpisode}`;
   return `S${entry.lastSeason} · E${entry.lastEpisode}`;
 }

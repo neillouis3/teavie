@@ -88,10 +88,18 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
   if (!match) return [];
 
   const limit = Math.min(50, Math.max(1, opts.limit ?? DEFAULT_LIMIT));
+  const excludeMovieIds = new Set(
+    (Array.isArray(opts.excludeMovieIds) ? opts.excludeMovieIds : [])
+      .map((id) => String(id ?? "").trim())
+      .filter(Boolean)
+  );
   const hasStrictPrefs =
     selectedGenreLabels(preferences).length > 0 ||
     selectedLanguageCodes(preferences).length > 0;
-  const fetchLimit = hasStrictPrefs ? Math.min(192, limit * 4) : limit;
+  const fetchPad = excludeMovieIds.size > 0 ? Math.min(48, excludeMovieIds.size) : 0;
+  const fetchLimit = hasStrictPrefs
+    ? Math.min(192, limit * 4 + fetchPad)
+    : Math.min(96, limit + fetchPad);
   const todayIso = catalogTodayIsoUtc();
 
   const client = await clientPromise;
@@ -152,7 +160,12 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
     ])
     .toArray();
 
-  return (await mapDocsToItemsWithTmdbArt(docs, preferences)).slice(0, limit);
+  return (await mapDocsToItemsWithTmdbArt(docs, preferences))
+    .filter(
+      (item) =>
+        !(item.type === "movie" && excludeMovieIds.has(String(item.id)))
+    )
+    .slice(0, limit);
 }
 
 async function queryPersonalizedNew(preferences, limit = 20) {
@@ -257,7 +270,7 @@ async function queryPersonalizedUpcoming(preferences, limit = 20) {
 
 /**
  * @param {import('@/types/user').UserPreferences | null | undefined} preferences
- * @param {{ limit?: number; type?: 'movie' | 'tv' }} [opts]
+ * @param {{ limit?: number; type?: 'movie' | 'tv'; excludeMovieIds?: string[] }} [opts]
  */
 export async function loadPersonalizedCatalog(preferences, opts = {}) {
   const items = await queryPersonalizedCatalog(preferences, opts);
@@ -267,14 +280,15 @@ export async function loadPersonalizedCatalog(preferences, opts = {}) {
 /**
  * Full personalized explore feed from user preferences.
  * @param {import('@/types/user').UserPreferences | null | undefined} preferences
- * @param {{ limit?: number }} [opts]
+ * @param {{ limit?: number; excludeMovieIds?: string[] }} [opts]
  */
 export async function loadPersonalizedExploreBundle(preferences, opts = {}) {
   const limit = Math.min(50, Math.max(1, opts.limit ?? DEFAULT_LIMIT));
+  const excludeMovieIds = opts.excludeMovieIds;
 
   const [recommended, popularMovies, popularTv, newContent, upcomingContent] =
     await Promise.all([
-      queryPersonalizedCatalog(preferences, { limit }),
+      queryPersonalizedCatalog(preferences, { limit, excludeMovieIds }),
       queryPersonalizedCatalog(preferences, {
         limit,
         type: "movie",

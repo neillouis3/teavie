@@ -15,12 +15,33 @@ export async function POST(req: Request) {
 
     const body = (await req.json()) as {
       watchLater?: { catalogId: string; mediaType: "movie" | "tv"; addedAt?: number }[];
+      watchHistory?: {
+        catalogId: string;
+        mediaType: "movie" | "tv";
+        lastSeason?: number;
+        lastEpisode?: number;
+        lastWatchedAt?: number;
+      }[];
       progressRows?: {
         catalogId: string;
         progress?: Record<string, unknown>;
         moviePositionSeconds?: number;
       }[];
     };
+
+    if (Array.isArray(body.watchHistory) && body.watchHistory.length > 0) {
+      const rows = body.watchHistory.map((entry) => ({
+        user_id: user.id,
+        catalog_id: entry.catalogId,
+        media_type: entry.mediaType,
+        last_season: Math.max(1, Math.floor(Number(entry.lastSeason)) || 1),
+        last_episode: Math.max(1, Math.floor(Number(entry.lastEpisode)) || 1),
+        last_watched_at: new Date(entry.lastWatchedAt ?? Date.now()).toISOString(),
+      }));
+      await supabase.from("watch_history").upsert(rows, {
+        onConflict: "user_id,catalog_id",
+      });
+    }
 
     if (Array.isArray(body.watchLater) && body.watchLater.length > 0) {
       const rows = body.watchLater.map((entry) => ({

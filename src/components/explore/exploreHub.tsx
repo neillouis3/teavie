@@ -56,12 +56,16 @@ function listSignature(entries: { catalogId: string; mediaType: string }[]) {
 
 export default function ExploreHub() {
   const { loading: authLoading } = useAuth();
-  const { preferences, watchHistoryEntries, watchLaterEntries, favoriteEntries } =
+  const { preferences, watchHistoryEntries, watchLaterEntries, favoriteEntries, watchedMovieIds } =
     useUserData();
   const [core, setCore] = useState<ExploreCorePayload | null>(null);
   const [userRails, setUserRails] = useState<UserRailRows>(EMPTY_RAILS);
 
   const preferencesSig = useMemo(() => JSON.stringify(preferences), [preferences]);
+  const watchedMoviesSig = useMemo(
+    () => [...watchedMovieIds].sort().join("|"),
+    [watchedMovieIds]
+  );
   const historySig = useMemo(
     () => historySignature(watchHistoryEntries),
     [watchHistoryEntries]
@@ -116,13 +120,15 @@ export default function ExploreHub() {
   useEffect(() => {
     if (authLoading) return;
     let cancelled = false;
-    void loadExploreCorePayload(preferences).then((nextCore) => {
+    void loadExploreCorePayload(preferences, {
+      excludeMovieIds: watchedMovieIds,
+    }).then((nextCore) => {
       if (!cancelled) setCore(nextCore);
     });
     return () => {
       cancelled = true;
     };
-  }, [authLoading, preferencesSig]);
+  }, [authLoading, preferencesSig, watchedMoviesSig, preferences, watchedMovieIds]);
 
   useEffect(() => {
     if (authLoading) return;
