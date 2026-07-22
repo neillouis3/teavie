@@ -85,6 +85,7 @@ export default function TrendingHero({
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
   const [count, setCount] = React.useState(0);
+  const [logoByKey, setLogoByKey] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
     if (!api || !showDots) return;
@@ -94,6 +95,42 @@ export default function TrendingHero({
       setCurrent(api.selectedScrollSnap() + 1);
     });
   }, [api, showDots]);
+
+  React.useEffect(() => {
+    const payload = items
+      .map((item) => {
+        const id = String(item.id ?? "").trim();
+        if (!/^\d+$/.test(id)) return null;
+        return { id, type: item.type === "tv" ? "tv" : "movie" };
+      })
+      .filter((row): row is { id: string; type: "movie" | "tv" } => row != null)
+      .slice(0, 24);
+
+    if (payload.length === 0) {
+      setLogoByKey({});
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/tmdb/logos", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ items: payload }),
+        });
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as { logos?: Record<string, string> };
+        if (!cancelled) setLogoByKey(json.logos ?? {});
+      } catch {
+        if (!cancelled) setLogoByKey({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
 
   if (items.length === 0) return null;
 
@@ -108,6 +145,7 @@ export default function TrendingHero({
         ? String(releaseDate).slice(0, 10)
         : null;
     const type = item.type ?? "movie";
+    const logoKey = `${type}:${String(item.id)}`;
 
     return (
       <LargeCard
@@ -128,6 +166,7 @@ export default function TrendingHero({
         overview={item.overview}
         imageFit={preserveImageAspect ? "contain" : "cover"}
         preferPoster={preserveImageAspect}
+        logoPath={logoByKey[logoKey] ?? null}
       />
     );
   }

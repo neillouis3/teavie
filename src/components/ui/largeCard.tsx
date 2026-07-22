@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
 import { preferHighResAnimeImageUrl } from "@/lib/animePoster";
-import { tmdbImageUrlOr } from "@/lib/tmdbImage";
+import { tmdbImageUrl, tmdbImageUrlOr } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 
 type LargeCardProps = {
@@ -38,6 +38,8 @@ type LargeCardProps = {
   imageFit?: "cover" | "contain";
   /** Prefer poster over backdrop (anime covers are usually portrait). */
   preferPoster?: boolean;
+  /** TMDB title logo path (official wordmark) for hero overlays. */
+  logoPath?: string | null;
 };
 
 function MetaDot() {
@@ -108,6 +110,7 @@ function HeroCardOverlay({
   overview,
   compact = false,
   releaseDateStyle = "short",
+  logoPath,
 }: {
   title: string;
   type: "movie" | "tv";
@@ -121,6 +124,7 @@ function HeroCardOverlay({
   overview?: string | null;
   compact?: boolean;
   releaseDateStyle?: "short" | "phrase";
+  logoPath?: string | null;
 }) {
   const dateLabel =
     releaseDateStyle === "phrase"
@@ -148,6 +152,7 @@ function HeroCardOverlay({
       ? `${voteAverage.toFixed(1)} / 10`
       : null;
   const overviewText = overview?.trim() ?? "";
+  const logoUrl = tmdbImageUrl(logoPath);
 
   return (
     <div
@@ -172,15 +177,30 @@ function HeroCardOverlay({
           </div>
         ) : null}
 
-        <h1
-          className={`line-clamp-2 font-bold leading-tight text-white ${
-            compact
-              ? "text-xl sm:text-2xl md:text-3xl"
-              : "text-2xl sm:text-3xl md:text-4xl"
-          }`}
-        >
-          {title}
-        </h1>
+        {logoUrl ? (
+          <div
+            className={cn(
+              "relative w-full max-w-[18rem] sm:max-w-[22rem] md:max-w-[26rem] lg:max-w-[30rem]",
+              compact ? "max-w-[14rem] sm:max-w-[18rem]" : null
+            )}
+          >
+            <img
+              src={logoUrl}
+              alt={title}
+              className="h-auto w-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.55)]"
+            />
+          </div>
+        ) : (
+          <h1
+            className={`line-clamp-2 font-bold leading-tight text-white ${
+              compact
+                ? "text-xl sm:text-2xl md:text-3xl"
+                : "text-2xl sm:text-3xl md:text-4xl"
+            }`}
+          >
+            {title}
+          </h1>
+        )}
 
         {!compact && overviewText ? (
           <p className="w-full min-w-0 text-sm leading-snug text-white/75 line-clamp-2 sm:line-clamp-3">
@@ -242,6 +262,7 @@ export default function LargeCard({
   releaseDateStyle = "short",
   imageFit = "cover",
   preferPoster = false,
+  logoPath = null,
 }: LargeCardProps) {
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
@@ -319,6 +340,7 @@ export default function LargeCard({
             overview={overview}
             compact={!hero || heroCompact}
             releaseDateStyle={releaseDateStyle}
+            logoPath={logoPath}
           />
         )}
       </div>
