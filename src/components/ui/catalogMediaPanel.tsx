@@ -48,6 +48,8 @@ function formatStatusDisplay(
 ): { label: string; active: boolean } | null {
   const raw = String(status ?? "").trim();
   if (!raw) return null;
+  // Already covered by the subtitle year / release date.
+  if (/^released$/i.test(raw)) return null;
   if (/returning/i.test(raw)) return { label: "Returning", active: true };
   if (/production/i.test(raw)) return { label: "In production", active: true };
   return {

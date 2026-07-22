@@ -6,7 +6,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import {
   Building02Icon,
-  Calendar03Icon,
   LanguageCircleIcon,
   LinkSquare02Icon,
   Location01Icon,
@@ -248,7 +247,6 @@ export function buildMovieInfoLines(movie: {
   production_countries?: { iso_3166_1?: string; name?: string }[];
   origin_country?: string[];
   original_language?: string | null;
-  release_date?: string | null;
 }): CatalogInfoLine[] {
   const lines: CatalogInfoLine[] = [];
   const studio = sortedCompanyNames(movie.production_companies, 1)[0] ?? null;
@@ -273,9 +271,6 @@ export function buildMovieInfoLines(movie: {
 
   const language = languageDisplayName(movie.original_language);
   if (language) lines.push({ icon: LanguageCircleIcon, label: language });
-
-  const year = movie.release_date?.slice(0, 4);
-  if (year) lines.push({ icon: Calendar03Icon, label: year });
 
   return lines;
 }
