@@ -26,7 +26,7 @@ interface SmallCardProps {
   linkHref?: string | null;
   /** Muted line above the title (e.g. continue-watching S/E). */
   subtitle?: string;
-  /** When set, replaces default MOVIE/TV/year pills (e.g. continue watching S/E). */
+  /** When set, replaces default Movie/TV/year pills (e.g. continue watching S/E). */
   metaChips?: string[];
   /** Top-right dismiss control (e.g. remove from continue watching). */
   onDismiss?: () => void;
@@ -59,18 +59,18 @@ function buildMetaChips(
         : null;
 
     if (seasons > 1) {
-      chips.push(`${seasons} SS`);
+      chips.push(`${seasons} ss`);
     } else if (eps != null) {
-      chips.push(`${eps} EP`);
+      chips.push(`${eps} ep`);
     }
 
     chips.push('TV');
   } else if (typeLower === 'movie') {
     const runtime = formatHeroRuntime(runtimeSeconds);
     if (runtime) chips.push(runtime);
-    chips.push('MOVIE');
-  } else {
-    chips.push(typeLower.toUpperCase());
+    chips.push('Movie');
+  } else if (typeLower) {
+    chips.push(typeLower.charAt(0).toUpperCase() + typeLower.slice(1));
   }
 
   const when = String(year ?? '').trim();

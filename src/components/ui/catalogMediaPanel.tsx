@@ -198,7 +198,7 @@ export default function CatalogMediaPanel({
 
   const overviewBlock = (
     <div className="w-full max-w-[75%]">
-      <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-default-500">
+      <h2 className="mb-2 text-xs font-medium tracking-wide text-default-500">
         Synopsis
       </h2>
       <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
@@ -260,7 +260,7 @@ export default function CatalogMediaPanel({
 
       {creditsSection ? (
         <section className="w-full space-y-3" aria-label="Cast and crew">
-          <h2 className="text-xs font-medium uppercase tracking-wide text-default-500">
+          <h2 className="text-xs font-medium tracking-wide text-default-500">
             Cast & crew
           </h2>
           {creditsSection}

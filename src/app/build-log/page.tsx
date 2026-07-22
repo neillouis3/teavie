@@ -30,7 +30,7 @@ export default function BuildLogPage() {
           <div className="space-y-5">
             {groups.map((group) => (
               <section key={group.day} className={PAGE_CARD}>
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-default-400">
+                <h2 className="text-xs font-semibold tracking-wide text-default-400">
                   {group.label}
                 </h2>
                 <ul className="mt-4 space-y-4">
