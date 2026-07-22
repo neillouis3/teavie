@@ -501,7 +501,8 @@ export default function MovieTemplate({
         subtitleLine={movieSubtitleLine(movie)}
         rating={movie.vote_average}
         certification={usCertificationFromDoc(movie)}
-        overview=""
+        overview={movie.overview}
+        tagline={movie.tagline}
         mediaType="movie"
         genres={[]}
         infoLines={[]}
@@ -510,6 +511,16 @@ export default function MovieTemplate({
           <div className="flex flex-wrap items-center gap-2">
             <FavoriteButton catalogId={String(id)} mediaType="movie" iconOnly />
             <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
+            <Button
+              as={Link}
+              href={`/movies/${encodeURIComponent(id)}`}
+              variant="flat"
+              size="sm"
+              radius="md"
+              className="h-8 min-h-8 px-3 text-sm"
+            >
+              Details
+            </Button>
           </div>
         }
       />
