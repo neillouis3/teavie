@@ -42,7 +42,6 @@ import MovieTrailerEmbed from '@/components/movie/MovieTrailerEmbed';
 import ShowDetailsHero, {
   SHOW_DETAILS_HERO_OVERLAP,
 } from '@/components/show/ShowDetailsHero';
-import { ShowWatchPlayerHeading } from '@/components/show/ShowEpisodePicker';
 import { pickYoutubeTrailerEmbedUrl, type TmdbVideosPayload } from '@/lib/tmdbVideos';
 import { MOVIE_CONTENT_INSET_X } from '@/lib/contentInset';
 
@@ -523,7 +522,6 @@ export default function MovieTemplate({
   return (
     <div className="flex min-h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
       <div className={`flex w-full flex-col gap-6 ${MOVIE_CONTENT_INSET_X}`}>
-        <ShowWatchPlayerHeading title={movie.title} />
         <div className={PLAYER_SHELL_CLASS}>
           {!movieReleased ? (
             trailerEmbedUrl ? (

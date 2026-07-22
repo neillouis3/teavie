@@ -17,7 +17,6 @@ import ShowEpisodePicker, {
   ShowEpisodePickerControls,
   ShowEpisodePickerList,
   ShowEpisodePickerProvider,
-  ShowWatchPlayerHeading,
   SHOW_VIDEO_PLAYER_ID,
 } from "@/components/show/ShowEpisodePicker";
 import {
@@ -1658,7 +1657,6 @@ export default function ShowTemplate({
 
   const watchMainContent = (
     <>
-      <ShowWatchPlayerHeading title={title} />
       {playerBlock}
       {!isAnimeMovie ? (
         <div className="flex w-full flex-col gap-2">
