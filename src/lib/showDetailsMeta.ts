@@ -112,48 +112,13 @@ export function buildShowDetailStatPills(
   show: ShowDetailsSource,
   isAnime: boolean
 ): string[] {
-  const pills: string[] = [];
+  // Regular TV already shows seasons / episodes / year / rating above — pills only
+  // add anime-specific facts that aren't repeated elsewhere.
+  if (!isAnime) return [];
 
-  const seasons = show.number_of_seasons;
-  if (typeof seasons === "number" && seasons > 0) {
-    pills.push(`${seasons} ${seasons === 1 ? "season" : "seasons"}`);
-  }
-
-  const episodes =
-    show.number_of_episodes ??
-    show.anilist?.episodes ??
-    null;
-  if (typeof episodes === "number" && episodes > 0) {
-    pills.push(`${episodes} ${episodes === 1 ? "episode" : "episodes"}`);
-  }
-
-  if (isAnime && typeof show.anilist?.averageScore === "number") {
-    pills.push(`${(show.anilist.averageScore / 10).toFixed(1)} AniList`);
-  } else if (
-    typeof show.vote_average === "number" &&
-    Number.isFinite(show.vote_average) &&
-    show.vote_average > 0
-  ) {
-    pills.push(`${show.vote_average.toFixed(1)} TMDB`);
-  }
-
-  if (isAnime && show.anilist?.format) {
-    const format = ANILIST_FORMAT_LABELS[show.anilist.format] ?? show.anilist.format;
-    pills.push(format);
-  }
-
-  const premiere = formatAnilistSeason(
-    show.anilist?.season,
-    show.anilist?.seasonYear ?? undefined
-  );
-  if (premiere) {
-    pills.push(premiere);
-  } else {
-    const year = show.first_air_date?.slice(0, 4);
-    if (year) pills.push(`Since ${year}`);
-  }
-
-  return pills;
+  if (!show.anilist?.format) return [];
+  const format = ANILIST_FORMAT_LABELS[show.anilist.format] ?? show.anilist.format;
+  return format ? [format] : [];
 }
 
 export function buildExtendedShowInfoLines(
@@ -163,13 +128,6 @@ export function buildExtendedShowInfoLines(
   const lines: CatalogInfoLine[] = [...buildShowInfoLines(show)];
 
   if (isAnime) {
-    const format = show.anilist?.format
-      ? ANILIST_FORMAT_LABELS[show.anilist.format] ?? show.anilist.format
-      : null;
-    if (format) {
-      lines.unshift({ icon: Tv01Icon, label: format });
-    }
-
     const premiere = formatAnilistSeason(
       show.anilist?.season,
       show.anilist?.seasonYear ?? undefined

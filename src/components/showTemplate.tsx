@@ -45,7 +45,6 @@ import {
   buildShowAlternateTitles,
   buildShowDetailLinks,
   buildShowDetailStatPills,
-  buildShowNetworkTags,
 } from "@/lib/showDetailsMeta";
 import CatalogMediaPanel, {
   showSubtitleLine,
@@ -1471,7 +1470,6 @@ export default function ShowTemplate({
             links={buildShowDetailLinks(show)}
             statPills={buildShowDetailStatPills(show, isAnimeShowPage(show, id))}
             alternateTitles={buildShowAlternateTitles(show)}
-            networkTags={buildShowNetworkTags(show)}
             genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
             toolbar={
               <div className="flex flex-wrap items-center gap-2">
