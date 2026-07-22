@@ -41,7 +41,7 @@ export default function ExploreSectionTitle({
           <HugeiconsIcon
             icon={resolvedIcon}
             size={isExplore ? 22 : 18}
-            className={cn(isExplore ? "text-default-500" : "text-default-400")}
+            className={cn(isExplore ? "text-foreground" : "text-default-400")}
           />
         </span>
       ) : null}
