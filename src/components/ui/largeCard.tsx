@@ -53,7 +53,7 @@ function CalendarIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.75"
-      className="shrink-0 opacity-80"
+      className="shrink-0 text-white"
       aria-hidden
     >
       <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -71,7 +71,7 @@ function ClockIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.75"
-      className="shrink-0 opacity-80"
+      className="shrink-0 text-white"
       aria-hidden
     >
       <circle cx="12" cy="12" r="9" />
@@ -87,7 +87,7 @@ function StarIcon() {
       height="14"
       viewBox="0 0 24 24"
       fill="currentColor"
-      className="shrink-0 text-warning"
+      className="shrink-0 text-white"
       aria-hidden
     >
       <path d="M12 2.5 14.9 8.4l6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5L2.6 9.3l6.5-.9L12 2.5Z" />
