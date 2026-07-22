@@ -24,6 +24,7 @@ import CatalogMediaPanel, {
   movieSubtitleLine,
 } from './ui/catalogMediaPanel';
 import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 import { PLAYER_SHELL_CLASS } from '@/components/ui/playerEmbedSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
@@ -428,7 +429,11 @@ export default function MovieTemplate({
     : null;
 
   if (loading) {
-    return <WatchPageSkeleton />;
+    return viewMode === 'details' ? (
+      <CatalogDetailsSkeleton />
+    ) : (
+      <WatchPageSkeleton />
+    );
   }
 
   if (!movie) {

@@ -50,6 +50,7 @@ import CatalogMediaPanel, {
   showSubtitleLine,
 } from "@/components/ui/catalogMediaPanel";
 import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
+import CatalogDetailsSkeleton from "@/components/ui/catalogDetailsSkeleton";
 import { PlayerEmbedSkeleton, PLAYER_SHELL_CLASS } from "@/components/ui/playerEmbedSkeleton";
 import CatalogComingSoon from "@/components/ui/catalogComingSoon";
 import CatalogUnavailable from "@/components/ui/catalogUnavailable";
@@ -1520,8 +1521,10 @@ export default function ShowTemplate({
   );
 
   if (loading) {
-    return (
-      <WatchPageSkeleton withSeasonPicker={viewMode === "watch"} />
+    return viewMode === "details" ? (
+      <CatalogDetailsSkeleton />
+    ) : (
+      <WatchPageSkeleton withSeasonPicker />
     );
   }
 

@@ -3,7 +3,7 @@
 import React, { Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import ShowTemplate from '@/components/showTemplate';
-import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 
 function ShowPageInner() {
   const params = useParams();
@@ -16,7 +16,7 @@ function ShowPageInner() {
 }
 
 const ShowPage = () => (
-  <Suspense fallback={<WatchPageSkeleton />}>
+  <Suspense fallback={<CatalogDetailsSkeleton />}>
     <ShowPageInner />
   </Suspense>
 );
