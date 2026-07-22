@@ -299,21 +299,27 @@ export async function fetchFavoriteRows(
 }
 
 export async function fetchPersonalizedRows(
-  preferences: UserPreferences | null
+  preferences: UserPreferences | null,
+  excludeMovieIds: string[] = []
 ): Promise<ContentItem[]> {
-  const bundle = await fetchPersonalizedExploreBundle(preferences);
+  const bundle = await fetchPersonalizedExploreBundle(preferences, excludeMovieIds);
   return bundle?.recommended ?? [];
 }
 
 export async function fetchPersonalizedExploreBundle(
-  preferences: UserPreferences | null
+  preferences: UserPreferences | null,
+  excludeMovieIds: string[] = []
 ): Promise<PersonalizedExploreBundle | null> {
   if (!preferences || !hasUserPreferences(preferences)) return null;
-  const key = JSON.stringify(preferences);
+  const excludeKey = [...excludeMovieIds].map(String).sort().join("|");
+  const key = `${JSON.stringify(preferences)}::${excludeKey}`;
   const inflight = personalizedInflight.get(key);
   if (inflight) return inflight;
 
-  const promise = fetchPersonalizedExploreBundleImpl(preferences).finally(() => {
+  const promise = fetchPersonalizedExploreBundleImpl(
+    preferences,
+    excludeMovieIds
+  ).finally(() => {
     personalizedInflight.delete(key);
   });
   personalizedInflight.set(key, promise);
@@ -323,13 +329,18 @@ export async function fetchPersonalizedExploreBundle(
 const personalizedInflight = new Map<string, Promise<PersonalizedExploreBundle | null>>();
 
 async function fetchPersonalizedExploreBundleImpl(
-  preferences: UserPreferences
+  preferences: UserPreferences,
+  excludeMovieIds: string[]
 ): Promise<PersonalizedExploreBundle | null> {
   try {
     const res = await fetch("/api/explore/personalized", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ preferences, bundle: true }),
+      body: JSON.stringify({
+        preferences,
+        bundle: true,
+        excludeMovieIds,
+      }),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as {
@@ -437,21 +448,28 @@ export type ExploreCorePayload = Omit<
 >;
 
 export async function loadExploreCorePayload(
-  preferences: UserPreferences | null
+  preferences: UserPreferences | null,
+  options?: { excludeMovieIds?: string[] }
 ): Promise<ExploreCorePayload> {
+  const excludeMovieIds = options?.excludeMovieIds ?? [];
   const [bundle, feed, personalized] = await Promise.all([
     fetchExploreBundle(),
     fetchDiscoverFeed(),
-    fetchPersonalizedExploreBundle(preferences),
+    fetchPersonalizedExploreBundle(preferences, excludeMovieIds),
   ]);
+
+  const excludeSet = new Set(excludeMovieIds.map(String));
+  const recommendedRows = filterRailByPreferences(
+    personalized?.recommended ?? [],
+    preferences
+  ).filter(
+    (item) => !(item.type === "movie" && excludeSet.has(String(item.id)))
+  );
 
   return {
     discover: buildDiscoverFromPersonalized(bundle, personalized, preferences),
     genres: bundle.genres,
-    recommendedRows: filterRailByPreferences(
-      personalized?.recommended ?? [],
-      preferences
-    ),
+    recommendedRows,
     newContent:
       personalized &&
       (personalized.newContent.length > 0 || hasUserPreferences(preferences))
@@ -473,6 +491,7 @@ export async function loadExplorePagePayload(
     watchLaterEntries?: { catalogId: string; mediaType: "movie" | "tv" }[];
     favoriteEntries?: { catalogId: string; mediaType: "movie" | "tv" }[];
     preferences?: UserPreferences | null;
+    excludeMovieIds?: string[];
   }
 ): Promise<ExplorePagePayload> {
   const watchLaterEntries = options?.watchLaterEntries ?? [];
@@ -480,7 +499,9 @@ export async function loadExplorePagePayload(
   const preferences = options?.preferences ?? null;
 
   const [core, rails] = await Promise.all([
-    loadExploreCorePayload(preferences),
+    loadExploreCorePayload(preferences, {
+      excludeMovieIds: options?.excludeMovieIds,
+    }),
     fetchUserRailRows({
       historyEntries,
       watchLaterEntries,

@@ -34,7 +34,7 @@ export async function GET() {
       .select("catalog_id, media_type, last_season, last_episode, last_watched_at")
       .eq("user_id", user.id)
       .order("last_watched_at", { ascending: false })
-      .limit(24);
+      .limit(100);
 
     if (error) {
       console.error("GET /api/user/watch-history", error);

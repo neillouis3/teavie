@@ -1,8 +1,7 @@
-import { listWatchHistory } from "@/lib/watchHistory";
+import { listWatchHistoryLog } from "@/lib/watchHistory";
 import { listWatchLater } from "@/lib/watchLater";
 import {
   loadWatchProgress,
-  watchProgressStorageKey,
   WATCH_PROGRESS_VERSION,
 } from "@/lib/watchProgress";
 import {
@@ -11,7 +10,7 @@ import {
 } from "@/lib/movieWatchProgress";
 
 export type LocalUserDataPayload = {
-  watchHistory: ReturnType<typeof listWatchHistory>;
+  watchHistory: ReturnType<typeof listWatchHistoryLog>;
   watchLater: ReturnType<typeof listWatchLater>;
   progressRows: {
     catalogId: string;
@@ -71,7 +70,7 @@ export function collectLocalUserData(): LocalUserDataPayload {
   }
 
   return {
-    watchHistory: listWatchHistory(),
+    watchHistory: listWatchHistoryLog(),
     watchLater: listWatchLater(),
     progressRows,
   };
