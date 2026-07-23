@@ -13,7 +13,6 @@ import {
   Location01Icon,
   StarIcon,
   Tv01Icon,
-  UserIcon,
 } from "@hugeicons/core-free-icons";
 
 export type ShowDetailsSource = {
@@ -31,7 +30,6 @@ export type ShowDetailsSource = {
   production_companies?: { name?: string }[];
   networks?: { name?: string }[];
   studios?: { name?: string }[];
-  created_by?: { name?: string }[];
   homepage?: string | null;
   is_anime?: boolean;
   mal_id?: number | null;
@@ -169,14 +167,6 @@ export function buildExtendedShowInfoLines(
     const runtime = show.episode_run_time?.[0];
     if (runtime && runtime > 0) {
       lines.push({ icon: Clock01Icon, label: `~${runtime} min per episode` });
-    }
-
-    const creators = (show.created_by ?? [])
-      .map((person) => String(person?.name ?? "").trim())
-      .filter(Boolean)
-      .slice(0, 2);
-    if (creators.length > 0) {
-      lines.push({ icon: UserIcon, label: creators.join(", ") });
     }
   }
 
