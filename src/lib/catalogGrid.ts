@@ -22,3 +22,10 @@ export const RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE =
 
 export const EXPLORE_RAIL_MAX_ITEMS = 50;
 export const NEW_ON_TEAVIE_MAX_ITEMS = 20;
+
+/** Title → cards gap inside every rail. */
+export const RAIL_INNER_CLASS = "flex w-full flex-col gap-3";
+
+/** Vertical rhythm between stacked rails (Explore / Activity). */
+export const RAIL_STACK_CLASS = "flex w-full flex-col gap-10";
+

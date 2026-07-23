@@ -19,6 +19,7 @@ import {
   EXPLORE_RAIL_MAX_ITEMS,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE,
+  RAIL_INNER_CLASS,
 } from "@/lib/catalogGrid";
 import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
@@ -57,9 +58,7 @@ export default function FavoritesRail({
 
   return (
     <section
-      className={`flex w-full flex-col gap-3 ${
-        profile ? "mt-0 mb-8" : "mt-8 mb-8"
-      } ${className}`}
+      className={`${RAIL_INNER_CLASS} ${className}`}
       aria-label="Favorites"
     >
       <ExploreSectionTitle variant="explore">Favorites</ExploreSectionTitle>

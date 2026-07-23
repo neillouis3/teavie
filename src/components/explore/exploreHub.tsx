@@ -31,7 +31,11 @@ import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 
 export type { TmdbDiscoverPayload };
 
-import { EXPLORE_RAIL_MAX_ITEMS } from "@/lib/catalogGrid";
+import {
+  EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_INNER_CLASS,
+  RAIL_STACK_CLASS,
+} from "@/lib/catalogGrid";
 
 const SECTION_MAX_ITEMS = EXPLORE_RAIL_MAX_ITEMS;
 
@@ -216,7 +220,9 @@ export default function ExploreHub() {
 
       <div
         className={cn(
-          `w-full ${MOBILE_CONTENT_INSET_LEFT}`,
+          RAIL_STACK_CLASS,
+          MOBILE_CONTENT_INSET_LEFT,
+          "pb-8",
           hasTrending ? "mt-0" : "mt-2"
         )}
       >
@@ -236,43 +242,35 @@ export default function ExploreHub() {
           <FavoritesRail items={favoriteRows} maxItems={SECTION_MAX_ITEMS} />
         ) : null}
         <GenreRail genres={genres} preferredGenreSlugs={preferences.genres} />
+        {hasPopular ? (
+          <CatalogRail
+            title="Popular movies"
+            items={discover.popularMovies}
+            maxItems={SECTION_MAX_ITEMS}
+            titleVariant="explore"
+          />
+        ) : null}
+        {hasPopular ? (
+          <CatalogRail
+            title="Popular TV shows"
+            items={discover.popularTv}
+            maxItems={SECTION_MAX_ITEMS}
+            titleVariant="explore"
+          />
+        ) : null}
+        {hasUpcoming ? (
+          <section className={RAIL_INNER_CLASS} aria-label="New and upcoming">
+            <ExploreSectionTitle variant="explore">New & upcoming</ExploreSectionTitle>
+            <UpcomingRail items={upcomingContent} />
+          </section>
+        ) : null}
+        {hasNew ? (
+          <section className={RAIL_INNER_CLASS} aria-label="New on Teavie">
+            <ExploreSectionTitle variant="explore">New on Teavie</ExploreSectionTitle>
+            <NewContentRail items={newContent} />
+          </section>
+        ) : null}
       </div>
-
-      {hasPopular && (
-        <div className={`mt-6 flex w-full flex-col gap-12 ${MOBILE_CONTENT_INSET_LEFT}`}>
-          <div className="flex flex-col gap-10">
-            <CatalogRail
-              title="Popular movies"
-              items={discover.popularMovies}
-              maxItems={SECTION_MAX_ITEMS}
-              titleVariant="explore"
-            />
-            <CatalogRail
-              title="Popular TV shows"
-              items={discover.popularTv}
-              maxItems={SECTION_MAX_ITEMS}
-              titleVariant="explore"
-            />
-          </div>
-        </div>
-      )}
-
-      {(hasUpcoming || hasNew) && (
-        <div className={`mt-6 flex w-full flex-col gap-10 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
-          {hasUpcoming && (
-            <section className="flex w-full flex-col gap-3" aria-label="New and upcoming">
-              <ExploreSectionTitle variant="explore">New & upcoming</ExploreSectionTitle>
-              <UpcomingRail items={upcomingContent} />
-            </section>
-          )}
-          {hasNew && (
-            <section className="flex w-full flex-col gap-3" aria-label="New on Teavie">
-              <ExploreSectionTitle variant="explore">New on Teavie</ExploreSectionTitle>
-              <NewContentRail items={newContent} />
-            </section>
-          )}
-        </div>
-      )}
     </div>
   );
 }

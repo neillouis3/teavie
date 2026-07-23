@@ -11,7 +11,11 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
-import { EXPLORE_RAIL_MAX_ITEMS, RAIL_CAROUSEL_ITEM_VERTICAL } from "@/lib/catalogGrid";
+import {
+  EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_VERTICAL,
+  RAIL_INNER_CLASS,
+} from "@/lib/catalogGrid";
 import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
@@ -91,7 +95,7 @@ export default function CatalogRail({
   if (!loading && slice.length === 0) return null;
 
   return (
-    <div className="flex w-full flex-col gap-3">
+    <div className={RAIL_INNER_CLASS}>
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
         <ExploreSectionTitle variant={titleVariant}>{title}</ExploreSectionTitle>
         {moreHref ? (
