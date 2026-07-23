@@ -20,6 +20,7 @@ import {
   EXPLORE_RAIL_MAX_ITEMS,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE,
+  RAIL_INNER_CLASS,
 } from "@/lib/catalogGrid";
 import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ExploreHistoryRow } from "@/lib/explorePageData";
@@ -66,9 +67,7 @@ export default function WatchHistoryLogRail({
 
   return (
     <section
-      className={`flex w-full flex-col gap-3 ${
-        profile ? "mt-0 mb-8" : "mt-12 mb-8"
-      } ${className}`}
+      className={`${RAIL_INNER_CLASS} ${className}`}
       aria-label="Watch history"
     >
       <ExploreSectionTitle variant="explore">Watch history</ExploreSectionTitle>

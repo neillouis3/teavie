@@ -23,6 +23,7 @@ import {
   type ExploreHistoryRow,
 } from "@/lib/explorePageData";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { RAIL_STACK_CLASS } from "@/lib/catalogGrid";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 import type { ContentItem } from "@/types/content";
@@ -153,38 +154,30 @@ export default function ActivityPage() {
         </div>
       ) : null}
 
-      {historyRows.length > 0 ? (
-        <div className={`mt-6 w-full ${CONTENT_INSET_X}`}>
+      <div className={`${RAIL_STACK_CLASS} ${CONTENT_INSET_X} mt-6 pb-12`}>
+        {historyRows.length > 0 ? (
           <WatchHistoryRail items={historyRows} layout="profile" />
-        </div>
-      ) : null}
+        ) : null}
 
-      {historyLogRows.length > 0 ? (
-        <div className={`mt-4 w-full ${CONTENT_INSET_X}`}>
+        {historyLogRows.length > 0 ? (
           <WatchHistoryLogRail items={historyLogRows} layout="profile" />
-        </div>
-      ) : null}
+        ) : null}
 
-      {favoriteRows.length > 0 ? (
-        <div className={`mt-4 w-full ${CONTENT_INSET_X}`}>
+        {favoriteRows.length > 0 ? (
           <FavoritesRail items={favoriteRows} layout="profile" />
-        </div>
-      ) : hasFavorites ? (
-        <div className={`mt-8 max-w-2xl ${CONTENT_INSET_X}`}>
-          <section className="space-y-2">
+        ) : hasFavorites ? (
+          <section className="max-w-2xl space-y-2">
             <ExploreSectionTitle className="pl-0 text-lg" variant="explore">
               Favorites
             </ExploreSectionTitle>
             <p className="text-sm text-default-500">Loading your favorites…</p>
           </section>
-        </div>
-      ) : null}
+        ) : null}
 
-      {watchLaterRows.length > 0 ? (
-        <div className={`mt-4 w-full pb-12 ${CONTENT_INSET_X}`}>
+        {watchLaterRows.length > 0 ? (
           <WatchLaterRail items={watchLaterRows} layout="profile" />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

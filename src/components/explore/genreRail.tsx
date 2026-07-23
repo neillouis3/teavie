@@ -19,6 +19,7 @@ import {
   type CatalogGenreRow,
 } from "@/components/genre/genreTileShared";
 import { exploreGenreRailRows } from "@/lib/imdbGenres";
+import { RAIL_INNER_CLASS } from "@/lib/catalogGrid";
 
 type GenreRailProps = {
   genres: CatalogGenreRow[];
@@ -39,7 +40,7 @@ export default function GenreRail({ genres, preferredGenreSlugs = [] }: GenreRai
   }
 
   return (
-    <section className="mt-16 flex w-full flex-col gap-3" aria-label="Browse by genre">
+    <section className={RAIL_INNER_CLASS} aria-label="Browse by genre">
       <ExploreSectionTitle variant="explore">Browse by genre</ExploreSectionTitle>
 
       <SidebarBleedRail>
