@@ -1,7 +1,6 @@
 /** Client-only index of recently watched titles (newest first). */
 
 import { formatWatchEpKey, loadWatchProgress, saveWatchProgress, clearWatchProgress } from "@/lib/watchProgress";
-import { loadMoviePlaybackPosition } from "@/lib/movieWatchProgress";
 import { formatHeroRuntime } from "@/lib/formatRelease";
 
 export const WATCH_HISTORY_VERSION = 1 as const;
@@ -187,14 +186,25 @@ export function recordMovieInWatchHistory(catalogId: string): void {
   });
 }
 
-/** Newest-first continue watching; drops stale, unplayed, or progress-less rows. */
+/** Newest-first continue watching; drops TTL-expired rows only. */
 export function listWatchHistory(): WatchHistoryEntry[] {
   const now = Date.now();
-  const index = readIndex();
+  let index = readIndex();
+
+  // Recover if the continue index was wiped (e.g. older evidence-filter prune).
+  if (index.length === 0) {
+    const recovered = listWatchHistoryLog()
+      .filter((e) => now - e.lastWatchedAt < WATCH_HISTORY_TTL_MS)
+      .slice(0, WATCH_HISTORY_MAX);
+    if (recovered.length > 0) {
+      writeIndex(recovered);
+      index = recovered;
+    }
+  }
+
   const kept: WatchHistoryEntry[] = [];
   for (const entry of index) {
     if (now - entry.lastWatchedAt >= WATCH_HISTORY_TTL_MS) continue;
-    if (!hasPlaybackEvidence(entry)) continue;
     const progress = loadWatchProgress(entry.catalogId);
     kept.push({
       ...entry,
@@ -206,18 +216,6 @@ export function listWatchHistory(): WatchHistoryEntry[] {
     writeIndex(kept);
   }
   return kept;
-}
-
-function hasPlaybackEvidence(entry: WatchHistoryEntry): boolean {
-  if (entry.mediaType === "movie") {
-    return loadMoviePlaybackPosition(entry.catalogId) >= WATCH_HISTORY_MIN_PLAY_SECONDS;
-  }
-  const progress = loadWatchProgress(entry.catalogId);
-  if (!progress) return false;
-  const positions = progress.positions ?? {};
-  return Object.values(positions).some(
-    (sec) => Number(sec) >= WATCH_HISTORY_MIN_PLAY_SECONDS
-  );
 }
 
 /** Remove a title from continue watching and clear saved progress. Keeps durable log. */
