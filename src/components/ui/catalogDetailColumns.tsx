@@ -6,6 +6,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import {
   Building02Icon,
+  Calendar03Icon,
+  Clock01Icon,
   LanguageCircleIcon,
   LinkSquare02Icon,
   Location01Icon,
@@ -16,6 +18,7 @@ import {
   imdbGenreSlugFromLabel,
   imdbGenresForDisplayInput,
 } from "@/lib/imdbGenres";
+import { formatFullReleaseDate, formatHeroRuntime } from "@/lib/formatRelease";
 
 export type CatalogGenre = { name: string; slug: string };
 
@@ -104,20 +107,20 @@ export default function CatalogDetailColumns({
 
         <div className="min-w-0">
           <ColumnHeading label="Details" />
-          <ul className="mt-2.5 grid w-full max-w-full grid-cols-1 gap-x-4 gap-y-2.5 text-sm text-foreground sm:grid-cols-2">
+          <ul className="mt-2.5 flex flex-col gap-2.5 text-sm text-foreground">
             {infoItems.length > 0 ? (
               infoItems.map((line, index) => (
-                <li key={`${line.label}-${index}`} className="flex items-start gap-2 leading-snug">
+                <li key={`${line.label}-${index}`} className="flex items-start gap-2.5 leading-snug">
                   <HugeiconsIcon
                     icon={line.icon}
                     size={15}
-                    className="mt-0.5 shrink-0 text-default-500"
+                    className="mt-0.5 shrink-0 text-foreground"
                   />
                   <span>{line.label}</span>
                 </li>
               ))
             ) : (
-              <li className="col-span-2 text-foreground/70">—</li>
+              <li className="text-foreground/70">—</li>
             )}
           </ul>
         </div>
@@ -243,12 +246,28 @@ function countryLabelFromShow(show: {
 }
 
 export function buildMovieInfoLines(movie: {
+  release_date?: string | null;
+  runtime?: number | null;
+  runtimeSeconds?: number | null;
   production_companies?: { name?: string }[];
   production_countries?: { iso_3166_1?: string; name?: string }[];
   origin_country?: string[];
   original_language?: string | null;
 }): CatalogInfoLine[] {
   const lines: CatalogInfoLine[] = [];
+
+  const fullDate = formatFullReleaseDate(movie.release_date);
+  if (fullDate) lines.push({ icon: Calendar03Icon, label: fullDate });
+
+  const runtimeSeconds =
+    movie.runtimeSeconds != null && Number.isFinite(Number(movie.runtimeSeconds))
+      ? Number(movie.runtimeSeconds)
+      : movie.runtime != null && Number.isFinite(Number(movie.runtime))
+        ? Number(movie.runtime) * 60
+        : null;
+  const runtime = formatHeroRuntime(runtimeSeconds);
+  if (runtime) lines.push({ icon: Clock01Icon, label: runtime });
+
   const studio = sortedCompanyNames(movie.production_companies, 1)[0] ?? null;
   const country =
     (() => {
@@ -285,6 +304,10 @@ export function buildShowInfoLines(show: {
   first_air_date?: string | null;
 }): CatalogInfoLine[] {
   const lines: CatalogInfoLine[] = [];
+
+  const premiere = formatFullReleaseDate(show.first_air_date);
+  if (premiere) lines.push({ icon: Calendar03Icon, label: premiere });
+
   const primary = primaryStudioOrNetwork(show);
   const country = countryLabelFromShow(show);
 

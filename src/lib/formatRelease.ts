@@ -40,6 +40,22 @@ export function formatHeroDate(iso: string | null | undefined): string | null {
   });
 }
 
+/** Full release date, e.g. “April 10, 2026”. */
+export function formatFullReleaseDate(iso: string | null | undefined): string | null {
+  if (iso == null || String(iso).trim().length < 10) return null;
+  const ymd = String(iso).trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+  const [y, m, d] = ymd.split("-").map(Number);
+  const rel = new Date(Date.UTC(y, m - 1, d));
+  if (Number.isNaN(rel.getTime())) return null;
+  return rel.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** Coming-soon line, e.g. “July 10” or “July 10, 2027” when not this year. */
 export function formatComingSoonDate(iso: string | null | undefined): string | null {
   if (iso == null || String(iso).trim().length < 10) return null;
