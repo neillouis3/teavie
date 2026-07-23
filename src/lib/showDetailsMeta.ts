@@ -1,11 +1,10 @@
 import type { CatalogDetailLink, CatalogInfoLine } from "@/components/ui/catalogDetailColumns";
 import {
-  buildShowInfoLines,
   countryNamesFromCodes,
   languageDisplayName,
   sortedCompanyNames,
 } from "@/components/ui/catalogDetailColumns";
-import { formatHeroDate } from "@/lib/formatRelease";
+import { formatFullReleaseDate, formatHeroDate } from "@/lib/formatRelease";
 import {
   Building02Icon,
   Calendar03Icon,
@@ -125,7 +124,7 @@ export function buildExtendedShowInfoLines(
   show: ShowDetailsSource,
   isAnime: boolean
 ): CatalogInfoLine[] {
-  const lines: CatalogInfoLine[] = [...buildShowInfoLines(show)];
+  const lines: CatalogInfoLine[] = [];
 
   if (isAnime) {
     const premiere = formatAnilistSeason(
@@ -134,6 +133,9 @@ export function buildExtendedShowInfoLines(
     );
     if (premiere) {
       lines.push({ icon: Calendar03Icon, label: `Premiered ${premiere}` });
+    } else {
+      const firstAir = formatFullReleaseDate(show.first_air_date);
+      if (firstAir) lines.push({ icon: Calendar03Icon, label: `Premiered ${firstAir}` });
     }
 
     const aniStatus = mapAnilistStatusLabel(show.anilist?.status ?? show.status);
@@ -146,13 +148,22 @@ export function buildExtendedShowInfoLines(
       lines.push({ icon: Clock01Icon, label: `~${runtime} min per episode` });
     }
   } else {
+    const premiere = formatFullReleaseDate(show.first_air_date);
+    if (premiere) {
+      lines.push({ icon: Calendar03Icon, label: `Premiered ${premiere}` });
+    }
+
     const lastAir = show.last_air_date;
     if (lastAir && String(lastAir).length >= 10) {
       const ended = /ended|canceled|cancelled/i.test(String(show.status ?? ""));
-      const label = ended
-        ? `Ended ${formatHeroDate(lastAir) ?? lastAir.slice(0, 4)}`
-        : `Latest episode ${formatHeroDate(lastAir) ?? lastAir.slice(0, 10)}`;
-      lines.push({ icon: Calendar03Icon, label });
+      const when =
+        formatFullReleaseDate(lastAir) ??
+        formatHeroDate(lastAir) ??
+        lastAir.slice(0, 10);
+      lines.push({
+        icon: Calendar03Icon,
+        label: ended ? `Ended ${when}` : `Latest episode ${when}`,
+      });
     }
 
     const runtime = show.episode_run_time?.[0];
@@ -167,15 +178,21 @@ export function buildExtendedShowInfoLines(
     if (creators.length > 0) {
       lines.push({ icon: UserIcon, label: creators.join(", ") });
     }
-
-    const networkNames = uniqueStrings((show.networks ?? []).map((n) => n?.name));
-    if (networkNames.length > 0) {
-      lines.push({ icon: Tv01Icon, label: networkNames.slice(0, 3).join(", ") });
-    }
   }
 
-  const companies = sortedCompanyNames(show.production_companies, 2);
-  if (companies.length > 0 && !lines.some((line) => line.label.includes(companies[0]))) {
+  const networkNames = uniqueStrings((show.networks ?? []).map((n) => n?.name));
+  if (networkNames.length > 0) {
+    lines.push({ icon: Tv01Icon, label: networkNames.slice(0, 3).join(", ") });
+  }
+
+  const companies = sortedCompanyNames(
+    [
+      ...(show.production_companies ?? []),
+      ...((show.studios ?? []).map((s) => ({ name: s?.name })) as { name?: string }[]),
+    ],
+    2
+  );
+  if (companies.length > 0) {
     lines.push({ icon: Building02Icon, label: companies.join(", ") });
   }
 
@@ -185,12 +202,12 @@ export function buildExtendedShowInfoLines(
       .filter(Boolean)
       .slice(0, 2)
       .join(", ") || countryNamesFromCodes(show.origin_country);
-  if (country && !lines.some((line) => line.label === country)) {
+  if (country) {
     lines.push({ icon: Location01Icon, label: country });
   }
 
   const language = languageDisplayName(show.original_language);
-  if (language && !lines.some((line) => line.label === language)) {
+  if (language) {
     lines.push({ icon: LanguageCircleIcon, label: language });
   }
 
