@@ -9,7 +9,9 @@ import {
   CATALOG_GRID_HORIZONTAL_SEARCH,
   CATALOG_GRID_VERTICAL_SEARCH,
   EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
+  RAIL_TRACK,
 } from "@/lib/catalogGrid";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import {
@@ -61,9 +63,6 @@ type YmlItem = {
 
 const RELATED_CACHE_PREFIX = "teavie.cache.anime-related.v1:";
 const YML_CACHE_PREFIX = "teavie.cache.anime-yml.v1:";
-
-const CAROUSEL_ITEM_HORIZONTAL =
-  "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 
 async function fetchRelatedAnime(
   idMal: number,
@@ -275,13 +274,13 @@ export default function AnimeShowRails({
               <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
                 <CarouselContent
                   viewportClassName={catalogRailViewportClass(bleed)}
-                  className="-ml-3"
+                  className={RAIL_TRACK}
                 >
                   {bleed ? <SidebarBleedStartSpacer /> : null}
                   {youMightLike.map((item) => (
                     <CarouselItem
                       key={`${item.catalogId}-${item.malId ?? "na"}`}
-                      className={horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL}
+                      className={horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL}
                     >
                       {horizontal ? (
                         <HorizontalCatalogCard

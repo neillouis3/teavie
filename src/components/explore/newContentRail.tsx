@@ -15,6 +15,7 @@ import {
 import {
   NEW_ON_TEAVIE_MAX_ITEMS,
   RAIL_CAROUSEL_ITEM_VERTICAL,
+  RAIL_TRACK,
 } from '@/lib/catalogGrid';
 import { railContentItems } from '@/lib/dedupeContentItems';
 import type { ContentItem } from '@/types/content';
@@ -40,7 +41,7 @@ export default function NewContentRail({
       <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
         <CarouselContent
           viewportClassName={sidebarBleedViewportClass()}
-          className="-ml-3"
+          className={RAIL_TRACK}
         >
           <SidebarBleedStartSpacer />
           {visibleItems.map((item) => {

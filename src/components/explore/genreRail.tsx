@@ -19,15 +19,16 @@ import {
   type CatalogGenreRow,
 } from "@/components/genre/genreTileShared";
 import { exploreGenreRailRows } from "@/lib/imdbGenres";
-import { RAIL_INNER_CLASS } from "@/lib/catalogGrid";
+import {
+  RAIL_CAROUSEL_ITEM_GENRE,
+  RAIL_INNER_CLASS,
+  RAIL_TRACK,
+} from "@/lib/catalogGrid";
 
 type GenreRailProps = {
   genres: CatalogGenreRow[];
   preferredGenreSlugs?: string[];
 };
-
-const CAROUSEL_ITEM =
-  "basis-[48%] pl-3 sm:basis-[34%] md:basis-[22%] lg:basis-[calc(100%/6.5)]";
 
 export default function GenreRail({ genres, preferredGenreSlugs = [] }: GenreRailProps) {
   const railGenres = useMemo(
@@ -47,18 +48,18 @@ export default function GenreRail({ genres, preferredGenreSlugs = [] }: GenreRai
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
             viewportClassName={sidebarBleedViewportClass()}
-            className="-ml-3"
+            className={RAIL_TRACK}
           >
             <SidebarBleedStartSpacer />
             {railGenres.map((genre, i) => (
-              <CarouselItem key={genre.slug} className={CAROUSEL_ITEM}>
+              <CarouselItem key={genre.slug} className={RAIL_CAROUSEL_ITEM_GENRE}>
                 <GenreCatalogTile
                   genre={genre}
                   colorClass={genreTileColor(genre.name, i)}
                 />
               </CarouselItem>
             ))}
-            <CarouselItem className={CAROUSEL_ITEM}>
+            <CarouselItem className={RAIL_CAROUSEL_ITEM_GENRE}>
               <GenreBrowseAllTile />
             </CarouselItem>
           </CarouselContent>

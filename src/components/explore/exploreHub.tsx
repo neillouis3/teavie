@@ -33,6 +33,7 @@ export type { TmdbDiscoverPayload };
 
 import {
   EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_AFTER_SPOTLIGHT,
   RAIL_INNER_CLASS,
   RAIL_STACK_CLASS,
 } from "@/lib/catalogGrid";
@@ -203,7 +204,10 @@ export default function ExploreHub() {
     <div className="flex w-full flex-col bg-background">
       {hasTrending && (
         <section
-          className="relative z-0 -mt-14 mb-4 w-full overflow-hidden rounded-tl-2xl"
+          className={cn(
+            "relative z-0 -mt-14 w-full overflow-hidden rounded-tl-2xl",
+            RAIL_AFTER_SPOTLIGHT
+          )}
           aria-label="Spotlight"
         >
           <TrendingHero

@@ -31,6 +31,12 @@ import {
 } from "@/lib/catalogCategories";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
 import {
+  RAIL_CAROUSEL_ITEM_GENRE,
+  RAIL_INNER_CLASS,
+  RAIL_STACK_CLASS,
+  RAIL_TRACK,
+} from "@/lib/catalogGrid";
+import {
   fetchCategoryDiscover,
   type CategoryDiscoverPayload,
 } from "@/lib/pageDataCache";
@@ -199,19 +205,19 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
         )}
 
         {categoryGenres.length > 0 && (
-          <section className="flex w-full flex-col gap-3" aria-label="Browse by genre">
+          <section className={RAIL_INNER_CLASS} aria-label="Browse by genre">
             <ExploreSectionTitle>Browse by genre</ExploreSectionTitle>
             <SidebarBleedRail>
             <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
               <CarouselContent
                 viewportClassName={sidebarBleedViewportClass()}
-                className="-ml-3"
+                className={RAIL_TRACK}
               >
                 <SidebarBleedStartSpacer />
                 {categoryGenres.map((genre, i) => (
                   <CarouselItem
                     key={genre.slug}
-                    className="basis-[48%] pl-3 sm:basis-[34%] md:basis-[22%] lg:basis-[calc(100%/6.5)]"
+                    className={RAIL_CAROUSEL_ITEM_GENRE}
                   >
                     <GenreCatalogTile
                       genre={genre}
@@ -227,7 +233,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
         )}
 
         {hasContent ? (
-          <div className="flex flex-col gap-10">
+          <div className={RAIL_STACK_CLASS}>
             <CatalogRail title="Popular" items={data.popular} />
             <CatalogRail title="Top rated" items={data.topRated} />
             <CatalogRail title="New" items={data.new} />
