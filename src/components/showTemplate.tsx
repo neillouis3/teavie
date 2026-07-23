@@ -1680,8 +1680,10 @@ export default function ShowTemplate({
 
   const watchMainContent = (
     <>
-      {playerBlock}
-      {!isAnimeMovie ? <ShowEpisodePickerControls /> : null}
+      <div className="flex w-full flex-col gap-2">
+        {playerBlock}
+        {!isAnimeMovie ? <ShowEpisodePickerControls /> : null}
+      </div>
       <ShowWatchPlayerHeading title={title} />
       {!isAnimeMovie ? <ShowEpisodePickerList /> : null}
     </>
