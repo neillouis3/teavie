@@ -493,7 +493,6 @@ export default function MovieTemplate({
         posterUrl={imageUrl}
         posterAlt={movie.title}
         title={movie.title}
-        logoPath={titleLogoPath}
         rating={movie.vote_average}
         certification={usCertificationFromDoc(movie)}
         overview={movie.overview}
