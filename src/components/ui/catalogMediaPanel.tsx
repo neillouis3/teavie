@@ -148,7 +148,7 @@ export default function CatalogMediaPanel({
   const ratingLabel =
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
   const statusDisplay = compact ? null : formatStatusDisplay(status);
-  const logoUrl = tmdbImageUrl(logoPath);
+  const logoUrl = compact ? null : tmdbImageUrl(logoPath);
   const subtitle = subtitleLine.trim();
 
   const titleAndStats = (
