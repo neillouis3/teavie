@@ -40,7 +40,7 @@ export default function ExploreSectionTitle({
         <span className="inline-flex shrink-0 items-center justify-center" aria-hidden>
           <HugeiconsIcon
             icon={resolvedIcon}
-            size={isExplore ? 22 : 18}
+            size={isExplore ? 18 : 16}
             className={cn(isExplore ? "text-foreground" : "text-default-400")}
           />
         </span>
