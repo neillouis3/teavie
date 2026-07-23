@@ -19,14 +19,13 @@ import {
 import { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
 import {
   EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
+  RAIL_TRACK,
 } from '@/lib/catalogGrid';
 
 const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
 const YOU_MIGHT_LIKE_MAX_VERTICAL = EXPLORE_RAIL_MAX_ITEMS;
-
-const CAROUSEL_ITEM_HORIZONTAL =
-  'basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4';
 
 type RecItem = {
   keyId: number;
@@ -62,7 +61,7 @@ export default function YouMightLike({
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === 'horizontal';
   const maxItems = horizontal ? YOU_MIGHT_LIKE_MAX_HORIZONTAL : YOU_MIGHT_LIKE_MAX_VERTICAL;
-  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const itemClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -215,7 +214,7 @@ export default function YouMightLike({
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
             viewportClassName={catalogRailViewportClass(bleed)}
-            className="-ml-3"
+            className={RAIL_TRACK}
           >
             {bleed ? <SidebarBleedStartSpacer /> : null}
             {items.map((item) => (

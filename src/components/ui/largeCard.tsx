@@ -160,7 +160,7 @@ function HeroCardOverlay({
         "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent",
         compact
           ? "px-4 pb-4 pt-16 sm:px-5 sm:pb-5 sm:pt-20"
-          : "px-5 pb-8 pt-24 sm:px-8 sm:pb-10 sm:pt-32"
+          : "px-5 pb-8 pt-24 sm:px-8 sm:pt-32"
       )}
     >
       <div className="flex max-w-3xl flex-col gap-3">

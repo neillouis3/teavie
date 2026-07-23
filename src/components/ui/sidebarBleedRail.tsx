@@ -40,7 +40,7 @@ export const SIDEBAR_BLEED_SHELL =
 export const SPOTLIGHT_SLIDE_CLASS =
   "h-full !basis-full !pl-0";
 
-/** Explore spotlight: embla track (no default pl-4 gutter). */
+/** Explore spotlight: embla track (no default pl-3 gutter). */
 export const SPOTLIGHT_TRACK_CLASS = "!ml-0 h-full";
 
 /** Explore spotlight shell: content column + sidebar = full viewport width. */

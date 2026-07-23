@@ -8,6 +8,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
+import { RAIL_ITEM_PAD, RAIL_TRACK } from "@/lib/catalogGrid";
 import type { ContentItem } from "@/types/content";
 
 type UpcomingRailProps = {
@@ -40,7 +41,7 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
         className="w-full"
         setApi={setApi}
       >
-        <CarouselContent className="-ml-4">
+        <CarouselContent className={RAIL_TRACK}>
           {items.map((item) => {
             const title = item.title ?? item.name ?? "Untitled";
             const releaseDate = item.release_date ?? item.first_air_date ?? "";
@@ -56,7 +57,7 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
             return (
               <CarouselItem
                 key={`${type}-${item.id}`}
-                className="basis-[88%] pl-3 sm:basis-2/3 sm:pl-4"
+                className={`basis-[88%] sm:basis-2/3 ${RAIL_ITEM_PAD}`}
               >
                 <LargeCard
                   richOverlay

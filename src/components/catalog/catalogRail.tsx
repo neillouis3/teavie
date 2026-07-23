@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/carousel";
 import {
   EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_INNER_CLASS,
+  RAIL_TRACK,
 } from "@/lib/catalogGrid";
 import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
@@ -41,9 +43,6 @@ type CatalogRailProps = {
   titleVariant?: "default" | "explore";
 };
 
-const CAROUSEL_ITEM_HORIZONTAL =
-  "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
-
 function releaseNoteForItem(item: ContentItem): string | undefined {
   const rawDate = item.release_date ?? item.first_air_date ?? "";
   if (!rawDate || String(rawDate).length < 10) return undefined;
@@ -59,12 +58,12 @@ export function CatalogRailSkeleton({
   count?: number;
   bleed?: boolean;
 }) {
-  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const itemClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
   return (
     <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
       <CarouselContent
         viewportClassName={catalogRailViewportClass(bleed)}
-        className="-ml-3"
+        className={RAIL_TRACK}
       >
         {bleed ? <SidebarBleedStartSpacer /> : null}
         {Array.from({ length: count }).map((_, i) => (
@@ -89,7 +88,7 @@ export default function CatalogRail({
 }: CatalogRailProps) {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === "horizontal";
-  const itemClass = horizontal ? CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const itemClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
 
   const slice = railContentItems(items ?? [], maxItems);
   if (!loading && slice.length === 0) return null;
@@ -116,7 +115,7 @@ export default function CatalogRail({
           <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
             <CarouselContent
               viewportClassName={catalogRailViewportClass()}
-              className="-ml-3"
+              className={RAIL_TRACK}
             >
               <SidebarBleedStartSpacer />
               {slice.map((item) => {

@@ -142,7 +142,7 @@ export default function SmallCard({
   );
 
   const meta = (
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1.5">
       {subtitle ? (
         <p
           className="line-clamp-1 text-[11px] leading-snug text-default-500"

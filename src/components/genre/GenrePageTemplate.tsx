@@ -15,6 +15,7 @@ import {
   type GenrePagePayload,
 } from '@/lib/pageDataCache';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
+import { RAIL_STACK_CLASS } from '@/lib/catalogGrid';
 import { useUserData } from '@/contexts/userDataContext';
 import { PREFERENCES_CHANGED_EVENT } from '@/lib/userPreferences';
 
@@ -184,7 +185,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           </section>
         )}
 
-        <div className="mt-6 flex flex-col gap-10">
+        <div className={`mt-6 ${RAIL_STACK_CLASS}`}>
           {RAIL_SECTIONS.map(({ sort, title }) => (
             <CatalogRail
               key={sort}

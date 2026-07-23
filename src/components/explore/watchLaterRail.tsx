@@ -17,15 +17,14 @@ import {
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import {
   EXPLORE_RAIL_MAX_ITEMS,
+  RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE,
   RAIL_INNER_CLASS,
+  RAIL_TRACK,
 } from "@/lib/catalogGrid";
 import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
-
-const CAROUSEL_ITEM_HORIZONTAL =
-  "basis-[88%] pl-3 sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4";
 
 type WatchLaterRailProps = {
   items: ContentItem[];
@@ -44,7 +43,7 @@ export default function WatchLaterRail({
   const horizontal = mode === "horizontal";
   const profile = layout === "profile";
   const itemClass = horizontal
-    ? CAROUSEL_ITEM_HORIZONTAL
+    ? RAIL_CAROUSEL_ITEM_HORIZONTAL
     : profile
       ? RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE
       : RAIL_CAROUSEL_ITEM_VERTICAL;
@@ -67,7 +66,7 @@ export default function WatchLaterRail({
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
             viewportClassName={sidebarBleedViewportClass()}
-            className="-ml-3"
+            className={RAIL_TRACK}
           >
             <SidebarBleedStartSpacer />
             {visibleItems.map((item) => {
