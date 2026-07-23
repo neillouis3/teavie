@@ -75,9 +75,6 @@ import {
   animeReleaseDateYmdFromDoc,
   catalogTvPremiered,
 } from "@/lib/animeRelease.js";
-import MovieCreditsStrip, {
-  type MovieCreditsPayload,
-} from "@/components/movie/MovieCreditsStrip";
 import MovieTrailerEmbed from "@/components/movie/MovieTrailerEmbed";
 import ShowDetailsHero, {
   SHOW_DETAILS_HERO_OVERLAP,
@@ -164,7 +161,7 @@ interface Show {
       thumbnail?: string | null;
     } | null;
   } | null;
-  aggregate_credits?: MovieCreditsPayload;
+  aggregate_credits?: unknown;
   videos?: TmdbVideosPayload;
 }
 
@@ -1495,14 +1492,6 @@ export default function ShowTemplate({
                   </Button>
                 ) : null}
               </div>
-            }
-            creditsSection={
-              viewMode === "details" && !isAnimeMovie ? (
-                <MovieCreditsStrip
-                  variant="show"
-                  credits={show.aggregate_credits}
-                />
-              ) : null
             }
           />
       )}
