@@ -107,7 +107,7 @@ export default function CatalogDetailColumns({
 
         <div className="min-w-0">
           <ColumnHeading label="Details" />
-          <ul className="mt-2.5 flex flex-col gap-2.5 text-sm text-foreground">
+          <ul className="mt-2.5 grid grid-cols-1 gap-x-6 gap-y-2.5 text-sm text-foreground sm:grid-cols-2">
             {infoItems.length > 0 ? (
               infoItems.map((line, index) => (
                 <li key={`${line.label}-${index}`} className="flex items-start gap-2.5 leading-snug">
@@ -120,7 +120,7 @@ export default function CatalogDetailColumns({
                 </li>
               ))
             ) : (
-              <li className="text-foreground/70">—</li>
+              <li className="text-foreground/70 sm:col-span-2">—</li>
             )}
           </ul>
         </div>
