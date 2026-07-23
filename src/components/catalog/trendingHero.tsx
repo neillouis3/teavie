@@ -14,10 +14,10 @@ import { cn } from "@/lib/utils";
 import type { ContentItem } from "@/types/content";
 
 const TRENDING_CAROUSEL_H =
-  "h-[min(52vh,400px)] sm:h-[min(62vh,480px)] lg:h-[calc(80vh-2rem)]";
+  "h-[min(52vh,400px)] sm:h-[min(62vh,480px)] lg:h-[85vh]";
 
 const SPOTLIGHT_UNDER_NAV_H =
-  "h-[calc(min(52vh,400px)+3.5rem)] sm:h-[calc(min(62vh,480px)+3.5rem)] lg:h-[calc(80vh-2rem+3.5rem)]";
+  "h-[calc(min(52vh,400px)+3.5rem)] sm:h-[calc(min(62vh,480px)+3.5rem)] lg:h-[calc(85vh+3.5rem)]";
 
 const TRENDING_ARROW_CLASS =
   "top-1/2 z-20 h-10 w-10 -translate-y-1/2 border-none bg-black/45 text-white backdrop-blur-sm hover:bg-black/60 disabled:opacity-40";
