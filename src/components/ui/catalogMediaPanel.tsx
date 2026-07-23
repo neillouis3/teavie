@@ -9,12 +9,13 @@ import CatalogDetailColumns, {
   type CatalogGenre,
   type CatalogInfoLine,
 } from "./catalogDetailColumns";
+import { tmdbImageUrl } from "@/lib/tmdbImage";
 
 export type CatalogMediaPanelProps = {
   posterUrl: string;
   posterAlt: string;
   title: string;
-  subtitleLine: string;
+  subtitleLine?: string;
   rating: number | null;
   certification?: string | null;
   status?: string | null;
@@ -40,6 +41,8 @@ export type CatalogMediaPanelProps = {
    * no synopsis / genre / details / links.
    */
   compact?: boolean;
+  /** TMDB title logo path — shown instead of the text title when set. */
+  logoPath?: string | null;
 };
 
 const DETAIL_META_CARD =
@@ -122,7 +125,7 @@ export default function CatalogMediaPanel({
   posterUrl,
   posterAlt,
   title,
-  subtitleLine,
+  subtitleLine = "",
   rating,
   certification,
   status,
@@ -140,17 +143,32 @@ export default function CatalogMediaPanel({
   alternateTitles,
   networkTags,
   compact = false,
+  logoPath = null,
 }: CatalogMediaPanelProps) {
   const ratingLabel =
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
   const statusDisplay = compact ? null : formatStatusDisplay(status);
+  const logoUrl = tmdbImageUrl(logoPath);
+  const subtitle = subtitleLine.trim();
 
   const titleAndStats = (
     <>
-      <h1 className="text-2xl !font-normal tracking-tight text-foreground sm:text-3xl">
-        {title}
-      </h1>
-      <p className="mt-1.5 text-sm text-default-500">{subtitleLine}</p>
+      {logoUrl ? (
+        <div className="w-full max-w-[16rem] sm:max-w-[18rem] md:max-w-[20rem]">
+          <img
+            src={logoUrl}
+            alt={title}
+            className="h-auto w-full object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
+          />
+        </div>
+      ) : (
+        <h1 className="text-2xl !font-normal tracking-tight text-foreground sm:text-3xl">
+          {title}
+        </h1>
+      )}
+      {subtitle ? (
+        <p className="mt-1.5 text-sm text-default-500">{subtitle}</p>
+      ) : null}
       {(ratingLabel || certification || statusDisplay) && (
         <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           {ratingLabel ? (
@@ -206,9 +224,6 @@ export default function CatalogMediaPanel({
 
   const overviewBlock = (
     <div className="w-full max-w-[75%]">
-      <h2 className="mb-2 text-xs font-medium tracking-wide text-default-500">
-        Synopsis
-      </h2>
       <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
         {overview?.trim() ? overview : "No overview available."}
       </p>

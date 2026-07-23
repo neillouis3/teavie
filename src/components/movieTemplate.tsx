@@ -20,9 +20,7 @@ import {
   catalogGenresForDisplay,
   type CatalogDetailLink,
 } from './ui/catalogDetailColumns';
-import CatalogMediaPanel, {
-  movieSubtitleLine,
-} from './ui/catalogMediaPanel';
+import CatalogMediaPanel from './ui/catalogMediaPanel';
 import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
 import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 import { PLAYER_SHELL_CLASS } from '@/components/ui/playerEmbedSkeleton';
@@ -45,6 +43,7 @@ import ShowDetailsHero, {
 } from '@/components/show/ShowDetailsHero';
 import { pickYoutubeTrailerEmbedUrl, type TmdbVideosPayload } from '@/lib/tmdbVideos';
 import { MOVIE_CONTENT_INSET_X } from '@/lib/contentInset';
+import { useTmdbTitleLogo } from '@/hooks/useTmdbTitleLogo';
 
 interface Movie {
   id: number;
@@ -138,6 +137,7 @@ export default function MovieTemplate({
   const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
   const [playerEpoch, setPlayerEpoch] = useState(0);
   const partyPlaybackBroadcastRef = useRef(0);
+  const titleLogoPath = useTmdbTitleLogo("movie", id);
 
   const applyGuestSync = useCallback((plan: GuestSyncPayload) => {
     setPlayerStartSeconds(plan.targetSeconds);
@@ -454,7 +454,7 @@ export default function MovieTemplate({
         posterUrl={imageUrl}
         posterAlt={movie.title}
         title={movie.title}
-        subtitleLine={movieSubtitleLine(movie)}
+        logoPath={titleLogoPath}
         rating={movie.vote_average}
         certification={usCertificationFromDoc(movie)}
         status={movie.status}
@@ -498,7 +498,7 @@ export default function MovieTemplate({
         posterUrl={imageUrl}
         posterAlt={movie.title}
         title={movie.title}
-        subtitleLine={movieSubtitleLine(movie)}
+        logoPath={titleLogoPath}
         rating={movie.vote_average}
         certification={usCertificationFromDoc(movie)}
         overview={movie.overview}

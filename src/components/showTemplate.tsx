@@ -46,9 +46,7 @@ import {
   buildShowDetailLinks,
   buildShowDetailStatPills,
 } from "@/lib/showDetailsMeta";
-import CatalogMediaPanel, {
-  showSubtitleLine,
-} from "@/components/ui/catalogMediaPanel";
+import CatalogMediaPanel from "@/components/ui/catalogMediaPanel";
 import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
 import CatalogDetailsSkeleton from "@/components/ui/catalogDetailsSkeleton";
 import { PlayerEmbedSkeleton, PLAYER_SHELL_CLASS } from "@/components/ui/playerEmbedSkeleton";
@@ -72,6 +70,7 @@ import {
   splitCourGroupForMal,
   normalizeSplitCourMalEpisode,
 } from "@/lib/animeSplitCour.js";
+import { useTmdbTitleLogo } from "@/hooks/useTmdbTitleLogo";
 import {
   animeReleaseDateYmdFromDoc,
   catalogTvPremiered,
@@ -696,6 +695,13 @@ export default function ShowTemplate({
   const progressAppliedForIdRef = useRef<string | null>(null);
   const partyPlaybackBroadcastRef = useRef(0);
   const lastPartyEpRef = useRef<string | null>(null);
+  const titleLogoId =
+    animeMovieTmdbId ??
+    (/^\d+$/.test(String(resolvedPlayerId)) ? String(resolvedPlayerId) : null);
+  const titleLogoPath = useTmdbTitleLogo(
+    animeMovieTmdbId ? "movie" : "tv",
+    titleLogoId
+  );
 
   useEffect(() => {
     progressAppliedForIdRef.current = null;
@@ -1455,7 +1461,7 @@ export default function ShowTemplate({
             posterUrl={imageUrl}
             posterAlt={title}
             title={title}
-            subtitleLine={showSubtitleLine(show)}
+            logoPath={titleLogoPath}
             rating={Number.isFinite(Number(show.vote_average)) ? Number(show.vote_average) : null}
             certification={usCertificationFromDoc(show)}
             status={show.status}
