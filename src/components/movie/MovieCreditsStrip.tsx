@@ -35,6 +35,68 @@ const STAFF_JOB_PRIORITY: Record<string, number> = {
 
 const STAFF_JOBS = new Set(Object.keys(STAFF_JOB_PRIORITY));
 
+/** Normalize movie `credits` or TV `aggregate_credits` into a shared shape. */
+export function normalizeCreditsPayload(raw: unknown): MovieCreditsPayload | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as { cast?: unknown; crew?: unknown };
+  const cast = Array.isArray(data.cast)
+    ? data.cast
+        .map((row) => normalizeCreditPerson(row))
+        .filter((row): row is MovieCreditPerson => row != null)
+    : [];
+  const crew = Array.isArray(data.crew)
+    ? data.crew
+        .map((row) => normalizeCreditPerson(row))
+        .filter((row): row is MovieCreditPerson => row != null)
+    : [];
+  if (cast.length === 0 && crew.length === 0) return null;
+  return { cast, crew };
+}
+
+function normalizeCreditPerson(raw: unknown): MovieCreditPerson | null {
+  if (!raw || typeof raw !== "object") return null;
+  const person = raw as {
+    id?: number;
+    name?: string;
+    profile_path?: string | null;
+    character?: string | null;
+    job?: string | null;
+    roles?: { character?: string | null }[];
+    jobs?: { job?: string | null }[];
+  };
+  const id = Number(person.id);
+  const name = String(person.name ?? "").trim();
+  if (!name || !Number.isFinite(id)) return null;
+
+  const character =
+    String(person.character ?? "").trim() ||
+    String(person.roles?.[0]?.character ?? "").trim() ||
+    null;
+
+  const jobCandidates = [
+    String(person.job ?? "").trim(),
+    ...(Array.isArray(person.jobs)
+      ? person.jobs.map((j) => String(j?.job ?? "").trim())
+      : []),
+  ].filter(Boolean);
+  let job = jobCandidates[0] ?? null;
+  for (const candidate of jobCandidates) {
+    if (STAFF_JOBS.has(candidate)) {
+      const rank = STAFF_JOB_PRIORITY[candidate] ?? 99;
+      const currentRank = job ? STAFF_JOB_PRIORITY[job] ?? 99 : 99;
+      if (!job || rank < currentRank) job = candidate;
+    }
+  }
+
+  return {
+    id,
+    name,
+    profile_path: person.profile_path ?? null,
+    character,
+    job,
+  };
+}
+
 function uniquePeople(
   rows: MovieCreditPerson[],
   limit: number
@@ -179,7 +241,7 @@ function CreditRow({ title, people, subtitleFor, previewCount }: CreditRowProps)
 }
 
 type MovieCreditsStripProps = {
-  credits?: MovieCreditsPayload | null;
+  credits?: MovieCreditsPayload | unknown | null;
   /** TV shows group directors/writers under Staff; movies keep a Directors row. */
   variant?: "movie" | "show";
 };
@@ -188,17 +250,21 @@ export default function MovieCreditsStrip({
   credits,
   variant = "movie",
 }: MovieCreditsStripProps) {
+  const normalized = useMemo(
+    () => normalizeCreditsPayload(credits),
+    [credits]
+  );
   const cast = useMemo(
-    () => castFromCredits(credits?.cast),
-    [credits?.cast]
+    () => castFromCredits(normalized?.cast),
+    [normalized?.cast]
   );
   const directors = useMemo(
-    () => directorsFromCrew(credits?.crew),
-    [credits?.crew]
+    () => directorsFromCrew(normalized?.crew),
+    [normalized?.crew]
   );
   const staff = useMemo(
-    () => staffFromCrew(credits?.crew),
-    [credits?.crew]
+    () => staffFromCrew(normalized?.crew),
+    [normalized?.crew]
   );
 
   if (cast.length === 0 && directors.length === 0 && staff.length === 0) return null;

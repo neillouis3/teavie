@@ -79,6 +79,7 @@ import {
   catalogTvPremiered,
 } from "@/lib/animeRelease.js";
 import MovieTrailerEmbed from "@/components/movie/MovieTrailerEmbed";
+import MovieCreditsStrip from "@/components/movie/MovieCreditsStrip";
 import ShowDetailsHero, {
   SHOW_DETAILS_HERO_OVERLAP,
 } from "@/components/show/ShowDetailsHero";
@@ -1495,6 +1496,14 @@ export default function ShowTemplate({
                   </Button>
                 ) : null}
               </div>
+            }
+            creditsSection={
+              viewMode === "details" && !isAnimeMovie ? (
+                <MovieCreditsStrip
+                  variant="show"
+                  credits={show.aggregate_credits}
+                />
+              ) : null
             }
           />
       )}
