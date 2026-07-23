@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Avatar, Button, Chip, Input } from "@heroui/react";
+import { Avatar, Button, Input } from "@heroui/react";
 import Header from "@/components/ui/header";
 import { PageCard, PageCardRow } from "@/components/ui/pageCard";
 import { avatarInitials } from "@/lib/partyNickname";
@@ -20,7 +20,15 @@ import { CONTENT_INSET_X } from "@/lib/contentInset";
 import { useAuth, ONBOARDING_REQUEST_EVENT } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 import { hasUserPreferences } from "@/types/user";
-import { ONBOARDING_GENRES, ONBOARDING_LANGUAGES, ONBOARDING_CATEGORIES } from "@/lib/onboardingOptions";
+import {
+  ONBOARDING_GENRES,
+  ONBOARDING_LANGUAGES,
+  ONBOARDING_CATEGORIES,
+} from "@/lib/onboardingOptions";
+
+function openPreferenceEditor() {
+  window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT));
+}
 
 export default function ProfilePage() {
   const { user, profile, loading: authLoading, updateDisplayName, updateAvatarUrl, signOut } =
@@ -234,44 +242,62 @@ export default function ProfilePage() {
         </PageCard>
 
         {user ? (
-          <PageCard
-            title="Your preferences"
-            footer="Saved to your account and synced across devices."
-            action={
+          <section className="rounded-xl border border-default-200/80 bg-content1/50 p-5 dark:border-white/10">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">
+                  Your preferences
+                </h2>
+                <p className="mt-1 text-sm text-default-500">
+                  Used for Recommended for you and Explore rails.
+                </p>
+              </div>
               <Button
                 size="sm"
+                color="success"
                 variant="flat"
-                onPress={() => window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT))}
+                onPress={openPreferenceEditor}
               >
                 Edit
               </Button>
-            }
-          >
+            </div>
+
             {preferenceGroups ? (
-              preferenceGroups.map((group) => (
-                <PageCardRow key={group.label} label={group.label}>
-                  <div className="flex flex-wrap gap-2">
-                    {group.items.map((item) => (
-                      <Chip key={item} size="sm" variant="flat">
-                        {item}
-                      </Chip>
-                    ))}
+              <div className="mt-5 space-y-5">
+                {preferenceGroups.map((group) => (
+                  <div key={group.label} className="space-y-2">
+                    <p className="text-xs font-medium tracking-wide text-default-500">
+                      {group.label}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {group.items.map((item) => (
+                        <span
+                          key={item}
+                          className="inline-flex items-center rounded-md border border-default-200/70 bg-default-100/60 px-2.5 py-1 text-sm text-foreground dark:border-default-100/25 dark:bg-default-100/10"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </PageCardRow>
-              ))
+                ))}
+              </div>
             ) : (
-              <PageCardRow label="Taste profile">
-                <Button
-                  size="sm"
-                  variant="flat"
-                  color="success"
-                  onPress={() => window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT))}
-                >
+              <div className="mt-5 space-y-3">
+                <p className="text-sm text-default-500">
+                  No preferences yet. Set categories, genres, and languages to
+                  personalize Explore.
+                </p>
+                <Button size="sm" color="success" onPress={openPreferenceEditor}>
                   Set preferences
                 </Button>
-              </PageCardRow>
+              </div>
             )}
-          </PageCard>
+
+            <p className="mt-5 text-xs leading-relaxed text-default-500">
+              Saved to your account and synced across devices.
+            </p>
+          </section>
         ) : null}
       </div>
     </div>
