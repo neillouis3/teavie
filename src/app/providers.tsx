@@ -18,6 +18,8 @@ import { Suspense } from "react";
 import { AuthProvider } from "@/contexts/authContext";
 import { UserDataProvider } from "@/contexts/userDataContext";
 import { pathUsesAuthShell } from "@/lib/authShellPaths";
+import OnboardingModal from "@/components/onboarding/OnboardingModal";
+import MaintenanceAnnouncementModal from "@/components/ui/maintenanceAnnouncementModal";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -57,6 +59,8 @@ export function Providers({ children }: ProvidersProps) {
               <WatchPartyNavProvider>
               <TeaPartyModal />
               <TeaPartyHostSyncListener />
+              <MaintenanceAnnouncementModal />
+              <OnboardingModal />
               <MobileTopNavGate />
               <AppShell>{children}</AppShell>
               </WatchPartyNavProvider>
