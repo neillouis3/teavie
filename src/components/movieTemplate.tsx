@@ -34,6 +34,7 @@ import { isBlockedMovieTmdbId } from '@/lib/tmdbMovieContentPolicy';
 import CatalogUnavailable from './ui/catalogUnavailable';
 import WatchLaterButton from '@/components/watchLater/WatchLaterButton';
 import FavoriteButton from '@/components/favorites/FavoriteButton';
+import MovieCreditsStrip from '@/components/movie/MovieCreditsStrip';
 import MovieTrailerEmbed from '@/components/movie/MovieTrailerEmbed';
 import ShowDetailsHero, {
   SHOW_DETAILS_HERO_OVERLAP,
@@ -480,6 +481,7 @@ export default function MovieTemplate({
             ) : null}
           </div>
         }
+        creditsSection={<MovieCreditsStrip credits={movie.credits} />}
       />
     </div>
   );

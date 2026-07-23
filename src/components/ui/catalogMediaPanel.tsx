@@ -313,10 +313,7 @@ export default function CatalogMediaPanel({
       </section>
 
       {creditsSection ? (
-        <section className="w-full space-y-3" aria-label="Cast and crew">
-          <h2 className="text-xs font-medium tracking-wide text-default-500">
-            Cast & crew
-          </h2>
+        <section className="w-full" aria-label="Cast and crew">
           {creditsSection}
         </section>
       ) : null}
