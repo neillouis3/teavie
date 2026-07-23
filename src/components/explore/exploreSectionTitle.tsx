@@ -34,7 +34,7 @@ export default function ExploreSectionTitle({
 
   return (
     <h2
-      className={`flex items-center gap-2.5 pl-2 text-xl font-normal leading-none tracking-tight text-foreground normal-case ${className}`.trim()}
+      className={`flex items-center gap-2.5 text-xl font-normal leading-none tracking-tight text-foreground normal-case ${className}`.trim()}
     >
       {resolvedIcon ? (
         <span className="inline-flex shrink-0 items-center justify-center" aria-hidden>

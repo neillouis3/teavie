@@ -141,10 +141,10 @@ export function heroContentColumnObjectStyle(
 
 /** Overlay / controls aligned to the main content column. */
 export const SPOTLIGHT_CONTENT_INSET =
-  `pl-4 lg:pl-[calc(var(--sidebar-w,16rem)+1rem)] ${SIDEBAR_SYNC_TRANSITION}`;
+  `pl-2 lg:pl-[calc(var(--sidebar-w,16rem)+0.5rem)] ${SIDEBAR_SYNC_TRANSITION}`;
 
 export const SPOTLIGHT_ARROW_PREV =
-  `left-4 lg:left-[calc(var(--sidebar-w,16rem)+1rem)] ${SIDEBAR_SYNC_TRANSITION}`;
+  `left-2 lg:left-[calc(var(--sidebar-w,16rem)+0.5rem)] ${SIDEBAR_SYNC_TRANSITION}`;
 
 export const SPOTLIGHT_ARROW_NEXT =
   "right-4";
