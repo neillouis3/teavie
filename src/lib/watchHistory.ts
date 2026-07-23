@@ -1,6 +1,7 @@
 /** Client-only index of recently watched titles (newest first). */
 
 import { formatWatchEpKey, loadWatchProgress, saveWatchProgress, clearWatchProgress } from "@/lib/watchProgress";
+import { loadMoviePlaybackPosition } from "@/lib/movieWatchProgress";
 import { formatHeroRuntime } from "@/lib/formatRelease";
 
 export const WATCH_HISTORY_VERSION = 1 as const;
@@ -10,6 +11,8 @@ export const WATCH_HISTORY_MAX = 24;
 export const WATCH_HISTORY_LOG_MAX = 100;
 /** Remove continue-watching rows not opened in this window. */
 export const WATCH_HISTORY_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+/** Minimum playback seconds before a title can enter Continue watching. */
+export const WATCH_HISTORY_MIN_PLAY_SECONDS = 5;
 
 export type WatchHistoryMediaType = "movie" | "tv";
 
@@ -184,25 +187,37 @@ export function recordMovieInWatchHistory(catalogId: string): void {
   });
 }
 
-/** Newest-first continue watching; drops stale, expired, or progress-less rows. */
+/** Newest-first continue watching; drops stale, unplayed, or progress-less rows. */
 export function listWatchHistory(): WatchHistoryEntry[] {
   const now = Date.now();
   const index = readIndex();
   const kept: WatchHistoryEntry[] = [];
   for (const entry of index) {
     if (now - entry.lastWatchedAt >= WATCH_HISTORY_TTL_MS) continue;
+    if (!hasPlaybackEvidence(entry)) continue;
     const progress = loadWatchProgress(entry.catalogId);
-    if (!progress) continue;
     kept.push({
       ...entry,
-      lastSeason: progress.lastSeason,
-      lastEpisode: progress.lastEpisode,
+      lastSeason: progress?.lastSeason ?? entry.lastSeason,
+      lastEpisode: progress?.lastEpisode ?? entry.lastEpisode,
     });
   }
   if (kept.length !== index.length) {
     writeIndex(kept);
   }
   return kept;
+}
+
+function hasPlaybackEvidence(entry: WatchHistoryEntry): boolean {
+  if (entry.mediaType === "movie") {
+    return loadMoviePlaybackPosition(entry.catalogId) >= WATCH_HISTORY_MIN_PLAY_SECONDS;
+  }
+  const progress = loadWatchProgress(entry.catalogId);
+  if (!progress) return false;
+  const positions = progress.positions ?? {};
+  return Object.values(positions).some(
+    (sec) => Number(sec) >= WATCH_HISTORY_MIN_PLAY_SECONDS
+  );
 }
 
 /** Remove a title from continue watching and clear saved progress. Keeps durable log. */

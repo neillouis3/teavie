@@ -26,7 +26,7 @@ import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 import { PLAYER_SHELL_CLASS } from '@/components/ui/playerEmbedSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
-import { recordMovieInWatchHistory } from '@/lib/watchHistory';
+import { recordMovieInWatchHistory, WATCH_HISTORY_MIN_PLAY_SECONDS } from '@/lib/watchHistory';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 import { inferMovieStreamQuality } from '@/lib/streamQuality';
@@ -162,6 +162,9 @@ export default function MovieTemplate({
   const handleVideasyProgress = useCallback(
     (msg: VideasyProgressMessage) => {
       saveMoviePlaybackPosition(String(id), msg.timestamp);
+      if (msg.timestamp >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
+        recordMovieInWatchHistory(String(id));
+      }
       watchParty.noteHostPlayback(msg.timestamp);
       if (!watchParty.isHost || !watchParty.room || server !== 'videasy') return;
       const now = Date.now();
@@ -413,12 +416,6 @@ export default function MovieTemplate({
       ? `Watch ${movie.title} (${year}) - Teavie`
       : `Watch ${movie.title} - Teavie`;
   }, [movie, viewMode]);
-
-  useEffect(() => {
-    if (viewMode !== 'watch') return;
-    if (!movie || loading || !movieReleased) return;
-    recordMovieInWatchHistory(String(id));
-  }, [id, movie, loading, movieReleased, viewMode]);
 
   const imageUrl = tmdbImageUrl(movie?.poster_path);
   const trailerEmbedUrl = movie

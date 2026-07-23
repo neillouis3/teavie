@@ -34,7 +34,10 @@ import {
 } from "@/lib/watchProgress";
 import type { VideasyProgressMessage } from "@/lib/videasyProgress";
 import type { MegaPlayMessage } from "@/lib/megaPlayProgress";
-import { recordMovieInWatchHistory, touchWatchHistory } from "@/lib/watchHistory";
+import { recordMovieInWatchHistory, touchWatchHistory, WATCH_HISTORY_MIN_PLAY_SECONDS } from "@/lib/watchHistory";
+import {
+  saveMoviePlaybackPosition,
+} from "@/lib/movieWatchProgress";
 import WatchLaterButton from "@/components/watchLater/WatchLaterButton";
 import FavoriteButton from "@/components/favorites/FavoriteButton";
 import {
@@ -769,11 +772,6 @@ export default function ShowTemplate({
       lastEpisode: selectedEpisode,
       watched: Array.from(watchedEpisodes),
     });
-    touchWatchHistory(String(id), {
-      mediaType: "tv",
-      lastSeason: selectedSeason,
-      lastEpisode: selectedEpisode,
-    });
   }, [
     id,
     show,
@@ -1075,15 +1073,6 @@ export default function ShowTemplate({
   }, [loading, show, id, viewMode]);
 
   useEffect(() => {
-    if (!show || loading) return;
-    const isMovie =
-      Boolean(show.is_anime) &&
-      (show.anilist?.format === "MOVIE" || show.anilist?.format === "MUSIC");
-    if (!isMovie || !animeMovieTmdbId) return;
-    recordMovieInWatchHistory(String(id));
-  }, [show, loading, id, animeMovieTmdbId]);
-
-  useEffect(() => {
     const displayName = showDisplayTitle(show);
     if (!show || !displayName) return;
     const year = show.first_air_date?.slice(0, 4);
@@ -1228,6 +1217,13 @@ export default function ShowTemplate({
       const e = msg.episode ?? selectedEpisode;
       markEpisodeWatchedFromPlayback(s, e, msg.timestamp);
       saveEpisodePlaybackPosition(String(id), s, e, msg.timestamp);
+      if (msg.timestamp >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
+        touchWatchHistory(String(id), {
+          mediaType: "tv",
+          lastSeason: s,
+          lastEpisode: e,
+        });
+      }
       watchParty.noteHostPlayback(msg.timestamp);
 
       if (!watchParty.isHost || !watchParty.room || server !== "videasy") return;
@@ -1290,6 +1286,13 @@ export default function ShowTemplate({
       const sec = Math.floor(msg.currentTime);
       markEpisodeWatchedFromPlayback(selectedSeason, selectedEpisode, sec);
       saveEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode, sec);
+      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
+        touchWatchHistory(String(id), {
+          mediaType: "tv",
+          lastSeason: selectedSeason,
+          lastEpisode: selectedEpisode,
+        });
+      }
       watchParty.noteHostPlayback(sec);
       if (!watchParty.isHost || !watchParty.room) return;
       const now = Date.now();
@@ -1546,7 +1549,21 @@ export default function ShowTemplate({
         animeMovieResolving ? (
           <PlayerEmbedSkeleton rounded="rounded-xl" />
         ) : animeMovieTmdbId ? (
-          <MoviePlayer key={`movie-${id}`} videoId={animeMovieTmdbId} server={server} />
+          <MoviePlayer
+            key={`movie-${id}`}
+            videoId={animeMovieTmdbId}
+            server={server}
+            onVideasyProgress={
+              server === "videasy"
+                ? (msg) => {
+                    const sec = Math.floor(Number(msg.timestamp) || 0);
+                    if (sec < WATCH_HISTORY_MIN_PLAY_SECONDS) return;
+                    saveMoviePlaybackPosition(String(id), sec);
+                    recordMovieInWatchHistory(String(id));
+                  }
+                : undefined
+            }
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
             No playback source available for this page yet. Try again later.
