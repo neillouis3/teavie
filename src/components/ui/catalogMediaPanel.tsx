@@ -5,6 +5,7 @@ import { Image } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { StarIcon } from "@hugeicons/core-free-icons";
 import CatalogDetailColumns, {
+  CatalogGenreChips,
   type CatalogDetailLink,
   type CatalogGenre,
   type CatalogInfoLine,
@@ -43,6 +44,8 @@ export type CatalogMediaPanelProps = {
   compact?: boolean;
   /** TMDB title logo path — shown instead of the text title when set. */
   logoPath?: string | null;
+  /** Intercepted desktop modal: backdrop is the artwork, so omit the poster card. */
+  hidePosterOnDesktop?: boolean;
 };
 
 const DETAIL_META_CARD =
@@ -144,6 +147,7 @@ export default function CatalogMediaPanel({
   networkTags,
   compact = false,
   logoPath = null,
+  hidePosterOnDesktop = false,
 }: CatalogMediaPanelProps) {
   const ratingLabel =
     rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
@@ -154,23 +158,36 @@ export default function CatalogMediaPanel({
   const titleAndStats = (
     <>
       {logoUrl ? (
-        <div className="w-full max-w-[16rem] sm:max-w-[18rem] md:max-w-[20rem]">
+        <div className="flex h-20 w-full max-w-[16rem] items-end sm:h-24 sm:max-w-[18rem] md:h-28 md:max-w-[20rem]">
           <img
             src={logoUrl}
             alt={title}
-            className="h-auto w-full object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
+            className="max-h-full w-auto max-w-full object-contain object-left-bottom drop-shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
           />
         </div>
       ) : (
-        <h1 className="text-2xl !font-normal tracking-tight text-foreground sm:text-3xl">
-          {title}
-        </h1>
+        <div className="flex h-20 items-end sm:h-24 md:h-28">
+          <h1 className="text-2xl !font-normal tracking-tight text-foreground sm:text-3xl">
+            {title}
+          </h1>
+        </div>
       )}
       {subtitle ? (
         <p className="mt-1.5 text-sm text-default-500">{subtitle}</p>
       ) : null}
+      {toolbar ? (
+        <div
+          className={
+            hidePosterOnDesktop
+              ? "mt-3 lg:mt-14 lg:translate-y-2"
+              : "mt-3"
+          }
+        >
+          {toolbar}
+        </div>
+      ) : null}
       {(ratingLabel || certification || statusDisplay) && (
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <div className="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           {ratingLabel ? (
             <span className="inline-flex items-center gap-1 text-foreground">
               <HugeiconsIcon
@@ -183,7 +200,7 @@ export default function CatalogMediaPanel({
           ) : null}
           {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
           {certification ? (
-            <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-xs font-normal text-foreground/90">
+            <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-sm font-normal text-foreground/90">
               {certification}
             </span>
           ) : null}
@@ -201,7 +218,12 @@ export default function CatalogMediaPanel({
           ) : null}
         </div>
       )}
-      {toolbar ? <div className="mt-3">{toolbar}</div> : null}
+      <CatalogGenreChips
+        mediaType={mediaType}
+        genres={genres}
+        genreBrowseBase={genreBrowseBase}
+        className="mt-3"
+      />
       {!compact && statPills && statPills.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {statPills.map((pill) => (
@@ -224,7 +246,7 @@ export default function CatalogMediaPanel({
 
   const overviewBlock = (
     <div className="w-full max-w-[75%]">
-      <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
+      <p className="text-sm leading-relaxed text-foreground/85">
         {overview?.trim() ? overview : "No overview available."}
       </p>
       {tagline?.trim() ? (
@@ -288,7 +310,13 @@ export default function CatalogMediaPanel({
 
       {/* sm+: poster beside title, stats, and description */}
       <div className="hidden gap-5 sm:flex sm:flex-row">
-        <div className="w-32 shrink-0 md:w-36 lg:w-40">{posterEl}</div>
+        <div
+          className={`w-32 shrink-0 md:w-36 lg:w-40 ${
+            hidePosterOnDesktop ? "lg:hidden" : ""
+          }`}
+        >
+          {posterEl}
+        </div>
         <div className="min-w-0 flex-1">
           {titleAndStats}
           <div className="mt-4 sm:mt-5">{overviewBlock}</div>
@@ -302,12 +330,9 @@ export default function CatalogMediaPanel({
       <section className={DETAIL_META_CARD}>
         <div className={DETAIL_META_CARD_INNER}>
           <CatalogDetailColumns
-            mediaType={mediaType}
-            genres={genres}
             infoLines={infoLines}
             links={links}
             networkTags={networkTags}
-            genreBrowseBase={genreBrowseBase}
           />
         </div>
       </section>
@@ -392,12 +417,7 @@ export function CatalogMediaPanelSkeleton({
       ) : null}
       <section className={DETAIL_META_CARD}>
         <div className={DETAIL_META_CARD_INNER}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
-              <div className="h-6 w-24 animate-pulse rounded-full bg-default-200" />
-              <div className="h-6 w-28 animate-pulse rounded-full bg-default-200" />
-            </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
             <div className="min-w-0 flex-[2] space-y-2">
               <div className="h-3 w-16 animate-pulse rounded bg-default-200" />
               <div className="h-6 w-32 animate-pulse rounded bg-default-200" />

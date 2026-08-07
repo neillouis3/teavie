@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import StreamQualityBadge from '@/components/ui/streamQualityBadge';
+import StremioPlayer from '@/components/stremioPlayer';
 import {
   VIDEASY_PLAYER_BASE,
   VIDEASY_TV_QUERY_PREFIX,
@@ -53,7 +54,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode, startSeconds } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.movies111;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.peachify;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -74,6 +75,10 @@ function buildEmbedUrl(p) {
 /**
  * @param {object} props
  * @param {string} [props.videoId] TMDB TV id
+ * @param {string | null} [props.imdbId] IMDb title id used by Stremio addons
+ * @param {string} [props.title]
+ * @param {string | null} [props.posterUrl]
+ * @param {string | null} [props.backdropUrl]
  * @param {number} props.season
  * @param {number} props.episode
  * @param {string} [props.server]
@@ -83,9 +88,13 @@ function buildEmbedUrl(p) {
  */
 export default function ShowPlayer({
   videoId,
+  imdbId,
+  title,
+  posterUrl,
+  backdropUrl,
   season,
   episode,
-  server = 'movies111',
+  server = 'peachify',
   startSeconds = 0,
   onVideasyProgress,
   onEmbedLoad,
@@ -108,6 +117,21 @@ export default function ShowPlayer({
       }),
     [server, videoId, season, episode, startSeconds]
   );
+
+  if (server === 'stremio') {
+    return (
+      <StremioPlayer
+        type="series"
+        imdbId={imdbId}
+        season={season}
+        episode={episode}
+        startSeconds={startSeconds}
+        title={title}
+        posterUrl={posterUrl}
+        backdropUrl={backdropUrl}
+      />
+    );
+  }
 
   if (error) {
     return (

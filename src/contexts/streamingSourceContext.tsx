@@ -13,12 +13,14 @@ import { MOVIE_SERVERS } from '@/components/moviePlayer';
 export type StreamServerId = keyof typeof MOVIE_SERVERS;
 
 const STORAGE_KEY = 'teavie-streaming-server';
-const DEFAULT_SERVER: StreamServerId = 'movies111';
+const DEFAULT_SERVER: StreamServerId = 'peachify';
 
-const ORDER: StreamServerId[] = ['movies111', 'peachify', 'vidcore', 'videasy'];
+const ORDER: StreamServerId[] = ['peachify', 'stremio', 'movies111', 'vidcore', 'videasy'];
 
 export function streamServerLabel(id: StreamServerId): string {
   switch (id) {
+    case 'stremio':
+      return 'Custom player · Experimental';
     case 'movies111':
       return '111movies';
     case 'peachify':
@@ -38,7 +40,11 @@ function readStored(): StreamServerId {
   if (typeof window === 'undefined') return DEFAULT_SERVER;
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v && v in MOVIE_SERVERS) return v as StreamServerId;
+    if (v === 'stremio') {
+      localStorage.setItem(STORAGE_KEY, DEFAULT_SERVER);
+      return DEFAULT_SERVER;
+    }
+    if (v && v in MOVIE_SERVERS && v !== 'stremio') return v as StreamServerId;
   } catch {
     /* ignore */
   }
@@ -64,6 +70,7 @@ export function StreamingSourceProvider({ children }: { children: React.ReactNod
   }, []);
 
   const setServer = useCallback((id: StreamServerId) => {
+    if (id === 'stremio') return;
     setServerState(id);
     try {
       localStorage.setItem(STORAGE_KEY, id);

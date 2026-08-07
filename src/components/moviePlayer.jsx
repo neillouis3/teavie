@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import StreamQualityBadge from '@/components/ui/streamQualityBadge';
+import StremioPlayer from '@/components/stremioPlayer';
 import {
   VIDEASY_MOVIE_QUERY,
   VIDEASY_PLAYER_BASE,
@@ -19,6 +20,12 @@ const PEACHIFY_BASE = 'https://peachify.top';
 const VIDCORE_QUERY = '?theme=22c55e&autoPlay=true';
 
 export const MOVIE_SERVERS = {
+  stremio: {
+    base: '',
+    path: () => '',
+    suffix: () => '',
+    supportsProgress: true,
+  },
   movies111: {
     base: MOVIES111_BASE,
     path: (id) => `/embed/movie/${id}`,
@@ -48,6 +55,10 @@ export const MOVIE_SERVERS = {
 /**
  * @param {object} props
  * @param {string | number} props.videoId
+ * @param {string | null} [props.imdbId]
+ * @param {string} [props.title]
+ * @param {string | null} [props.posterUrl]
+ * @param {string | null} [props.backdropUrl]
  * @param {string} [props.server]
  * @param {'cam' | 'hd'} [props.streamQuality]
  * @param {number} [props.startSeconds] Videasy resume position
@@ -55,7 +66,11 @@ export const MOVIE_SERVERS = {
  */
 const MoviePlayer = ({
   videoId,
-  server = 'movies111',
+  imdbId,
+  title,
+  posterUrl,
+  backdropUrl,
+  server = 'peachify',
   streamQuality: streamQualityProp,
   startSeconds = 0,
   onVideasyProgress,
@@ -70,7 +85,8 @@ const MoviePlayer = ({
   );
 
   const playerUrl = useMemo(() => {
-    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.movies111;
+    if (server === 'stremio') return '';
+    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.peachify;
     const path = config.path(videoId);
     let suffix = typeof config.suffix === 'function' ? config.suffix() : '';
     if (config.supportsProgress && startSeconds > 0) {
@@ -111,6 +127,16 @@ const MoviePlayer = ({
   }, [videoId, streamQualityProp]);
 
   return (
+    server === 'stremio' ? (
+      <StremioPlayer
+        type="movie"
+        imdbId={imdbId}
+        startSeconds={startSeconds}
+        title={title}
+        posterUrl={posterUrl}
+        backdropUrl={backdropUrl}
+      />
+    ) : (
     <div className="relative h-full min-h-0 w-full touch-auto rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
       {streamQuality ? <StreamQualityBadge quality={streamQuality} /> : null}
       {playerUrl ? (
@@ -125,6 +151,7 @@ const MoviePlayer = ({
         <PlayerEmbedSkeleton />
       )}
     </div>
+    )
   );
 };
 
