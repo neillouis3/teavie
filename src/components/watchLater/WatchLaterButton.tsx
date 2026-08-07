@@ -8,8 +8,10 @@ import { useUserData } from "@/contexts/userDataContext";
 type WatchLaterButtonProps = {
   catalogId: string;
   mediaType: "movie" | "tv";
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   iconOnly?: boolean;
+  className?: string;
+  radius?: "none" | "sm" | "md" | "lg" | "full";
 };
 
 export default function WatchLaterButton({
@@ -17,6 +19,8 @@ export default function WatchLaterButton({
   mediaType,
   size = "sm",
   iconOnly = false,
+  className,
+  radius,
 }: WatchLaterButtonProps) {
   const { isWatchLater, toggleWatchLater } = useUserData();
   const saved = isWatchLater(catalogId);
@@ -26,6 +30,8 @@ export default function WatchLaterButton({
       <Button
         isIconOnly
         size={size}
+        radius={radius}
+        className={className}
         variant={saved ? "solid" : "flat"}
         color={saved ? "success" : "default"}
         aria-label={saved ? "Remove from watch later" : "Add to watch later"}
@@ -39,6 +45,8 @@ export default function WatchLaterButton({
   return (
     <Button
       size={size}
+      radius={radius}
+      className={className}
       variant={saved ? "solid" : "flat"}
       color={saved ? "success" : "default"}
       onPress={() => void toggleWatchLater(catalogId, mediaType)}

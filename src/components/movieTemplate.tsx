@@ -119,9 +119,13 @@ function resolveMovieDetailsBannerUrl(movie: Movie): string | null {
 export default function MovieTemplate({
   id,
   viewMode = 'details',
+  detailsModal = false,
+  onDetailsNavigate,
 }: {
   id: string;
   viewMode?: MovieTemplateViewMode;
+  detailsModal?: boolean;
+  onDetailsNavigate?: () => void;
 }) {
   const { server } = useStreamingSource();
   const router = useRouter();
@@ -450,6 +454,7 @@ export default function MovieTemplate({
         posterAlt={movie.title}
         title={movie.title}
         logoPath={titleLogoPath}
+        hidePosterOnDesktop={detailsModal}
         rating={movie.vote_average}
         certification={usCertificationFromDoc(movie)}
         status={movie.status}
@@ -465,20 +470,35 @@ export default function MovieTemplate({
         links={movieDetailLinks(movie)}
         toolbar={
           <div className="flex flex-wrap items-center gap-2">
-            <FavoriteButton catalogId={String(id)} mediaType="movie" iconOnly />
-            <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
             {viewMode === 'details' && movieReleased ? (
               <Button
                 as={Link}
                 href={watchHref}
                 color="success"
-                size="sm"
-                radius="md"
-                className="h-8 min-h-8 px-3 text-sm font-medium"
+                size="lg"
+                radius="full"
+                className="border border-white/15 bg-success/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl"
+                onPress={onDetailsNavigate}
               >
                 Watch
               </Button>
             ) : null}
+            <FavoriteButton
+              catalogId={String(id)}
+              mediaType="movie"
+              size="lg"
+              radius="full"
+              className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl"
+              iconOnly
+            />
+            <WatchLaterButton
+              catalogId={String(id)}
+              mediaType="movie"
+              size="lg"
+              radius="full"
+              className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl"
+              iconOnly
+            />
           </div>
         }
         creditsSection={<MovieCreditsStrip credits={movie.credits} />}
@@ -526,7 +546,11 @@ export default function MovieTemplate({
     const hasDetailsHero = Boolean(detailsBannerUrl);
 
     return (
-      <div className="flex w-full flex-col overflow-x-hidden bg-background pb-32">
+      <div
+        className={`flex w-full flex-col overflow-x-hidden pb-32 ${
+          detailsModal ? "bg-transparent" : "bg-background"
+        }`}
+      >
         {hasDetailsHero ? (
           <ShowDetailsHero
             bannerUrl={detailsBannerUrl!}
@@ -576,8 +600,12 @@ export default function MovieTemplate({
             <MoviePlayer
               key={`movie-${id}-${playerEpoch}`}
               videoId={id}
+              imdbId={movie.imdb_id}
+              title={movie.title}
+              posterUrl={imageUrl}
+              backdropUrl={resolveMovieDetailsBannerUrl(movie)}
               server={server}
-              startSeconds={server === 'videasy' ? playerStartSeconds : 0}
+              startSeconds={server === 'videasy' || server === 'stremio' ? playerStartSeconds : 0}
               onVideasyProgress={
                 server === 'videasy' ? handleVideasyProgress : undefined
               }

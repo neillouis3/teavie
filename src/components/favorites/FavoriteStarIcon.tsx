@@ -10,12 +10,14 @@ type FavoriteStarIconProps = {
   filled?: boolean;
   size?: number;
   className?: string;
+  filledColor?: string;
 };
 
 export default function FavoriteStarIcon({
   filled = false,
   size = 16,
   className = "",
+  filledColor = FAVORITE_ORANGE,
 }: FavoriteStarIconProps) {
   return (
     <HugeiconsIcon
@@ -24,10 +26,17 @@ export default function FavoriteStarIcon({
       strokeWidth={filled ? 1.25 : 2}
       className={
         filled
-          ? `shrink-0 [&_path]:!fill-[#fb923c] [&_path]:!stroke-[#fb923c] ${className}`
+          ? `shrink-0 [&_path]:!fill-[var(--favorite-star-color)] [&_path]:!stroke-[var(--favorite-star-color)] ${className}`
           : `shrink-0 ${className}`
       }
-      style={filled ? { color: FAVORITE_ORANGE } : undefined}
+      style={
+        filled
+          ? ({
+              color: filledColor,
+              "--favorite-star-color": filledColor,
+            } as React.CSSProperties)
+          : undefined
+      }
     />
   );
 }
