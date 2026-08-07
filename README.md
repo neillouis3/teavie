@@ -21,3 +21,19 @@ I wanted a place where my friends and family could watch movies and TV shows wit
 - **MongoDB**
 - **Python**
 - **Vercel** (Deployment)
+
+## Stremio addon streaming
+
+Teavie's first-party player can resolve direct HTTP and HLS streams from any
+server that implements the Stremio Addon Protocol. Configure one or more addon
+manifest URLs (one per line):
+
+```env
+STREMIO_ADDON_URLS=https://your-addon.example/manifest.json
+```
+
+The backend calls each addon's `stream` resource and returns only direct,
+browser-playable URLs to the player. Torrent `infoHash`, YouTube, and external
+page streams are intentionally excluded because they require a separate
+playback engine. Remote addons must use HTTPS; local development also permits
+`http://localhost` and `http://127.0.0.1`.

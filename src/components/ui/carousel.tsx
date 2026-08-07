@@ -60,6 +60,8 @@ const Carousel = React.forwardRef<
     },
     ref
   ) => {
+    const pointerStart = React.useRef<{ x: number; y: number } | null>(null)
+    const dragged = React.useRef(false)
     const [carouselRef, api] = useEmblaCarousel(
       {
         ...opts,
@@ -100,6 +102,25 @@ const Carousel = React.forwardRef<
       [scrollPrev, scrollNext]
     )
 
+    const handlePointerDownCapture = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+      pointerStart.current = { x: event.clientX, y: event.clientY }
+      dragged.current = false
+    }, [])
+
+    const handlePointerMoveCapture = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+      const start = pointerStart.current
+      if (!start) return
+      if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) dragged.current = true
+    }, [])
+
+    const handleClickCapture = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+      if (!dragged.current) return
+      event.preventDefault()
+      event.stopPropagation()
+      dragged.current = false
+      pointerStart.current = null
+    }, [])
+
     React.useEffect(() => {
       if (!api || !setApi) {
         return
@@ -139,6 +160,9 @@ const Carousel = React.forwardRef<
         <div
           ref={ref}
           onKeyDownCapture={handleKeyDown}
+          onPointerDownCapture={handlePointerDownCapture}
+          onPointerMoveCapture={handlePointerMoveCapture}
+          onClickCapture={handleClickCapture}
           className={cn("relative", className)}
           role="region"
           aria-roledescription="carousel"

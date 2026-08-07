@@ -20,6 +20,7 @@ import { UserDataProvider } from "@/contexts/userDataContext";
 import { pathUsesAuthShell } from "@/lib/authShellPaths";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import MaintenanceAnnouncementModal from "@/components/ui/maintenanceAnnouncementModal";
+import CatalogDetailsModalController from "@/components/catalog/catalogDetailsModalController";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -63,6 +64,7 @@ export function Providers({ children }: ProvidersProps) {
               <OnboardingModal />
               <MobileTopNavGate />
               <AppShell>{children}</AppShell>
+              <CatalogDetailsModalController />
               </WatchPartyNavProvider>
               </AnimeAudioProvider>
               </AnimeSourceProvider>

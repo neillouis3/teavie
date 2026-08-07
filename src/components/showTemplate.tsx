@@ -661,11 +661,15 @@ export default function ShowTemplate({
   adminKey,
   adminPreview = false,
   viewMode = "details",
+  detailsModal = false,
+  onDetailsNavigate,
 }: {
   id: string;
   adminKey?: string;
   adminPreview?: boolean;
   viewMode?: ShowTemplateViewMode;
+  detailsModal?: boolean;
+  onDetailsNavigate?: () => void;
 }) {
   const { server } = useStreamingSource();
   const { audio: animeAudio } = useAnimeAudio();
@@ -1463,6 +1467,7 @@ export default function ShowTemplate({
             posterAlt={title}
             title={title}
             logoPath={titleLogoPath}
+            hidePosterOnDesktop={detailsModal}
             rating={Number.isFinite(Number(show.vote_average)) ? Number(show.vote_average) : null}
             certification={usCertificationFromDoc(show)}
             status={show.status}
@@ -1481,20 +1486,35 @@ export default function ShowTemplate({
             genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
             toolbar={
               <div className="flex flex-wrap items-center gap-2">
-                <FavoriteButton catalogId={String(id)} mediaType="tv" iconOnly />
-                <WatchLaterButton catalogId={String(id)} mediaType="tv" iconOnly />
                 {viewMode === "details" && (canPlay || isAnimeMovie) ? (
                   <Button
                     as={Link}
                     href={watchHref}
                     color="success"
-                    size="sm"
-                    radius="md"
-                    className="h-8 min-h-8 px-3 text-sm font-medium"
+                    size="lg"
+                    radius="full"
+                    className="border border-white/15 bg-success/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl"
+                    onPress={onDetailsNavigate}
                   >
                     Watch
                   </Button>
                 ) : null}
+                <FavoriteButton
+                  catalogId={String(id)}
+                  mediaType="tv"
+                  size="lg"
+                  radius="full"
+                  className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl"
+                  iconOnly
+                />
+                <WatchLaterButton
+                  catalogId={String(id)}
+                  mediaType="tv"
+                  size="lg"
+                  radius="full"
+                  className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl"
+                  iconOnly
+                />
               </div>
             }
             creditsSection={
@@ -1561,6 +1581,10 @@ export default function ShowTemplate({
           <MoviePlayer
             key={`movie-${id}`}
             videoId={animeMovieTmdbId}
+            imdbId={catalogImdbId(show)}
+            title={title}
+            posterUrl={imageUrl}
+            backdropUrl={resolveShowDetailsBannerUrl(show, id, imageUrl, fetchedBannerUrl)}
             server={server}
             onVideasyProgress={
               server === "videasy"
@@ -1615,9 +1639,13 @@ export default function ShowTemplate({
           key={`${id}-${playerCoords.season}-${playerCoords.episode}-${playerEpoch}`}
           server={server}
           videoId={resolvedPlayerId}
+          imdbId={catalogImdbId(show)}
+          title={title}
+          posterUrl={imageUrl}
+          backdropUrl={resolveShowDetailsBannerUrl(show, id, imageUrl, fetchedBannerUrl)}
           season={playerCoords.season}
           episode={playerCoords.episode}
-          startSeconds={server === "videasy" ? playerStartSeconds : 0}
+          startSeconds={server === "videasy" || server === "stremio" ? playerStartSeconds : 0}
           onVideasyProgress={server === "videasy" ? handleVideasyProgress : undefined}
           onEmbedLoad={
             server === "vidcore"
@@ -1642,7 +1670,11 @@ export default function ShowTemplate({
     const heroAccentColor = isAnimeDetails ? animeAccentColor : null;
 
     return (
-      <div className="flex w-full flex-col overflow-x-hidden bg-background pb-32">
+      <div
+        className={`flex w-full flex-col overflow-x-hidden pb-32 ${
+          detailsModal ? "bg-transparent" : "bg-background"
+        }`}
+      >
         {adminPreview && adminBypassActive ? (
           <div
             className={`mb-3 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-center text-xs text-warning-800 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200 ${SHOW_CONTENT_INSET_X}`}
@@ -1708,4 +1740,3 @@ export default function ShowTemplate({
     </div>
   );
 }
-

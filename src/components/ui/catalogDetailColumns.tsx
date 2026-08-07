@@ -34,13 +34,9 @@ export type CatalogDetailLink = {
 };
 
 type CatalogDetailColumnsProps = {
-  mediaType: "movie" | "tv";
-  genres: CatalogGenre[];
   infoLines: CatalogInfoLine[];
   links: CatalogDetailLink[];
   networkTags?: string[];
-  /** When set, genre chips link to this browse base (e.g. `/kdrama/all`). */
-  genreBrowseBase?: string;
   className?: string;
 };
 
@@ -58,53 +54,61 @@ function genreBrowseHref(
   });
 }
 
+export function CatalogGenreChips({
+  mediaType,
+  genres,
+  genreBrowseBase,
+  className = "",
+}: {
+  mediaType: "movie" | "tv";
+  genres: CatalogGenre[];
+  genreBrowseBase?: string;
+  className?: string;
+}) {
+  const sortedGenres = [...genres]
+    .filter((genre) => genre?.name && genre?.slug)
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
+
+  if (sortedGenres.length === 0) return null;
+
+  return (
+    <div className={`flex flex-wrap gap-2 ${className}`} aria-label="Genres">
+      {sortedGenres.map((genre) => (
+        <Link
+          key={genre.slug}
+          href={genreBrowseHref(mediaType, genre.slug, genreBrowseBase)}
+          className="inline-flex max-w-full items-center rounded-full border border-default-200/70 bg-default-100/70 px-2.5 py-1 text-sm leading-none text-foreground/90 backdrop-blur-sm transition-colors hover:border-success/40 hover:bg-success/10 hover:text-success dark:border-default-100/25 dark:bg-default-100/15"
+        >
+          {genre.name}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 function ColumnHeading({ label }: { label: string }) {
   return (
-    <h3 className="text-xs font-medium text-default-500">
+    <h3 className="text-sm font-medium text-default-500">
       {label}
     </h3>
   );
 }
 
 export default function CatalogDetailColumns({
-  mediaType,
-  genres,
   infoLines,
   links,
   networkTags = [],
-  genreBrowseBase,
   className = "",
 }: CatalogDetailColumnsProps) {
-  const sortedGenres = [...genres]
-    .filter((g) => g?.name && g?.slug)
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-
   const infoItems = infoLines.filter((line) => String(line?.label ?? "").trim());
   const linkItems = links.filter((l) => l?.href && l?.label);
   const networks = networkTags.filter((tag) => String(tag).trim());
 
   return (
     <div className={`flex flex-col gap-6 ${className}`}>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,0.85fr)] lg:gap-8">
-        <div className="min-w-0">
-          <ColumnHeading label="Genre" />
-          <div className="mt-2.5 flex flex-wrap gap-2 text-sm text-foreground">
-            {sortedGenres.length > 0 ? (
-              sortedGenres.map((genre) => (
-                <Link
-                  key={genre.slug}
-                  href={genreBrowseHref(mediaType, genre.slug, genreBrowseBase)}
-                  className="inline-flex max-w-full items-center rounded-full border border-default-200/80 bg-default-100/80 px-2.5 py-0.5 text-inherit leading-snug transition-colors hover:border-success/40 hover:bg-success/10 dark:border-default-100/30 dark:bg-default-100/20"
-                >
-                  {genre.name}
-                </Link>
-              ))
-            ) : (
-              <span className="text-foreground/70">—</span>
-            )}
-          </div>
-        </div>
-
+      <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)] md:gap-10">
         <div className="min-w-0">
           <ColumnHeading label="Details" />
           <ul className="mt-2.5 grid grid-cols-1 gap-x-6 gap-y-2.5 text-sm text-foreground sm:grid-cols-2">
