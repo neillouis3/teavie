@@ -26,6 +26,9 @@ import {
 
 const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
 const YOU_MIGHT_LIKE_MAX_VERTICAL = EXPLORE_RAIL_MAX_ITEMS;
+const YOU_MIGHT_LIKE_DETAIL_MAX = 5;
+const YOU_MIGHT_LIKE_DETAIL_VERTICAL_ITEM =
+  'basis-[45%] pl-3 sm:basis-[32%] md:basis-1/4 lg:basis-1/5';
 
 type RecItem = {
   keyId: number;
@@ -60,8 +63,16 @@ export default function YouMightLike({
   const [loading, setLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === 'horizontal';
-  const maxItems = horizontal ? YOU_MIGHT_LIKE_MAX_HORIZONTAL : YOU_MIGHT_LIKE_MAX_VERTICAL;
-  const itemClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const maxItems = bleed
+    ? horizontal
+      ? YOU_MIGHT_LIKE_MAX_HORIZONTAL
+      : YOU_MIGHT_LIKE_MAX_VERTICAL
+    : YOU_MIGHT_LIKE_DETAIL_MAX;
+  const itemClass = horizontal
+    ? RAIL_CAROUSEL_ITEM_HORIZONTAL
+    : bleed
+      ? RAIL_CAROUSEL_ITEM_VERTICAL
+      : YOU_MIGHT_LIKE_DETAIL_VERTICAL_ITEM;
 
   useEffect(() => {
     const controller = new AbortController();
