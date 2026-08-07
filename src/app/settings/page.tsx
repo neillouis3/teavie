@@ -40,12 +40,14 @@ function SegmentControl<T extends string>({
   onChange,
   label,
   icon,
+  disabled,
 }: {
   options: readonly T[];
   value: T;
   onChange: (next: T) => void;
   label: (id: T) => string;
   icon?: (id: T) => React.ReactNode;
+  disabled?: (id: T) => boolean;
 }) {
   return (
     <div
@@ -54,15 +56,20 @@ function SegmentControl<T extends string>({
     >
       {options.map((id) => {
         const selected = value === id;
+        const optionDisabled = disabled?.(id) ?? false;
         return (
           <button
             key={id}
             type="button"
             onClick={() => onChange(id)}
+            disabled={optionDisabled}
             aria-pressed={selected}
+            aria-disabled={optionDisabled}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-              selected
+              optionDisabled
+                ? 'cursor-not-allowed bg-transparent text-default-300 opacity-45 dark:text-white/30'
+                : selected
                 ? 'bg-background text-foreground shadow-sm dark:bg-default-100/10'
                 : 'text-default-500 hover:text-foreground'
             )}
@@ -150,6 +157,7 @@ export default function SettingsPage() {
               value={streamServer}
               onChange={setStreamServer}
               label={streamServerLabel}
+              disabled={(id) => id === 'stremio'}
             />
           </PageCardRow>
 

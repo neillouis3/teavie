@@ -4,7 +4,7 @@ import React from "react";
 
 /** Pull details content up over the bottom of the hero banner. */
 export const SHOW_DETAILS_HERO_OVERLAP =
-  "-mt-12 sm:-mt-16 md:-mt-20 lg:-mt-20";
+  "-mt-[164px] sm:-mt-[164px] md:-mt-[164px] lg:-mt-[164px]";
 
 type ShowDetailsHeroProps = {
   bannerUrl: string;
