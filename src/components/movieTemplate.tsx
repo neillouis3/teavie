@@ -477,7 +477,7 @@ export default function MovieTemplate({
                 color="success"
                 size="lg"
                 radius="full"
-                className="border border-white/15 bg-success/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl"
+                className="border border-white/15 bg-success/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl dark:!bg-success/65"
                 onPress={onDetailsNavigate}
               >
                 Watch
@@ -488,7 +488,7 @@ export default function MovieTemplate({
               mediaType="movie"
               size="lg"
               radius="full"
-              className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl"
+              className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10"
               iconOnly
             />
             <WatchLaterButton
@@ -496,7 +496,7 @@ export default function MovieTemplate({
               mediaType="movie"
               size="lg"
               radius="full"
-              className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl"
+              className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10"
               iconOnly
             />
           </div>
@@ -617,7 +617,6 @@ export default function MovieTemplate({
           )}
         </div>
         {movieWatchSummary}
-        <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} bleed={false} />
       </div>
     </div>
   );

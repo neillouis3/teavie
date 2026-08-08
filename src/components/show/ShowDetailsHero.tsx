@@ -39,7 +39,7 @@ export default function ShowDetailsHero({
         />
       ) : null}
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background from-0% via-background/45 via-40% to-transparent"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background from-0% via-background/45 via-40% to-transparent dark:from-[#101214] dark:via-[#101214]/55"
         aria-hidden
       />
       <span className="sr-only">{title}</span>
