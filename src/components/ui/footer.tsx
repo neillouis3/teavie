@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Chip } from "@heroui/react";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
 
 export default function Footer() {
@@ -28,19 +27,6 @@ export default function Footer() {
             Teavie does not host or store media content. Links point to publicly
             available third-party sources.
           </p>
-
-          <Chip
-            as="a"
-            href="https://x.com/neillouis3dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            size="lg"
-            radius="full"
-            variant="bordered"
-            className="mt-4 cursor-pointer text-default-500 transition-colors hover:text-foreground"
-          >
-            @neillouis3dev
-          </Chip>
 
           <Link
             href="/build-log"
