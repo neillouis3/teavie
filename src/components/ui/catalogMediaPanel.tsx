@@ -52,7 +52,7 @@ const DETAIL_META_CARD =
   "w-full overflow-hidden rounded-xl border border-solid border-default-200/55 dark:border-default-100/35";
 
 const DETAIL_META_CARD_INNER =
-  "bg-default-50 px-4 py-5 dark:bg-default-50/10 sm:px-6 sm:py-6";
+  "bg-default-50 px-4 py-5 dark:!bg-black/20 sm:px-6 sm:py-6";
 
 function formatStatusDisplay(
   status: string | null | undefined
@@ -166,7 +166,11 @@ export default function CatalogMediaPanel({
           />
         </div>
       ) : (
-        <div className="flex h-20 items-end sm:h-24 md:h-28">
+        <div
+          className={
+            compact ? "flex items-end" : "flex h-20 items-end sm:h-24 md:h-28"
+          }
+        >
           <h1 className="text-2xl !font-normal tracking-tight text-foreground sm:text-3xl">
             {title}
           </h1>
@@ -187,7 +191,11 @@ export default function CatalogMediaPanel({
         </div>
       ) : null}
       {(ratingLabel || certification || statusDisplay) && (
-        <div className="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <div
+          className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-sm ${
+            compact ? "mt-4" : "mt-8"
+          }`}
+        >
           {ratingLabel ? (
             <span className="inline-flex items-center gap-1 text-foreground">
               <HugeiconsIcon

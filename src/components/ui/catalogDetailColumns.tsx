@@ -79,7 +79,7 @@ export function CatalogGenreChips({
         <Link
           key={genre.slug}
           href={genreBrowseHref(mediaType, genre.slug, genreBrowseBase)}
-          className="inline-flex max-w-full items-center rounded-full border border-default-200/70 bg-default-100/70 px-2.5 py-1 text-sm leading-none text-foreground/90 backdrop-blur-sm transition-colors hover:border-success/40 hover:bg-success/10 hover:text-success dark:border-default-100/25 dark:bg-default-100/15"
+          className="inline-flex max-w-full items-center rounded-full border border-default-200/70 bg-default-100/70 px-2.5 py-1 text-sm leading-none text-foreground/90 backdrop-blur-sm transition-colors hover:border-success/40 hover:bg-success/10 hover:text-success dark:border-white/10 dark:!bg-white/[0.07]"
         >
           {genre.name}
         </Link>
