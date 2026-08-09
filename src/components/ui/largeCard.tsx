@@ -148,7 +148,7 @@ function HeroCardOverlay({
           return null;
         })();
   const ratingLabel =
-    typeof voteAverage === "number" && Number.isFinite(voteAverage)
+    typeof voteAverage === "number" && Number.isFinite(voteAverage) && voteAverage > 0
       ? `${voteAverage.toFixed(1)} / 10`
       : null;
   const overviewText = overview?.trim() ?? "";

@@ -15,6 +15,7 @@ import { APP_NAV_SECTIONS } from "@/components/ui/navItems";
 import { SIDEBAR_GLASS_CLASS } from "@/components/ui/navGlass";
 import { TEAVIE_LOGO, teavieLogoForTheme } from "@/lib/brandAssets";
 import VersionChip from "@/components/ui/versionChip";
+import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 
 export default function SideBar() {
   const pathname = usePathname();
@@ -134,7 +135,10 @@ export default function SideBar() {
                         : undefined
                     }
                   >
-                    <HugeiconsIcon icon={item.icon} size={20} className="shrink-0" />
+                    <AssetMaskIcon
+                      src={isActive && item.icon.activeSrc ? item.icon.activeSrc : item.icon.src}
+                      size={20}
+                    />
                     <AnimatePresence mode="wait">
                       {!isCollapsed && (
                         <motion.span

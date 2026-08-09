@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { StarIcon } from "@hugeicons/core-free-icons";
+import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 
 const FAVORITE_ORANGE = "#fb923c";
 
@@ -20,23 +18,11 @@ export default function FavoriteStarIcon({
   filledColor = FAVORITE_ORANGE,
 }: FavoriteStarIconProps) {
   return (
-    <HugeiconsIcon
-      icon={StarIcon}
+    <AssetMaskIcon
+      src={filled ? "/rail-icons/star.svg" : "/ui-icons/star-outline.svg"}
       size={size}
-      strokeWidth={filled ? 1.25 : 2}
-      className={
-        filled
-          ? `shrink-0 [&_path]:!fill-[var(--favorite-star-color)] [&_path]:!stroke-[var(--favorite-star-color)] ${className}`
-          : `shrink-0 ${className}`
-      }
-      style={
-        filled
-          ? ({
-              color: filledColor,
-              "--favorite-star-color": filledColor,
-            } as React.CSSProperties)
-          : undefined
-      }
+      className={`shrink-0 ${className}`}
+      style={filled ? { color: filledColor } : undefined}
     />
   );
 }

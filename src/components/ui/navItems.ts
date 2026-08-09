@@ -1,14 +1,7 @@
-import type { IconSvgElement } from '@hugeicons/react';
-import {
-  Home01Icon,
-  Film02Icon,
-  Tv01Icon,
-  FootballIcon,
-  OrangeIcon,
-  LoveKoreanFingerIcon,
-} from '@hugeicons/core-free-icons';
-
-export type NavIcon = IconSvgElement;
+export type NavIcon = {
+  src: string;
+  activeSrc?: string;
+};
 
 export type AppNavItem = {
   key: string;
@@ -29,18 +22,18 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     id: "browse",
     title: null,
     items: [
-      { key: "explore", label: "Explore", href: "/explore", icon: Home01Icon },
-      { key: "movies", label: "Movies", href: "/movies/all", icon: Film02Icon },
-      { key: "shows", label: "TV Shows", href: "/shows/all", icon: Tv01Icon },
-      { key: "sports", label: "Sports", href: "/sports", icon: FootballIcon },
+      { key: "explore", label: "Explore", href: "/explore", icon: { src: "/ui-icons/home-outline.svg", activeSrc: "/ui-icons/home-filled.svg" } },
+      { key: "movies", label: "Movies", href: "/movies/all", icon: { src: "/rail-icons/clapper-open.svg" } },
+      { key: "shows", label: "TV Shows", href: "/shows/all", icon: { src: "/rail-icons/tv-retro.svg" } },
+      { key: "sports", label: "Sports", href: "/sports", icon: { src: "/rail-icons/football.svg" } },
     ],
   },
   {
     id: "categories",
     title: "Categories",
     items: [
-      { key: "anime", label: "Anime", href: "/anime", icon: OrangeIcon },
-      { key: "kdrama", label: "Korean Drama", href: "/kdrama", icon: LoveKoreanFingerIcon },
+      { key: "anime", label: "Anime", href: "/anime", icon: { src: "/rail-icons/citrus.svg" } },
+      { key: "kdrama", label: "Korean Drama", href: "/kdrama", icon: { src: "/rail-icons/mug-hot-alt.svg" } },
     ],
   },
 ];

@@ -29,7 +29,13 @@ export default function ExploreSectionTitle({
   variant = "default",
 }: ExploreSectionTitleProps) {
   const label = titleFromChildren(children);
-  const resolvedIcon = hideIcon ? undefined : icon ?? (label ? exploreSectionIcon(label) : undefined);
+  const resolvedIcon = hideIcon
+    ? undefined
+    : icon
+      ? { kind: "huge" as const, icon }
+      : label
+        ? exploreSectionIcon(label)
+        : undefined;
   const isExplore = variant === "explore";
 
   return (
@@ -38,11 +44,33 @@ export default function ExploreSectionTitle({
     >
       {resolvedIcon ? (
         <span className="inline-flex shrink-0 items-center justify-center" aria-hidden>
-          <HugeiconsIcon
-            icon={resolvedIcon}
-            size={isExplore ? 18 : 16}
-            className={cn(isExplore ? "text-foreground" : "text-default-400")}
-          />
+          {resolvedIcon.kind === "asset" ? (
+            <span
+              aria-hidden
+              className={cn(
+                isExplore ? "text-foreground" : "text-default-400",
+                "inline-block shrink-0 bg-current",
+                isExplore ? "size-[18px]" : "size-4"
+              )}
+              style={{
+                WebkitMaskImage: `url(${resolvedIcon.src})`,
+                maskImage: `url(${resolvedIcon.src})`,
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+              }}
+            />
+          ) : (
+            <HugeiconsIcon
+              icon={resolvedIcon.icon}
+              size={isExplore ? 18 : 16}
+              strokeWidth={2.2}
+              className={cn(isExplore ? "text-foreground" : "text-default-400")}
+            />
+          )}
         </span>
       ) : null}
       <span className="leading-none">{children}</span>

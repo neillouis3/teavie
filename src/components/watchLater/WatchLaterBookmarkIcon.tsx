@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Bookmark02Icon } from "@hugeicons/core-free-icons";
+import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 
 const WATCH_LATER_GREEN = "#17c964";
 
@@ -18,15 +16,10 @@ export default function WatchLaterBookmarkIcon({
   className = "",
 }: WatchLaterBookmarkIconProps) {
   return (
-    <HugeiconsIcon
-      icon={Bookmark02Icon}
+    <AssetMaskIcon
+      src={filled ? "/rail-icons/bookmark.svg" : "/ui-icons/bookmark-outline.svg"}
       size={size}
-      strokeWidth={filled ? 1.25 : 2}
-      className={
-        filled
-          ? `shrink-0 [&_path]:!fill-[#17c964] [&_path]:!stroke-[#17c964] ${className}`
-          : `shrink-0 ${className}`
-      }
+      className={`shrink-0 ${className}`}
       style={filled ? { color: WATCH_LATER_GREEN } : undefined}
     />
   );

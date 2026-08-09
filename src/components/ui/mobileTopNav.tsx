@@ -16,11 +16,11 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import {
   ChartLineData01Icon,
   Menu01Icon,
-  Search01Icon,
   Settings01Icon,
   UserCircleIcon,
 } from '@hugeicons/core-free-icons';
 import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
+import AssetMaskIcon from '@/components/ui/assetMaskIcon';
 import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from '@/components/ui/navGlass';
 import { pathUsesHeroBleed } from '@/lib/heroBleedPaths';
 import { useScrollNavBlend } from '@/hooks/useScrollNavBlend';
@@ -100,7 +100,7 @@ export default function MobileTopNav() {
             searchActive ? 'text-success' : overHero ? 'text-white' : 'text-foreground'
           } ${overHero ? 'hover:bg-white/10' : ''}`}
         >
-          <HugeiconsIcon icon={Search01Icon} size={24} className="shrink-0" />
+          <AssetMaskIcon src="/ui-icons/search.svg" size={24} />
         </Link>
       </header>
 
@@ -148,7 +148,10 @@ export default function MobileTopNav() {
                             : 'text-foreground hover:bg-default-100'
                         }`}
                       >
-                        <HugeiconsIcon icon={item.icon} size={20} className="shrink-0" />
+                        <AssetMaskIcon
+                          src={isActive && item.icon.activeSrc ? item.icon.activeSrc : item.icon.src}
+                          size={20}
+                        />
                         {item.label}
                       </Link>
                     );

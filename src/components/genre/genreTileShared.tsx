@@ -2,6 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { genrePageHref } from "@/lib/imdbGenres";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
 
@@ -106,9 +108,21 @@ export function GenreCatalogTile({
         className={`pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br ${colorClass} shadow-sm`}
         aria-hidden
       />
-      <div className="relative z-20 flex w-[46%] flex-col items-start text-left sm:w-[48%]">
-        <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
-          {genre.name}
+      <div className="relative z-20 mt-auto flex min-w-0 max-w-[72%] flex-col items-start text-left drop-shadow-sm">
+        <span className="flex max-w-full items-center gap-1 text-white">
+          <span className="truncate text-base font-medium leading-tight sm:text-lg">
+            {genre.name}
+          </span>
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            size={17}
+            strokeWidth={1.8}
+            aria-hidden
+            className="shrink-0 transition-transform duration-200 group-hover:translate-x-1"
+          />
+        </span>
+        <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/75 sm:text-[11px]">
+          {genre.count.toLocaleString()} titles
         </span>
       </div>
 
@@ -128,7 +142,7 @@ export function GenreCatalogTile({
         </div>
       )}
 
-      <span className="pointer-events-none absolute inset-0 z-[1] rounded-xl bg-gradient-to-br from-white/15 to-black/20" />
+      <span className="pointer-events-none absolute inset-0 z-[1] rounded-xl bg-gradient-to-b from-white/10 via-black/5 to-black/55" />
     </Link>
   );
 }

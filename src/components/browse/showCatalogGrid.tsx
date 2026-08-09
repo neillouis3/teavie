@@ -50,6 +50,7 @@ export default function ShowCatalogGrid({ items }: ShowCatalogGridProps) {
             id={id}
             title={title}
             year={year}
+            voteAverage={item.vote_average}
             type={type}
             runtimeSeconds={item.runtimeSeconds ?? undefined}
             seasonAmount={item.season_amount ?? 0}

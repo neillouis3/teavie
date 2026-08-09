@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Button } from "@heroui/react";
+import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 import ShowPlayer from "./showPlayer";
 import AnimePlayer from "./animePlayer";
 import MoviePlayer from "./moviePlayer";
@@ -1493,10 +1494,16 @@ export default function ShowTemplate({
                     color="success"
                     size="lg"
                     radius="full"
-                    className="border border-white/15 bg-success/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl dark:!bg-success/65"
+                    className="border border-white/25 !bg-[#22c55e]/90 !text-[#052e16] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_24px_rgba(34,197,94,0.16)] backdrop-blur-xl hover:!bg-[#2dd66b]"
+                    startContent={
+                      <AssetMaskIcon
+                        src="/rail-icons/play.svg"
+                        size={20}
+                      />
+                    }
                     onPress={onDetailsNavigate}
                   >
-                    Watch
+                    Play
                   </Button>
                 ) : null}
                 <FavoriteButton

@@ -141,6 +141,7 @@ export default function CatalogRail({
                         id={item.id}
                         title={titleText}
                         year={year}
+                        voteAverage={item.vote_average}
                         releaseNote={
                           showReleaseNote ? releaseNoteForItem(item) : undefined
                         }

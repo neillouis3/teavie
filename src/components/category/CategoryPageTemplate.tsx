@@ -205,8 +205,8 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
         )}
 
         {categoryGenres.length > 0 && (
-          <section className={RAIL_INNER_CLASS} aria-label="Browse by genre">
-            <ExploreSectionTitle>Browse by genre</ExploreSectionTitle>
+          <section className={RAIL_INNER_CLASS} aria-label="Browse by Genre">
+            <ExploreSectionTitle>Browse by Genre</ExploreSectionTitle>
             <SidebarBleedRail>
             <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
               <CarouselContent

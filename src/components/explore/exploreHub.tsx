@@ -248,7 +248,7 @@ export default function ExploreHub() {
         <GenreRail genres={genres} preferredGenreSlugs={preferences.genres} />
         {hasPopular ? (
           <CatalogRail
-            title="Popular movies"
+            title="Popular Movies"
             items={discover.popularMovies}
             maxItems={SECTION_MAX_ITEMS}
             titleVariant="explore"
@@ -256,15 +256,15 @@ export default function ExploreHub() {
         ) : null}
         {hasPopular ? (
           <CatalogRail
-            title="Popular TV shows"
+            title="Popular TV Shows"
             items={discover.popularTv}
             maxItems={SECTION_MAX_ITEMS}
             titleVariant="explore"
           />
         ) : null}
         {hasUpcoming ? (
-          <section className={RAIL_INNER_CLASS} aria-label="New and upcoming">
-            <ExploreSectionTitle variant="explore">New & upcoming</ExploreSectionTitle>
+          <section className={RAIL_INNER_CLASS} aria-label="New and Upcoming">
+            <ExploreSectionTitle variant="explore">New and Upcoming</ExploreSectionTitle>
             <UpcomingRail items={upcomingContent} />
           </section>
         ) : null}
