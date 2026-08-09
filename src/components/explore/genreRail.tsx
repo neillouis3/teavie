@@ -41,8 +41,8 @@ export default function GenreRail({ genres, preferredGenreSlugs = [] }: GenreRai
   }
 
   return (
-    <section className={RAIL_INNER_CLASS} aria-label="Browse by genre">
-      <ExploreSectionTitle variant="explore">Browse by genre</ExploreSectionTitle>
+    <section className={RAIL_INNER_CLASS} aria-label="Browse by Genre">
+      <ExploreSectionTitle variant="explore">Browse by Genre</ExploreSectionTitle>
 
       <SidebarBleedRail>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">

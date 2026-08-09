@@ -5,15 +5,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
-import { formatHeroRuntime } from '@/lib/formatRelease';
 import { catalogDisplayTitle } from '@/lib/catalogDisplayTitle';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 import CatalogCardHoverActions from '@/components/catalog/CatalogCardHoverActions';
+import FavoriteStarIcon from '@/components/favorites/FavoriteStarIcon';
 
 interface SmallCardProps {
   id: number | string;
   title: string;
   year: string;
+  voteAverage?: number | null;
   /** e.g. “Released Apr 1, 2025” for Explore “new” rail */
   releaseNote?: string;
   runtimeSeconds?: number;
@@ -42,51 +43,12 @@ function MetaChip({ children }: { children: React.ReactNode }) {
   );
 }
 
-function buildMetaChips(
-  typeLower: string,
-  year: string,
-  seasonAmount: number,
-  numberOfEpisodes: number | null | undefined,
-  runtimeSeconds?: number
-): string[] {
-  const chips: string[] = [];
-
-  if (typeLower === 'tv') {
-    const seasons = seasonAmount > 0 ? seasonAmount : 0;
-    const eps =
-      typeof numberOfEpisodes === 'number' && numberOfEpisodes > 0
-        ? numberOfEpisodes
-        : null;
-
-    if (seasons > 1) {
-      chips.push(`${seasons} ss`);
-    } else if (eps != null) {
-      chips.push(`${eps} ep`);
-    }
-
-    chips.push('TV');
-  } else if (typeLower === 'movie') {
-    const runtime = formatHeroRuntime(runtimeSeconds);
-    if (runtime) chips.push(runtime);
-    chips.push('Movie');
-  } else if (typeLower) {
-    chips.push(typeLower.charAt(0).toUpperCase() + typeLower.slice(1));
-  }
-
-  const when = String(year ?? '').trim();
-  if (when && when !== 'N/A') chips.push(when);
-
-  return chips;
-}
-
 export default function SmallCard({
   id,
   title,
   year,
+  voteAverage,
   releaseNote,
-  runtimeSeconds,
-  seasonAmount,
-  numberOfEpisodes,
   type,
   posterPath,
   linkHref,
@@ -102,20 +64,17 @@ export default function SmallCard({
   const defaultHref = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
   const resolvedHref = String(linkHref ?? '').trim() || defaultHref;
   const external = /^https?:\/\//i.test(resolvedHref);
-  const metaChips =
-    metaChipsProp ??
-    buildMetaChips(
-      typeLower,
-      year,
-      seasonAmount,
-      numberOfEpisodes,
-      runtimeSeconds
-    );
+  const metaChips = metaChipsProp ?? [];
   const displayTitle = catalogDisplayTitle(title);
   const enableHoverActions = showHoverActions && !external;
+  const yearLabel = String(year ?? '').trim();
+  const ratingLabel =
+    typeof voteAverage === 'number' && Number.isFinite(voteAverage) && voteAverage > 0
+      ? voteAverage.toFixed(1)
+      : null;
 
   const poster = (
-    <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden rounded-xl bg-default-200">
+    <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden rounded-2xl bg-default-200">
       {hasPoster ? (
         <Image
           src={imageUrl}
@@ -142,7 +101,7 @@ export default function SmallCard({
   );
 
   const meta = (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5 px-1 pt-1">
       {subtitle ? (
         <p
           className="line-clamp-1 text-[11px] leading-snug text-default-500"
@@ -159,11 +118,22 @@ export default function SmallCard({
         </div>
       ) : null}
       <h2
-        className="normal-case min-w-0 line-clamp-2 text-sm leading-snug text-foreground transition-colors duration-300 group-hover:text-success sm:text-[15px]"
+        className="normal-case min-w-0 truncate text-base leading-snug text-foreground transition-colors duration-300 group-hover:text-success"
         title={displayTitle}
       >
         {displayTitle}
       </h2>
+      {metaChipsProp == null && (yearLabel || ratingLabel) ? (
+        <div className="flex min-w-0 items-center justify-between gap-3 text-sm text-default-500">
+          <span className="truncate">{yearLabel && yearLabel !== 'N/A' ? yearLabel : '—'}</span>
+          {ratingLabel ? (
+            <span className="inline-flex shrink-0 items-center gap-1.5 text-warning">
+              <FavoriteStarIcon filled filledColor="#f5b301" size={16} />
+              {ratingLabel}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {releaseNote ? (
         <p
           className="line-clamp-2 text-[11px] leading-snug text-default-500"
@@ -175,7 +145,7 @@ export default function SmallCard({
     </div>
   );
 
-  const shellClass = 'group relative flex min-w-0 w-full flex-col gap-1.5 rounded-xl';
+  const shellClass = 'group relative flex min-w-0 w-full flex-col gap-2 rounded-xl';
 
   const dismissButton =
     onDismiss != null ? (
@@ -207,7 +177,7 @@ export default function SmallCard({
           href={resolvedHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-w-0 flex-col gap-1.5"
+          className="flex min-w-0 flex-col gap-2"
           aria-label={`${title}, ${year}`}
         >
           {cardBody}
@@ -221,7 +191,7 @@ export default function SmallCard({
     <div className={shellClass}>
       <Link
         href={resolvedHref}
-        className="flex min-w-0 flex-col gap-1.5"
+        className="flex min-w-0 flex-col gap-2"
         aria-label={`${title}, ${year}`}
       >
         {cardBody}

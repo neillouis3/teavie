@@ -1,44 +1,44 @@
 import type { IconSvgElement } from "@hugeicons/react";
-import {
-  Bookmark02Icon,
-  Calendar01Icon,
-  ChartIncreaseIcon,
-  Clock02Icon,
-  Film02Icon,
-  FireIcon,
-  GridViewIcon,
-  Image02Icon,
-  OrangeIcon,
-  PopcornIcon,
-  SparklesIcon,
-  StarIcon,
-  Time04Icon,
-  Tv01Icon,
-} from "@hugeicons/core-free-icons";
+
+export type ExploreSectionIcon =
+  | { kind: "asset"; src: string }
+  | { kind: "huge"; icon: IconSvgElement };
 
 function normalizeSectionTitle(title: string): string {
   return title.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-const SECTION_TITLE_ICONS: Record<string, IconSvgElement> = {
-  "continue watching": Clock02Icon,
-  "watch history": Time04Icon,
-  favorites: StarIcon,
-  "watch later": Bookmark02Icon,
-  popular: FireIcon,
-  "popular movies": Film02Icon,
-  "popular tv shows": Tv01Icon,
-  "recommended for you": PopcornIcon,
-  new: SparklesIcon,
-  "new & upcoming": Calendar01Icon,
-  "new on teavie": SparklesIcon,
-  "browse by genre": GridViewIcon,
-  featured: StarIcon,
-  "top rated": ChartIncreaseIcon,
-  "related anime": OrangeIcon,
-  artwork: Image02Icon,
+const SECTION_TITLE_ICONS: Record<string, string> = {
+  "continue watching": "/rail-icons/play.svg",
+  "watch history": "/rail-icons/clock.svg",
+  favorites: "/rail-icons/star.svg",
+  "watch later": "/rail-icons/bookmark.svg",
+  popular: "/rail-icons/galaxy-star.svg",
+  "popular movies": "/rail-icons/clapper-open.svg",
+  "popular tv shows": "/rail-icons/tv-retro.svg",
+  "recommended for you": "/rail-icons/galaxy-star.svg",
+  new: "/rail-icons/galaxy-star.svg",
+  "new & upcoming": "/rail-icons/calendar-clock.svg",
+  "new and upcoming": "/rail-icons/calendar-clock.svg",
+  "new on teavie": "/rail-icons/new-product.svg",
+  "more like this": "/rail-icons/heart.svg",
+  "browse by genre": "/rail-icons/apps.svg",
+  featured: "/rail-icons/star.svg",
+  "top rated": "/rail-icons/star.svg",
+  artwork: "/rail-icons/camera-movie.svg",
+  sports: "/rail-icons/football.svg",
 };
 
-export function exploreSectionIcon(title: string): IconSvgElement | undefined {
-  return SECTION_TITLE_ICONS[normalizeSectionTitle(title)];
+export function exploreSectionIcon(title: string): ExploreSectionIcon | undefined {
+  const normalized = normalizeSectionTitle(title);
+
+  if (normalized.includes("anime")) {
+    return { kind: "asset", src: "/rail-icons/citrus.svg" };
+  }
+  if (normalized.includes("korean") || normalized.includes("k-drama")) {
+    return { kind: "asset", src: "/rail-icons/mug-hot-alt.svg" };
+  }
+
+  const src = SECTION_TITLE_ICONS[normalized];
+  return src ? { kind: "asset", src } : undefined;
 }

@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@heroui/react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon } from "@hugeicons/core-free-icons";
+import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 
 type NavSearchBarProps = {
   /** Full width on mobile popover; constrained on desktop nav */
@@ -55,8 +54,8 @@ export default function NavSearchBar({
         onValueChange={setValue}
         aria-label="Search"
         startContent={
-          <HugeiconsIcon
-            icon={Search01Icon}
+          <AssetMaskIcon
+            src="/ui-icons/search.svg"
             size={size === "md" ? 18 : 16}
             className={`shrink-0 ${overHero ? "text-white/70" : "text-default-400"}`}
           />

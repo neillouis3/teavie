@@ -94,6 +94,7 @@ export default function FavoritesRail({
                       id={item.id}
                       title={titleText}
                       year={year}
+                      voteAverage={item.vote_average}
                       type={mediaType}
                       runtimeSeconds={item.runtimeSeconds ?? undefined}
                       seasonAmount={item.season_amount ?? 0}

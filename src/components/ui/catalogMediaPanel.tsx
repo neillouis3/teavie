@@ -2,8 +2,7 @@
 
 import React from "react";
 import { Image } from "@heroui/react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { StarIcon } from "@hugeicons/core-free-icons";
+import FavoriteStarIcon from "@/components/favorites/FavoriteStarIcon";
 import CatalogDetailColumns, {
   CatalogGenreChips,
   type CatalogDetailLink,
@@ -150,7 +149,9 @@ export default function CatalogMediaPanel({
   hidePosterOnDesktop = false,
 }: CatalogMediaPanelProps) {
   const ratingLabel =
-    rating != null && Number.isFinite(rating) ? `${rating.toFixed(1)} / 10` : null;
+    rating != null && Number.isFinite(rating) && rating > 0
+      ? `${rating.toFixed(1)} / 10`
+      : null;
   const statusDisplay = compact ? null : formatStatusDisplay(status);
   const logoUrl = compact ? null : tmdbImageUrl(logoPath);
   const subtitle = subtitleLine.trim();
@@ -190,48 +191,48 @@ export default function CatalogMediaPanel({
           {toolbar}
         </div>
       ) : null}
-      {(ratingLabel || certification || statusDisplay) && (
+      {(ratingLabel || certification || statusDisplay || genres.length > 0) && (
         <div
-          className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-sm ${
+          className={`flex items-center gap-3 overflow-x-auto text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
             compact ? "mt-4" : "mt-8"
           }`}
         >
-          {ratingLabel ? (
-            <span className="inline-flex items-center gap-1 text-foreground">
-              <HugeiconsIcon
-                icon={StarIcon}
-                size={15}
-                className="text-warning"
-              />
-              {ratingLabel}
-            </span>
+          {ratingLabel || certification || statusDisplay ? (
+            <div className="flex shrink-0 items-center gap-x-2">
+              {ratingLabel ? (
+                <span className="inline-flex items-center gap-1 text-foreground">
+                  <FavoriteStarIcon filled filledColor="#f5b301" size={15} />
+                  {ratingLabel}
+                </span>
+              ) : null}
+              {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
+              {certification ? (
+                <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-sm font-normal text-foreground/90">
+                  {certification}
+                </span>
+              ) : null}
+              {certification && statusDisplay ? <MetaDot /> : null}
+              {statusDisplay ? (
+                <span
+                  className={
+                    statusDisplay.active
+                      ? "font-medium text-success"
+                      : "capitalize text-foreground/80"
+                  }
+                >
+                  {statusDisplay.label}
+                </span>
+              ) : null}
+            </div>
           ) : null}
-          {ratingLabel && (certification || statusDisplay) ? <MetaDot /> : null}
-          {certification ? (
-            <span className="rounded border border-default-400/60 px-1.5 py-0.5 text-sm font-normal text-foreground/90">
-              {certification}
-            </span>
-          ) : null}
-          {certification && statusDisplay ? <MetaDot /> : null}
-          {statusDisplay ? (
-            <span
-              className={
-                statusDisplay.active
-                  ? "font-medium text-success"
-                  : "capitalize text-foreground/80"
-              }
-            >
-              {statusDisplay.label}
-            </span>
-          ) : null}
+          <CatalogGenreChips
+            mediaType={mediaType}
+            genres={genres}
+            genreBrowseBase={genreBrowseBase}
+            className="shrink-0 flex-nowrap"
+          />
         </div>
       )}
-      <CatalogGenreChips
-        mediaType={mediaType}
-        genres={genres}
-        genreBrowseBase={genreBrowseBase}
-        className="mt-3"
-      />
       {!compact && statPills && statPills.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {statPills.map((pill) => (
@@ -254,7 +255,7 @@ export default function CatalogMediaPanel({
 
   const overviewBlock = (
     <div className="w-full max-w-[75%]">
-      <p className="text-sm leading-relaxed text-foreground/85">
+      <p className="text-sm leading-relaxed text-foreground/85 dark:text-white">
         {overview?.trim() ? overview : "No overview available."}
       </p>
       {tagline?.trim() ? (
