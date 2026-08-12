@@ -380,7 +380,7 @@ export default function CatalogMediaPanel({
   return (
     <div className="w-full space-y-5">
       {/* Mobile: title & stats → poster + description → details */}
-      <div className={`min-w-0 sm:hidden ${hideTitleBlockOnDesktop ? "lg:hidden" : ""}`}>
+      <div className={`min-w-0 sm:hidden ${hideTitleBlockOnDesktop ? "hidden" : ""}`}>
         {titleBlock}
       </div>
 
