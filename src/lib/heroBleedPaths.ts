@@ -1,8 +1,14 @@
-/** Routes whose hero extends under the fixed top nav. */
-export const HERO_BLEED_PATHS = ["/explore", "/anime", "/kdrama"] as const;
+/** Routes whose hero extends under the fixed top nav (exact match or nested subpaths). */
+export const HERO_BLEED_PATHS = ["/explore"] as const;
+
+/** Hub routes with a hero banner, but only the exact route — nested catalog pages
+ *  like `/anime/all` must NOT inherit this. */
+export const HERO_BLEED_EXACT_PATHS = ["/anime", "/kdrama"] as const;
 
 const SHOW_DETAIL_HERO_RE = /^\/shows\/([^/]+)\/?$/;
 const MOVIE_DETAIL_HERO_RE = /^\/movies\/([^/]+)\/?$/;
+const ANIME_DETAIL_HERO_RE = /^\/anime\/([^/]+)\/?$/;
+const KDRAMA_DETAIL_HERO_RE = /^\/kdrama\/([^/]+)\/?$/;
 
 /** Show detail pages with a hero banner (excludes watch, all, admin). */
 export function pathUsesShowDetailHeroBleed(pathname: string): boolean {
@@ -22,11 +28,37 @@ export function pathUsesMovieDetailHeroBleed(pathname: string): boolean {
   return true;
 }
 
+/** Anime detail pages with a hero banner (excludes the `/anime/all` catalog). */
+export function pathUsesAnimeDetailHeroBleed(pathname: string): boolean {
+  const m = ANIME_DETAIL_HERO_RE.exec(pathname);
+  if (!m) return false;
+  const slug = m[1];
+  if (slug === "all") return false;
+  return true;
+}
+
+/** K-Drama detail pages with a hero banner (excludes the `/kdrama/all` catalog). */
+export function pathUsesKdramaDetailHeroBleed(pathname: string): boolean {
+  const m = KDRAMA_DETAIL_HERO_RE.exec(pathname);
+  if (!m) return false;
+  const slug = m[1];
+  if (slug === "all") return false;
+  return true;
+}
+
 export function pathUsesHeroBleed(pathname: string): boolean {
   if (HERO_BLEED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return true;
   }
-  return pathUsesShowDetailHeroBleed(pathname) || pathUsesMovieDetailHeroBleed(pathname);
+  if (HERO_BLEED_EXACT_PATHS.some((p) => pathname === p)) {
+    return true;
+  }
+  return (
+    pathUsesShowDetailHeroBleed(pathname) ||
+    pathUsesMovieDetailHeroBleed(pathname) ||
+    pathUsesAnimeDetailHeroBleed(pathname) ||
+    pathUsesKdramaDetailHeroBleed(pathname)
+  );
 }
 
 /** Fixed top nav height (`h-14`) — extend heroes by this much when bleeding under nav. */
