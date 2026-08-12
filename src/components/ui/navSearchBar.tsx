@@ -49,7 +49,7 @@ export default function NavSearchBar({
       <Input
         size={size}
         variant="flat"
-        placeholder="Search movies, shows, anime…"
+        placeholder="Search"
         value={value}
         onValueChange={setValue}
         aria-label="Search"

@@ -19,7 +19,7 @@ export default function MainWithSidebarOffset({
   return (
     <div
       className={`relative flex min-h-screen w-full min-w-0 flex-col overflow-x-clip lg:overflow-x-visible ${
-        heroBleed ? "pt-0" : "pt-14"
+        heroBleed ? "pt-0" : "pt-14 lg:pt-24"
       }`}
     >
       <DesktopTopNav />

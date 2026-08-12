@@ -110,7 +110,7 @@ export function GenreCatalogTile({
       />
       <div className="relative z-20 mt-auto flex min-w-0 max-w-[72%] flex-col items-start text-left drop-shadow-sm">
         <span className="flex max-w-full items-center gap-1 text-white">
-          <span className="truncate text-base font-medium leading-tight sm:text-lg">
+          <span className="truncate text-sm font-medium leading-tight">
             {genre.name}
           </span>
           <HugeiconsIcon
@@ -160,7 +160,7 @@ export function GenreBrowseAllTile() {
         aria-hidden
       />
       <div className="relative z-20 flex h-full w-full flex-col items-center justify-center text-center px-2">
-        <span className="text-base font-bold leading-tight text-white drop-shadow-sm sm:text-lg">
+        <span className="text-sm font-bold leading-tight text-white drop-shadow-sm">
           Browse genres
         </span>
         <span className="mt-0.5 text-[11px] font-medium text-white/80">View all</span>

@@ -1,14 +1,15 @@
 "use client";
 
-import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/ui/header";
 import MovieCatalogGrid from "@/components/browse/movieCatalogGrid";
 import ShowCatalogGrid from "@/components/browse/showCatalogGrid";
 import MovieCatalogGridLoading from "@/components/browse/skeleton/movieCatalogGridLoading";
 import BrowseCatalogFilters from "@/components/browse/BrowseCatalogFilters";
-import { Pagination } from "@heroui/react";
+import BrowseCatalogSidebar from "@/components/browse/BrowseCatalogSidebar";
+import { Spinner } from "@heroui/react";
 import type { ContentItem } from "@/types/content";
 import { fetchBrowseCatalogPayload } from "@/lib/pageDataCache";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
@@ -38,20 +39,14 @@ function BrowseCatalogPageContent({
   defaultSort = "title",
 }: BrowseCatalogPageProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const rawPage = parseInt(searchParams.get("page") || "1", 10);
-  const pageParam = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   const sortParam = searchParams.get("sort_by") || defaultSort;
   const genreParam = searchParams.get("genre") ?? "";
   const yearMinParam = searchParams.get("year_min") ?? "";
   const yearMaxParam = searchParams.get("year_max") ?? "";
   const qParam = searchParams.get("q") ?? "";
 
-  const queryString = useMemo(() => {
+  const filterQueryString = useMemo(() => {
     const qs = new URLSearchParams();
-    qs.set("page", String(pageParam));
     qs.set("limit", "28");
     qs.set("sort_by", sortParam);
     if (genreParam) qs.set("genre", genreParam);
@@ -59,12 +54,16 @@ function BrowseCatalogPageContent({
     if (yearMaxParam) qs.set("year_max", yearMaxParam);
     if (qParam.trim()) qs.set("q", qParam.trim());
     return qs.toString();
-  }, [pageParam, sortParam, genreParam, yearMinParam, yearMaxParam, qParam]);
+  }, [sortParam, genreParam, yearMinParam, yearMaxParam, qParam]);
 
   const [items, setItems] = useState<ContentItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [genreSlugs, setGenreSlugs] = useState<string[] | undefined>();
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const pageRef = useRef(1);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.title = documentTitle;
@@ -74,17 +73,23 @@ function BrowseCatalogPageContent({
     let cancelled = false;
     setLoading(true);
 
-    void fetchBrowseCatalogPayload(namespace, apiPath, queryString, genreApiPath)
+    pageRef.current = 1;
+    const query = new URLSearchParams(filterQueryString);
+    query.set("page", "1");
+
+    void fetchBrowseCatalogPayload(namespace, apiPath, query.toString(), genreApiPath)
       .then((data) => {
         if (cancelled) return;
         setItems(data.results);
         setTotalPages(data.totalPages);
+        setTotal(data.total);
         if (data.genreSlugs) setGenreSlugs(data.genreSlugs);
       })
       .catch(() => {
         if (cancelled) return;
         setItems([]);
         setTotalPages(1);
+        setTotal(0);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -93,25 +98,80 @@ function BrowseCatalogPageContent({
     return () => {
       cancelled = true;
     };
-  }, [namespace, apiPath, queryString, genreApiPath]);
+  }, [namespace, apiPath, filterQueryString, genreApiPath]);
 
-  const setPage = (p: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("page", String(p));
-    router.push(`${pathname}?${params.toString()}`);
-  };
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || pageRef.current >= totalPages) return;
+    setLoadingMore(true);
+    const nextPage = pageRef.current + 1;
+    const query = new URLSearchParams(filterQueryString);
+    query.set("page", String(nextPage));
+
+    try {
+      const data = await fetchBrowseCatalogPayload(
+        namespace,
+        apiPath,
+        query.toString(),
+        genreApiPath
+      );
+      setItems((current) => {
+        const seen = new Set(current.map((item) => `${item.type ?? viewer}:${item.id}`));
+        return [
+          ...current,
+          ...data.results.filter((item) => !seen.has(`${item.type ?? viewer}:${item.id}`)),
+        ];
+      });
+      pageRef.current = nextPage;
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [apiPath, filterQueryString, genreApiPath, loading, loadingMore, namespace, totalPages, viewer]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || loading || pageRef.current >= totalPages) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) void loadMore();
+      },
+      { rootMargin: "700px 0px" }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [items.length, loadMore, loading, totalPages]);
 
   return (
     <div className="bg-main min-h-screen w-full">
-      <Header pageName={pageName} />
-      <div className={`space-y-4 pb-8 pt-2 ${CONTENT_INSET_X}`}>
-        <BrowseCatalogFilters
-          mode={filterMode}
-          genreSlugs={genreSlugs}
-          defaultSort={defaultSort}
-        />
+      <div className={`pb-10 ${CONTENT_INSET_X}`}>
+        <div className="flex items-start gap-8">
+          <BrowseCatalogSidebar
+            label={viewer === "movie" ? "Movies" : "Shows"}
+            genreSlugs={genreSlugs}
+          />
+          <main className="min-w-0 flex-1">
+            <div className="mb-5 flex items-end justify-between gap-4">
+              <div>
+                <h1 className="text-base tracking-tight text-foreground">{pageName}</h1>
+                
+              </div>
+              {!loading && total > 0 ? (
+                <span className="shrink-0 rounded-full bg-foreground/8 px-4 py-2 text-xs text-default-500 dark:bg-white/8">
+                  {total.toLocaleString()} titles
+                </span>
+              ) : null}
+            </div>
 
-        {backLink ? (
+            <div className="mb-5 lg:hidden">
+              <BrowseCatalogFilters
+                mode={filterMode}
+                genreSlugs={genreSlugs}
+                defaultSort={defaultSort}
+              />
+            </div>
+
+            {backLink ? (
           <p className="text-sm text-default-500">
             <Link href={backLink.href} className="text-success hover:underline">
               {backLink.label}
@@ -119,7 +179,7 @@ function BrowseCatalogPageContent({
           </p>
         ) : null}
 
-        {loading ? (
+            {loading ? (
           <MovieCatalogGridLoading />
         ) : items.length === 0 ? (
           <p className="py-16 text-center text-sm text-default-500">
@@ -131,19 +191,13 @@ function BrowseCatalogPageContent({
           <ShowCatalogGrid items={items} />
         )}
 
-        {totalPages > 1 && !loading && items.length > 0 ? (
-          <div className="flex justify-center pt-2">
-            <Pagination
-              total={totalPages}
-              page={pageParam}
-              onChange={setPage}
-              showControls
-              size="sm"
-              color="default"
-              variant="light"
-            />
-          </div>
-        ) : null}
+            {!loading && items.length > 0 ? (
+              <div ref={loadMoreRef} className="flex min-h-24 items-center justify-center pt-6">
+                {loadingMore ? <Spinner size="sm" color="success" label="Loading more" /> : null}
+              </div>
+            ) : null}
+          </main>
+        </div>
       </div>
     </div>
   );

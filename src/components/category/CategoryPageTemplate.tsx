@@ -23,14 +23,14 @@ import type { ContentItem } from "@/types/content";
 import {
   GenreCatalogTile,
   genreTileColor,
-  type CatalogGenreRow,
 } from "@/components/genre/genreTileShared";
 import {
   categoryGenreBrowseHref,
   getCatalogCategory,
 } from "@/lib/catalogCategories";
-import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 import {
+  RAIL_AFTER_SPOTLIGHT,
   RAIL_CAROUSEL_ITEM_GENRE,
   RAIL_INNER_CLASS,
   RAIL_STACK_CLASS,
@@ -42,6 +42,7 @@ import {
 } from "@/lib/pageDataCache";
 import { useUserData } from "@/contexts/userDataContext";
 import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
+import { cn } from "@/lib/utils";
 
 /** Match Explore trending hero overlay; tuned for two-up featured row. */
 const FEATURED_CARD_HEIGHT =
@@ -128,27 +129,38 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
   const hasTrending = data.trending.length > 0;
   const hasFeatured = data.featured.length > 0;
+  const useExploreSpotlight =
+    category.slug === "anime" || category.slug === "kdrama";
 
   return (
     <div className="bg-background min-h-screen w-full">
-      <Header pageName={category.label} />
+      {!useExploreSpotlight ? <Header pageName={category.label} /> : null}
 
       {hasTrending && (
         <section
-          className={`mb-4 mt-2 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`}
-          aria-label="Trending"
+          className={cn(
+            useExploreSpotlight
+              ? "relative z-0 w-full overflow-hidden rounded-tl-2xl"
+              : `mb-4 mt-2 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`,
+            useExploreSpotlight && RAIL_AFTER_SPOTLIGHT
+          )}
+          aria-label={useExploreSpotlight ? "Spotlight" : "Trending"}
         >
           <TrendingHero
+            variant={useExploreSpotlight ? "spotlight" : "carousel"}
+            bleedUnderNav={useExploreSpotlight}
+            showDots={!useExploreSpotlight}
             trendingMovies={[]}
             trendingTv={data.trending}
+            spotlightItems={useExploreSpotlight ? data.trending : undefined}
             maxItems={16}
-            rounded
-            flushLeft
+            rounded={!useExploreSpotlight}
+            flushLeft={!useExploreSpotlight}
           />
         </section>
       )}
 
-      <div className={`space-y-8 pb-8 ${CONTENT_INSET_X}`}>
+      <div className={`space-y-8 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
         <section
           className="flex flex-col gap-4 rounded-xl border border-default-200/70 bg-default-50/60 p-4 dark:border-white/10 dark:bg-default-50/10 sm:flex-row sm:items-center sm:justify-between sm:p-5"
           aria-label={`Browse all ${category.label}`}
@@ -171,7 +183,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
         {hasFeatured && (
           <section className="space-y-3" aria-label="Featured">
-            <ExploreSectionTitle>Featured</ExploreSectionTitle>
+            <ExploreSectionTitle variant="explore">Featured</ExploreSectionTitle>
             <div className="grid gap-3 sm:grid-cols-2">
               {data.featured.map((item) => {
                 const title = item.title || item.name || "Untitled";
@@ -206,7 +218,6 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
         {categoryGenres.length > 0 && (
           <section className={RAIL_INNER_CLASS} aria-label="Browse by Genre">
-            <ExploreSectionTitle>Browse by Genre</ExploreSectionTitle>
             <SidebarBleedRail>
             <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
               <CarouselContent
@@ -234,9 +245,9 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
         {hasContent ? (
           <div className={RAIL_STACK_CLASS}>
-            <CatalogRail title="Popular" items={data.popular} />
-            <CatalogRail title="Top rated" items={data.topRated} />
-            <CatalogRail title="New" items={data.new} />
+            <CatalogRail title="Popular" items={data.popular} titleVariant="explore" />
+            <CatalogRail title="Top rated" items={data.topRated} titleVariant="explore" />
+            <CatalogRail title="New" items={data.new} titleVariant="explore" />
           </div>
         ) : (
           <p className="py-12 text-center text-sm text-default-500">

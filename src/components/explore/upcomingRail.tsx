@@ -8,6 +8,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
+import { sidebarBleedViewportClass } from "@/components/ui/sidebarBleedRail";
 import { RAIL_ITEM_PAD, RAIL_TRACK } from "@/lib/catalogGrid";
 import type { ContentItem } from "@/types/content";
 
@@ -41,7 +42,10 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
         className="w-full"
         setApi={setApi}
       >
-        <CarouselContent className={RAIL_TRACK}>
+        <CarouselContent
+          viewportClassName={sidebarBleedViewportClass()}
+          className={RAIL_TRACK}
+        >
           {items.map((item) => {
             const title = item.title ?? item.name ?? "Untitled";
             const releaseDate = item.release_date ?? item.first_air_date ?? "";
@@ -57,7 +61,7 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
             return (
               <CarouselItem
                 key={`${type}-${item.id}`}
-                className={`basis-[88%] sm:basis-2/3 ${RAIL_ITEM_PAD}`}
+                className={`basis-[88%] sm:basis-[71.428571%] ${RAIL_ITEM_PAD}`}
               >
                 <LargeCard
                   richOverlay

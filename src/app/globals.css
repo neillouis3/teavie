@@ -39,11 +39,11 @@
   @property --sidebar-w {
     syntax: "<length>";
     inherits: true;
-    initial-value: 16rem;
+    initial-value: 0rem;
   }
 
   :root {
-    --sidebar-w: 16rem;
+    --sidebar-w: 0rem;
     transition: --sidebar-w 200ms ease-in-out;
   }
 

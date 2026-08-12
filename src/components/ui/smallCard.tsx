@@ -101,7 +101,7 @@ export default function SmallCard({
   );
 
   const meta = (
-    <div className="flex min-w-0 flex-col gap-1.5 px-1 pt-1">
+    <div className="flex min-w-0 flex-col gap-1 px-1 pt-0.5">
       {subtitle ? (
         <p
           className="line-clamp-1 text-[11px] leading-snug text-default-500"
@@ -118,7 +118,7 @@ export default function SmallCard({
         </div>
       ) : null}
       <h2
-        className="normal-case min-w-0 truncate text-base leading-snug text-foreground transition-colors duration-300 group-hover:text-success"
+        className="normal-case min-w-0 truncate text-sm leading-snug text-foreground transition-colors duration-300 group-hover:text-success"
         title={displayTitle}
       >
         {displayTitle}
@@ -145,7 +145,7 @@ export default function SmallCard({
     </div>
   );
 
-  const shellClass = 'group relative flex min-w-0 w-full flex-col gap-2 rounded-xl';
+  const shellClass = 'group relative flex min-w-0 w-full flex-col gap-1 rounded-xl';
 
   const dismissButton =
     onDismiss != null ? (
@@ -177,7 +177,7 @@ export default function SmallCard({
           href={resolvedHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-w-0 flex-col gap-2"
+          className="flex min-w-0 flex-col gap-1"
           aria-label={`${title}, ${year}`}
         >
           {cardBody}
@@ -191,7 +191,7 @@ export default function SmallCard({
     <div className={shellClass}>
       <Link
         href={resolvedHref}
-        className="flex min-w-0 flex-col gap-2"
+        className="flex min-w-0 flex-col gap-1"
         aria-label={`${title}, ${year}`}
       >
         {cardBody}

@@ -21,7 +21,7 @@ import {
   catalogGenresForDisplay,
   type CatalogDetailLink,
 } from './ui/catalogDetailColumns';
-import CatalogMediaPanel from './ui/catalogMediaPanel';
+import CatalogMediaPanel, { CatalogTitleBlock } from './ui/catalogMediaPanel';
 import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
 import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 import { PLAYER_SHELL_CLASS } from '@/components/ui/playerEmbedSkeleton';
@@ -85,6 +85,8 @@ function isReleasedByDate(releaseDate: string | undefined | null): boolean {
   return ymd <= new Date().toISOString().slice(0, 10);
 }
 
+
+
 function movieDetailLinks(movie: Movie): CatalogDetailLink[] {
   const links: CatalogDetailLink[] = [];
   if (movie.imdb_id && /^tt\d+/i.test(movie.imdb_id)) {
@@ -116,6 +118,8 @@ function resolveMovieDetailsBannerUrl(movie: Movie): string | null {
   if (backdrop) return backdrop;
   return tmdbImageUrl(movie.poster_path) || null;
 }
+
+
 
 export default function MovieTemplate({
   id,
@@ -448,6 +452,46 @@ export default function MovieTemplate({
     );
   }
 
+  const movieToolbar = (
+    <div className="flex flex-wrap items-center gap-2">
+      {viewMode === 'details' && movieReleased ? (
+        <Button
+          as={Link}
+          href={watchHref}
+          color="success"
+          size="lg"
+          radius="full"
+          className="border border-white/25 !bg-[#22c55e]/90 !text-[#052e16] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_24px_rgba(34,197,94,0.16)] backdrop-blur-xl hover:!bg-[#2dd66b]"
+          startContent={<AssetMaskIcon src="/rail-icons/play.svg" size={20} />}
+          onPress={onDetailsNavigate}
+        >
+          Play
+        </Button>
+      ) : null}
+      <FavoriteButton catalogId={String(id)} mediaType="movie" size="lg" radius="full" className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10" iconOnly />
+      <WatchLaterButton catalogId={String(id)} mediaType="movie" size="lg" radius="full" className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10" iconOnly />
+    </div>
+  );
+  
+  const movieGenresForDisplay = catalogGenresForDisplay({
+    imdb_genres: movie.imdb_genres,
+    omdb: movie.omdb,
+    genres: movie.genres,
+  });
+  
+  const movieTitleOverlay = detailsModal ? (
+    <CatalogTitleBlock
+      title={movie.title}
+      logoPath={titleLogoPath}
+      rating={movie.vote_average}
+      certification={usCertificationFromDoc(movie)}
+      status={movie.status}
+      mediaType="movie"
+      genres={movieGenresForDisplay}
+      toolbar={movieToolbar}
+    />
+  ) : null;
+  
   const movieDetailsPanel = (
     <div className="w-full">
       <CatalogMediaPanel
@@ -456,62 +500,23 @@ export default function MovieTemplate({
         title={movie.title}
         logoPath={titleLogoPath}
         hidePosterOnDesktop={detailsModal}
+        hideTitleBlockOnDesktop={detailsModal}
         rating={movie.vote_average}
         certification={usCertificationFromDoc(movie)}
         status={movie.status}
         overview={movie.overview}
         tagline={movie.tagline}
         mediaType="movie"
-        genres={catalogGenresForDisplay({
-          imdb_genres: movie.imdb_genres,
-          omdb: movie.omdb,
-          genres: movie.genres,
-        })}
+        genres={movieGenresForDisplay}
         infoLines={buildMovieInfoLines(movie)}
         links={movieDetailLinks(movie)}
-        toolbar={
-          <div className="flex flex-wrap items-center gap-2">
-            {viewMode === 'details' && movieReleased ? (
-              <Button
-                as={Link}
-                href={watchHref}
-                color="success"
-                size="lg"
-                radius="full"
-                className="border border-white/25 !bg-[#22c55e]/90 !text-[#052e16] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_24px_rgba(34,197,94,0.16)] backdrop-blur-xl hover:!bg-[#2dd66b]"
-                startContent={
-                  <AssetMaskIcon
-                    src="/rail-icons/play.svg"
-                    size={20}
-                  />
-                }
-                onPress={onDetailsNavigate}
-              >
-                Play
-              </Button>
-            ) : null}
-            <FavoriteButton
-              catalogId={String(id)}
-              mediaType="movie"
-              size="lg"
-              radius="full"
-              className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10"
-              iconOnly
-            />
-            <WatchLaterButton
-              catalogId={String(id)}
-              mediaType="movie"
-              size="lg"
-              radius="full"
-              className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10"
-              iconOnly
-            />
-          </div>
-        }
+        toolbar={movieToolbar}
         creditsSection={<MovieCreditsStrip credits={movie.credits} />}
       />
     </div>
   );
+
+
 
   const movieWatchSummary = (
     <div className="w-full">
@@ -562,6 +567,7 @@ export default function MovieTemplate({
           <ShowDetailsHero
             bannerUrl={detailsBannerUrl!}
             title={movie.title}
+            overlayContent={movieTitleOverlay}
           />
         ) : null}
         <div

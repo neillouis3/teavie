@@ -34,7 +34,7 @@ export const SIDEBAR_SYNC_TRANSITION =
 
 /** Full viewport width under the fixed sidebar (desktop). */
 export const SIDEBAR_BLEED_SHELL =
-  `w-full lg:ml-[calc(-1*var(--sidebar-w,16rem))] lg:w-screen lg:max-w-none ${SIDEBAR_SYNC_TRANSITION}`;
+  `-ml-4 w-[calc(100%+1rem)] max-w-none lg:-ml-24 lg:w-[calc(100%+6rem)] ${SIDEBAR_SYNC_TRANSITION}`;
 
 /** Explore spotlight: gapless full-width slides. */
 export const SPOTLIGHT_SLIDE_CLASS =
@@ -188,29 +188,27 @@ export function CatalogRailShell({
 /** Embla viewport: 100vw under the sidebar (Explore spotlight). */
 export const SPOTLIGHT_VIEWPORT_CLASS = sidebarBleedViewportClass("h-full");
 
-/** Desktop-only leading slide matching the sidebar width. */
+/**
+ * Leading slide that restores the shared content gutter at the rail's resting
+ * position. The viewport bleeds to the edge, while this spacer keeps the first
+ * card aligned with its title until the user starts scrolling.
+ */
 export function SidebarBleedStartSpacer() {
-  const show = useSidebarBleedOffset();
-  if (!show) return null;
-
   return (
     <CarouselItem
       aria-hidden
-      className="shrink-0 grow-0 basis-[var(--sidebar-w,16rem)] pl-0 lg:transition-[basis,width] lg:duration-200 lg:ease-in-out"
+      className="shrink-0 grow-0 basis-4 pl-0 lg:basis-24"
     >
       <span className="sr-only">Sidebar offset</span>
     </CarouselItem>
   );
 }
 
-/** Desktop-only leading gap for native horizontal scroll tracks. */
+/** Leading gap for native horizontal tracks using the same bleed geometry. */
 export function SidebarBleedNativeStart() {
-  const show = useSidebarBleedOffset();
-  if (!show) return null;
-
   return (
     <div
-      className="shrink-0 w-[var(--sidebar-w,16rem)]"
+      className="w-4 shrink-0 lg:w-24"
       aria-hidden
     />
   );

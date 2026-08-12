@@ -10,6 +10,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
+import { tmdbImageUrl } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import type { ContentItem } from "@/types/content";
 
@@ -86,15 +87,26 @@ export default function TrendingHero({
   const [current, setCurrent] = React.useState(0);
   const [count, setCount] = React.useState(0);
   const [logoByKey, setLogoByKey] = React.useState<Record<string, string>>({});
+  const spotlightRailRef = React.useRef<HTMLDivElement>(null);
+  const spotlightDragRef = React.useRef({
+    active: false,
+    dragged: false,
+    startX: 0,
+    startScrollLeft: 0,
+  });
 
   React.useEffect(() => {
-    if (!api || !showDots) return;
+    if (!api) return;
     setCount(api.scrollSnapList().length);
     setCurrent(api.selectedScrollSnap() + 1);
-    api.on("select", () => {
+    const handleSelect = () => {
       setCurrent(api.selectedScrollSnap() + 1);
-    });
-  }, [api, showDots]);
+    };
+    api.on("select", handleSelect);
+    return () => {
+      api.off("select", handleSelect);
+    };
+  }, [api]);
 
   React.useEffect(() => {
     const payload = items
@@ -167,6 +179,7 @@ export default function TrendingHero({
         imageFit={preserveImageAspect ? "contain" : "cover"}
         preferPoster={preserveImageAspect}
         logoPath={logoByKey[logoKey] ?? null}
+        showHeroActions={variant === "spotlight"}
       />
     );
   }
@@ -208,7 +221,7 @@ export default function TrendingHero({
     const spotlightHeight = bleedUnderNav ? SPOTLIGHT_UNDER_NAV_H : TRENDING_CAROUSEL_H;
     return (
       <div
-        className={cn("flex w-full flex-col", spotlightHeight)}
+        className={cn("relative flex w-full flex-col", spotlightHeight)}
         aria-label="Spotlight"
       >
         <Carousel
@@ -233,6 +246,74 @@ export default function TrendingHero({
             className={cn(TRENDING_ARROW_CLASS, "right-4")}
           />
         </Carousel>
+        <div
+          ref={spotlightRailRef}
+          className="absolute inset-x-0 bottom-4 z-20 cursor-grab touch-none overflow-x-scroll overscroll-x-contain px-4 [scrollbar-width:none] active:cursor-grabbing [&::-webkit-scrollbar]:hidden lg:px-24"
+          aria-label="Choose a spotlight title"
+          onPointerDown={(event) => {
+            spotlightDragRef.current = {
+              active: true,
+              dragged: false,
+              startX: event.clientX,
+              startScrollLeft: event.currentTarget.scrollLeft,
+            };
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            const drag = spotlightDragRef.current;
+            if (!drag.active) return;
+            if (Math.abs(event.clientX - drag.startX) > 5) {
+              drag.dragged = true;
+            }
+            event.currentTarget.scrollLeft =
+              drag.startScrollLeft - (event.clientX - drag.startX);
+          }}
+          onPointerUp={(event) => {
+            spotlightDragRef.current.active = false;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={() => {
+            spotlightDragRef.current.active = false;
+          }}
+        >
+          <div className="grid w-max grid-flow-col auto-cols-[11rem] gap-3 pr-4 sm:auto-cols-[13rem] lg:auto-cols-[calc((100vw-13.5rem)/5.5)]">
+            {items.map((item, index) => {
+              const title = item.title ?? item.name ?? "Untitled";
+              const image =
+                tmdbImageUrl(item.backdrop_path) ||
+                tmdbImageUrl(item.poster_path);
+              return (
+                <button
+                  key={`spotlight-selector-${item.type ?? "movie"}-${item.id}`}
+                  type="button"
+                  data-spotlight-index={index}
+                  aria-label={`Show ${title} in Spotlight`}
+                  onClick={(event) => {
+                    if (spotlightDragRef.current.dragged) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      spotlightDragRef.current.dragged = false;
+                      return;
+                    }
+                    api?.scrollTo(index);
+                  }}
+                  className={cn(
+                    "relative aspect-video w-full overflow-hidden rounded-xl bg-default-100 text-left shadow-lg outline-none",
+                    "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  )}
+                >
+                  {image ? (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${JSON.stringify(image)})` }}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         {paginationDots}
       </div>
     );
