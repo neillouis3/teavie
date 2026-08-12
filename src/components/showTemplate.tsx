@@ -1509,6 +1509,7 @@ export default function ShowTemplate({
             title={title}
             logoPath={titleLogoPath}
             hidePosterOnDesktop={detailsModal}
+            hideTitleBlockOnDesktop={detailsModal}
             rating={Number.isFinite(Number(show.vote_average)) ? Number(show.vote_average) : null}
             certification={usCertificationFromDoc(show)}
             status={show.status}
