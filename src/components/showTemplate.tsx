@@ -50,7 +50,7 @@ import {
   buildShowDetailLinks,
   buildShowDetailStatPills,
 } from "@/lib/showDetailsMeta";
-import CatalogMediaPanel from "@/components/ui/catalogMediaPanel";
+import CatalogMediaPanel, { CatalogTitleBlock } from "@/components/ui/catalogMediaPanel";
 import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
 import CatalogDetailsSkeleton from "@/components/ui/catalogDetailsSkeleton";
 import { PlayerEmbedSkeleton, PLAYER_SHELL_CLASS } from "@/components/ui/playerEmbedSkeleton";
@@ -1459,6 +1459,46 @@ export default function ShowTemplate({
     onPlayableEpisodeCountChange: setPickerPlayableCount,
     showAnimeAudio: Boolean(show?.is_anime) && canPlayAnime,
   };
+  const showToolbar = show ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {viewMode === "details" && (canPlay || isAnimeMovie) ? (
+        <Button
+          as={Link}
+          href={watchHref}
+          color="success"
+          size="lg"
+          radius="full"
+          className="border border-white/25 !bg-[#22c55e]/90 !text-[#052e16] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_24px_rgba(34,197,94,0.16)] backdrop-blur-xl hover:!bg-[#2dd66b]"
+          startContent={<AssetMaskIcon src="/rail-icons/play.svg" size={20} />}
+          onPress={onDetailsNavigate}
+        >
+          Play
+        </Button>
+      ) : null}
+      <FavoriteButton catalogId={String(id)} mediaType="tv" size="lg" radius="full" className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10" iconOnly />
+      <WatchLaterButton catalogId={String(id)} mediaType="tv" size="lg" radius="full" className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10" iconOnly />
+    </div>
+  ) : null;
+  
+  const showGenresForDisplay = show
+    ? catalogGenresForDisplay({ imdb_genres: show.imdb_genres, omdb: show.omdb, genres: show.genres })
+    : [];
+  
+  const showTitleOverlay = show && detailsModal ? (
+    <CatalogTitleBlock
+      title={title}
+      logoPath={titleLogoPath}
+      rating={Number.isFinite(Number(show.vote_average)) ? Number(show.vote_average) : null}
+      certification={usCertificationFromDoc(show)}
+      status={show.status}
+      mediaType="tv"
+      genres={showGenresForDisplay}
+      genreBrowseBase={isKdramaShow(show) ? "/kdrama/all" : undefined}
+      statPills={buildShowDetailStatPills(show, isAnimeShowPage(show, id))}
+      alternateTitles={buildShowAlternateTitles(show)}
+      toolbar={showToolbar}
+    />
+  ) : null;
 
   const showDetailsPanel = (
     <div className="w-full">
@@ -1689,13 +1729,14 @@ export default function ShowTemplate({
             Admin preview — content policy bypass active
           </div>
         ) : null}
-        {hasDetailsHero ? (
-          <ShowDetailsHero
-            bannerUrl={detailsBannerUrl!}
-            accentColor={heroAccentColor}
-            title={title}
-          />
-        ) : null}
+{hasDetailsHero ? (
+  <ShowDetailsHero
+    bannerUrl={detailsBannerUrl!}
+    accentColor={heroAccentColor}
+    title={title}
+    overlayContent={showTitleOverlay}
+  />
+) : null}
         <div
           className={`relative z-10 flex w-full flex-col gap-6 ${SHOW_CONTENT_INSET_X} ${
             hasDetailsHero

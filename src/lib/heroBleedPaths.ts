@@ -1,5 +1,5 @@
 /** Routes whose hero extends under the fixed top nav. */
-export const HERO_BLEED_PATHS = ["/explore"] as const;
+export const HERO_BLEED_PATHS = ["/explore", "/anime", "/kdrama"] as const;
 
 const SHOW_DETAIL_HERO_RE = /^\/shows\/([^/]+)\/?$/;
 const MOVIE_DETAIL_HERO_RE = /^\/movies\/([^/]+)\/?$/;

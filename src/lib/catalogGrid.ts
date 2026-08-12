@@ -1,10 +1,10 @@
 /** Shared catalog grids: responsive column ladder (sidebar-aware at lg). */
 
 export const CATALOG_GRID_VERTICAL =
-  'grid h-full w-full grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7';
+  'grid h-full w-full grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-7';
 
 export const CATALOG_GRID_HORIZONTAL =
-  'grid h-full w-full grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6';
+  'grid h-full w-full grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-7';
 
 /** Search / sections without `h-full` on the grid wrapper */
 export const CATALOG_GRID_VERTICAL_SEARCH =
@@ -17,12 +17,12 @@ export const CATALOG_GRID_HORIZONTAL_SEARCH =
 export const RAIL_ITEM_PAD = 'pl-3';
 export const RAIL_TRACK = '-ml-3';
 
-/** Horizontal portrait rails: 7 full cards + ½ peek from `lg`. */
+/** Horizontal portrait rails: 8 full cards + ½ peek from `lg`. */
 export const RAIL_CAROUSEL_ITEM_VERTICAL =
-  `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[32%] md:basis-1/5 lg:basis-[calc(100%/7.5)]`;
+  `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[32%] md:basis-1/5 lg:basis-[calc((100%-6rem)/8.5)]`;
 
 export const RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE =
-  `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[30%] md:basis-1/4 lg:basis-[calc(100%/7.5)]`;
+  `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[30%] md:basis-1/4 lg:basis-[calc((100%-6rem)/8.5)]`;
 
 /** Landscape / continue-watching style cards. */
 export const RAIL_CAROUSEL_ITEM_HORIZONTAL =

@@ -40,9 +40,9 @@ export default function ExploreSectionTitle({
 
   return (
     <h2
-      className={`flex items-center gap-2.5 text-xl font-normal leading-none tracking-tight text-foreground normal-case ${className}`.trim()}
+      className={`flex items-center gap-2.5 font-normal leading-none tracking-tight text-foreground normal-case ${isExplore ? "text-lg" : "text-xl"} ${className}`.trim()}
     >
-      {resolvedIcon ? (
+      {resolvedIcon && !isExplore ? (
         <span className="inline-flex shrink-0 items-center justify-center" aria-hidden>
           {resolvedIcon.kind === "asset" ? (
             <span

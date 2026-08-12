@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo } from "react";
-import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
   SidebarBleedStartSpacer,
@@ -21,7 +20,6 @@ import {
 import { exploreGenreRailRows } from "@/lib/imdbGenres";
 import {
   RAIL_CAROUSEL_ITEM_GENRE,
-  RAIL_INNER_CLASS,
   RAIL_TRACK,
 } from "@/lib/catalogGrid";
 
@@ -41,9 +39,7 @@ export default function GenreRail({ genres, preferredGenreSlugs = [] }: GenreRai
   }
 
   return (
-    <section className={RAIL_INNER_CLASS} aria-label="Browse by Genre">
-      <ExploreSectionTitle variant="explore">Browse by Genre</ExploreSectionTitle>
-
+    <section className="w-full" aria-label="Browse by Genre">
       <SidebarBleedRail>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent

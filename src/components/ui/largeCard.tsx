@@ -2,6 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
+import { Button } from "@heroui/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { InformationCircleIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
 import { preferHighResAnimeImageUrl } from "@/lib/animePoster";
 import { tmdbImageUrl, tmdbImageUrlOr } from "@/lib/tmdbImage";
@@ -40,6 +43,8 @@ type LargeCardProps = {
   preferPoster?: boolean;
   /** TMDB title logo path (official wordmark) for hero overlays. */
   logoPath?: string | null;
+  /** Large play/details actions used by the Explore spotlight. */
+  showHeroActions?: boolean;
 };
 
 function MetaDot() {
@@ -111,6 +116,9 @@ function HeroCardOverlay({
   compact = false,
   releaseDateStyle = "short",
   logoPath,
+  showActions = false,
+  watchHref,
+  detailsHref,
 }: {
   title: string;
   type: "movie" | "tv";
@@ -125,6 +133,9 @@ function HeroCardOverlay({
   compact?: boolean;
   releaseDateStyle?: "short" | "phrase";
   logoPath?: string | null;
+  showActions?: boolean;
+  watchHref?: string;
+  detailsHref?: string;
 }) {
   const dateLabel =
     releaseDateStyle === "phrase"
@@ -157,18 +168,29 @@ function HeroCardOverlay({
   return (
     <div
       className={cn(
-        "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent",
-        compact
-          ? "px-4 pb-4 pt-16 sm:px-5 sm:pb-5 sm:pt-20"
-          : "px-5 pb-8 pt-24 sm:px-8 sm:pt-32"
+        showActions
+          ? "absolute inset-0 flex items-end bg-[linear-gradient(0deg,var(--background)_0%,color-mix(in_srgb,var(--background)_94%,transparent)_8%,rgba(0,0,0,0.58)_24%,rgba(0,0,0,0.24)_46%,transparent_72%),linear-gradient(90deg,rgba(0,0,0,0.72)_0%,rgba(0,0,0,0.42)_28%,rgba(0,0,0,0.12)_55%,transparent_76%)]"
+          : "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent",
+        showActions
+          ? "pb-8 pl-4 pr-5 pt-24 sm:pr-8 sm:pt-32 lg:pl-24"
+          : compact
+            ? "px-4 pb-4 pt-16 sm:px-5 sm:pb-5 sm:pt-20"
+            : "px-5 pb-8 pt-24 sm:px-8 sm:pt-32"
       )}
     >
-      <div className="flex max-w-3xl flex-col gap-3">
+      <div
+        className={cn(
+          "flex flex-col",
+          showActions ? "max-w-xl gap-4" : "max-w-3xl gap-3"
+        )}
+        style={showActions ? { transform: "translateY(-264px)" } : undefined}
+      >
         {logoUrl ? (
           <div
             className={cn(
               "relative w-full max-w-[18rem] sm:max-w-[22rem] md:max-w-[26rem] lg:max-w-[30rem]",
-              compact ? "max-w-[14rem] sm:max-w-[18rem]" : null
+              compact ? "max-w-[14rem] sm:max-w-[18rem]" : null,
+              showActions ? "max-w-[16rem] sm:max-w-[19rem] md:max-w-[22rem] lg:max-w-[22rem]" : null
             )}
           >
             <img
@@ -190,12 +212,36 @@ function HeroCardOverlay({
         )}
 
         {!compact && overviewText ? (
-          <p className="w-full min-w-0 text-sm leading-snug text-white/75 line-clamp-2 sm:line-clamp-3">
+          <p className="line-clamp-2 w-full min-w-0 text-base leading-snug text-white/75">
             {overviewText}
           </p>
         ) : null}
 
-        {genres.length > 0 ? (
+        {showActions && watchHref && detailsHref ? (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              as={Link}
+              href={watchHref}
+              size="md"
+              className="bg-white text-black shadow-sm"
+              startContent={<HugeiconsIcon icon={PlayIcon} size={20} fill="currentColor" />}
+            >
+              Watch now
+            </Button>
+            <Button
+              as={Link}
+              href={detailsHref}
+              size="md"
+              variant="flat"
+              className="border-0 bg-white/15 text-white shadow-sm backdrop-blur-xl hover:bg-white/20"
+              startContent={<HugeiconsIcon icon={InformationCircleIcon} size={21} />}
+            >
+              More info
+            </Button>
+          </div>
+        ) : null}
+
+        {!showActions && genres.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-white/70 sm:text-sm">
             {genres.slice(0, 2).map((genre) => (
               <span
@@ -208,7 +254,7 @@ function HeroCardOverlay({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/70 sm:text-sm">
+        {!showActions ? <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/70 sm:text-sm">
           {dateLabel && (
             <span className="inline-flex items-center gap-1.5">
               <CalendarIcon />
@@ -235,7 +281,7 @@ function HeroCardOverlay({
               {certification}
             </span>
           )}
-        </div>
+        </div> : null}
       </div>
     </div>
   );
@@ -263,6 +309,7 @@ export default function LargeCard({
   imageFit = "cover",
   preferPoster = false,
   logoPath = null,
+  showHeroActions = false,
 }: LargeCardProps) {
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
@@ -278,13 +325,13 @@ export default function LargeCard({
     "/placeholder.jpg";
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
+  const watchHref = `${href}/watch`;
   const when =
     releaseDate != null && String(releaseDate).trim().length >= 10
       ? formatReleasePhrase(releaseDate)
       : null;
 
-  return (
-    <Link href={href} className={`block h-full w-full ${hero ? "" : "min-w-0"}`}>
+  const card = (
       <div
         className={`group relative h-full w-full max-w-none overflow-hidden ${
           hero ? "min-h-[280px] rounded-none" : "aspect-video min-w-0 rounded-xl"
@@ -341,9 +388,21 @@ export default function LargeCard({
             compact={!hero || heroCompact}
             releaseDateStyle={releaseDateStyle}
             logoPath={logoPath}
+            showActions={showHeroActions}
+            watchHref={watchHref}
+            detailsHref={href}
           />
         )}
       </div>
+  );
+
+  if (showHeroActions) {
+    return <div className={`block h-full w-full ${hero ? "" : "min-w-0"}`}>{card}</div>;
+  }
+
+  return (
+    <Link href={href} className={`block h-full w-full ${hero ? "" : "min-w-0"}`}>
+      {card}
     </Link>
   );
 }

@@ -45,6 +45,11 @@ export type CatalogMediaPanelProps = {
   logoPath?: string | null;
   /** Intercepted desktop modal: backdrop is the artwork, so omit the poster card. */
   hidePosterOnDesktop?: boolean;
+  /**
+   * Intercepted desktop modal: the hero renders its own CatalogTitleBlock
+   * overlaid on the artwork, so omit this panel's copy to avoid a duplicate.
+   */
+  hideTitleBlockOnDesktop?: boolean;
 };
 
 const DETAIL_META_CARD =
@@ -123,31 +128,50 @@ export function showSubtitleLine(show: {
   return parts.join(" • ");
 }
 
-export default function CatalogMediaPanel({
-  posterUrl,
-  posterAlt,
+export type CatalogTitleBlockProps = {
+  title: string;
+  subtitleLine?: string;
+  rating: number | null;
+  certification?: string | null;
+  status?: string | null;
+  mediaType: "movie" | "tv";
+  genres: CatalogGenre[];
+  genreBrowseBase?: string;
+  toolbar?: React.ReactNode;
+  statPills?: string[];
+  alternateTitles?: string[];
+  compact?: boolean;
+  logoPath?: string | null;
+  /**
+   * Old layout only: when the poster is hidden but this block still sits in
+   * the normal document flow (not inside the hero), push the toolbar down so
+   * it lines up with the artwork below. Not needed when this renders inside
+   * the hero itself.
+   */
+  raiseToolbarForHiddenPoster?: boolean;
+};
+
+/**
+ * Title, rating/certification/status row, genre chips, stat pills, and
+ * toolbar. Used both in the normal document flow (CatalogMediaPanel) and
+ * overlaid directly on the hero artwork for the details modal.
+ */
+export function CatalogTitleBlock({
   title,
   subtitleLine = "",
   rating,
   certification,
   status,
-  overview,
-  tagline,
-  seasonEpisodeSection,
   mediaType,
   genres,
-  infoLines,
-  links,
   genreBrowseBase,
   toolbar,
-  creditsSection,
   statPills,
   alternateTitles,
-  networkTags,
   compact = false,
   logoPath = null,
-  hidePosterOnDesktop = false,
-}: CatalogMediaPanelProps) {
+  raiseToolbarForHiddenPoster = false,
+}: CatalogTitleBlockProps) {
   const ratingLabel =
     rating != null && Number.isFinite(rating) && rating > 0
       ? `${rating.toFixed(1)} / 10`
@@ -156,10 +180,10 @@ export default function CatalogMediaPanel({
   const logoUrl = compact ? null : tmdbImageUrl(logoPath);
   const subtitle = subtitleLine.trim();
 
-  const titleAndStats = (
+  return (
     <>
       {logoUrl ? (
-        <div className="flex h-20 w-full max-w-[16rem] items-end sm:h-24 sm:max-w-[18rem] md:h-28 md:max-w-[20rem]">
+        <div className="flex h-20 w-full mb-8 max-w-[16rem] items-end sm:h-24 sm:max-w-[18rem] md:h-28 md:max-w-[20rem]">
           <img
             src={logoUrl}
             alt={title}
@@ -183,7 +207,7 @@ export default function CatalogMediaPanel({
       {toolbar ? (
         <div
           className={
-            hidePosterOnDesktop
+            raiseToolbarForHiddenPoster
               ? "mt-3 lg:mt-14 lg:translate-y-2"
               : "mt-3"
           }
@@ -252,14 +276,60 @@ export default function CatalogMediaPanel({
       ) : null}
     </>
   );
+}
+
+export default function CatalogMediaPanel({
+  posterUrl,
+  posterAlt,
+  title,
+  subtitleLine = "",
+  rating,
+  certification,
+  status,
+  overview,
+  tagline,
+  seasonEpisodeSection,
+  mediaType,
+  genres,
+  infoLines,
+  links,
+  genreBrowseBase,
+  toolbar,
+  creditsSection,
+  statPills,
+  alternateTitles,
+  networkTags,
+  compact = false,
+  logoPath = null,
+  hidePosterOnDesktop = false,
+  hideTitleBlockOnDesktop = false,
+}: CatalogMediaPanelProps) {
+  const titleBlock = (
+    <CatalogTitleBlock
+      title={title}
+      subtitleLine={subtitleLine}
+      rating={rating}
+      certification={certification}
+      status={status}
+      mediaType={mediaType}
+      genres={genres}
+      genreBrowseBase={genreBrowseBase}
+      toolbar={toolbar}
+      statPills={statPills}
+      alternateTitles={alternateTitles}
+      compact={compact}
+      logoPath={logoPath}
+      raiseToolbarForHiddenPoster={hidePosterOnDesktop}
+    />
+  );
 
   const overviewBlock = (
-    <div className="w-full max-w-[75%]">
-      <p className="text-sm leading-relaxed text-foreground/85 dark:text-white">
+    <div className="w-full max-w-[80%] px-4">
+      <p className="text-base leading-relaxed text-foreground/85 dark:text-white/75">
         {overview?.trim() ? overview : "No overview available."}
       </p>
       {tagline?.trim() ? (
-        <p className="mt-2 text-sm italic text-default-500">
+        <p className="mt-2 text-base italic text-default-500">
           &ldquo;{tagline.trim()}&rdquo;
         </p>
       ) : null}
@@ -286,11 +356,11 @@ export default function CatalogMediaPanel({
             {posterEl}
           </div>
           <div className="min-w-0 flex-1">
-            {titleAndStats}
+            {titleBlock}
             {synopsis || quote ? (
               <div className="mt-4 max-w-3xl space-y-2">
                 {synopsis ? (
-                  <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
+                  <p className="text-base leading-relaxed text-foreground/85 sm:text-[15px]">
                     {synopsis}
                   </p>
                 ) : null}
@@ -310,11 +380,13 @@ export default function CatalogMediaPanel({
   return (
     <div className="w-full space-y-5">
       {/* Mobile: title & stats → poster + description → details */}
-      <div className="min-w-0 sm:hidden">{titleAndStats}</div>
+      <div className={`min-w-0 sm:hidden ${hideTitleBlockOnDesktop ? "lg:hidden" : ""}`}>
+        {titleBlock}
+      </div>
 
       <div className="flex gap-4 sm:hidden">
         <div className="w-28 shrink-0">{posterEl}</div>
-        <div className="min-w-0 flex-1 pt-0.5">{overviewBlock}</div>
+        <div className="min-w-0 flex-1 pt-0.5 ">{overviewBlock}</div>
       </div>
 
       {/* sm+: poster beside title, stats, and description */}
@@ -327,7 +399,9 @@ export default function CatalogMediaPanel({
           {posterEl}
         </div>
         <div className="min-w-0 flex-1">
-          {titleAndStats}
+          <div className={hideTitleBlockOnDesktop ? "lg:hidden" : ""}>
+            {titleBlock}
+          </div>
           <div className="mt-4 sm:mt-5">{overviewBlock}</div>
         </div>
       </div>

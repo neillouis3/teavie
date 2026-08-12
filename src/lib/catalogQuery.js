@@ -399,6 +399,8 @@ export function catalogSort(sortBy, fields) {
     case "popularity":
       // TMDB: higher popularity = more popular. Anime uses aggregation + catalogPopularityScore.
       return { popularity: -1, _id: -1 };
+    case "rating":
+      return { vote_average: -1, popularity: -1, _id: -1 };
     case "title_desc":
       return fields.titleDesc;
     case "runtime_desc":
