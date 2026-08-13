@@ -28,7 +28,7 @@ export default function UserPageShell({
     <div className="relative min-h-screen w-full overflow-x-hidden pb-24">
       <PageBlurredBackdrop />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-4 pb-12 pt-20 sm:px-6 lg:px-8 lg:pt-24">
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-4 pb-12 pt-4 sm:px-6 lg:px-8 lg:pt-6">
         <header
           className={cn(
             "mx-auto flex w-full max-w-2xl flex-col items-center text-center",
@@ -47,7 +47,7 @@ export default function UserPageShell({
 
         <div
           className={cn(
-            "mx-auto mt-12 w-full",
+            "mx-auto mt-8 w-full",
             contentMaxWidth === "6xl" ? "max-w-6xl" : "max-w-2xl",
             contentClassName
           )}
