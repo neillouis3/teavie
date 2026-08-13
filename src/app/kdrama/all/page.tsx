@@ -12,6 +12,7 @@ export default function AllKdramaPage() {
       genreApiPath="/api/category/kdrama/genres"
       filterMode="kdrama"
       viewer="show"
+      backdrop="kdrama"
     />
   );
 }

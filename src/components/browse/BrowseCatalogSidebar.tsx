@@ -120,7 +120,7 @@ export default function BrowseCatalogSidebar({
   };
 
   return (
-    <aside className="sticky top-24 hidden h-[calc(100vh-7rem)] w-60 shrink-0 overflow-y-auto pb-6 lg:block">
+    <aside className="sticky top-24 z-20 hidden max-h-[calc(100vh-6rem)] w-60 shrink-0 self-start overflow-y-auto pb-6 lg:block">
       <Listbox
         aria-label={`${label} filters`}
         selectionMode="single"

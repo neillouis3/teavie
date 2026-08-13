@@ -13,6 +13,7 @@ export default function AllAnimePage() {
       filterMode="anime"
       viewer="show"
       defaultSort="popularity"
+      backdrop="anime"
     />
   );
 } 

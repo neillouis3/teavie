@@ -63,7 +63,7 @@ export default function CatalogGrid({
             posterPath={poster}
             overview={item.overview}
             releaseDate={releaseDate || undefined}
-            priority={index < 4}
+            priority={index < 8}
           />
         );
       })}

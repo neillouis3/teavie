@@ -11,6 +11,7 @@ export default function AllShowsPage() {
       apiPath="/api/tv"
       filterMode="tv"
       viewer="show"
+      backdrop="shows"
     />
   );
 }

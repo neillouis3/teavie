@@ -3,6 +3,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import PageBlurredBackdrop from "@/components/ui/pageBlurredBackdrop";
+import type { PageShellBackdrop } from "@/lib/pageBackdrop";
 
 type UserPageShellProps = {
   title: string;
@@ -13,6 +14,8 @@ type UserPageShellProps = {
   /** Wrap main content (default: centered column with top spacing). */
   contentClassName?: string;
   headerClassName?: string;
+  /** Static blurred backdrop (default: library shell). */
+  backdrop?: PageShellBackdrop;
 };
 
 /** Library-style shell: blurred backdrop + centered page header. */
@@ -23,10 +26,11 @@ export default function UserPageShell({
   contentMaxWidth = "2xl",
   contentClassName,
   headerClassName,
+  backdrop = "shell",
 }: UserPageShellProps) {
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden pb-24">
-      <PageBlurredBackdrop />
+      <PageBlurredBackdrop variant={backdrop} />
 
       <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-4 pb-12 pt-4 sm:px-6 lg:px-8 lg:pt-6">
         <header

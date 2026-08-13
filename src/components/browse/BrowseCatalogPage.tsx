@@ -19,6 +19,7 @@ import {
   prefetchBrowseCatalogPage,
 } from "@/lib/pageDataCache";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
+import type { PageBrowseBackdrop } from "@/lib/pageBackdrop";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 
 type BrowseCatalogPageProps = {
@@ -31,6 +32,7 @@ type BrowseCatalogPageProps = {
   viewer: "movie" | "show";
   /** When the URL has no `sort_by`, use this (e.g. anime → most popular). */
   defaultSort?: string;
+  backdrop?: PageBrowseBackdrop;
 };
 
 function BrowseCatalogPageContent({
@@ -42,6 +44,7 @@ function BrowseCatalogPageContent({
   filterMode,
   viewer,
   defaultSort = "rating",
+  backdrop = "browse",
 }: BrowseCatalogPageProps) {
   const searchParams = useSearchParams();
   const sortParam = searchParams.get("sort_by") || defaultSort;
@@ -266,8 +269,8 @@ function BrowseCatalogPageContent({
   }, [items.length, loadMore, loading, totalPages]);
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden pb-10">
-      <PageBlurredBackdrop variant="browse" />
+    <div className="relative min-h-screen w-full pb-10">
+      <PageBlurredBackdrop variant={backdrop} />
       <div className={`relative z-10 ${CONTENT_INSET_X}`}>
         <div className="flex items-start gap-8">
           <BrowseCatalogSidebar
@@ -304,9 +307,9 @@ function BrowseCatalogPageContent({
               />
             </div>
 
-            {loading ? (
+            {loading && items.length === 0 ? (
           <CatalogGridLoading />
-        ) : loadFailed ? (
+        ) : loadFailed && items.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm text-default-500">
               Couldn&apos;t load titles right now.
@@ -327,10 +330,17 @@ function BrowseCatalogPageContent({
             No titles match these filters. Try adjusting your search.
           </p>
         ) : (
+          <>
           <CatalogGrid
             items={items}
             defaultType={viewer === "movie" ? "movie" : "tv"}
           />
+          {loading ? (
+            <p className="sr-only" aria-live="polite">
+              Updating results…
+            </p>
+          ) : null}
+          </>
         )}
 
             {!loading && items.length > 0 ? (
@@ -345,10 +355,16 @@ function BrowseCatalogPageContent({
   );
 }
 
-function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
+function BrowseCatalogPageFallback({
+  pageName,
+  backdrop = "browse",
+}: {
+  pageName: string;
+  backdrop?: PageBrowseBackdrop;
+}) {
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden">
-      <PageBlurredBackdrop variant="browse" />
+    <div className="relative min-h-screen w-full">
+      <PageBlurredBackdrop variant={backdrop} />
       <div className={`relative z-10 pb-8 pt-2 ${CONTENT_INSET_X}`}>
         <Header pageName={pageName} />
         <CatalogGridLoading />
@@ -359,7 +375,14 @@ function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
 
 export default function BrowseCatalogPage(props: BrowseCatalogPageProps) {
   return (
-    <Suspense fallback={<BrowseCatalogPageFallback pageName={props.pageName} />}>
+    <Suspense
+      fallback={
+        <BrowseCatalogPageFallback
+          pageName={props.pageName}
+          backdrop={props.backdrop}
+        />
+      }
+    >
       <BrowseCatalogPageContent {...props} />
     </Suspense>
   );

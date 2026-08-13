@@ -278,14 +278,20 @@ export default function ExploreHub() {
           hasTrending ? "mt-0" : "mt-2"
         )}
       >
-        {userRailsLoading && watchHistoryEntries.length > 0 && historyRows.length === 0 ? (
-          <section aria-label="Continue watching" aria-busy="true">
-            <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-            <CatalogRailSkeleton count={6} />
-          </section>
-        ) : (
-          <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
-        )}
+        {watchHistoryEntries.length > 0 ? (
+          userRailsLoading && historyRows.length === 0 ? (
+            <section
+              className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
+              aria-label="Continue watching"
+              aria-busy="true"
+            >
+              <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+              <CatalogRailSkeleton count={6} />
+            </section>
+          ) : historyRows.length > 0 ? (
+            <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
+          ) : null
+        ) : null}
         {showRecommendedSlot ? (
           awaitingPersonalized && !hasRecommended ? (
             <CatalogRailSkeleton count={6} />

@@ -77,9 +77,25 @@ function hasCatalogItems(items: ContentItem[] | undefined | null): boolean {
 
 function isCategoryDiscoverCacheable(data: CategoryDiscoverPayload): boolean {
   return (
+    isCategoryHeroCacheable(data) ||
+    isCategoryRailsCacheable(data)
+  );
+}
+
+function isCategoryHeroCacheable(
+  data: Pick<CategoryDiscoverPayload, "featured" | "trending" | "popular">
+): boolean {
+  return (
     hasCatalogItems(data.featured) ||
     hasCatalogItems(data.trending) ||
-    hasCatalogItems(data.popular) ||
+    hasCatalogItems(data.popular)
+  );
+}
+
+function isCategoryRailsCacheable(
+  data: Pick<CategoryDiscoverPayload, "topRated" | "newEpisodes" | "genres">
+): boolean {
+  return (
     hasCatalogItems(data.topRated) ||
     hasCatalogItems(data.newEpisodes) ||
     (Array.isArray(data.genres) && data.genres.some((g) => (g.count ?? 0) > 0))
@@ -134,6 +150,16 @@ export type CategoryDiscoverPayload = {
   genres: CatalogGenreRow[];
 };
 
+export type CategoryDiscoverHeroPayload = Pick<
+  CategoryDiscoverPayload,
+  "featured" | "trending" | "popular"
+>;
+
+export type CategoryDiscoverRailsPayload = Pick<
+  CategoryDiscoverPayload,
+  "topRated" | "newEpisodes" | "genres"
+>;
+
 export type GenrePageRails = {
   popular: ContentItem[];
   top_rated: ContentItem[];
@@ -169,6 +195,8 @@ const EMPTY_CATEGORY: CategoryDiscoverPayload = {
   newEpisodes: [],
   genres: [],
 };
+
+export { EMPTY_CATEGORY };
 
 const EMPTY_GENRE_RAILS: GenrePageRails = {
   popular: [],
@@ -271,18 +299,20 @@ export async function fetchExploreBundle(): Promise<ExploreBundle> {
   );
 }
 
-async function loadCategoryDiscover(
+async function loadCategoryDiscoverPart(
   slug: string,
-  preferences: UserPreferences | null
+  preferences: UserPreferences | null,
+  part: "hero" | "rails" | null
 ): Promise<CategoryDiscoverPayload> {
   try {
+    const query = part ? `?part=${part}` : "";
     const res = hasUserPreferences(preferences)
-      ? await fetch(`/api/category/${slug}/discover`, {
+      ? await fetch(`/api/category/${slug}/discover${query}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ preferences }),
         })
-      : await fetch(`/api/category/${slug}/discover`);
+      : await fetch(`/api/category/${slug}/discover${query}`);
     if (!res.ok) return EMPTY_CATEGORY;
     const json = await res.json();
     return {
@@ -296,6 +326,89 @@ async function loadCategoryDiscover(
   } catch {
     return EMPTY_CATEGORY;
   }
+}
+
+async function loadCategoryDiscover(
+  slug: string,
+  preferences: UserPreferences | null
+): Promise<CategoryDiscoverPayload> {
+  const [hero, rails] = await Promise.all([
+    loadCategoryDiscoverPart(slug, preferences, "hero"),
+    loadCategoryDiscoverPart(slug, preferences, "rails"),
+  ]);
+  return {
+    ...EMPTY_CATEGORY,
+    ...hero,
+    ...rails,
+  };
+}
+
+export function categoryDiscoverHeroCacheKey(
+  slug: string,
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.category-discover-hero.v1:${slug}:${preferencesCacheKey(preferences)}`;
+}
+
+export function categoryDiscoverRailsCacheKey(
+  slug: string,
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.category-discover-rails.v2:${slug}:${preferencesCacheKey(preferences)}`;
+}
+
+export async function fetchCategoryDiscoverHero(
+  slug: string,
+  preferences: UserPreferences | null = null
+): Promise<CategoryDiscoverHeroPayload> {
+  return withDayCache(
+    categoryDiscoverHeroCacheKey(slug, preferences),
+    async () => {
+      const first = await loadCategoryDiscoverPart(slug, preferences, "hero");
+      if (isCategoryHeroCacheable(first)) {
+        return {
+          featured: first.featured,
+          trending: first.trending,
+          popular: first.popular,
+        };
+      }
+      await new Promise((r) => setTimeout(r, 400));
+      const retry = await loadCategoryDiscoverPart(slug, preferences, "hero");
+      return {
+        featured: retry.featured,
+        trending: retry.trending,
+        popular: retry.popular,
+      };
+    },
+    { isCacheable: isCategoryHeroCacheable }
+  );
+}
+
+export async function fetchCategoryDiscoverRails(
+  slug: string,
+  preferences: UserPreferences | null = null
+): Promise<CategoryDiscoverRailsPayload> {
+  return withDayCache(
+    categoryDiscoverRailsCacheKey(slug, preferences),
+    async () => {
+      const first = await loadCategoryDiscoverPart(slug, preferences, "rails");
+      if (isCategoryRailsCacheable(first)) {
+        return {
+          topRated: first.topRated,
+          newEpisodes: first.newEpisodes,
+          genres: first.genres,
+        };
+      }
+      await new Promise((r) => setTimeout(r, 400));
+      const retry = await loadCategoryDiscoverPart(slug, preferences, "rails");
+      return {
+        topRated: retry.topRated,
+        newEpisodes: retry.newEpisodes,
+        genres: retry.genres,
+      };
+    },
+    { isCacheable: isCategoryRailsCacheable }
+  );
 }
 
 export async function fetchCategoryDiscover(
@@ -319,7 +432,7 @@ export function categoryDiscoverCacheKey(
   slug: string,
   preferences: UserPreferences | null = null
 ): string {
-  return `${PREFIX}.category-discover.v18:${slug}:${preferencesCacheKey(preferences)}`;
+  return `${PREFIX}.category-discover.v19:${slug}:${preferencesCacheKey(preferences)}`;
 }
 
 export function peekCategoryDiscoverCache(

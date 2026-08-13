@@ -20,11 +20,14 @@ import {
   type ExploreHistoryRow,
 } from "@/lib/explorePageData";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
-import { LIBRARY_GRID_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
+import { LIBRARY_GRID_CLASS, RAIL_INNER_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 
 const ACTIVITY_CACHE_PREFIX = "teavie.cache.activity.v2:";
+
+/** Reserve one grid row while cards load — reduces CLS when data arrives. */
+const ACTIVITY_GRID_MIN_H = "min-h-[420px] sm:min-h-[460px]";
 
 type ActivityPayload = {
   historyRows: ExploreHistoryRow[];
@@ -42,6 +45,31 @@ function ActivityGridSkeleton({ count = 4 }: { count?: number }) {
         <SmallCardLoading key={i} />
       ))}
     </div>
+  );
+}
+
+function ActivitySection({
+  title,
+  busy,
+  children,
+}: {
+  title: string;
+  busy?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={`${RAIL_INNER_CLASS} ${ACTIVITY_GRID_MIN_H} w-full items-center`}
+      aria-busy={busy || undefined}
+    >
+      <ExploreSectionTitle
+        className="justify-center text-lg text-white"
+        variant="explore"
+      >
+        {title}
+      </ExploreSectionTitle>
+      {children}
+    </section>
   );
 }
 
@@ -148,11 +176,14 @@ export default function ActivityPage() {
     watchHistoryEntries.length > 0 || historyRows.length > 0;
   const hasHistoryLog = pendingLogCount > 0 || historyLogRows.length > 0;
   const isEmpty = !loading && !hasContinue && !hasHistoryLog;
+  const showContinueSection = hasContinue || (loading && watchHistoryEntries.length > 0);
+  const showHistorySection = hasHistoryLog || (loading && pendingLogCount > 0);
 
   return (
     <UserPageShell
       title="Activity"
       description="Continue watching and your watch history."
+      backdrop="activity"
       contentMaxWidth="6xl"
       contentClassName="flex flex-col items-center"
     >
@@ -200,46 +231,34 @@ export default function ActivityPage() {
         </div>
       ) : (
         <div className={`${RAIL_STACK_CLASS} w-full items-center`}>
-          {loading && watchHistoryEntries.length > 0 && historyRows.length === 0 ? (
-            <section className="flex w-full flex-col items-center gap-4" aria-busy="true">
-              <ExploreSectionTitle
-                className="justify-center text-lg text-white"
-                variant="explore"
-              >
-                Continue watching
-              </ExploreSectionTitle>
-              <ActivityGridSkeleton count={4} />
-            </section>
+          {showContinueSection ? (
+            historyRows.length > 0 ? (
+              <WatchHistoryRail
+                items={historyRows}
+                layout="profile"
+                bleed={false}
+                display="grid"
+              />
+            ) : (
+              <ActivitySection title="Continue watching" busy>
+                <ActivityGridSkeleton count={4} />
+              </ActivitySection>
+            )
           ) : null}
 
-          {historyRows.length > 0 ? (
-            <WatchHistoryRail
-              items={historyRows}
-              layout="profile"
-              bleed={false}
-              display="grid"
-            />
-          ) : null}
-
-          {loading && pendingLogCount > 0 && historyLogRows.length === 0 ? (
-            <section className="flex w-full flex-col items-center gap-4" aria-busy="true">
-              <ExploreSectionTitle
-                className="justify-center text-lg text-white"
-                variant="explore"
-              >
-                Watch history
-              </ExploreSectionTitle>
-              <ActivityGridSkeleton count={4} />
-            </section>
-          ) : null}
-
-          {historyLogRows.length > 0 ? (
-            <WatchHistoryLogRail
-              items={historyLogRows}
-              layout="profile"
-              bleed={false}
-              display="grid"
-            />
+          {showHistorySection ? (
+            historyLogRows.length > 0 ? (
+              <WatchHistoryLogRail
+                items={historyLogRows}
+                layout="profile"
+                bleed={false}
+                display="grid"
+              />
+            ) : (
+              <ActivitySection title="Watch history" busy>
+                <ActivityGridSkeleton count={4} />
+              </ActivitySection>
+            )
           ) : null}
         </div>
       )}

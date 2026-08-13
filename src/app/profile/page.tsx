@@ -133,7 +133,11 @@ export default function ProfilePage() {
 
   if (authLoading) {
     return (
-      <UserPageShell title="Profile" description="Your account and preferences.">
+      <UserPageShell
+        title="Profile"
+        description="Your account and preferences."
+        backdrop="profile"
+      >
         <div className="h-40 animate-pulse rounded-xl bg-white/10" />
       </UserPageShell>
     );
@@ -144,6 +148,7 @@ export default function ProfilePage() {
       title="Profile"
       description="Your account, display name, and personalized recommendations."
       contentClassName="space-y-5"
+      backdrop="profile"
     >
       {!user ? (
         <PageCard

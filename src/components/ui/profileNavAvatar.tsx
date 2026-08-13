@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,6 +21,7 @@ import {
 import { avatarInitials } from "@/lib/partyNickname";
 import { useAuth } from "@/contexts/authContext";
 import AssetMaskIcon from "@/components/ui/assetMaskIcon";
+import { MENU_GLASS_CLASS } from "@/components/ui/navGlass";
 
 export default function ProfileNavAvatar() {
   const pathname = usePathname();
@@ -57,7 +58,12 @@ export default function ProfileNavAvatar() {
   }
 
   return (
-    <Dropdown placement="bottom-end">
+    <Dropdown
+      placement="bottom-end"
+      classNames={{
+        content: MENU_GLASS_CLASS,
+      }}
+    >
       <DropdownTrigger>
         <button
           type="button"
@@ -76,7 +82,13 @@ export default function ProfileNavAvatar() {
           />
         </button>
       </DropdownTrigger>
-      <DropdownMenu aria-label="Profile actions">
+      <DropdownMenu
+        aria-label="Profile actions"
+        classNames={{
+          base: "bg-transparent p-0",
+          list: "bg-transparent",
+        }}
+      >
         <DropdownSection showDivider>
           <DropdownItem key="identity" isReadOnly className="cursor-default opacity-100">
             <div className="flex flex-col gap-0.5 py-0.5">

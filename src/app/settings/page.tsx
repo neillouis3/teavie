@@ -105,6 +105,7 @@ export default function SettingsPage() {
     <UserPageShell
       title="Settings"
       description="Appearance and playback preferences for this device."
+      backdrop="settings"
       contentClassName="space-y-5"
     >
       <PageCard title="Appearance">

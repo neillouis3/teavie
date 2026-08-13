@@ -12,6 +12,10 @@ export const SIDEBAR_GLASS_CLASS =
 export const AUTH_PANEL_GLASS_CLASS =
   "bg-background/92 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/88 dark:bg-background/48 dark:supports-[backdrop-filter]:bg-background/40";
 
+/** Popover / dropdown menus — matches floating nav chrome. */
+export const MENU_GLASS_CLASS =
+  "border border-white/10 bg-background/58 p-1 shadow-[0_14px_40px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/44 dark:bg-black/50 dark:supports-[backdrop-filter]:bg-black/42";
+
 /** Modal glass — same blur as sidebar, 75% background fill. */
 export const MODAL_GLASS_CLASS =
   "bg-background/75 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/75 dark:bg-background/75 dark:supports-[backdrop-filter]:bg-background/75";

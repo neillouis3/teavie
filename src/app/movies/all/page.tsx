@@ -11,6 +11,7 @@ export default function AllMoviePage() {
       apiPath="/api/movies"
       filterMode="movie"
       viewer="movie"
+      backdrop="movies"
     />
   );
 }

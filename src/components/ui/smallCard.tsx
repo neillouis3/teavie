@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { catalogDisplayTitle } from '@/lib/catalogDisplayTitle';
-import { tmdbPosterUrl } from '@/lib/tmdbImage';
+import { tmdbGridPosterUrl } from '@/lib/tmdbImage';
 import CatalogCardHoverActions from '@/components/catalog/CatalogCardHoverActions';
 import {
   buildCatalogDetailsSeed,
@@ -72,7 +72,7 @@ export default function SmallCard({
   const typeLower = (type ?? '').toLowerCase();
   const mediaType = typeLower === 'tv' ? 'tv' : 'movie';
   const hasPoster = Boolean(posterPath?.trim());
-  const imageUrl = tmdbPosterUrl(posterPath);
+  const imageUrl = tmdbGridPosterUrl(posterPath);
   const defaultHref = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
   const resolvedHref = String(linkHref ?? '').trim() || defaultHref;
   const external = /^https?:\/\//i.test(resolvedHref);
