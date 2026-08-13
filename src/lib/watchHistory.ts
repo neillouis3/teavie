@@ -66,14 +66,24 @@ function readIndex(): WatchHistoryEntry[] {
   }
 }
 
-function writeIndex(entries: WatchHistoryEntry[]): void {
+type WatchHistoryWriteOptions = {
+  /** Skip change events (bulk hydrate / remote merge). */
+  silent?: boolean;
+};
+
+function writeIndex(
+  entries: WatchHistoryEntry[],
+  options?: WatchHistoryWriteOptions
+): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(
       WATCH_HISTORY_INDEX_KEY,
       JSON.stringify({ v: WATCH_HISTORY_VERSION, entries })
     );
-    window.dispatchEvent(new CustomEvent(WATCH_HISTORY_CHANGED_EVENT));
+    if (!options?.silent) {
+      window.dispatchEvent(new CustomEvent(WATCH_HISTORY_CHANGED_EVENT));
+    }
   } catch {
     /* quota / private mode */
   }
@@ -88,15 +98,20 @@ function readLogRaw(): WatchHistoryEntry[] {
   }
 }
 
-function writeLog(entries: WatchHistoryEntry[]): void {
+function writeLog(
+  entries: WatchHistoryEntry[],
+  options?: WatchHistoryWriteOptions
+): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(
       WATCH_HISTORY_LOG_KEY,
       JSON.stringify({ v: WATCH_HISTORY_VERSION, entries })
     );
-    window.dispatchEvent(new CustomEvent(WATCH_HISTORY_LOG_CHANGED_EVENT));
-    window.dispatchEvent(new CustomEvent(WATCH_HISTORY_CHANGED_EVENT));
+    if (!options?.silent) {
+      window.dispatchEvent(new CustomEvent(WATCH_HISTORY_LOG_CHANGED_EVENT));
+      window.dispatchEvent(new CustomEvent(WATCH_HISTORY_CHANGED_EVENT));
+    }
   } catch {
     /* quota / private mode */
   }
@@ -166,7 +181,7 @@ export function listWatchHistoryLog(): WatchHistoryEntry[] {
   if (log.length === 0) {
     const seeded = readIndex();
     if (seeded.length > 0) {
-      writeLog(seeded.slice(0, WATCH_HISTORY_LOG_MAX));
+      writeLog(seeded.slice(0, WATCH_HISTORY_LOG_MAX), { silent: true });
       log = seeded.slice(0, WATCH_HISTORY_LOG_MAX);
     }
   }
@@ -174,7 +189,10 @@ export function listWatchHistoryLog(): WatchHistoryEntry[] {
 }
 
 /** Merge remote/local log entries, keeping the newest per catalog id. */
-export function mergeWatchHistoryLog(entries: WatchHistoryEntry[]): WatchHistoryEntry[] {
+export function mergeWatchHistoryLog(
+  entries: WatchHistoryEntry[],
+  options?: WatchHistoryWriteOptions
+): WatchHistoryEntry[] {
   const byId = new Map(listWatchHistoryLog().map((e) => [e.catalogId, e]));
   for (const raw of entries) {
     const entry = normalizeEntry(raw);
@@ -187,7 +205,7 @@ export function mergeWatchHistoryLog(entries: WatchHistoryEntry[]): WatchHistory
   const merged = [...byId.values()]
     .sort((a, b) => b.lastWatchedAt - a.lastWatchedAt)
     .slice(0, WATCH_HISTORY_LOG_MAX);
-  writeLog(merged);
+  writeLog(merged, options);
 
   const now = Date.now();
   const freshContinue = merged.filter((entry) => isEligibleForContinue(entry, now));
@@ -203,7 +221,8 @@ export function mergeWatchHistoryLog(entries: WatchHistoryEntry[]): WatchHistory
     writeIndex(
       [...byId.values()]
         .sort((a, b) => b.lastWatchedAt - a.lastWatchedAt)
-        .slice(0, WATCH_HISTORY_MAX)
+        .slice(0, WATCH_HISTORY_MAX),
+      options
     );
   }
 

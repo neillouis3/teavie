@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import type { WatchHistoryEntry } from "@/lib/watchHistory";
 
+const UPSERT_CHUNK_SIZE = 50;
+
+function safeIsoTimestamp(raw: unknown): string {
+  const ms = Number(raw);
+  const date = Number.isFinite(ms) && ms > 0 ? new Date(ms) : new Date();
+  return date.toISOString();
+}
+
 function parseEntry(row: unknown): WatchHistoryEntry | null {
   if (!row || typeof row !== "object") return null;
   const o = row as Record<string, unknown>;
@@ -15,6 +23,25 @@ function parseEntry(row: unknown): WatchHistoryEntry | null {
     lastSeason: Math.max(1, Math.floor(Number(o.lastSeason ?? o.last_season)) || 1),
     lastEpisode: Math.max(1, Math.floor(Number(o.lastEpisode ?? o.last_episode)) || 1),
   };
+}
+
+function dedupeRows<T extends { catalog_id: string }>(rows: T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const row of rows) {
+    byId.set(row.catalog_id, row);
+  }
+  return [...byId.values()];
+}
+
+function isMissingTableError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const code = String(error.code ?? "");
+  const message = String(error.message ?? "").toLowerCase();
+  return (
+    code === "42P01" ||
+    code === "PGRST205" ||
+    message.includes("watch_history") && message.includes("does not exist")
+  );
 }
 
 export async function GET() {
@@ -37,6 +64,10 @@ export async function GET() {
       .limit(100);
 
     if (error) {
+      if (isMissingTableError(error)) {
+        console.warn("GET /api/user/watch-history: watch_history table missing");
+        return NextResponse.json({ entries: [] });
+      }
       console.error("GET /api/user/watch-history", error);
       return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
     }
@@ -83,22 +114,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No entries" }, { status: 400 });
     }
 
-    const rows = parsed.map((entry) => ({
-      user_id: user.id,
-      catalog_id: entry.catalogId,
-      media_type: entry.mediaType,
-      last_season: entry.lastSeason,
-      last_episode: entry.lastEpisode,
-      last_watched_at: new Date(entry.lastWatchedAt || Date.now()).toISOString(),
-    }));
+    const rows = dedupeRows(
+      parsed.map((entry) => ({
+        user_id: user.id,
+        catalog_id: entry.catalogId,
+        media_type: entry.mediaType,
+        last_season: entry.lastSeason,
+        last_episode: entry.lastEpisode,
+        last_watched_at: safeIsoTimestamp(entry.lastWatchedAt),
+      }))
+    );
 
-    const { error } = await supabase.from("watch_history").upsert(rows, {
-      onConflict: "user_id,catalog_id",
-    });
+    for (let i = 0; i < rows.length; i += UPSERT_CHUNK_SIZE) {
+      const chunk = rows.slice(i, i + UPSERT_CHUNK_SIZE);
+      const { error } = await supabase.from("watch_history").upsert(chunk, {
+        onConflict: "user_id,catalog_id",
+      });
 
-    if (error) {
-      console.error("POST /api/user/watch-history", error);
-      return NextResponse.json({ error: "Save failed" }, { status: 500 });
+      if (error) {
+        if (isMissingTableError(error)) {
+          console.warn("POST /api/user/watch-history: watch_history table missing");
+          return NextResponse.json(
+            { error: "Watch history storage is not configured" },
+            { status: 503 }
+          );
+        }
+        console.error("POST /api/user/watch-history", error);
+        return NextResponse.json({ error: "Save failed" }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ ok: true });
@@ -133,6 +176,9 @@ export async function DELETE(req: Request) {
       .eq("catalog_id", catalogId);
 
     if (error) {
+      if (isMissingTableError(error)) {
+        return NextResponse.json({ ok: true });
+      }
       console.error("DELETE /api/user/watch-history", error);
       return NextResponse.json({ error: "Delete failed" }, { status: 500 });
     }
