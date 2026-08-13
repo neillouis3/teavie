@@ -14,12 +14,14 @@ import {
   listWatchHistory,
   listWatchHistoryLog,
   mergeWatchHistoryLog,
+  recordMovieInWatchHistory,
   removeFromWatchHistory,
   removeFromWatchHistoryLog,
   touchWatchHistory,
   type WatchHistoryEntry,
   WATCH_HISTORY_CHANGED_EVENT,
   WATCH_HISTORY_LOG_CHANGED_EVENT,
+  WATCH_HISTORY_MIN_PLAY_SECONDS,
 } from "@/lib/watchHistory";
 import {
   addToWatchLater,
@@ -44,6 +46,11 @@ import {
   type UserPreferences,
 } from "@/types/user";
 import {
+  loadGuestPreferences,
+  PREFERENCES_CHANGED_EVENT,
+} from "@/lib/userPreferences";
+import {
+  deriveWatchedEpisodeKeys,
   loadWatchProgress,
   saveWatchProgress,
   type WatchProgressPayload,
@@ -135,13 +142,24 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const [watchHistoryLogEntries, setWatchHistoryLogEntries] = useState<WatchHistoryEntry[]>([]);
   const [watchLaterEntries, setWatchLaterEntries] = useState<WatchLaterEntry[]>([]);
   const [favoriteEntries, setFavoriteEntries] = useState<FavoriteEntry[]>([]);
+  const [guestPreferences, setGuestPreferences] = useState<UserPreferences>(() =>
+    typeof window === "undefined" ? EMPTY_USER_PREFERENCES : loadGuestPreferences()
+  );
 
   const preferences = useMemo(() => {
     if (user && profile) {
       return normalizeUserPreferences(profile.preferences);
     }
-    return EMPTY_USER_PREFERENCES;
-  }, [user, profile]);
+    return guestPreferences;
+  }, [user, profile, guestPreferences]);
+
+  useEffect(() => {
+    if (user) return;
+    const syncGuestPrefs = () => setGuestPreferences(loadGuestPreferences());
+    syncGuestPrefs();
+    window.addEventListener(PREFERENCES_CHANGED_EVENT, syncGuestPrefs);
+    return () => window.removeEventListener(PREFERENCES_CHANGED_EVENT, syncGuestPrefs);
+  }, [user]);
 
   const watchedMovieIds = useMemo(
     () =>
@@ -437,18 +455,40 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
             watched?: string[];
             positions?: Record<string, number>;
           };
-          saveWatchProgress(catalogId, {
+          const payload = {
             lastSeason: Math.max(1, Math.floor(Number(p.lastSeason)) || 1),
             lastEpisode: Math.max(1, Math.floor(Number(p.lastEpisode)) || 1),
             watched: Array.isArray(p.watched) ? p.watched : [],
             positions: p.positions,
-          });
+          };
+          saveWatchProgress(catalogId, payload);
+          const maxPosition = Math.max(
+            0,
+            ...Object.values(payload.positions ?? {}).map((value) =>
+              Number.isFinite(Number(value)) ? Number(value) : 0
+            )
+          );
+          const watchedKeys = deriveWatchedEpisodeKeys(payload, WATCH_HISTORY_MIN_PLAY_SECONDS);
+          if (
+            maxPosition >= WATCH_HISTORY_MIN_PLAY_SECONDS ||
+            watchedKeys.length > 0
+          ) {
+            touchWatchHistory(catalogId, {
+              mediaType: "tv",
+              lastSeason: payload.lastSeason,
+              lastEpisode: payload.lastEpisode,
+            });
+          }
         }
         const movieSec = Math.max(0, Math.floor(Number(row.movie_position_seconds)) || 0);
         if (movieSec > 0) {
           saveMoviePlaybackPosition(catalogId, movieSec);
         }
+        if (movieSec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
+          recordMovieInWatchHistory(catalogId);
+        }
       }
+      refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
     })();
   }, [user?.id]);
 

@@ -9,13 +9,13 @@ import Header from '@/components/ui/header';
 import SmallCard from '@/components/ui/smallCard';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import CatalogRail, { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
-import SearchCatalogGridLoading from '@/components/browse/skeleton/searchCatalogGridLoading';
+import CatalogGridLoading from '@/components/browse/skeleton/catalogGridLoading';
 import SearchPageSkeleton from '@/components/browse/skeleton/searchPageSkeleton';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
 import {
   useCatalogCardStyle,
 } from '@/contexts/catalogCardStyleContext';
-import SearchCatalogFilters from '@/components/browse/SearchCatalogFilters';
+import CatalogFilterBar from '@/components/browse/CatalogFilterBar';
 import { ContentItem } from '@/types/content';
 import {
   fetchSearchPopular,
@@ -254,11 +254,11 @@ function SearchContent() {
               />
             </form>
 
-            <SearchCatalogFilters />
+            <CatalogFilterBar variant="search" />
           </div>
 
           {hasQuery ? (
-            <SearchCatalogGridLoading />
+            <CatalogGridLoading variant="search" />
           ) : (
             <div className="space-y-8">
               <section className="space-y-3">
@@ -313,7 +313,7 @@ function SearchContent() {
             />
           </form>
 
-          <SearchCatalogFilters />
+          <CatalogFilterBar variant="search" />
         </div>
 
         {!hasQuery && (

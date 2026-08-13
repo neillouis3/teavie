@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Header from '@/components/ui/header';
-import SearchCatalogGridLoading from '@/components/browse/skeleton/searchCatalogGridLoading';
+import CatalogGridLoading from '@/components/browse/skeleton/catalogGridLoading';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
 
 export default function SearchPageSkeleton() {
@@ -21,7 +21,7 @@ export default function SearchPageSkeleton() {
             ))}
           </div>
         </div>
-        <SearchCatalogGridLoading count={14} />
+        <CatalogGridLoading count={14} variant="search" />
       </div>
     </div>
   );

@@ -1,24 +1,21 @@
-'use client';
+import { Suspense } from "react";
+import ShowTemplate from "@/components/showTemplate";
+import CatalogDetailsSkeleton from "@/components/ui/catalogDetailsSkeleton";
 
-import React, { Suspense } from 'react';
-import { useParams } from 'next/navigation';
-import ShowTemplate from '@/components/showTemplate';
-import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
+type ShowPageProps = {
+  params: Promise<{ id: string }>;
+};
 
-function ShowPageInner() {
-  const params = useParams();
+export default async function ShowPage({ params }: ShowPageProps) {
+  const { id } = await params;
 
-  if (!params || typeof params.id !== 'string') {
+  if (!id) {
     return <div>Error: Invalid show ID</div>;
   }
 
-  return <ShowTemplate id={params.id} viewMode="details" />;
+  return (
+    <Suspense fallback={<CatalogDetailsSkeleton />}>
+      <ShowTemplate id={id} viewMode="details" />
+    </Suspense>
+  );
 }
-
-const ShowPage = () => (
-  <Suspense fallback={<CatalogDetailsSkeleton />}>
-    <ShowPageInner />
-  </Suspense>
-);
-
-export default ShowPage;

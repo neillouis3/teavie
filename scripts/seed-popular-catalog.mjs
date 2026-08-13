@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { MongoClient } from "mongodb";
 import { mapTmdbMovieToDoc } from "../src/lib/syncMoviesTmdbDaily.js";
-import { tmdbBearerToken } from "../src/lib/tmdbAuth.js";
+import { hasTmdbAuth, tmdbAuth, tmdbFetchJson } from "../src/lib/tmdbAuth.js";
 import {
   shouldRejectTmdbTvFromCatalog,
   tmdbListMovieLooksAdult,
@@ -80,28 +80,11 @@ function mapTmdbTvToDoc(show) {
   );
 }
 
-async function tmdbGet(pathWithQuery, token) {
+async function tmdbGet(pathWithQuery) {
   const url = pathWithQuery.startsWith("http")
     ? pathWithQuery
     : `${TMDB_BASE}${pathWithQuery}`;
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`TMDB ${res.status}: ${txt.slice(0, 200)}`);
-    }
-    return res.json();
-  } finally {
-    clearTimeout(t);
-  }
+  return tmdbFetchJson(url, tmdbAuth(), { timeoutMs: FETCH_TIMEOUT_MS });
 }
 
 /** TMDB ids already represented as catalog anime — do not upsert numeric TV for these. */
@@ -138,7 +121,7 @@ async function animeClaimedTmdbIds(col) {
   return blocked;
 }
 
-async function popularIds(endpoint, token, maxPages, listRowSkip) {
+async function popularIds(endpoint, maxPages, listRowSkip) {
   const ids = [];
   const seen = new Set();
   for (let page = 1; page <= maxPages; page += 1) {
@@ -147,7 +130,7 @@ async function popularIds(endpoint, token, maxPages, listRowSkip) {
       include_adult: "false",
       page: String(page),
     });
-    const json = await tmdbGet(`${endpoint}?${q}`, token);
+    const json = await tmdbGet(`${endpoint}?${q}`);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
       if (listRowSkip && listRowSkip(r)) continue;
@@ -170,13 +153,12 @@ async function main() {
   const tvOnly = hasFlag("--tv-only");
 
   const uri = String(process.env.MONGODB_URI ?? "").trim();
-  const token = tmdbBearerToken().trim();
   if (!uri) {
     console.error("Missing MONGODB_URI");
     process.exit(1);
   }
-  if (!token) {
-    console.error("Missing TMDB_BEARER (or NEXT_PUBLIC_TMDB_BEARER)");
+  if (!hasTmdbAuth()) {
+    console.error("Missing TMDB_BEARER or TMDB_API_KEY");
     process.exit(1);
   }
 
@@ -197,7 +179,7 @@ async function main() {
   const ops = [];
 
   if (!tvOnly) {
-    const movieIds = await popularIds("/movie/popular", token, pages, (r) =>
+    const movieIds = await popularIds("/movie/popular", pages, (r) =>
       tmdbListMovieLooksAdult(r)
     );
     console.log(`popular movies: ${movieIds.length} ids`);
@@ -211,7 +193,7 @@ async function main() {
           include_adult: "false",
           append_to_response: "release_dates",
         });
-        const movie = await tmdbGet(`/movie/${id}?${q}`, token);
+        const movie = await tmdbGet(`/movie/${id}?${q}`);
         const doc = mapTmdbMovieToDoc(movie);
         if (doc) {
           ops.push({
@@ -234,7 +216,7 @@ async function main() {
   }
 
   if (!moviesOnly) {
-    const tvIds = await popularIds("/tv/popular", token, pages, (r) =>
+    const tvIds = await popularIds("/tv/popular", pages, (r) =>
       shouldRejectTmdbTvFromCatalog(r)
     );
     const toFetch = tvIds.filter((id) => !animeBlocked.has(id));
@@ -247,7 +229,7 @@ async function main() {
       const id = toFetch[i];
       try {
         const q = new URLSearchParams({ language: "en-US", include_adult: "false" });
-        const show = await tmdbGet(`/tv/${id}?${q}`, token);
+        const show = await tmdbGet(`/tv/${id}?${q}`);
         const doc = mapTmdbTvToDoc(show);
         if (doc) {
           ops.push({

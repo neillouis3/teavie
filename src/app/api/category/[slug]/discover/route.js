@@ -2,21 +2,30 @@ import clientPromise from "@/lib/mongo";
 import { fetchCategoryDiscover } from "@/lib/categoryDiscover";
 import { isValidCatalogCategorySlug } from "@/lib/catalogCategories";
 import { resolveRequestPreferences } from "@/lib/api/resolveRequestPreferences";
+import {
+  CATEGORY_DISCOVER_CACHE_HEADERS,
+  getCachedCategoryDiscover,
+} from "@/lib/api/categoryDiscoverCache";
 
 async function handleCategoryDiscover(slug, preferences = null) {
   if (!isValidCatalogCategorySlug(slug)) {
     return Response.json({ error: "Unknown category" }, { status: 404 });
   }
 
-  const client = await clientPromise;
-  const col = client.db("teavie").collection("content");
-  const data = await fetchCategoryDiscover(col, slug, preferences);
+  const data =
+    preferences == null
+      ? await getCachedCategoryDiscover(slug)
+      : await (async () => {
+          const client = await clientPromise;
+          const col = client.db("teavie").collection("content");
+          return fetchCategoryDiscover(col, slug, preferences);
+        })();
 
   if (!data) {
     return Response.json({ error: "Unknown category" }, { status: 404 });
   }
 
-  return Response.json(data);
+  return Response.json(data, { headers: CATEGORY_DISCOVER_CACHE_HEADERS });
 }
 
 export async function GET(_request, { params }) {

@@ -12,6 +12,10 @@ import {
   mongoMixedTvCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
 import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
+import {
+  fetchCatalogBrowsePage,
+  CATALOG_BROWSE_CACHE_HEADERS,
+} from "@/lib/api/catalogBrowsePage";
 
 function mapTvRow(doc) {
   return mapCatalogListDoc({
@@ -59,29 +63,32 @@ export async function GET(req) {
     }
     const filter = { $and: clauses };
 
-    const popPipeline = [
-      { $match: filter },
-      { $addFields: { _catalogPop: mongoMixedTvCatalogPopularityExpr() } },
-      { $sort: { _catalogPop: -1, _id: -1 } },
-      { $skip: skip },
-      { $limit: limit },
-      { $project: { _catalogPop: 0 } },
-    ];
-
-    const [total, results] = await Promise.all([
-      collection.countDocuments(filter),
-      sortBy === "popularity"
-        ? collection.aggregate(popPipeline).toArray()
-        : collection.find(filter).sort(sort).skip(skip).limit(limit).toArray(),
-    ]);
-
-    return Response.json({
-      page,
+    const includeTotal = page <= 1;
+    const { total, results } = await fetchCatalogBrowsePage(
+      collection,
+      filter,
+      sortBy,
+      sort,
+      skip,
       limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-      results: results.map(mapTvRow),
-    });
+      mongoMixedTvCatalogPopularityExpr(),
+      { includeTotal }
+    );
+
+    return Response.json(
+      {
+        page,
+        limit,
+        ...(includeTotal
+          ? {
+              total,
+              totalPages: Math.max(1, Math.ceil((total ?? 0) / limit)),
+            }
+          : {}),
+        results: results.map(mapTvRow),
+      },
+      { headers: CATALOG_BROWSE_CACHE_HEADERS }
+    );
   } catch (err) {
     console.error(err);
     return Response.json({ error: "Failed to fetch tv shows" }, { status: 500 });

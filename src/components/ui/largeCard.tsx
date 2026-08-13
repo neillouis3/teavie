@@ -9,6 +9,10 @@ import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/fo
 import { preferHighResAnimeImageUrl } from "@/lib/animePoster";
 import { tmdbImageUrl, tmdbImageUrlOr } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
+import {
+  buildCatalogDetailsSeed,
+  catalogSeedLinkProps,
+} from "@/lib/catalogDetailsSeed";
 
 type LargeCardProps = {
   id: number | string;
@@ -326,6 +330,15 @@ export default function LargeCard({
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
   const watchHref = `${href}/watch`;
+  const catalogSeed = buildCatalogDetailsSeed({
+    title,
+    posterPath,
+    backdropPath,
+    overview,
+    releaseDate,
+    year: String(year),
+    voteAverage,
+  });
   const when =
     releaseDate != null && String(releaseDate).trim().length >= 10
       ? formatReleasePhrase(releaseDate)
@@ -401,7 +414,11 @@ export default function LargeCard({
   }
 
   return (
-    <Link href={href} className={`block h-full w-full ${hero ? "" : "min-w-0"}`}>
+    <Link
+      href={href}
+      className={`block h-full w-full ${hero ? "" : "min-w-0"}`}
+      {...catalogSeedLinkProps(catalogSeed)}
+    >
       {card}
     </Link>
   );

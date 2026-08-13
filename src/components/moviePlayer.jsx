@@ -9,15 +9,12 @@ import {
   VIDEASY_PLAYER_BASE,
   withVideasyProgress,
 } from '@/lib/videasyPlayer';
-
-/** 111movies — embed must use the final player host (111movies.net 302s and breaks fullscreen). */
-const MOVIES111_BASE = 'https://player.vidlove.cc';
-
-/** Peachify — embed on peachify.top (docs host; .pro breaks fullscreen). */
-const PEACHIFY_BASE = 'https://peachify.top';
-
-/** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
-const VIDCORE_QUERY = '?theme=22c55e&autoPlay=true';
+import {
+  MOVIES111_EMBED_BASE,
+  PEACHIFY_EMBED_BASE,
+  VIDCORE_EMBED_BASE,
+  VIDCORE_THEME_QUERY,
+} from '@/lib/embedHosts';
 
 export const MOVIE_SERVERS = {
   stremio: {
@@ -27,13 +24,13 @@ export const MOVIE_SERVERS = {
     supportsProgress: true,
   },
   movies111: {
-    base: MOVIES111_BASE,
+    base: MOVIES111_EMBED_BASE,
     path: (id) => `/embed/movie/${id}`,
     suffix: () => '',
     supportsProgress: false,
   },
   peachify: {
-    base: PEACHIFY_BASE,
+    base: PEACHIFY_EMBED_BASE,
     path: (id) => `/embed/movie/${id}`,
     suffix: () => '',
     supportsProgress: false,
@@ -45,9 +42,9 @@ export const MOVIE_SERVERS = {
     supportsProgress: true,
   },
   vidcore: {
-    base: 'https://vidcore.net',
+    base: VIDCORE_EMBED_BASE,
     path: (id) => `/movie/${id}`,
-    suffix: () => VIDCORE_QUERY,
+    suffix: () => VIDCORE_THEME_QUERY,
     supportsProgress: false,
   },
 };
@@ -63,6 +60,7 @@ export const MOVIE_SERVERS = {
  * @param {'cam' | 'hd'} [props.streamQuality]
  * @param {number} [props.startSeconds] Videasy resume position
  * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
+ * @param {(seconds: number) => void} [props.onStremioProgress]
  */
 const MoviePlayer = ({
   videoId,
@@ -74,6 +72,7 @@ const MoviePlayer = ({
   streamQuality: streamQualityProp,
   startSeconds = 0,
   onVideasyProgress,
+  onStremioProgress,
 }) => {
   const [streamQuality, setStreamQuality] = useState(streamQualityProp ?? null);
 
@@ -82,6 +81,13 @@ const MoviePlayer = ({
       onVideasyProgress?.(msg);
     },
     [onVideasyProgress]
+  );
+
+  const stremioProgressHandler = useCallback(
+    (seconds) => {
+      onStremioProgress?.(seconds);
+    },
+    [onStremioProgress]
   );
 
   const playerUrl = useMemo(() => {
@@ -135,6 +141,7 @@ const MoviePlayer = ({
         title={title}
         posterUrl={posterUrl}
         backdropUrl={backdropUrl}
+        onPlaybackProgress={onStremioProgress ? stremioProgressHandler : undefined}
       />
     ) : (
     <div className="relative h-full min-h-0 w-full touch-auto rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">

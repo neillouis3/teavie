@@ -3,6 +3,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
+import { isExplorePath } from "@/lib/routes";
 import DesktopTopNav from "@/components/ui/desktopTopNav";
 import Footer from "@/components/ui/footer";
 import { CatalogStreamingOutageBanner } from "@/components/ui/catalogStreamingOutageAlert";
@@ -15,6 +16,7 @@ export default function MainWithSidebarOffset({
 }) {
   const pathname = usePathname();
   const heroBleed = pathUsesHeroBleed(pathname);
+  const showFooter = isExplorePath(pathname);
 
   return (
     <div
@@ -33,7 +35,7 @@ export default function MainWithSidebarOffset({
       >
         {children}
       </div>
-      <Footer />
+      {showFooter ? <Footer /> : null}
     </div>
   );
 }

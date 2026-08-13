@@ -459,12 +459,25 @@ export async function loadExploreCorePayload(
   ]);
 
   const excludeSet = new Set(excludeMovieIds.map(String));
-  const recommendedRows = filterRailByPreferences(
-    personalized?.recommended ?? [],
-    preferences
-  ).filter(
+  const personalizedRecommended = (personalized?.recommended ?? []).filter(
     (item) => !(item.type === "movie" && excludeSet.has(String(item.id)))
   );
+
+  let recommendedRows = filterRailByPreferences(
+    personalizedRecommended,
+    preferences
+  );
+
+  if (recommendedRows.length === 0 && hasUserPreferences(preferences)) {
+    recommendedRows = buildSpotlightItems(
+      bundle.discover.trendingMovies,
+      bundle.discover.trendingTv,
+      preferences,
+      24
+    ).filter(
+      (item) => !(item.type === "movie" && excludeSet.has(String(item.id)))
+    );
+  }
 
   return {
     discover: buildDiscoverFromPersonalized(bundle, personalized, preferences),

@@ -7,10 +7,7 @@ import {
   CATALOG_STREAMING_OUTAGE_ACTIVE,
   pathShowsCatalogStreamingOutage,
 } from "@/lib/streamingOutage";
-import {
-  pathUsesMovieDetailHeroBleed,
-  pathUsesShowDetailHeroBleed,
-} from "@/lib/heroBleedPaths";
+import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
 import { cn } from "@/lib/utils";
 
 type CatalogStreamingOutageAlertProps = {
@@ -36,10 +33,7 @@ export default function CatalogStreamingOutageAlert({
 /** Site-wide banner for catalog routes (excludes anime and sports). */
 export function CatalogStreamingOutageBanner() {
   const pathname = usePathname() ?? "";
-  const heroBleed =
-    pathname === "/explore" ||
-    pathUsesShowDetailHeroBleed(pathname) ||
-    pathUsesMovieDetailHeroBleed(pathname);
+  const heroBleed = pathUsesHeroBleed(pathname);
 
   if (!pathShowsCatalogStreamingOutage(pathname)) return null;
 

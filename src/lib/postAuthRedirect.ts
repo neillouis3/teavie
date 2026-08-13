@@ -1,4 +1,6 @@
-const DEFAULT_POST_AUTH_PATH = "/explore";
+import { EXPLORE_HOME } from "@/lib/routes";
+
+const DEFAULT_POST_AUTH_PATH = EXPLORE_HOME;
 
 /** Safe internal path for post-login redirect (?next=). */
 export function postAuthDestination(next: string | null | undefined): string {

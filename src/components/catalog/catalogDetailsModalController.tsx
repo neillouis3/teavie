@@ -1,12 +1,25 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import MovieTemplate from "@/components/movieTemplate";
-import ShowTemplate from "@/components/showTemplate";
 import CatalogDetailsSkeleton from "@/components/ui/catalogDetailsSkeleton";
 import ResponsiveDetailsOverlay from "@/components/catalog/responsiveDetailsOverlay";
+import MovieTemplate from "@/components/movieTemplate";
+import ShowTemplate from "@/components/showTemplate";
+import {
+  installCatalogDetailsPrefetchListeners,
+  prefetchCatalogDetailsPath,
+} from "@/lib/catalogDetailsPrefetch";
+import {
+  CATALOG_SEED_ATTR,
+  parseCatalogSeed,
+  type CatalogDetailsSeed,
+} from "@/lib/catalogDetailsSeed";
 
-type DetailsTarget = { type: "movie" | "show"; id: string };
+type DetailsTarget = {
+  type: "movie" | "show";
+  id: string;
+  seed: CatalogDetailsSeed | null;
+};
 
 function targetFromPath(pathname: string): DetailsTarget | null {
   const match = /^\/(movies|shows)\/([^/]+)\/?$/.exec(pathname);
@@ -15,11 +28,14 @@ function targetFromPath(pathname: string): DetailsTarget | null {
   return {
     type: match[1] === "movies" ? "movie" : "show",
     id: decodeURIComponent(match[2]),
+    seed: null,
   };
 }
 
 export default function CatalogDetailsModalController() {
   const [target, setTarget] = useState<DetailsTarget | null>(null);
+
+  useEffect(() => installCatalogDetailsPrefetchListeners(), []);
 
   useEffect(() => {
     const onDocumentClick = (event: MouseEvent) => {
@@ -36,8 +52,18 @@ export default function CatalogDetailsModalController() {
       }
 
       const element = event.target instanceof Element ? event.target : null;
+      if (
+        element?.closest(
+          "button, input, select, textarea, label, [role='button'], [data-no-details-modal]"
+        )
+      ) {
+        return;
+      }
+
       const anchor = element?.closest<HTMLAnchorElement>("a[href]");
-      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) {
+        return;
+      }
 
       const url = new URL(anchor.href, window.location.href);
       if (url.origin !== window.location.origin) return;
@@ -48,7 +74,9 @@ export default function CatalogDetailsModalController() {
       }
 
       event.preventDefault();
-      setTarget(next);
+      const seed = parseCatalogSeed(anchor.getAttribute(CATALOG_SEED_ATTR));
+      prefetchCatalogDetailsPath(url.pathname, { full: true });
+      setTarget({ ...next, seed });
     };
 
     document.addEventListener("click", onDocumentClick, true);
@@ -68,12 +96,13 @@ export default function CatalogDetailsModalController() {
       label={target.type === "movie" ? "Movie details" : "Show details"}
       onClose={close}
     >
-      <Suspense fallback={<CatalogDetailsSkeleton />}>
+      <Suspense fallback={<CatalogDetailsSkeleton modal />}>
         {target.type === "movie" ? (
           <MovieTemplate
             id={target.id}
             viewMode="details"
             detailsModal
+            detailsSeed={target.seed}
             onDetailsNavigate={close}
           />
         ) : (
@@ -81,6 +110,7 @@ export default function CatalogDetailsModalController() {
             id={target.id}
             viewMode="details"
             detailsModal
+            detailsSeed={target.seed}
             onDetailsNavigate={close}
           />
         )}

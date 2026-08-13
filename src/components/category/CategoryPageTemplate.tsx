@@ -4,9 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@heroui/react";
 import Header from "@/components/ui/header";
-import PageSplash from "@/components/ui/pageSplash";
 import LargeCard from "@/components/ui/largeCard";
-import CatalogRail from "@/components/catalog/catalogRail";
+import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
 import SidebarBleedRail, {
@@ -113,8 +112,30 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     );
   }
 
+  const useExploreSpotlight =
+    category.slug === "anime" || category.slug === "kdrama";
+
   if (!ready || !data) {
-    return <PageSplash ariaLabel={`Loading ${category.label}`} />;
+    return (
+      <div className="bg-background min-h-screen w-full">
+        {useExploreSpotlight ? (
+          <section
+            className={`relative z-0 w-full overflow-hidden rounded-tl-2xl ${RAIL_AFTER_SPOTLIGHT}`}
+            aria-hidden
+          >
+            <div className="min-h-[52vh] animate-pulse bg-default-200 sm:min-h-[62vh] lg:min-h-[80vh] dark:bg-default-100/10" />
+          </section>
+        ) : (
+          <Header pageName={category.label} />
+        )}
+        <div className={`space-y-8 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
+          <div className="h-24 animate-pulse rounded-xl bg-default-200 dark:bg-default-100/10" />
+          <CatalogRailSkeleton count={8} />
+          <CatalogRailSkeleton count={8} />
+          <CatalogRailSkeleton count={8} />
+        </div>
+      </div>
+    );
   }
 
   const categoryGenres = data.genres.filter((genre) => genre.count > 0);
@@ -129,8 +150,6 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
   const hasTrending = data.trending.length > 0;
   const hasFeatured = data.featured.length > 0;
-  const useExploreSpotlight =
-    category.slug === "anime" || category.slug === "kdrama";
 
   return (
     <div className="bg-background min-h-screen w-full">

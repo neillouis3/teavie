@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Avatar, Button } from "@heroui/react";
+import React, { useMemo } from "react";
+import { Avatar } from "@heroui/react";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
 import { avatarInitials } from "@/lib/partyNickname";
 
@@ -18,10 +18,7 @@ export type MovieCreditsPayload = {
   crew?: MovieCreditPerson[];
 };
 
-const CAST_LIMIT = 12;
-const CAST_PREVIEW = 4;
 const STAFF_LIMIT = 10;
-const DIRECTOR_JOBS = new Set(["Director", "Co-Director"]);
 
 const STAFF_JOB_PRIORITY: Record<string, number> = {
   Creator: 0,
@@ -97,28 +94,17 @@ function normalizeCreditPerson(raw: unknown): MovieCreditPerson | null {
   };
 }
 
-function uniquePeople(
-  rows: MovieCreditPerson[],
-  limit: number
-): MovieCreditPerson[] {
+function uniqueCast(cast: MovieCreditPerson[] | undefined): MovieCreditPerson[] {
+  if (!Array.isArray(cast)) return [];
   const seen = new Set<number>();
   const out: MovieCreditPerson[] = [];
-  for (const row of rows) {
+  for (const row of cast) {
     if (!row?.name?.trim() || !Number.isFinite(row.id)) continue;
     if (seen.has(row.id)) continue;
     seen.add(row.id);
     out.push(row);
-    if (out.length >= limit) break;
   }
   return out;
-}
-
-function directorsFromCrew(crew: MovieCreditPerson[] | undefined): MovieCreditPerson[] {
-  if (!Array.isArray(crew)) return [];
-  return uniquePeople(
-    crew.filter((person) => DIRECTOR_JOBS.has(String(person.job ?? "").trim())),
-    6
-  );
 }
 
 function staffFromCrew(crew: MovieCreditPerson[] | undefined): MovieCreditPerson[] {
@@ -151,11 +137,6 @@ function staffFromCrew(crew: MovieCreditPerson[] | undefined): MovieCreditPerson
       return a.name.localeCompare(b.name);
     })
     .slice(0, STAFF_LIMIT);
-}
-
-function castFromCredits(cast: MovieCreditPerson[] | undefined): MovieCreditPerson[] {
-  if (!Array.isArray(cast)) return [];
-  return uniquePeople(cast, CAST_LIMIT);
 }
 
 type CreditAvatarProps = {
@@ -197,44 +178,22 @@ type CreditRowProps = {
   title: string;
   people: MovieCreditPerson[];
   subtitleFor?: (person: MovieCreditPerson) => string | null;
-  previewCount?: number;
 };
 
-function CreditRow({ title, people, subtitleFor, previewCount }: CreditRowProps) {
-  const [expanded, setExpanded] = useState(false);
+function CreditRow({ title, people, subtitleFor }: CreditRowProps) {
   if (people.length === 0) return null;
-
-  const hasMore =
-    previewCount != null && !expanded && people.length > previewCount;
-  const visible =
-    previewCount != null && !expanded
-      ? people.slice(0, previewCount)
-      : people;
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
       <h3 className="pl-2 text-sm font-medium text-default-500">{title}</h3>
-      <div className="flex w-full min-w-0 items-center gap-2">
-        <div className="flex min-w-0 flex-1 gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {visible.map((person) => (
-            <CreditAvatar
-              key={person.id}
-              person={person}
-              subtitle={subtitleFor?.(person) ?? null}
-            />
-          ))}
-        </div>
-        {hasMore ? (
-          <Button
-            type="button"
-            variant="light"
-            size="sm"
-            className="h-7 min-h-7 shrink-0 self-center px-2 text-xs font-medium text-default-500"
-            onPress={() => setExpanded(true)}
-          >
-            Show more
-          </Button>
-        ) : null}
+      <div className="flex min-w-0 gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {people.map((person) => (
+          <CreditAvatar
+            key={person.id}
+            person={person}
+            subtitle={subtitleFor?.(person) ?? null}
+          />
+        ))}
       </div>
     </div>
   );
@@ -242,7 +201,7 @@ function CreditRow({ title, people, subtitleFor, previewCount }: CreditRowProps)
 
 type MovieCreditsStripProps = {
   credits?: MovieCreditsPayload | unknown | null;
-  /** TV shows group directors/writers under Staff; movies keep a Directors row. */
+  /** TV shows can show a Staff row for creators/writers. */
   variant?: "movie" | "show";
 };
 
@@ -255,37 +214,32 @@ export default function MovieCreditsStrip({
     [credits]
   );
   const cast = useMemo(
-    () => castFromCredits(normalized?.cast),
+    () => uniqueCast(normalized?.cast),
     [normalized?.cast]
-  );
-  const directors = useMemo(
-    () => directorsFromCrew(normalized?.crew),
-    [normalized?.crew]
   );
   const staff = useMemo(
     () => staffFromCrew(normalized?.crew),
     [normalized?.crew]
   );
 
-  if (cast.length === 0 && directors.length === 0 && staff.length === 0) return null;
+  if (cast.length === 0 && (variant !== "show" || staff.length === 0)) return null;
 
   return (
     <section className="flex w-full flex-col gap-4" aria-label="Cast and crew">
-      <CreditRow
-        title="Cast"
-        people={cast}
-        previewCount={CAST_PREVIEW}
-        subtitleFor={(person) => person.character?.trim() || null}
-      />
-      {variant === "show" ? (
+      {cast.length > 0 ? (
+        <CreditRow
+          title="Cast"
+          people={cast}
+          subtitleFor={(person) => person.character?.trim() || null}
+        />
+      ) : null}
+      {variant === "show" && staff.length > 0 ? (
         <CreditRow
           title="Staff"
           people={staff}
           subtitleFor={(person) => person.job?.trim() || null}
         />
-      ) : (
-        <CreditRow title="Directors" people={directors} />
-      )}
+      ) : null}
     </section>
   );
 }

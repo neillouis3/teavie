@@ -1,24 +1,21 @@
-'use client';
+import { Suspense } from "react";
+import MovieTemplate from "@/components/movieTemplate";
+import CatalogDetailsSkeleton from "@/components/ui/catalogDetailsSkeleton";
 
-import React, { Suspense } from 'react';
-import { useParams } from 'next/navigation';
-import MovieTemplate from '@/components/movieTemplate';
-import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
+type MoviePageProps = {
+  params: Promise<{ id: string }>;
+};
 
-function MoviePageInner() {
-  const params = useParams();
+export default async function MoviePage({ params }: MoviePageProps) {
+  const { id } = await params;
 
-  if (!params || typeof params.id !== 'string') {
+  if (!id) {
     return <div>Error: Invalid movie ID</div>;
   }
 
-  return <MovieTemplate id={params.id} viewMode="details" />;
+  return (
+    <Suspense fallback={<CatalogDetailsSkeleton />}>
+      <MovieTemplate id={id} viewMode="details" />
+    </Suspense>
+  );
 }
-
-const MoviePage = () => (
-  <Suspense fallback={<CatalogDetailsSkeleton />}>
-    <MoviePageInner />
-  </Suspense>
-);
-
-export default MoviePage;

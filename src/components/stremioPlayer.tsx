@@ -35,6 +35,7 @@ type Props = {
   title?: string;
   posterUrl?: string | null;
   backdropUrl?: string | null;
+  onPlaybackProgress?: (seconds: number) => void;
 };
 
 type AudioTrack = { audioIndex: number; language: string; title: string | null; codec: string; channels: number | null };
@@ -48,6 +49,7 @@ export default function StremioPlayer({
   title = "",
   posterUrl,
   backdropUrl,
+  onPlaybackProgress,
 }: Props) {
   const router = useRouter();
   const { openTeaParty } = useWatchPartyNav();
@@ -58,6 +60,7 @@ export default function StremioPlayer({
   const audioResumeTimeRef = useRef(0);
   const ignorePlaybackErrorsUntilRef = useRef(0);
   const controlsTimerRef = useRef<number | null>(null);
+  const lastProgressReportRef = useRef(0);
   const [streams, setStreams] = useState<PlayableStream[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -269,6 +272,14 @@ export default function StremioPlayer({
       if (controlsTimerRef.current) window.clearTimeout(controlsTimerRef.current);
     };
   }, [revealControls]);
+
+  useEffect(() => {
+    if (!onPlaybackProgress || currentTime < 1) return;
+    const now = Date.now();
+    if (now - lastProgressReportRef.current < 5000) return;
+    lastProgressReportRef.current = now;
+    onPlaybackProgress(currentTime);
+  }, [currentTime, onPlaybackProgress]);
 
   if (!imdbId) {
     return <PlayerMessage text="This title has no IMDb id, so Stremio addons cannot resolve it." />;

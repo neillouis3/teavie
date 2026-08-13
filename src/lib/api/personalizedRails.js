@@ -16,7 +16,6 @@ import {
   sortDocsByPreferenceRank,
 } from "@/lib/preferenceMatch";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
-import { enrichAnimeDocsWithTmdbBackdrops } from "@/lib/animeTmdbArt";
 import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
 import {
   CATALOG_POPULAR_MIN_VOTE_AVERAGE,
@@ -58,7 +57,6 @@ function mapDocsToItems(docs, preferences) {
 }
 
 async function mapDocsToItemsWithTmdbArt(docs, preferences) {
-  await enrichAnimeDocsWithTmdbBackdrops(docs);
   return mapDocsToItems(docs, preferences);
 }
 

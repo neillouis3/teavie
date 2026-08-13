@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { TEAVIE_LOGO } from "@/lib/brandAssets";
 
 export default function Footer() {
   return (
@@ -15,7 +16,7 @@ export default function Footer() {
             className="rounded-3xl p-2 opacity-70 transition-all hover:scale-105 hover:opacity-100"
           >
             <Image
-              src="/teavie-icon.png"
+              src={TEAVIE_LOGO.icon}
               alt=""
               width={56}
               height={56}

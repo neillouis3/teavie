@@ -596,6 +596,10 @@ export function buildPreferenceMatch(preferences, opts = {}) {
     clauses.push({ type: "tv" });
   }
 
+  if (clauses.length === 0 && preferences?.anime_audio) {
+    clauses.push(categoryClause("anime"));
+  }
+
   if (clauses.length === 0) return null;
   return { $and: clauses };
 }

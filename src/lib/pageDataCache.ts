@@ -133,6 +133,12 @@ export type BrowseCatalogPayload = {
   genreSlugs?: string[];
 };
 
+export type BrowseCatalogPageResults = {
+  results: ContentItem[];
+  totalPages?: number;
+  total?: number;
+};
+
 const EMPTY_CATEGORY: CategoryDiscoverPayload = {
   featured: [],
   trending: [],
@@ -313,41 +319,95 @@ export async function fetchGenrePagePayload(
   );
 }
 
+export async function fetchBrowseCatalogGenres(
+  namespace: string,
+  genreApiPath: string
+): Promise<string[] | undefined> {
+  return withDayCache(`${PREFIX}.browse-genres.v1:${namespace}`, async () => {
+    try {
+      const genreRes = await fetch(genreApiPath);
+      const genreJson = genreRes.ok ? await genreRes.json() : { genres: [] };
+      return (genreJson.genres ?? [])
+        .filter((g: { count?: number }) => (g.count ?? 0) > 0)
+        .map((g: { slug: string }) => g.slug);
+    } catch {
+      return undefined;
+    }
+  });
+}
+
+async function loadBrowseCatalogList(
+  apiPath: string,
+  queryString: string
+): Promise<BrowseCatalogPageResults> {
+  const listRes = await fetch(`${apiPath}?${queryString}`);
+  if (!listRes.ok) {
+    return { results: [] };
+  }
+  const listJson = await listRes.json();
+  return {
+    results: listJson.results ?? [],
+    totalPages:
+      typeof listJson.totalPages === "number" ? listJson.totalPages : undefined,
+    total: typeof listJson.total === "number" ? listJson.total : undefined,
+  };
+}
+
+export async function fetchBrowseCatalogPageResults(
+  namespace: string,
+  apiPath: string,
+  queryString: string
+): Promise<BrowseCatalogPageResults> {
+  const cacheKey = `${PREFIX}.browse-page.v1:${namespace}:${queryString}`;
+  return withDayCache(
+    cacheKey,
+    () => loadBrowseCatalogList(apiPath, queryString),
+    { isCacheable: (data) => hasCatalogItems(data.results) }
+  );
+}
+
+/** Warm the next browse page in the background (no-op if already cached). */
+export function prefetchBrowseCatalogPage(
+  namespace: string,
+  apiPath: string,
+  filterQueryString: string,
+  page: number
+): void {
+  if (page < 2 || typeof window === "undefined") return;
+  const query = new URLSearchParams(filterQueryString);
+  query.set("page", String(page));
+  void fetchBrowseCatalogPageResults(namespace, apiPath, query.toString());
+}
+
 export async function fetchBrowseCatalogPayload(
   namespace: string,
   apiPath: string,
   queryString: string,
   genreApiPath?: string
 ): Promise<BrowseCatalogPayload> {
-  const cacheKey = `${PREFIX}.browse.v3:${namespace}:${queryString}`;
+  const cacheKey = `${PREFIX}.browse.v4:${namespace}:${queryString}`;
+  const page = new URLSearchParams(queryString).get("page") || "1";
+  const isFirstPage = page === "1";
+
   return withDayCache(
     cacheKey,
     async () => {
       try {
-        const listRes = await fetch(`${apiPath}?${queryString}`);
-        if (!listRes.ok) {
-          // Leave uncached via isCacheable so a failed /anime/all or /kdrama/all can recover.
-          return { results: [], totalPages: 1, total: 0, genreSlugs: undefined };
-        }
-        const listJson = await listRes.json();
+        const [listData, genreSlugs] = await Promise.all([
+          loadBrowseCatalogList(apiPath, queryString),
+          isFirstPage && genreApiPath
+            ? fetchBrowseCatalogGenres(namespace, genreApiPath)
+            : Promise.resolve(undefined),
+        ]);
 
-        let genreSlugs: string[] | undefined;
-        if (genreApiPath) {
-          try {
-            const genreRes = await fetch(genreApiPath);
-            const genreJson = genreRes.ok ? await genreRes.json() : { genres: [] };
-            genreSlugs = (genreJson.genres ?? [])
-              .filter((g: { count?: number }) => (g.count ?? 0) > 0)
-              .map((g: { slug: string }) => g.slug);
-          } catch {
-            genreSlugs = undefined;
-          }
+        if (listData.results.length === 0 && !listData.total) {
+          return { results: [], totalPages: 1, total: 0, genreSlugs };
         }
 
         return {
-          results: listJson.results ?? [],
-          totalPages: listJson.totalPages ?? 1,
-          total: typeof listJson.total === "number" ? listJson.total : 0,
+          results: listData.results,
+          totalPages: listData.totalPages ?? 1,
+          total: listData.total ?? 0,
           genreSlugs,
         };
       } catch {

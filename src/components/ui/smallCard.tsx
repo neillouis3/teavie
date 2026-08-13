@@ -8,6 +8,10 @@ import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { catalogDisplayTitle } from '@/lib/catalogDisplayTitle';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 import CatalogCardHoverActions from '@/components/catalog/CatalogCardHoverActions';
+import {
+  buildCatalogDetailsSeed,
+  catalogSeedLinkProps,
+} from '@/lib/catalogDetailsSeed';
 import FavoriteStarIcon from '@/components/favorites/FavoriteStarIcon';
 
 interface SmallCardProps {
@@ -23,6 +27,9 @@ interface SmallCardProps {
   numberOfEpisodes?: number | null;
   type: string;
   posterPath: string;
+  overview?: string;
+  /** ISO release / first-air date when known. */
+  releaseDate?: string;
   /** When set, overrides `/shows/{id}` / `/movies/{id}` (e.g. AniList URL). */
   linkHref?: string | null;
   /** Muted line above the title (e.g. continue-watching S/E). */
@@ -51,6 +58,8 @@ export default function SmallCard({
   releaseNote,
   type,
   posterPath,
+  overview,
+  releaseDate,
   linkHref,
   subtitle,
   metaChips: metaChipsProp,
@@ -66,8 +75,17 @@ export default function SmallCard({
   const external = /^https?:\/\//i.test(resolvedHref);
   const metaChips = metaChipsProp ?? [];
   const displayTitle = catalogDisplayTitle(title);
-  const enableHoverActions = showHoverActions && !external;
   const yearLabel = String(year ?? '').trim();
+  const enableHoverActions = showHoverActions && !external;
+  const catalogSeed = buildCatalogDetailsSeed({
+    title: displayTitle,
+    posterPath,
+    backdropPath: posterPath,
+    overview,
+    releaseDate,
+    year: yearLabel,
+    voteAverage,
+  });
   const ratingLabel =
     typeof voteAverage === 'number' && Number.isFinite(voteAverage) && voteAverage > 0
       ? voteAverage.toFixed(1)
@@ -193,6 +211,7 @@ export default function SmallCard({
         href={resolvedHref}
         className="flex min-w-0 flex-col gap-1"
         aria-label={`${title}, ${year}`}
+        {...catalogSeedLinkProps(catalogSeed)}
       >
         {cardBody}
       </Link>

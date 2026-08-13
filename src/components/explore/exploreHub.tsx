@@ -60,7 +60,7 @@ function listSignature(entries: { catalogId: string; mediaType: string }[]) {
 }
 
 export default function ExploreHub() {
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, profileLoading, user } = useAuth();
   const { preferences, watchHistoryEntries, watchLaterEntries, favoriteEntries, watchedMovieIds } =
     useUserData();
   const [core, setCore] = useState<ExploreCorePayload | null>(null);
@@ -124,6 +124,7 @@ export default function ExploreHub() {
 
   useEffect(() => {
     if (authLoading) return;
+    if (user && profileLoading) return;
     let cancelled = false;
     void loadExploreCorePayload(preferences, {
       excludeMovieIds: watchedMovieIds,
@@ -133,7 +134,15 @@ export default function ExploreHub() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, preferencesSig, watchedMoviesSig, preferences, watchedMovieIds]);
+  }, [
+    authLoading,
+    profileLoading,
+    user,
+    preferencesSig,
+    watchedMoviesSig,
+    preferences,
+    watchedMovieIds,
+  ]);
 
   useEffect(() => {
     if (authLoading) return;

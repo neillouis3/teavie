@@ -16,8 +16,11 @@ export async function GET(req) {
       );
     }
 
+    const lite = searchParams.get("lite") === "1";
+    const append = lite ? "release_dates" : "release_dates,credits,videos";
+
     const data = await tmdbFetchJson(
-      `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=release_dates,credits,videos`
+      `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=${append}`
     );
 
     return Response.json(data, {
