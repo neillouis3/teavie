@@ -18,11 +18,15 @@ import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 import {
   bustInflightDayCache,
   categoryDiscoverCacheKey,
+  categoryDiscoverGenresCacheKey,
   categoryDiscoverHeroCacheKey,
-  categoryDiscoverRailsCacheKey,
+  categoryDiscoverNewEpisodesCacheKey,
+  categoryDiscoverTopRatedCacheKey,
   EMPTY_CATEGORY,
+  fetchCategoryDiscoverGenres,
   fetchCategoryDiscoverHero,
-  fetchCategoryDiscoverRails,
+  fetchCategoryDiscoverNewEpisodes,
+  fetchCategoryDiscoverTopRated,
   peekCategoryDiscoverCache,
   preferencesCacheKey,
   type CategoryDiscoverPayload,
@@ -40,15 +44,6 @@ function hasCategoryHeroData(data: CategoryDiscoverPayload | null | undefined): 
   return Boolean(data && (data.trending.length > 0 || data.popular.length > 0));
 }
 
-function hasCategoryRailsData(data: CategoryDiscoverPayload | null | undefined): boolean {
-  return Boolean(
-    data &&
-      (data.topRated.length > 0 ||
-        data.newEpisodes.length > 0 ||
-        data.genres.some((genre) => (genre.count ?? 0) > 0))
-  );
-}
-
 export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps) {
   const category = getCatalogCategory(slug);
   const { preferences } = useUserData();
@@ -57,31 +52,55 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     return peekCategoryDiscoverCache(category.slug, preferences) ?? EMPTY_CATEGORY;
   });
   const [heroReady, setHeroReady] = useState(() => hasCategoryHeroData(data));
-  const [railsReady, setRailsReady] = useState(() => hasCategoryRailsData(data));
+  const [topRatedReady, setTopRatedReady] = useState(() => data.topRated.length > 0);
+  const [newEpisodesReady, setNewEpisodesReady] = useState(() => data.newEpisodes.length > 0);
+  const [genresReady, setGenresReady] = useState(() =>
+    data.genres.some((genre) => (genre.count ?? 0) > 0)
+  );
   const preferencesSig = useMemo(
     () => preferencesCacheKey(preferences),
     [preferences]
   );
 
-  const loadDiscover = useCallback(() => {
+  const loadHero = useCallback(() => {
     if (!category) return;
-
     void fetchCategoryDiscoverHero(category.slug, preferences).then((hero) => {
       setData((prev) => ({ ...prev, ...hero }));
       setHeroReady(true);
     });
+  }, [category, preferences]);
 
-    void fetchCategoryDiscoverRails(category.slug, preferences).then((rails) => {
-      setData((prev) => ({ ...prev, ...rails }));
-      setRailsReady(true);
+  const loadRails = useCallback(() => {
+    if (!category) return;
+
+    void fetchCategoryDiscoverNewEpisodes(category.slug, preferences).then((part) => {
+      setData((prev) => ({ ...prev, ...part }));
+      setNewEpisodesReady(true);
+    });
+
+    void fetchCategoryDiscoverTopRated(category.slug, preferences).then((part) => {
+      setData((prev) => ({ ...prev, ...part }));
+      setTopRatedReady(true);
+    });
+
+    void fetchCategoryDiscoverGenres(category.slug, preferences).then((part) => {
+      setData((prev) => ({ ...prev, ...part }));
+      setGenresReady(true);
     });
   }, [category, preferences]);
+
+  const loadDiscover = useCallback(() => {
+    loadHero();
+    loadRails();
+  }, [loadHero, loadRails]);
 
   const bustDiscoverInflight = useCallback(() => {
     if (!category) return;
     bustInflightDayCache(categoryDiscoverCacheKey(category.slug, preferences));
     bustInflightDayCache(categoryDiscoverHeroCacheKey(category.slug, preferences));
-    bustInflightDayCache(categoryDiscoverRailsCacheKey(category.slug, preferences));
+    bustInflightDayCache(categoryDiscoverTopRatedCacheKey(category.slug, preferences));
+    bustInflightDayCache(categoryDiscoverNewEpisodesCacheKey(category.slug, preferences));
+    bustInflightDayCache(categoryDiscoverGenresCacheKey(category.slug, preferences));
   }, [category, preferences]);
 
   useEffect(() => {
@@ -98,7 +117,13 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     if (cached) {
       setData(cached);
       setHeroReady(hasCategoryHeroData(cached));
-      setRailsReady(hasCategoryRailsData(cached));
+      setTopRatedReady(cached.topRated.length > 0);
+      setNewEpisodesReady(cached.newEpisodes.length > 0);
+      setGenresReady(cached.genres.some((genre) => (genre.count ?? 0) > 0));
+    } else {
+      setTopRatedReady(false);
+      setNewEpisodesReady(false);
+      setGenresReady(false);
     }
 
     void fetchCategoryDiscoverHero(category.slug, preferences).then((hero) => {
@@ -107,10 +132,22 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
       setHeroReady(true);
     });
 
-    void fetchCategoryDiscoverRails(category.slug, preferences).then((rails) => {
+    void fetchCategoryDiscoverNewEpisodes(category.slug, preferences).then((part) => {
       if (cancelled) return;
-      setData((prev) => ({ ...prev, ...rails }));
-      setRailsReady(true);
+      setData((prev) => ({ ...prev, ...part }));
+      setNewEpisodesReady(true);
+    });
+
+    void fetchCategoryDiscoverTopRated(category.slug, preferences).then((part) => {
+      if (cancelled) return;
+      setData((prev) => ({ ...prev, ...part }));
+      setTopRatedReady(true);
+    });
+
+    void fetchCategoryDiscoverGenres(category.slug, preferences).then((part) => {
+      if (cancelled) return;
+      setData((prev) => ({ ...prev, ...part }));
+      setGenresReady(true);
     });
 
     return () => {
@@ -123,18 +160,11 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
   useEffect(() => {
     if (!category) return;
     const refresh = () => {
-      void fetchCategoryDiscoverHero(category.slug, preferences).then((hero) => {
-        setData((prev) => ({ ...prev, ...hero }));
-        setHeroReady(true);
-      });
-      void fetchCategoryDiscoverRails(category.slug, preferences).then((rails) => {
-        setData((prev) => ({ ...prev, ...rails }));
-        setRailsReady(true);
-      });
+      loadDiscover();
     };
     window.addEventListener(PREFERENCES_CHANGED_EVENT, refresh);
     return () => window.removeEventListener(PREFERENCES_CHANGED_EVENT, refresh);
-  }, [category, preferences]);
+  }, [category, loadDiscover]);
 
   if (!category) {
     return (
@@ -187,6 +217,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
   const hasTrending = data.trending.length > 0;
   const hasNewEpisodes = data.newEpisodes.length > 0;
+  const railsLoading = !topRatedReady || !newEpisodesReady;
 
   return (
     <div className="bg-background min-h-screen w-full">
@@ -222,7 +253,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
         </div>
       ) : null}
 
-      {!railsReady && !hasNewEpisodes ? (
+      {!newEpisodesReady && !hasNewEpisodes ? (
         <div
           className={cn(
             "mb-8 w-full",
@@ -255,7 +286,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           categoryGenres.length > 0 ? "pb-0" : "pb-10"
         )}
       >
-        {hasContent || !railsReady ? (
+        {hasContent || railsLoading ? (
           <>
             {data.popular.length > 0 ? (
               <CatalogRail
@@ -263,8 +294,6 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                 items={data.popular}
                 titleVariant="explore"
               />
-            ) : !railsReady ? (
-              <CatalogRailSkeleton count={8} />
             ) : null}
 
             {data.topRated.length > 0 ? (
@@ -273,7 +302,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                 items={data.topRated}
                 titleVariant="explore"
               />
-            ) : !railsReady ? (
+            ) : !topRatedReady ? (
               <CatalogRailSkeleton count={8} />
             ) : null}
           </>
@@ -284,7 +313,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
         )}
       </div>
 
-      {!railsReady && categoryGenres.length === 0 ? (
+      {!genresReady && categoryGenres.length === 0 ? (
         <div className={cn("pb-10 pt-8", MOBILE_CONTENT_INSET_LEFT)}>
           <div className="h-5 w-28 animate-pulse rounded bg-default-200 dark:bg-default-100/10" />
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">

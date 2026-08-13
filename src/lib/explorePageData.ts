@@ -21,7 +21,7 @@ const EMPTY_FEED = {
   upcomingContent: [] as ContentItem[],
 };
 
-const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v2:";
+const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v3:";
 
 export type ExploreHistoryRow = ContentItem & {
   progressLabel: string;
@@ -89,7 +89,7 @@ export async function fetchExploreHistoryRows(
 
   const cacheKey = historyCacheKey(entries);
   const cached = readClientDayCache<ExploreHistoryRow[]>(cacheKey);
-  if (cached) {
+  if (cached && cached.length > 0) {
     const merged = mergeHistoryRows(cached, entries, progressLabel);
     if (merged.length === entries.length) return merged;
   }
@@ -105,12 +105,14 @@ export async function fetchExploreHistoryRows(
         })),
       }),
     });
-    if (!res.ok) return [];
+    if (!res.ok) return cached?.length ? mergeHistoryRows(cached, entries, progressLabel) : [];
     const json = (await res.json()) as { items?: ContentItem[] };
     const byId = new Map((json.items ?? []).map((item) => [String(item.id), item]));
     const rows: ExploreHistoryRow[] = [];
     for (const entry of entries) {
-      const item = byId.get(entry.catalogId);
+      const item =
+        byId.get(entry.catalogId) ??
+        (json.items ?? []).find((row) => String(row.id) === entry.catalogId);
       if (!item) continue;
       rows.push({
         ...item,
@@ -120,10 +122,12 @@ export async function fetchExploreHistoryRows(
         lastEpisode: entry.lastEpisode,
       });
     }
-    writeClientDayCache(cacheKey, rows);
+    if (rows.length > 0) {
+      writeClientDayCache(cacheKey, rows);
+    }
     return rows;
   } catch {
-    return [];
+    return cached?.length ? mergeHistoryRows(cached, entries, progressLabel) : [];
   }
 }
 

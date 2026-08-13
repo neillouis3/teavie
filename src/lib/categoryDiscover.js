@@ -44,7 +44,6 @@ const TILE_POSTERS = 5;
 const RAIL_LIMIT = 24;
 const TRENDING_LIMIT = 16;
 const FEATURED_SIZE = 2;
-const ANILIST_NEW_EPISODES_TIMEOUT_MS = 1200;
 
 const AGG_OPTS = { allowDiskUse: true };
 
@@ -256,23 +255,18 @@ async function fetchNewEpisodesRail(
       limit,
       lookbackDays,
     });
+    const anilistLive = fetchAnimeNewEpisodesFromAnilist(col, baseFilter, {
+      limit,
+      lookbackDays,
+    }).then((rows) =>
+      rows.length > 0 ? rows : new Promise(() => {})
+    );
 
     try {
-      const live = await Promise.race([
-        fetchAnimeNewEpisodesFromAnilist(col, baseFilter, {
-          limit,
-          lookbackDays,
-        }),
-        new Promise((resolve) => {
-          setTimeout(() => resolve([]), ANILIST_NEW_EPISODES_TIMEOUT_MS);
-        }),
-      ]);
-      if (live.length > 0) return live;
-    } catch (err) {
-      console.error("[categoryDiscover] AniList new episodes:", err);
+      return await Promise.race([mongoFallback, anilistLive]);
+    } catch {
+      return mongoFallback;
     }
-
-    return mongoFallback;
   }
 
   return fetchNewEpisodesFromMongo(col, baseFilter, {

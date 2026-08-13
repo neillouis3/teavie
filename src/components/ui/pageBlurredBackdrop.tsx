@@ -14,10 +14,13 @@ type PageBlurredBackdropProps = {
   variant?: "shell" | PageBrowseBackdrop | PageShellBackdrop;
 };
 
-const BACKDROP_IMAGE_CLASS =
+const STATIC_BACKDROP_CLASS =
+  "absolute inset-0 h-full w-full scale-105 object-cover object-[center_25%] brightness-[0.72] saturate-150";
+
+const DYNAMIC_BACKDROP_CLASS =
   "absolute inset-0 h-full w-full scale-110 object-cover object-[center_25%] blur-2xl brightness-[0.72] saturate-150";
 
-/** Full-viewport frosted backdrop — matches show/episodes pages. */
+/** Full-viewport frosted backdrop — static JPGs are pre-sized; hero art gets CSS blur. */
 export default function PageBlurredBackdrop({
   imageUrl,
   variant = "shell",
@@ -33,16 +36,27 @@ export default function PageBlurredBackdrop({
         ? pageBrowseBackdropUrl(variant)
         : pageShellBackdropUrl(variant);
   const src = imageUrl ?? staticSrc;
+  const isStaticAsset = imageUrl == null;
 
   return (
     <div
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black"
       aria-hidden
     >
-      <img src={src} alt="" className={BACKDROP_IMAGE_CLASS} decoding="async" />
+      <img
+        src={src}
+        alt=""
+        decoding="async"
+        fetchPriority="low"
+        className={isStaticAsset ? STATIC_BACKDROP_CLASS : DYNAMIC_BACKDROP_CLASS}
+      />
       <div className="absolute inset-0 bg-black/35" />
-      <div className="absolute left-[18%] top-0 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[120px]" />
-      <div className="absolute right-[18%] top-0 h-[28rem] w-[28rem] translate-x-1/2 rounded-full bg-rose-700/10 blur-[120px]" />
+      {!isStaticAsset ? (
+        <>
+          <div className="absolute left-[18%] top-0 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[120px]" />
+          <div className="absolute right-[18%] top-0 h-[28rem] w-[28rem] translate-x-1/2 rounded-full bg-rose-700/10 blur-[120px]" />
+        </>
+      ) : null}
     </div>
   );
 }

@@ -24,7 +24,7 @@ import { LIBRARY_GRID_CLASS, RAIL_INNER_CLASS, RAIL_STACK_CLASS } from "@/lib/ca
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 
-const ACTIVITY_CACHE_PREFIX = "teavie.cache.activity.v2:";
+const ACTIVITY_CACHE_PREFIX = "teavie.cache.activity.v3:";
 
 /** Reserve one grid row while cards load — reduces CLS when data arrives. */
 const ACTIVITY_GRID_MIN_H = "min-h-[420px] sm:min-h-[460px]";
@@ -74,7 +74,7 @@ function ActivitySection({
 }
 
 export default function ActivityPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { watchHistoryEntries, watchHistoryLogEntries } = useUserData();
 
   const cacheKey = useMemo(() => {
@@ -98,6 +98,7 @@ export default function ActivityPage() {
     const cached = readClientDayCache<ActivityPayload>(cacheKey);
     return !(cached && (cached.historyRows.length > 0 || cached.historyLogRows.length > 0));
   });
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const loadUserRails = useCallback(async () => {
     const continueIds = new Set(watchHistoryEntries.map((e) => e.catalogId));
@@ -114,6 +115,7 @@ export default function ActivityPage() {
     ) {
       setLoading(true);
     }
+    setLoadFailed(false);
 
     try {
       const [rails, logRows] = await Promise.all([
@@ -127,12 +129,16 @@ export default function ActivityPage() {
       ]);
       setHistoryRows(rails.historyRows);
       setHistoryLogRows(logRows);
-      if (rails.historyRows.length > 0 || logRows.length > 0) {
+      const loaded = rails.historyRows.length > 0 || logRows.length > 0;
+      setLoadFailed(hasPending && !loaded);
+      if (loaded) {
         writeClientDayCache(cacheKey, {
           historyRows: rails.historyRows,
           historyLogRows: logRows,
         });
       }
+    } catch {
+      setLoadFailed(hasPending);
     } finally {
       setLoading(false);
     }
@@ -143,7 +149,6 @@ export default function ActivityPage() {
   }, []);
 
   useEffect(() => {
-    if (authLoading) return;
     const cached = readClientDayCache<ActivityPayload>(cacheKey);
     if (cached) {
       setHistoryRows(cached.historyRows);
@@ -153,7 +158,7 @@ export default function ActivityPage() {
       }
     }
     void loadUserRails();
-  }, [authLoading, cacheKey, loadUserRails]);
+  }, [cacheKey, loadUserRails]);
 
   useEffect(() => {
     const onUserRailsChange = () => void loadUserRails();
@@ -239,8 +244,21 @@ export default function ActivityPage() {
                 bleed={false}
                 display="grid"
               />
+            ) : loadFailed ? (
+              <ActivitySection title="Continue watching">
+                <p className="text-center text-sm text-default-500">
+                  Couldn&apos;t load titles.{" "}
+                  <button
+                    type="button"
+                    className="text-success hover:underline"
+                    onClick={() => void loadUserRails()}
+                  >
+                    Try again
+                  </button>
+                </p>
+              </ActivitySection>
             ) : (
-              <ActivitySection title="Continue watching" busy>
+              <ActivitySection title="Continue watching" busy={loading}>
                 <ActivityGridSkeleton count={4} />
               </ActivitySection>
             )
@@ -254,8 +272,21 @@ export default function ActivityPage() {
                 bleed={false}
                 display="grid"
               />
+            ) : loadFailed ? (
+              <ActivitySection title="Watch history">
+                <p className="text-center text-sm text-default-500">
+                  Couldn&apos;t load titles.{" "}
+                  <button
+                    type="button"
+                    className="text-success hover:underline"
+                    onClick={() => void loadUserRails()}
+                  >
+                    Try again
+                  </button>
+                </p>
+              </ActivitySection>
             ) : (
-              <ActivitySection title="Watch history" busy>
+              <ActivitySection title="Watch history" busy={loading}>
                 <ActivityGridSkeleton count={4} />
               </ActivitySection>
             )

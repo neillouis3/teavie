@@ -337,14 +337,18 @@ async function loadCategoryDiscover(
   slug: string,
   preferences: UserPreferences | null
 ): Promise<CategoryDiscoverPayload> {
-  const [hero, rails] = await Promise.all([
+  const [hero, topRated, newEpisodes, genres] = await Promise.all([
     loadCategoryDiscoverPart(slug, preferences, "hero"),
-    loadCategoryDiscoverPart(slug, preferences, "rails"),
+    loadCategoryDiscoverPart(slug, preferences, "topRated"),
+    loadCategoryDiscoverPart(slug, preferences, "newEpisodes"),
+    loadCategoryDiscoverPart(slug, preferences, "genres"),
   ]);
   return {
     ...EMPTY_CATEGORY,
     ...hero,
-    ...rails,
+    ...topRated,
+    ...newEpisodes,
+    ...genres,
   };
 }
 
@@ -479,8 +483,6 @@ export async function fetchCategoryDiscover(
     async () => {
       const first = await loadCategoryDiscover(slug, preferences);
       if (isCategoryDiscoverCacheable(first)) return first;
-      // One quick retry on empty/failed loads so a blip does not blank the hub.
-      await new Promise((r) => setTimeout(r, 400));
       return loadCategoryDiscover(slug, preferences);
     },
     { isCacheable: isCategoryDiscoverCacheable }

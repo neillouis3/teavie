@@ -65,6 +65,7 @@ export default function ExploreHub() {
   const [userRailsLoading, setUserRailsLoading] = useState(
     () => watchHistoryEntries.length > 0
   );
+  const [userRailsFailed, setUserRailsFailed] = useState(false);
   const [awaitingPersonalized, setAwaitingPersonalized] = useState(
     () =>
       hasUserPreferences(preferences) &&
@@ -85,9 +86,11 @@ export default function ExploreHub() {
     if (watchHistoryEntries.length === 0) {
       setUserRails(EMPTY_RAILS);
       setUserRailsLoading(false);
+      setUserRailsFailed(false);
       return;
     }
     setUserRailsLoading(true);
+    setUserRailsFailed(false);
     try {
       const rails = await fetchUserRailRows({
         historyEntries: watchHistoryEntries,
@@ -96,6 +99,9 @@ export default function ExploreHub() {
         progressLabel: watchHistoryProgressLabel,
       });
       setUserRails(rails);
+      setUserRailsFailed(rails.historyRows.length === 0);
+    } catch {
+      setUserRailsFailed(true);
     } finally {
       setUserRailsLoading(false);
     }
@@ -293,6 +299,20 @@ export default function ExploreHub() {
             </section>
           ) : historyRows.length > 0 ? (
             <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
+          ) : userRailsFailed ? (
+            <section className={RAIL_INNER_CLASS} aria-label="Continue watching">
+              <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+              <p className="text-sm text-default-500">
+                Couldn&apos;t load your titles.{" "}
+                <button
+                  type="button"
+                  className="text-success hover:underline"
+                  onClick={() => void loadUserRails()}
+                >
+                  Try again
+                </button>
+              </p>
+            </section>
           ) : null
         ) : null}
         {showRecommendedSlot ? (

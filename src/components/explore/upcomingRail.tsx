@@ -5,7 +5,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
 import { sidebarBleedViewportClass } from "@/components/ui/sidebarBleedRail";
@@ -17,21 +16,7 @@ type UpcomingRailProps = {
 };
 
 export default function UpcomingRail({ items }: UpcomingRailProps) {
-  const [api, setApi] = React.useState<CarouselApi>();
-  const [current, setCurrent] = React.useState(0);
-  const [count, setCount] = React.useState(0);
   const [logoByKey, setLogoByKey] = React.useState<Record<string, string>>({});
-
-  React.useEffect(() => {
-    if (!api) return;
-
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap() + 1);
-
-    api.on("select", () => {
-      setCurrent(api.selectedScrollSnap() + 1);
-    });
-  }, [api]);
 
   React.useEffect(() => {
     const payload = items
@@ -77,7 +62,6 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
           loop: true,
         }}
         className="w-full"
-        setApi={setApi}
       >
         <CarouselContent
           viewportClassName={sidebarBleedViewportClass()}
@@ -119,17 +103,6 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
           })}
         </CarouselContent>
       </Carousel>
-
-      <div className="mt-4 flex items-center justify-center space-x-2">
-        {Array.from({ length: count }).map((_, index) => (
-          <div
-            key={index}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              index === current - 1 ? "w-2 bg-gray-400" : "w-2 bg-gray-500"
-            }`}
-          />
-        ))}
-      </div>
     </div>
   );
 }

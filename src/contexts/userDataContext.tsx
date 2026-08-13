@@ -139,8 +139,14 @@ function refreshLocalHistoryState(
 
 export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, loading: authLoading } = useAuth();
-  const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>([]);
-  const [watchHistoryLogEntries, setWatchHistoryLogEntries] = useState<WatchHistoryEntry[]>([]);
+  const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>(() => {
+    if (typeof window === "undefined") return [];
+    return listWatchHistory();
+  });
+  const [watchHistoryLogEntries, setWatchHistoryLogEntries] = useState<WatchHistoryEntry[]>(() => {
+    if (typeof window === "undefined") return [];
+    return listWatchHistoryLog();
+  });
   const [watchLaterEntries, setWatchLaterEntries] = useState<WatchLaterEntry[]>([]);
   const [favoriteEntries, setFavoriteEntries] = useState<FavoriteEntry[]>([]);
   const [guestPreferences, setGuestPreferences] = useState<UserPreferences>(() =>
@@ -201,6 +207,10 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       setWatchLaterEntries(localLater);
     }
   }, [user]);
+
+  useEffect(() => {
+    refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;

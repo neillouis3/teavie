@@ -37,9 +37,53 @@ function mapTmdbToItem(entry, data) {
   };
 }
 
+/** All catalog id shapes that may refer to the same Mongo row. */
+function expandCatalogLookupIds(rawId) {
+  const id = String(rawId ?? "").trim();
+  if (!id) return [];
+  const out = new Set([id]);
+  if (/^\d+$/.test(id)) {
+    out.add(`anime_${id}`);
+    out.add(Number(id));
+  } else if (id.startsWith("anime_")) {
+    const tail = id.slice("anime_".length);
+    if (/^\d+$/.test(tail)) {
+      out.add(tail);
+      out.add(Number(tail));
+    }
+  }
+  return [...out];
+}
+
+function catalogAliasKeys(doc) {
+  const keys = new Set([String(doc.id)]);
+  if (typeof doc.tmdb_id === "number" && doc.tmdb_id > 0) {
+    keys.add(String(doc.tmdb_id));
+  }
+  if (typeof doc.mal_id === "number" && doc.mal_id > 0) {
+    keys.add(String(doc.mal_id));
+    keys.add(`anime_${doc.mal_id}`);
+  }
+  const idStr = String(doc.id ?? "");
+  if (idStr.startsWith("anime_")) {
+    const tail = idStr.slice("anime_".length);
+    if (tail) keys.add(tail);
+  }
+  return keys;
+}
+
+function lookupCatalogItem(entry, byKey) {
+  for (const key of expandCatalogLookupIds(entry.catalogId)) {
+    const item = byKey.get(String(key));
+    if (item) return item;
+  }
+  return null;
+}
+
 async function resolveEntryItem(entry, byKey, reqSignal) {
   if (reqSignal?.aborted) return null;
-  const item = byKey.get(entry.catalogId);
+
+  const item = lookupCatalogItem(entry, byKey);
   if (item) {
     if (entry.mediaType === "movie" && item.type !== "movie") return null;
     if (entry.mediaType === "tv" && item.type !== "tv") return null;
@@ -105,14 +149,20 @@ export async function POST(req) {
       return Response.json({ items: [] });
     }
 
-    const ids = entries.map((e) => e.catalogId);
-    const numeric = ids
+    const lookupIds = new Set();
+    for (const entry of entries) {
+      for (const id of expandCatalogLookupIds(entry.catalogId)) {
+        lookupIds.add(typeof id === "number" ? id : String(id));
+      }
+    }
+    const idList = [...lookupIds];
+    const numeric = idList
       .map((id) => Number(id))
       .filter((n) => Number.isFinite(n) && n > 0);
 
-    const or = [{ id: { $in: ids } }];
+    const or = [{ id: { $in: idList } }];
     if (numeric.length) {
-      or.push({ id: { $in: numeric } }, { tmdb_id: { $in: numeric } });
+      or.push({ tmdb_id: { $in: numeric } }, { mal_id: { $in: numeric } });
     }
 
     const client = await clientPromise;
@@ -125,6 +175,7 @@ export async function POST(req) {
           projection: {
             id: 1,
             tmdb_id: 1,
+            mal_id: 1,
             type: 1,
             title: 1,
             name: 1,
@@ -153,12 +204,8 @@ export async function POST(req) {
     const byKey = new Map();
     for (const doc of docs) {
       const item = mapContentDocToItem(doc);
-      const keys = new Set([String(doc.id)]);
-      if (typeof doc.tmdb_id === "number" && doc.tmdb_id > 0) {
-        keys.add(String(doc.tmdb_id));
-      }
-      for (const key of keys) {
-        if (ids.includes(key)) byKey.set(key, item);
+      for (const key of catalogAliasKeys(doc)) {
+        byKey.set(String(key), item);
       }
     }
 
