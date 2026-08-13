@@ -13,10 +13,12 @@ import UpcomingRail from "@/components/explore/upcomingRail";
 import NewContentRail from "@/components/explore/newContentRail";
 import {
   loadExploreCoreShell,
-  enrichExploreCoreWithPreferences,
   bustExploreCoreInflight,
-  peekExploreCoreCache,
+  peekExploreInitialCore,
   fetchUserRailRows,
+  fetchExploreBundle,
+  fetchPersonalizedExploreBundle,
+  applyPersonalizedToCore,
   projectExploreHistoryRows,
   buildSpotlightItems,
   type ExploreCorePayload,
@@ -65,9 +67,15 @@ function listSignature(entries: { catalogId: string; mediaType: string }[]) {
 export default function ExploreHub() {
   const { preferences, watchHistoryEntries, watchLaterEntries, favoriteEntries, watchedMovieIds } =
     useUserData();
-  const [core, setCore] = useState<ExploreCorePayload | null>(() => peekExploreCoreCache());
+  const [core, setCore] = useState<ExploreCorePayload | null>(() =>
+    peekExploreInitialCore(preferences, watchedMovieIds)
+  );
   const [userRails, setUserRails] = useState<UserRailRows>(EMPTY_RAILS);
-  const [personalizing, setPersonalizing] = useState(false);
+  const [awaitingPersonalized, setAwaitingPersonalized] = useState(
+    () =>
+      hasUserPreferences(preferences) &&
+      (peekExploreInitialCore(preferences, watchedMovieIds)?.recommendedRows.length ?? 0) === 0
+  );
 
   const preferencesSig = useMemo(() => JSON.stringify(preferences), [preferences]);
   const watchedMoviesSig = useMemo(
@@ -135,25 +143,32 @@ export default function ExploreHub() {
 
   useEffect(() => {
     let cancelled = false;
+    const wantsPersonalized = hasUserPreferences(preferences);
 
     void (async () => {
-      const shell = await loadExploreCoreShell();
+      const [shell, bundle, personalized] = await Promise.all([
+        loadExploreCoreShell(),
+        fetchExploreBundle(),
+        wantsPersonalized
+          ? fetchPersonalizedExploreBundle(preferences, watchedMovieIds, false)
+          : Promise.resolve(null),
+      ]);
+
       if (cancelled) return;
-      setCore(shell);
 
-      if (!hasUserPreferences(preferences)) return;
+      const nextCore =
+        wantsPersonalized && personalized
+          ? applyPersonalizedToCore(
+              shell,
+              bundle,
+              personalized,
+              preferences,
+              watchedMovieIds
+            )
+          : shell;
 
-      setPersonalizing(true);
-      try {
-        const enriched = await enrichExploreCoreWithPreferences(
-          shell,
-          preferences,
-          watchedMovieIds
-        );
-        if (!cancelled) setCore(enriched);
-      } finally {
-        if (!cancelled) setPersonalizing(false);
-      }
+      setCore(nextCore);
+      setAwaitingPersonalized(false);
     })();
 
     return () => {
@@ -243,6 +258,8 @@ export default function ExploreHub() {
   const hasWatchLater = watchLaterRows.length > 0;
   const hasFavorites = favoriteRows.length > 0;
   const hasRecommended = recommendedRows.length > 0;
+  const showRecommendedSlot =
+    hasUserPreferences(preferences) && (awaitingPersonalized || hasRecommended);
 
   return (
     <div className="flex w-full flex-col bg-background">
@@ -275,15 +292,17 @@ export default function ExploreHub() {
         )}
       >
         <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
-        {personalizing && !hasRecommended ? (
-          <CatalogRailSkeleton count={6} />
-        ) : hasRecommended ? (
-          <CatalogRail
-            title="Recommended for you"
-            items={recommendedRows}
-            maxItems={SECTION_MAX_ITEMS}
-            titleVariant="explore"
-          />
+        {showRecommendedSlot ? (
+          awaitingPersonalized && !hasRecommended ? (
+            <CatalogRailSkeleton count={6} />
+          ) : (
+            <CatalogRail
+              title="Recommended for you"
+              items={recommendedRows}
+              maxItems={SECTION_MAX_ITEMS}
+              titleVariant="explore"
+            />
+          )
         ) : null}
         {hasWatchLater ? (
           <WatchLaterRail items={watchLaterRows} maxItems={SECTION_MAX_ITEMS} />

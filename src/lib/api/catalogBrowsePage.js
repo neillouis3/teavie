@@ -21,15 +21,21 @@ async function fetchIndexedBrowsePage(
   limit,
   includeTotal
 ) {
-  const total = includeTotal
-    ? await collection.countDocuments(filter)
-    : undefined;
-  const results = await collection
+  const resultsPromise = collection
     .find(filter)
     .sort(sort)
     .skip(skip)
     .limit(limit)
     .toArray();
+
+  if (!includeTotal) {
+    return { total: undefined, results: await resultsPromise };
+  }
+
+  const [total, results] = await Promise.all([
+    collection.countDocuments(filter),
+    resultsPromise,
+  ]);
   return { total, results };
 }
 

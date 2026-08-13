@@ -17,26 +17,36 @@ import {
 } from "@/lib/preferenceMatch";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
-import {
-  CATALOG_POPULAR_MIN_VOTE_AVERAGE,
-  mongoCatalogPopularitySortExpr,
-  mongoMixedTvCatalogPopularityExpr,
-} from "@/lib/catalogPopularity";
+import { CATALOG_POPULAR_MIN_VOTE_AVERAGE } from "@/lib/catalogPopularity";
 
 const DEFAULT_LIMIT = 50;
 
-function popularityExpr() {
-  const popDouble = {
-    $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
-  };
-  return {
-    $cond: [
-      { $regexMatch: { input: { $toString: "$id" }, regex: "^anime_" } },
-      { $divide: [popDouble, 1000] },
-      popDouble,
-    ],
-  };
-}
+const LIST_PROJECTION = {
+  id: 1,
+  tmdb_id: 1,
+  type: 1,
+  title: 1,
+  name: 1,
+  release_date: 1,
+  first_air_date: 1,
+  poster_path: 1,
+  backdrop_path: 1,
+  overview: 1,
+  runtimeSeconds: 1,
+  runtime: 1,
+  season_amount: 1,
+  number_of_seasons: 1,
+  number_of_episodes: 1,
+  vote_average: 1,
+  imdb_genres: 1,
+  omdb: 1,
+  original_language: 1,
+  origin_country: 1,
+  production_countries: 1,
+  is_anime: 1,
+  anilist: 1,
+  mal_id: 1,
+};
 
 function toDateString(date) {
   return date.toISOString().split("T")[0];
@@ -54,10 +64,6 @@ function mapDocsToItems(docs, preferences) {
       }
       return true;
     });
-}
-
-async function mapDocsToItemsWithTmdbArt(docs, preferences) {
-  return mapDocsToItems(docs, preferences);
 }
 
 function baseCatalogMatch(match, todayIso) {
@@ -81,6 +87,15 @@ function baseCatalogMatch(match, todayIso) {
   };
 }
 
+function buildPersonalizedFindFilter(match, todayIso, opts = {}) {
+  /** @type {Record<string, unknown>[]} */
+  const clauses = [baseCatalogMatch(match, todayIso)];
+  if (opts.minVoteAverage != null) {
+    clauses.push({ vote_average: { $gte: opts.minVoteAverage } });
+  }
+  return { $and: clauses };
+}
+
 async function queryPersonalizedCatalog(preferences, opts = {}) {
   const match = buildPreferenceMatch(preferences, { type: opts.type });
   if (!match) return [];
@@ -102,66 +117,18 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
 
   const client = await clientPromise;
   const col = client.db("teavie").collection("content");
+  const filter = buildPersonalizedFindFilter(match, todayIso, opts);
 
   const docs = await col
-    .aggregate([
-      { $match: baseCatalogMatch(match, todayIso) },
-      ...(opts.minVoteAverage != null
-        ? [
-            {
-              $addFields: {
-                _vote: {
-                  $convert: {
-                    input: "$vote_average",
-                    to: "double",
-                    onError: 0,
-                    onNull: 0,
-                  },
-                },
-              },
-            },
-            { $match: { _vote: { $gte: opts.minVoteAverage } } },
-          ]
-        : []),
-      { $addFields: { _pop: popularityExpr() } },
-      { $sort: { _pop: -1, _id: -1 } },
-      { $limit: fetchLimit },
-      {
-        $project: {
-          id: 1,
-          tmdb_id: 1,
-          type: 1,
-          title: 1,
-          name: 1,
-          release_date: 1,
-          first_air_date: 1,
-          poster_path: 1,
-          backdrop_path: 1,
-          overview: 1,
-          runtimeSeconds: 1,
-          runtime: 1,
-          season_amount: 1,
-          number_of_seasons: 1,
-          number_of_episodes: 1,
-          vote_average: 1,
-          imdb_genres: 1,
-          omdb: 1,
-          original_language: 1,
-          origin_country: 1,
-          production_countries: 1,
-          is_anime: 1,
-          /** Needed so animePoster/backdrop helpers can prefer AniList banner + extraLarge. */
-          anilist: 1,
-          mal_id: 1,
-        },
-      },
-    ])
+    .find(filter)
+    .sort({ popularity: -1, _id: -1 })
+    .limit(fetchLimit)
+    .project(LIST_PROJECTION)
     .toArray();
 
-  return (await mapDocsToItemsWithTmdbArt(docs, preferences))
+  return mapDocsToItems(docs, preferences)
     .filter(
-      (item) =>
-        !(item.type === "movie" && excludeMovieIds.has(String(item.id)))
+      (item) => !(item.type === "movie" && excludeMovieIds.has(String(item.id)))
     )
     .slice(0, limit);
 }
@@ -180,39 +147,30 @@ async function queryPersonalizedNew(preferences, limit = 20) {
   const col = client.db("teavie").collection("content");
 
   const docs = await col
-    .aggregate([
-      {
-        $match: {
-          $and: [
-            match,
-            catalogMoviePolicyClause(),
+    .find({
+      $and: [
+        match,
+        catalogMoviePolicyClause(),
+        {
+          $or: [
             {
-              $or: [
-                {
-                  type: "movie",
-                  release_date: { $gte: startDate, $lte: endDate },
-                },
-                {
-                  type: "tv",
-                  first_air_date: { $gte: startDate, $lte: endDate },
-                },
-              ],
+              type: "movie",
+              release_date: { $gte: startDate, $lte: endDate },
+            },
+            {
+              type: "tv",
+              first_air_date: { $gte: startDate, $lte: endDate },
             },
           ],
         },
-      },
-      {
-        $addFields: {
-          sortDate: { $ifNull: ["$release_date", "$first_air_date"] },
-          sortPop: mongoCatalogPopularitySortExpr(),
-        },
-      },
-      { $sort: { sortPop: -1, sortDate: -1, _id: -1 } },
-      { $limit: limit },
-    ])
+      ],
+    })
+    .sort({ popularity: -1, release_date: -1, first_air_date: -1, _id: -1 })
+    .limit(limit)
+    .project(LIST_PROJECTION)
     .toArray();
 
-  return mapDocsToItemsWithTmdbArt(docs, preferences);
+  return mapDocsToItems(docs, preferences);
 }
 
 async function queryPersonalizedUpcoming(preferences, limit = 20) {
@@ -229,41 +187,19 @@ async function queryPersonalizedUpcoming(preferences, limit = 20) {
   const col = client.db("teavie").collection("content");
 
   const docs = await col
-    .aggregate([
-      {
-        $addFields: {
-          sortDate: { $ifNull: ["$release_date", "$first_air_date"] },
-          sortPop: {
-            $cond: [
-              { $eq: ["$type", "movie"] },
-              {
-                $convert: {
-                  input: "$popularity",
-                  to: "double",
-                  onError: 0,
-                  onNull: 0,
-                },
-              },
-              mongoMixedTvCatalogPopularityExpr(),
-            ],
-          },
-        },
-      },
-      {
-        $match: {
-          $and: [
-            match,
-            catalogMoviePolicyClause(),
-            { type: "movie", sortDate: { $gte: startDate, $lte: endDate } },
-          ],
-        },
-      },
-      { $sort: { sortPop: -1, sortDate: 1 } },
-      { $limit: limit },
-    ])
+    .find({
+      $and: [
+        match,
+        catalogMoviePolicyClause(),
+        { type: "movie", release_date: { $gte: startDate, $lte: endDate } },
+      ],
+    })
+    .sort({ popularity: -1, release_date: 1, _id: -1 })
+    .limit(limit)
+    .project(LIST_PROJECTION)
     .toArray();
 
-  return mapDocsToItemsWithTmdbArt(docs, preferences);
+  return mapDocsToItems(docs, preferences);
 }
 
 /**
@@ -278,11 +214,26 @@ export async function loadPersonalizedCatalog(preferences, opts = {}) {
 /**
  * Full personalized explore feed from user preferences.
  * @param {import('@/types/user').UserPreferences | null | undefined} preferences
- * @param {{ limit?: number; excludeMovieIds?: string[] }} [opts]
+ * @param {{ limit?: number; excludeMovieIds?: string[]; recommendedOnly?: boolean }} [opts]
  */
 export async function loadPersonalizedExploreBundle(preferences, opts = {}) {
   const limit = Math.min(50, Math.max(1, opts.limit ?? DEFAULT_LIMIT));
   const excludeMovieIds = opts.excludeMovieIds;
+
+  if (opts.recommendedOnly) {
+    const recommended = await queryPersonalizedCatalog(preferences, {
+      limit,
+      excludeMovieIds,
+    });
+    return {
+      recommended,
+      spotlight: recommended,
+      popularMovies: [],
+      popularTv: [],
+      newContent: [],
+      upcomingContent: [],
+    };
+  }
 
   const [recommended, popularMovies, popularTv, newContent, upcomingContent] =
     await Promise.all([

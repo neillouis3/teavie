@@ -191,6 +191,8 @@ function BrowseCatalogPageContent({
         apiPath,
         query.toString()
       );
+      if (data.results.length === 0) return;
+
       setItems((current) => {
         const seen = new Set(current.map((item) => `${item.type ?? viewer}:${item.id}`));
         return [
@@ -201,7 +203,9 @@ function BrowseCatalogPageContent({
       pageRef.current = nextPage;
       if (typeof data.totalPages === "number") setTotalPages(data.totalPages);
       if (typeof data.total === "number") setTotal(data.total);
-      if (nextPage < totalPages) {
+      if (data.results.length < 28) {
+        setTotalPages(nextPage);
+      } else if (nextPage < totalPages) {
         prefetchBrowseCatalogPage(
           namespace,
           apiPath,
