@@ -10,8 +10,7 @@ import {
   catalogItemTitle,
   catalogItemYear,
 } from "@/lib/catalogRailCard";
-import type { ExploreHistoryRow } from "@/lib/explorePageData";
-import { catalogIdsMatch } from "@/lib/explorePageData";
+import type { ExploreHistoryRow } from "@/lib/continueWatchingRows";
 import { useUserData } from "@/contexts/userDataContext";
 
 type WatchHistoryRailProps = {
@@ -31,24 +30,14 @@ export default function WatchHistoryRail({
   maxItems,
   className,
 }: WatchHistoryRailProps) {
-  const { watchHistoryEntries, removeHistoryItem } = useUserData();
+  const { removeHistoryItem } = useUserData();
   const { horizontal } = useCatalogRailLayout(layout);
-
-  const visibleItems = React.useMemo(
-    () =>
-      items.filter((item) =>
-        watchHistoryEntries.some((entry) =>
-          catalogIdsMatch(entry.catalogId, item.id)
-        )
-      ),
-    [items, watchHistoryEntries]
-  );
 
   return (
     <UserContentRail
       title="Continue watching"
       ariaLabel="Watch history"
-      items={visibleItems}
+      items={items}
       layout={layout}
       bleed={bleed}
       display={display}
@@ -56,19 +45,14 @@ export default function WatchHistoryRail({
       className={className}
       getItemKey={(item) => `${catalogItemMediaType(item)}-${item.id}`}
       renderItem={(item) => {
-        const progress = watchHistoryEntries.find((entry) =>
-          catalogIdsMatch(entry.catalogId, item.id)
-        );
-        if (!progress) return null;
-
+        const mediaType = catalogItemMediaType(item);
         const titleText = catalogItemTitle(item);
         const year = catalogItemYear(item);
-        const mediaType = catalogItemMediaType(item);
         const metaChips = watchHistoryMetaChips(
           {
-            mediaType: progress.mediaType,
-            lastSeason: progress.lastSeason,
-            lastEpisode: progress.lastEpisode,
+            mediaType,
+            lastSeason: item.lastSeason,
+            lastEpisode: item.lastEpisode,
           },
           item.season_amount ?? 0,
           item.runtimeSeconds ?? undefined

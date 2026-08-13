@@ -44,6 +44,7 @@ import {
 import CatalogMediaPanel, { CatalogTitleBlock } from "@/components/ui/catalogMediaPanel";
 import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
 import CatalogDetailsSkeleton from "@/components/ui/catalogDetailsSkeleton";
+import DeferredModalSections from "@/components/ui/deferredModalSections";
 import { PlayerEmbedSkeleton, PLAYER_SHELL_CLASS } from "@/components/ui/playerEmbedSkeleton";
 import CatalogComingSoon from "@/components/ui/catalogComingSoon";
 import CatalogUnavailable from "@/components/ui/catalogUnavailable";
@@ -183,7 +184,7 @@ export default function ShowTemplate({
     detailsModal && detailsSeed ? showFromSeed(id, detailsSeed) : null
   );
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string>(id);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(detailsModal && detailsSeed));
   /** TMDB movie id for anime films (AniList format MOVIE/MUSIC), resolved via /api/anime/resolve-movie. */
   const [animeMovieTmdbId, setAnimeMovieTmdbId] = useState<string | null>(null);
   const [animeMovieResolving, setAnimeMovieResolving] = useState(false);
@@ -292,10 +293,11 @@ export default function ShowTemplate({
             ? fetchTvDetailsCached(id, { lite: true })
             : Promise.resolve(null);
 
-        const [resolved, earlyLite] = await Promise.all([
+        const [resolved, earlyLiteRaw] = await Promise.all([
           resolvePromise,
           earlyLitePromise,
         ]);
+        let earlyLite = earlyLiteRaw;
         const resolvedObj = resolved as {
           playerId?: number | string | null;
           fallback?: Show | null;
@@ -326,6 +328,15 @@ export default function ShowTemplate({
         if (resolvedObj?.playerId != null && !isAnimeCatalogRoute) {
           targetTmdbId = String(resolvedObj.playerId);
           setResolvedPlayerId(String(resolvedObj.playerId));
+        }
+        if (
+          detailsModal &&
+          /^\d+$/.test(targetTmdbId) &&
+          targetTmdbId !== id &&
+          !isAnimeCatalogRoute &&
+          !earlyLite
+        ) {
+          earlyLite = await fetchTvDetailsCached(targetTmdbId, { lite: true });
         }
         if (resolvedObj?.fallback && typeof resolvedObj.fallback === "object") {
           fallbackShow = resolvedObj.fallback as Show;
@@ -547,8 +558,9 @@ export default function ShowTemplate({
         pickFirstSeason(finalShow.seasons);
         setSelectedEpisode(1);
 
-        if (detailsModal && (merged.is_anime || fallbackShow?.is_anime)) {
-          void fetchAnilistAndMerge(forAni, fallbackShow, id).then((enriched) => {
+        if (detailsModal) {
+          if (merged.is_anime || fallbackShow?.is_anime) {
+            void fetchAnilistAndMerge(forAni, fallbackShow, id).then((enriched) => {
             const upgraded = applyAnimeHeroArt(
               finalizeAnimeShowForUi(enriched, id),
               fallbackShow
@@ -562,10 +574,10 @@ export default function ShowTemplate({
               )
             );
           });
-        }
+          }
 
-        if (detailsModal && /^\d+$/.test(targetTmdbId)) {
-          void (async () => {
+          if (/^\d+$/.test(targetTmdbId)) {
+            void (async () => {
             const full = await fetchTvDetailsCached(targetTmdbId);
             if (!full) return;
             const fullData = full as Show;
@@ -603,6 +615,8 @@ export default function ShowTemplate({
               )
             );
           })();
+          }
+          return;
         }
       } catch {
         /* keep prior show on transient errors */
@@ -839,7 +853,6 @@ export default function ShowTemplate({
       recordMovieInWatchHistory(String(id));
       return;
     }
-    if (!canPlay && !canPlayAnime) return;
     const coords = show.is_anime
       ? resolveAnimePlayerCoords(show, selectedSeason, selectedEpisode)
       : { season: selectedSeason, episode: selectedEpisode };
@@ -853,8 +866,6 @@ export default function ShowTemplate({
     id,
     show,
     isAnimeMovie,
-    canPlay,
-    canPlayAnime,
     selectedSeason,
     selectedEpisode,
   ]);
@@ -1267,7 +1278,22 @@ export default function ShowTemplate({
     </div>
   );
 
-  const showRelatedSections = (
+  const showRelatedSections = detailsModal ? (
+    <DeferredModalSections>
+      {showAnimeRelated && idMalForAnilistRails != null ? (
+        <AnimeShowRails idMal={idMalForAnilistRails} bleed={false} />
+      ) : null}
+
+      {!Boolean(show?.is_anime) && /^\d+$/.test(String(resolvedPlayerId)) ? (
+        <YouMightLike
+          key={`yml-${resolvedPlayerId}`}
+          mediaType="tv"
+          id={resolvedPlayerId}
+          bleed={false}
+        />
+      ) : null}
+    </DeferredModalSections>
+  ) : (
     <>
       {showAnimeRelated && idMalForAnilistRails != null ? (
         <AnimeShowRails idMal={idMalForAnilistRails} bleed={false} />

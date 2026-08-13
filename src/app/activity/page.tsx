@@ -1,166 +1,71 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@heroui/react";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import WatchHistoryRail from "@/components/explore/watchHistoryRail";
 import WatchHistoryLogRail from "@/components/explore/watchHistoryLogRail";
 import UserPageShell from "@/components/ui/userPageShell";
-import {
-  watchHistoryLogLabel,
-  watchHistoryProgressLabel,
-  WATCH_HISTORY_CHANGED_EVENT,
-  WATCH_HISTORY_LOG_CHANGED_EVENT,
-} from "@/lib/watchHistory";
-import {
-  fetchUserRailRows,
-  fetchExploreHistoryRows,
-  peekExploreHistoryRows,
-  exploreHistoryRowsMatch,
-  historyRowsCoverEntries,
-  type ExploreHistoryRow,
-} from "@/lib/explorePageData";
-import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
+import { watchHistoryLogLabel } from "@/lib/watchHistory";
 import { RAIL_INNER_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
 import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
-
-const ACTIVITY_CACHE_PREFIX = "teavie.cache.activity.v3:";
-
-type ActivityPayload = {
-  historyRows: ExploreHistoryRow[];
-  historyLogRows: ExploreHistoryRow[];
-};
-
-function listSignature(entries: { catalogId: string; mediaType: string }[]) {
-  return entries.map((e) => `${e.mediaType}:${e.catalogId}`).sort().join("|");
-}
+import { useContinueWatchingRows } from "@/hooks/useContinueWatchingRows";
 
 export default function ActivityPage() {
   const { user } = useAuth();
   const { watchHistoryEntries, watchHistoryLogEntries } = useUserData();
-
-  const cacheKey = useMemo(() => {
-    const continueIds = new Set(watchHistoryEntries.map((e) => e.catalogId));
-    const logEntries = watchHistoryLogEntries.filter(
-      (e) => !continueIds.has(e.catalogId)
-    );
-    return `${ACTIVITY_CACHE_PREFIX}${listSignature(watchHistoryEntries)}::${listSignature(logEntries)}`;
-  }, [watchHistoryEntries, watchHistoryLogEntries]);
-
-  const [historyRows, setHistoryRows] = useState<ExploreHistoryRow[]>(() => {
-    if (typeof window === "undefined") return [];
-    return readClientDayCache<ActivityPayload>(cacheKey)?.historyRows ?? [];
-  });
-  const [historyLogRows, setHistoryLogRows] = useState<ExploreHistoryRow[]>(() => {
-    if (typeof window === "undefined") return [];
-    return readClientDayCache<ActivityPayload>(cacheKey)?.historyLogRows ?? [];
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return false;
-  });
-  const [loadFailed, setLoadFailed] = useState(false);
 
   const logEntries = useMemo(() => {
     const continueIds = new Set(watchHistoryEntries.map((e) => e.catalogId));
     return watchHistoryLogEntries.filter((e) => !continueIds.has(e.catalogId));
   }, [watchHistoryEntries, watchHistoryLogEntries]);
 
+  const {
+    rows: historyRows,
+    loading: continueLoading,
+    failed: continueFailed,
+    reload: reloadContinue,
+  } = useContinueWatchingRows(watchHistoryEntries);
+
+  const {
+    rows: historyLogRows,
+    loading: logLoading,
+    failed: logFailed,
+    reload: reloadLog,
+  } = useContinueWatchingRows(logEntries, watchHistoryLogLabel);
+
   const hasLocalHistory =
     watchHistoryEntries.length > 0 || logEntries.length > 0;
-
-  const loadUserRails = useCallback(async () => {
-    const hasPending = hasLocalHistory;
-    const cached = readClientDayCache<ActivityPayload>(cacheKey);
-    const peekedHistory = peekExploreHistoryRows(
-      watchHistoryEntries,
-      watchHistoryProgressLabel
-    );
-    const peekedLog = peekExploreHistoryRows(logEntries, watchHistoryLogLabel);
-    const cacheComplete =
-      hasPending &&
-      historyRowsCoverEntries(peekedHistory, watchHistoryEntries) &&
-      historyRowsCoverEntries(peekedLog, logEntries);
-
-    if (cacheComplete) {
-      setHistoryRows((prev) =>
-        exploreHistoryRowsMatch(prev, peekedHistory) ? prev : peekedHistory
-      );
-      setHistoryLogRows((prev) =>
-        exploreHistoryRowsMatch(prev, peekedLog) ? prev : peekedLog
-      );
-      setLoading(false);
-      setLoadFailed(false);
-      return;
-    }
-
-    if (hasPending) {
-      setLoading(true);
-    }
-    setLoadFailed(false);
-    try {
-      const [rails, logRows] = await Promise.all([
-        fetchUserRailRows({
-          historyEntries: watchHistoryEntries,
-          watchLaterEntries: [],
-          favoriteEntries: [],
-          progressLabel: watchHistoryProgressLabel,
-        }),
-        fetchExploreHistoryRows(logEntries, watchHistoryLogLabel),
-      ]);
-      setHistoryRows((prev) =>
-        exploreHistoryRowsMatch(prev, rails.historyRows) ? prev : rails.historyRows
-      );
-      setHistoryLogRows((prev) =>
-        exploreHistoryRowsMatch(prev, logRows) ? prev : logRows
-      );
-      const loaded = rails.historyRows.length > 0 || logRows.length > 0;
-      setLoadFailed(hasPending && !loaded);
-      if (loaded) {
-        writeClientDayCache(cacheKey, {
-          historyRows: rails.historyRows,
-          historyLogRows: logRows,
-        });
-      }
-    } catch {
-      setLoadFailed(hasPending);
-      if (peekedHistory.length > 0 || peekedLog.length > 0) {
-        setHistoryRows((prev) =>
-          exploreHistoryRowsMatch(prev, peekedHistory) ? prev : peekedHistory
-        );
-        setHistoryLogRows((prev) =>
-          exploreHistoryRowsMatch(prev, peekedLog) ? prev : peekedLog
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [cacheKey, watchHistoryEntries, logEntries, hasLocalHistory]);
+  const loading =
+    hasLocalHistory &&
+    continueLoading &&
+    logLoading &&
+    historyRows.length === 0 &&
+    historyLogRows.length === 0;
+  const loadFailed =
+    hasLocalHistory &&
+    !loading &&
+    (continueFailed || logFailed) &&
+    historyRows.length === 0 &&
+    historyLogRows.length === 0;
 
   useEffect(() => {
     document.title = "Activity - Teavie";
   }, []);
 
-  useEffect(() => {
-    void loadUserRails();
-  }, [cacheKey, loadUserRails]);
+  const isEmpty =
+    !hasLocalHistory &&
+    !loading &&
+    historyRows.length === 0 &&
+    historyLogRows.length === 0;
 
-  useEffect(() => {
-    const onUserRailsChange = () => void loadUserRails();
-    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onUserRailsChange);
-    window.addEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, onUserRailsChange);
-    return () => {
-      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onUserRailsChange);
-      window.removeEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, onUserRailsChange);
-    };
-  }, [loadUserRails]);
-
-  const isEmpty = !hasLocalHistory && !loading && historyRows.length === 0 && historyLogRows.length === 0;
-  const showLoading =
-    hasLocalHistory && loading && historyRows.length === 0 && historyLogRows.length === 0;
+  const retry = () => {
+    void reloadContinue();
+    void reloadLog();
+  };
 
   return (
     <UserPageShell
@@ -212,7 +117,7 @@ export default function ActivityPage() {
             </div>
           ) : null}
         </div>
-      ) : showLoading ? (
+      ) : loading ? (
         <div className={`${RAIL_STACK_CLASS} w-full items-center`}>
           <section className={RAIL_INNER_CLASS} aria-label="Continue watching" aria-busy="true">
             <ExploreSectionTitle className="justify-center" variant="explore">
@@ -228,7 +133,7 @@ export default function ActivityPage() {
             <button
               type="button"
               className="text-success hover:underline"
-              onClick={() => void loadUserRails()}
+              onClick={retry}
             >
               Try again
             </button>

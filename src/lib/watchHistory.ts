@@ -209,22 +209,10 @@ export function mergeWatchHistoryLog(
 
   const now = Date.now();
   const freshContinue = merged.filter((entry) => isEligibleForContinue(entry, now));
-  if (freshContinue.length > 0) {
-    const byId = new Map<string, WatchHistoryEntry>();
-    for (const entry of [...readIndex(), ...freshContinue]) {
-      if (isDismissedFromContinue(entry.catalogId)) continue;
-      const prev = byId.get(entry.catalogId);
-      if (!prev || entry.lastWatchedAt >= prev.lastWatchedAt) {
-        byId.set(entry.catalogId, entry);
-      }
-    }
-    writeIndex(
-      [...byId.values()]
-        .sort((a, b) => b.lastWatchedAt - a.lastWatchedAt)
-        .slice(0, WATCH_HISTORY_MAX),
-      options
-    );
-  }
+  writeIndex(
+    freshContinue.slice(0, WATCH_HISTORY_MAX),
+    options
+  );
 
   return merged;
 }
@@ -304,9 +292,6 @@ export function listWatchHistory(): WatchHistoryEntry[] {
       lastSeason: progress?.lastSeason ?? entry.lastSeason,
       lastEpisode: progress?.lastEpisode ?? entry.lastEpisode,
     });
-  }
-  if (kept.length !== index.length) {
-    writeIndex(kept);
   }
   return kept;
 }

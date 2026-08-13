@@ -27,6 +27,7 @@ import { ImmersiveWatchPageSkeleton } from '@/components/ui/watchPageSkeleton';
 import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import WatchPlayerBackButton from '@/components/ui/watchPlayerBackButton';
+import DeferredModalSections from '@/components/ui/deferredModalSections';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { recordMovieInWatchHistory } from '@/lib/watchHistory';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
@@ -209,7 +210,7 @@ export default function MovieTemplate({
     detailsModal && detailsSeed ? movieFromSeed(id, detailsSeed) : null
   );
   const [resolvedTmdbId, setResolvedTmdbId] = useState<string>(id);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(detailsModal && detailsSeed));
   const [movieUnavailableReason, setMovieUnavailableReason] = useState<
     'content_policy' | 'not_found' | null
   >(null);
@@ -740,21 +741,43 @@ export default function MovieTemplate({
               title={`${movie.title} trailer`}
             />
           ) : null}
-          {/^\d+$/.test(String(resolvedTmdbId)) ? (
-            <MovieCollectionRail
-              key={`collection-${resolvedTmdbId}`}
-              movieId={String(resolvedTmdbId)}
-              bleed={false}
-            />
-          ) : null}
-          {/^\d+$/.test(String(resolvedTmdbId)) ? (
-            <YouMightLike
-              key={`yml-${resolvedTmdbId}`}
-              mediaType="movie"
-              id={String(resolvedTmdbId)}
-              bleed={false}
-            />
-          ) : null}
+          {detailsModal ? (
+            <DeferredModalSections>
+              {/^\d+$/.test(String(resolvedTmdbId)) ? (
+                <MovieCollectionRail
+                  key={`collection-${resolvedTmdbId}`}
+                  movieId={String(resolvedTmdbId)}
+                  bleed={false}
+                />
+              ) : null}
+              {/^\d+$/.test(String(resolvedTmdbId)) ? (
+                <YouMightLike
+                  key={`yml-${resolvedTmdbId}`}
+                  mediaType="movie"
+                  id={String(resolvedTmdbId)}
+                  bleed={false}
+                />
+              ) : null}
+            </DeferredModalSections>
+          ) : (
+            <>
+              {/^\d+$/.test(String(resolvedTmdbId)) ? (
+                <MovieCollectionRail
+                  key={`collection-${resolvedTmdbId}`}
+                  movieId={String(resolvedTmdbId)}
+                  bleed={false}
+                />
+              ) : null}
+              {/^\d+$/.test(String(resolvedTmdbId)) ? (
+                <YouMightLike
+                  key={`yml-${resolvedTmdbId}`}
+                  mediaType="movie"
+                  id={String(resolvedTmdbId)}
+                  bleed={false}
+                />
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     );

@@ -1,6 +1,10 @@
 import clientPromise from "@/lib/mongo";
 import { tmdbFetchJson } from "@/lib/tmdbAuth";
-import { assertTvTmdbIdAllowed } from "@/lib/animeContentPolicy";
+import {
+  assertTvTmdbIdAllowed,
+  isBlockedTvTmdbId,
+  tmdbTvShowToPolicyProbe,
+} from "@/lib/animeContentPolicy";
 import { SHOW_UNAVAILABLE_MESSAGES } from "@/lib/tvJpAnimePrune";
 
 export async function GET(req) {
@@ -12,10 +16,7 @@ export async function GET(req) {
     }
 
     const numeric = Number(id);
-    const client = await clientPromise;
-    const collection = client.db("teavie").collection("content");
-    const gate = await assertTvTmdbIdAllowed(numeric, { collection });
-    if (!gate.allowed) {
+    if (isBlockedTvTmdbId(numeric)) {
       return Response.json(
         {
           error: "content_policy",
@@ -33,6 +34,20 @@ export async function GET(req) {
     const data = await tmdbFetchJson(
       `https://api.themoviedb.org/3/tv/${id}?language=en-US&append_to_response=${append}`
     );
+
+    const client = await clientPromise;
+    const collection = client.db("teavie").collection("content");
+    const probe = tmdbTvShowToPolicyProbe(data, numeric);
+    const gate = await assertTvTmdbIdAllowed(numeric, { collection, probe });
+    if (!gate.allowed) {
+      return Response.json(
+        {
+          error: "content_policy",
+          message: SHOW_UNAVAILABLE_MESSAGES.content_policy,
+        },
+        { status: 404 }
+      );
+    }
 
     return Response.json(data, {
       headers: {

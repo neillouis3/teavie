@@ -10,8 +10,7 @@ import {
   catalogItemTitle,
   catalogItemYear,
 } from "@/lib/catalogRailCard";
-import type { ExploreHistoryRow } from "@/lib/explorePageData";
-import { catalogIdsMatch } from "@/lib/explorePageData";
+import type { ExploreHistoryRow } from "@/lib/continueWatchingRows";
 import { useUserData } from "@/contexts/userDataContext";
 
 type WatchHistoryLogRailProps = {
@@ -31,24 +30,14 @@ export default function WatchHistoryLogRail({
   maxItems,
   className,
 }: WatchHistoryLogRailProps) {
-  const { watchHistoryLogEntries, removeHistoryLogItem } = useUserData();
+  const { removeHistoryLogItem } = useUserData();
   const { horizontal } = useCatalogRailLayout(layout);
-
-  const visibleItems = React.useMemo(
-    () =>
-      items.filter((item) =>
-        watchHistoryLogEntries.some((entry) =>
-          catalogIdsMatch(entry.catalogId, item.id)
-        )
-      ),
-    [items, watchHistoryLogEntries]
-  );
 
   return (
     <UserContentRail
       title="Watch history"
       ariaLabel="Watch history"
-      items={visibleItems}
+      items={items}
       layout={layout}
       bleed={bleed}
       display={display}
@@ -56,19 +45,14 @@ export default function WatchHistoryLogRail({
       className={className}
       getItemKey={(item) => `history-${catalogItemMediaType(item)}-${item.id}`}
       renderItem={(item) => {
-        const entry = watchHistoryLogEntries.find((candidate) =>
-          catalogIdsMatch(candidate.catalogId, item.id)
-        );
-        if (!entry) return null;
-
+        const mediaType = catalogItemMediaType(item);
         const titleText = catalogItemTitle(item);
         const year = catalogItemYear(item);
-        const mediaType = catalogItemMediaType(item);
         const metaChips = watchHistoryMetaChips(
           {
-            mediaType: entry.mediaType,
-            lastSeason: entry.lastSeason,
-            lastEpisode: entry.lastEpisode,
+            mediaType,
+            lastSeason: item.lastSeason,
+            lastEpisode: item.lastEpisode,
           },
           item.season_amount ?? 0,
           item.runtimeSeconds ?? undefined
@@ -84,7 +68,7 @@ export default function WatchHistoryLogRail({
             posterPath={item.poster_path || ""}
             backdropPath={item.backdrop_path || ""}
             topNote={
-              entry.mediaType === "movie" ? "Watched" : metaChips?.join(" · ")
+              mediaType === "movie" ? "Watched" : metaChips?.join(" · ")
             }
             onDismiss={dismiss}
           />
@@ -98,7 +82,7 @@ export default function WatchHistoryLogRail({
             seasonAmount={item.season_amount ?? 0}
             numberOfEpisodes={item.number_of_episodes ?? undefined}
             posterPath={item.poster_path || ""}
-            metaChips={entry.mediaType === "movie" ? ["Watched"] : metaChips}
+            metaChips={mediaType === "movie" ? ["Watched"] : metaChips}
             onDismiss={dismiss}
           />
         );

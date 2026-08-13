@@ -253,6 +253,27 @@ export function isBlockedAdultTmdbTvShow(show) {
  * Fetch TMDB TV metadata + keywords for adult-content checks.
  * @param {number} tmdbId
  */
+export function tmdbTvShowToPolicyProbe(show, tmdbId) {
+  const id = normalizeTmdbId(tmdbId);
+  if (id == null || !show || typeof show !== "object") return null;
+  return {
+    type: "tv",
+    id,
+    tmdb_id: id,
+    adult: show.adult === true,
+    origin_country: show.origin_country,
+    original_language: show.original_language,
+    first_air_date: show.first_air_date ?? null,
+    genre_ids: Array.isArray(show.genres)
+      ? show.genres.map((g) => g?.id).filter((n) => typeof n === "number")
+      : [],
+    genres: show.genres,
+    keywords: show.keywords,
+    name: show.name,
+    title: show.name,
+  };
+}
+
 export async function fetchTmdbTvPolicyProbe(tmdbId) {
   const id = normalizeTmdbId(tmdbId);
   if (id == null) return null;
@@ -260,27 +281,15 @@ export async function fetchTmdbTvPolicyProbe(tmdbId) {
     const show = await tmdbFetchJson(
       `https://api.themoviedb.org/3/tv/${id}?language=en-US&append_to_response=keywords`
     );
-    if (!show || typeof show !== "object") return null;
-    return {
-      type: "tv",
-      id,
-      tmdb_id: id,
-      adult: show.adult === true,
-      origin_country: show.origin_country,
-      original_language: show.original_language,
-      first_air_date: show.first_air_date ?? null,
-      genre_ids: Array.isArray(show.genres)
-        ? show.genres.map((g) => g?.id).filter((n) => typeof n === "number")
-        : [],
-      genres: show.genres,
-      keywords: show.keywords,
-      name: show.name,
-      title: show.name,
-    };
+    return tmdbTvShowToPolicyProbe(show, id);
   } catch {
     return null;
   }
 }
+
+const TV_POLICY_CACHE_TTL_MS = 60 * 60 * 1000;
+/** @type {Map<string, { at: number; result: { allowed: boolean; probe: object | null } }>} */
+const tvPolicyCache = new Map();
 
 /**
  * @param {number} tmdbId
@@ -296,16 +305,31 @@ export async function assertTvTmdbIdAllowed(tmdbId, opts = {}) {
       probe: { type: "tv", id, tmdb_id: id },
     };
   }
-  const probe = await fetchTmdbTvPolicyProbe(id);
+
+  const cacheKey = String(id);
+  if (!opts.probe) {
+    const cached = tvPolicyCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < TV_POLICY_CACHE_TTL_MS) {
+      return cached.result;
+    }
+  }
+
+  const probe = opts.probe ?? (await fetchTmdbTvPolicyProbe(id));
   if (probe && isBlockedAdultTmdbTvShow(probe)) {
-    return { allowed: false, probe };
+    const result = { allowed: false, probe };
+    tvPolicyCache.set(cacheKey, { at: Date.now(), result });
+    return result;
   }
   const { isBlockedAdultTmdbTvShowEnriched } = await import("./animeTmdbPolicyEnrich.js");
   if (
     probe &&
     (await isBlockedAdultTmdbTvShowEnriched(id, probe, { collection: opts.collection }))
   ) {
-    return { allowed: false, probe };
+    const result = { allowed: false, probe };
+    tvPolicyCache.set(cacheKey, { at: Date.now(), result });
+    return result;
   }
-  return { allowed: true, probe };
+  const result = { allowed: true, probe };
+  tvPolicyCache.set(cacheKey, { at: Date.now(), result });
+  return result;
 }

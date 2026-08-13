@@ -13,23 +13,17 @@ import {
   loadExploreCoreShell,
   bustExploreCoreInflight,
   peekExploreInitialCore,
-  fetchUserRailRows,
   fetchExploreBundle,
   fetchPersonalizedExploreBundle,
   applyPersonalizedToCore,
-  projectExploreHistoryRows,
-  peekExploreUserRails,
-  exploreHistoryRowsMatch,
-  historyRowsCoverEntries,
   buildSpotlightItems,
   type ExploreCorePayload,
   type ExplorePagePayload,
   type TmdbDiscoverPayload,
-  type UserRailRows,
 } from "@/lib/explorePageData";
 import { hasUserPreferences } from "@/types/user";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
-import { watchHistoryProgressLabel, WATCH_HISTORY_CHANGED_EVENT } from "@/lib/watchHistory";
+import { useContinueWatchingRows } from "@/hooks/useContinueWatchingRows";
 import { useUserData } from "@/contexts/userDataContext";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 
@@ -44,92 +38,36 @@ import {
 
 const SECTION_MAX_ITEMS = EXPLORE_RAIL_MAX_ITEMS;
 
-const EMPTY_RAILS: UserRailRows = {
-  historyRows: [],
-  watchLaterRows: [],
-  favoriteRows: [],
-};
-
-function historySignature(
-  entries: { catalogId: string; mediaType: string; lastSeason: number; lastEpisode: number }[]
-) {
-  return entries
-    .map((e) => `${e.mediaType}:${e.catalogId}:s${e.lastSeason}e${e.lastEpisode}`)
-    .sort()
-    .join("|");
-}
-
 export default function ExploreHub() {
   const { preferences, watchHistoryEntries, watchedMovieIds } = useUserData();
   const [core, setCore] = useState<ExploreCorePayload | null>(() =>
     peekExploreInitialCore(preferences, watchedMovieIds)
   );
-  const [userRails, setUserRails] = useState<UserRailRows>(() => {
-    if (typeof window === "undefined") return EMPTY_RAILS;
-    return peekExploreUserRails(watchHistoryEntries, watchHistoryProgressLabel);
-  });
-  const [userRailsLoading, setUserRailsLoading] = useState(false);
-  const [userRailsFailed, setUserRailsFailed] = useState(false);
+
+  const {
+    rows: historyRows,
+    loading: historyLoading,
+    failed: historyFailed,
+    reload: reloadHistory,
+  } = useContinueWatchingRows(watchHistoryEntries);
 
   const preferencesSig = useMemo(() => JSON.stringify(preferences), [preferences]);
   const watchedMoviesSig = useMemo(
     () => [...watchedMovieIds].sort().join("|"),
     [watchedMovieIds]
   );
-  const historySig = useMemo(
-    () => historySignature(watchHistoryEntries),
-    [watchHistoryEntries]
-  );
-
-  const loadUserRails = useCallback(async () => {
-    if (watchHistoryEntries.length === 0) {
-      setUserRails(EMPTY_RAILS);
-      setUserRailsLoading(false);
-      setUserRailsFailed(false);
-      return;
-    }
-
-    const cached = peekExploreUserRails(
-      watchHistoryEntries,
-      watchHistoryProgressLabel
-    );
-    if (historyRowsCoverEntries(cached.historyRows, watchHistoryEntries)) {
-      setUserRails((prev) =>
-        exploreHistoryRowsMatch(prev.historyRows, cached.historyRows) ? prev : cached
-      );
-      setUserRailsLoading(false);
-      setUserRailsFailed(false);
-      return;
-    }
-
-    setUserRailsLoading(true);
-    setUserRailsFailed(false);
-    try {
-      const rails = await fetchUserRailRows({
-        historyEntries: watchHistoryEntries,
-        watchLaterEntries: [],
-        favoriteEntries: [],
-        progressLabel: watchHistoryProgressLabel,
-      });
-      setUserRails((prev) =>
-        exploreHistoryRowsMatch(prev.historyRows, rails.historyRows) ? prev : rails
-      );
-      setUserRailsFailed(
-        rails.historyRows.length === 0 && watchHistoryEntries.length > 0
-      );
-    } catch {
-      setUserRailsFailed(true);
-      setUserRails((prev) =>
-        cached.historyRows.length > 0 ? cached : prev.historyRows.length > 0 ? prev : EMPTY_RAILS
-      );
-    } finally {
-      setUserRailsLoading(false);
-    }
-  }, [watchHistoryEntries]);
 
   const payload = useMemo<ExplorePagePayload | null>(
-    () => (core ? { ...core, ...userRails } : null),
-    [core, userRails]
+    () =>
+      core
+        ? {
+            ...core,
+            historyRows: [],
+            watchLaterRows: [],
+            favoriteRows: [],
+          }
+        : null,
+    [core]
   );
 
   const spotlightItems = useMemo(
@@ -197,36 +135,34 @@ export default function ExploreHub() {
 
   useResumeFetchWhenVisible(!core, loadShell, bustCoreInflight);
 
-  useEffect(() => {
-    void loadUserRails();
-  }, [historySig, loadUserRails]);
-
-  useEffect(() => {
-    const onHistoryChange = () => {
-      setUserRails((prev) => {
-        if (watchHistoryEntries.length === 0) {
-          return EMPTY_RAILS;
-        }
-        const projected = projectExploreHistoryRows(
-          prev.historyRows,
-          watchHistoryEntries,
-          watchHistoryProgressLabel
-        );
-        if (projected) {
-          return exploreHistoryRowsMatch(prev.historyRows, projected)
-            ? prev
-            : { ...prev, historyRows: projected };
-        }
-        void loadUserRails();
-        return prev;
-      });
-    };
-
-    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);
-    return () => {
-      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);
-    };
-  }, [watchHistoryEntries, loadUserRails]);
+  const continueWatchingSection = watchHistoryEntries.length > 0 ? (
+    historyRows.length > 0 ? (
+      <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
+    ) : historyLoading ? (
+      <section
+        className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
+        aria-label="Continue watching"
+        aria-busy="true"
+      >
+        <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+        <CatalogRailSkeleton count={6} />
+      </section>
+    ) : historyFailed ? (
+      <section className={RAIL_INNER_CLASS} aria-label="Continue watching">
+        <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+        <p className="text-sm text-default-500">
+          Couldn&apos;t load your titles.{" "}
+          <button
+            type="button"
+            className="text-success hover:underline"
+            onClick={() => void reloadHistory()}
+          >
+            Try again
+          </button>
+        </p>
+      </section>
+    ) : null
+  ) : null;
 
   if (!core || !payload) {
     return (
@@ -246,6 +182,7 @@ export default function ExploreHub() {
           />
         </section>
         <div className={cn(RAIL_STACK_CLASS, MOBILE_CONTENT_INSET_LEFT, "pb-8")}>
+          {continueWatchingSection}
           <CatalogRailSkeleton count={8} />
           <CatalogRailSkeleton count={8} />
           <CatalogRailSkeleton count={8} />
@@ -257,7 +194,6 @@ export default function ExploreHub() {
   const {
     discover,
     genres,
-    historyRows,
     recommendedRows,
     newContent,
     upcomingContent,
@@ -299,34 +235,7 @@ export default function ExploreHub() {
           hasTrending ? "mt-0" : "mt-2"
         )}
       >
-        {watchHistoryEntries.length > 0 ? (
-          historyRows.length > 0 ? (
-            <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
-          ) : userRailsLoading ? (
-            <section
-              className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
-              aria-label="Continue watching"
-              aria-busy="true"
-            >
-              <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-              <CatalogRailSkeleton count={6} />
-            </section>
-          ) : userRailsFailed ? (
-            <section className={RAIL_INNER_CLASS} aria-label="Continue watching">
-              <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-              <p className="text-sm text-default-500">
-                Couldn&apos;t load your titles.{" "}
-                <button
-                  type="button"
-                  className="text-success hover:underline"
-                  onClick={() => void loadUserRails()}
-                >
-                  Try again
-                </button>
-              </p>
-            </section>
-          ) : null
-        ) : null}
+        {continueWatchingSection}
         {hasRecommended ? (
           <CatalogRail
             title="Recommended for you"

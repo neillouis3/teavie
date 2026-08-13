@@ -486,7 +486,7 @@ export function installCatalogDetailsPrefetchListeners(): () => void {
       if (url.origin !== window.location.origin) return;
       const seed = parseCatalogSeed(anchor.getAttribute(CATALOG_SEED_ATTR));
       preloadHeroBannerFromSeed(seed);
-      prefetchCatalogDetailsPath(url.pathname);
+      prefetchCatalogDetailsPath(url.pathname, { full: true });
     } catch {
       /* ignore bad href */
     }
