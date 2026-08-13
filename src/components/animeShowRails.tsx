@@ -25,7 +25,6 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
-import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import {
   clearLegacyAnimeShowRailsCache,
   readClientDayCache,
@@ -109,8 +108,6 @@ export default function AnimeShowRails({
 }) {
   const [related, setRelated] = useState<RelatedItem[]>([]);
   const [youMightLike, setYouMightLike] = useState<YmlItem[]>([]);
-  const [relatedLoading, setRelatedLoading] = useState(true);
-  const [ymlLoading, setYmlLoading] = useState(true);
   const { mode: cardLayout } = useCatalogCardStyle();
   const horizontal = cardLayout === "horizontal";
   const ymlMax = horizontal ? 8 : EXPLORE_RAIL_MAX_ITEMS;
@@ -129,67 +126,49 @@ export default function AnimeShowRails({
 
     if (cachedRelated?.length) {
       setRelated(cachedRelated);
-      setRelatedLoading(false);
     } else {
       setRelated([]);
-      setRelatedLoading(true);
     }
 
     if (cachedYml?.length) {
       setYouMightLike(cachedYml);
-      setYmlLoading(false);
     } else {
       setYouMightLike([]);
-      setYmlLoading(true);
     }
 
     void fetchYouMightLike(idMal, ymlMax)
       .then((items) => {
         if (cancelled) return;
-        setYouMightLike(items);
-        if (items.length > 0) writeClientDayCache(ymlCacheKey, items);
+        if (items.length > 0) {
+          setYouMightLike(items);
+          writeClientDayCache(ymlCacheKey, items);
+        }
       })
       .catch(() => {
         if (cancelled) return;
-        setYouMightLike([]);
-      })
-      .finally(() => {
-        if (!cancelled) setYmlLoading(false);
       });
 
-    if (cachedRelated?.length) {
-      void fetchRelatedAnime(idMal, true)
-        .then((items) => {
-          if (cancelled || items.length === 0) return;
-          setRelated(items);
-          writeClientDayCache(relatedCacheKey, items);
-        })
-        .catch(() => {});
-      return () => {
-        cancelled = true;
-      };
-    }
+    void (async () => {
+      try {
+        if (!cachedRelated?.length) {
+          const fastItems = await fetchRelatedAnime(idMal, false);
+          if (cancelled) return;
+          if (fastItems.length > 0) {
+            setRelated(fastItems);
+            writeClientDayCache(relatedCacheKey, fastItems);
+          }
+        }
 
-    void fetchRelatedAnime(idMal, false)
-      .then((fastItems) => {
+        const fullItems = await fetchRelatedAnime(idMal, true);
         if (cancelled) return;
-        if (fastItems.length > 0) setRelated(fastItems);
-      })
-      .catch(() => {});
-
-    void fetchRelatedAnime(idMal, true)
-      .then((items) => {
+        if (fullItems.length > 0) {
+          setRelated(fullItems);
+          writeClientDayCache(relatedCacheKey, fullItems);
+        }
+      } catch {
         if (cancelled) return;
-        setRelated(items);
-        if (items.length > 0) writeClientDayCache(relatedCacheKey, items);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setRelated([]);
-      })
-      .finally(() => {
-        if (!cancelled) setRelatedLoading(false);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -200,119 +179,100 @@ export default function AnimeShowRails({
     ? CATALOG_GRID_HORIZONTAL_SEARCH
     : CATALOG_GRID_VERTICAL_SEARCH;
 
-  const showRelated = related.length > 0 || relatedLoading;
-  const showYml = youMightLike.length > 0 || ymlLoading;
+  const showRelated = related.length > 0;
+  const showYml = youMightLike.length > 0;
 
   return (
     <>
       {showRelated ? (
         <section className="w-full pt-6">
           <ExploreSectionTitle className="mb-3">Related anime</ExploreSectionTitle>
-          {related.length > 0 ? (
-            <ul className={`${gridClass} items-start`}>
-              {related.map((item) => {
-                const catalogKind =
-                  item.catalogType === "movie" ? "movie" : "tv";
-                return (
-                  <li
-                    key={`${item.catalogId}-${item.anilistId ?? "na"}-${item.topNote}`}
-                    className="min-w-0"
-                  >
-                    {horizontal ? (
-                      <HorizontalCatalogCard
-                        id={item.catalogId}
-                        title={item.title}
-                        year={item.year}
-                        type={catalogKind}
-                        posterPath={item.posterPath || ""}
-                        backdropPath={item.backdropPath || ""}
-                        topNote={item.topNote}
-                      />
-                    ) : (
-                      <SmallCard
-                        id={item.catalogId}
-                        title={item.title}
-                        year={item.year}
-                        type={catalogKind}
-                        seasonAmount={item.seasonAmount ?? 0}
-                        numberOfEpisodes={item.numberOfEpisodes ?? undefined}
-                        posterPath={item.posterPath || ""}
-                        releaseNote={item.topNote}
-                      />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <div className="flex gap-3 overflow-hidden opacity-60">
-              {Array.from({ length: horizontal ? 4 : 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`shrink-0 animate-pulse rounded-lg bg-muted ${
-                    horizontal ? "h-24 w-44" : "h-52 w-36"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
+          <ul className={`${gridClass} items-start`}>
+            {related.map((item) => {
+              const catalogKind =
+                item.catalogType === "movie" ? "movie" : "tv";
+              return (
+                <li
+                  key={`${item.catalogId}-${item.anilistId ?? "na"}-${item.topNote}`}
+                  className="min-w-0"
+                >
+                  {horizontal ? (
+                    <HorizontalCatalogCard
+                      id={item.catalogId}
+                      title={item.title}
+                      year={item.year}
+                      type={catalogKind}
+                      posterPath={item.posterPath || ""}
+                      backdropPath={item.backdropPath || ""}
+                      topNote={item.topNote}
+                    />
+                  ) : (
+                    <SmallCard
+                      id={item.catalogId}
+                      title={item.title}
+                      year={item.year}
+                      type={catalogKind}
+                      seasonAmount={item.seasonAmount ?? 0}
+                      numberOfEpisodes={item.numberOfEpisodes ?? undefined}
+                      posterPath={item.posterPath || ""}
+                      releaseNote={item.topNote}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </section>
       ) : null}
 
       {showYml ? (
         <section
           className={`flex w-full flex-col gap-3 ${
-            related.length > 0 || relatedLoading ? "mt-10 pt-8" : "pt-6"
+            related.length > 0 ? "mt-10 pt-8" : "pt-6"
           }`}
           aria-label="More like this"
         >
           <ExploreSectionTitle variant="explore" hideIcon>
             More like this
           </ExploreSectionTitle>
-          {youMightLike.length > 0 ? (
-            <CatalogRailShell bleed={bleed}>
-              <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
-                <CarouselContent
-                  viewportClassName={catalogRailViewportClass(bleed)}
-                  className={RAIL_TRACK}
-                >
-                  {bleed ? <SidebarBleedStartSpacer /> : null}
-                  {youMightLike.map((item) => (
-                    <CarouselItem
-                      key={`${item.catalogId}-${item.malId ?? "na"}`}
-                      className={horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL}
-                    >
-                      {horizontal ? (
-                        <HorizontalCatalogCard
-                          id={item.catalogId}
-                          title={item.title}
-                          year={item.year}
-                          type="tv"
-                          posterPath={item.posterPath || ""}
-                          backdropPath={item.backdropPath || ""}
-                        />
-                      ) : (
-                        <SmallCard
-                          id={item.catalogId}
-                          title={item.title}
-                          year={item.year}
-                          type="tv"
-                          runtimeSeconds={item.runtimeSeconds ?? undefined}
-                          seasonAmount={item.seasonAmount ?? 0}
-                          numberOfEpisodes={item.numberOfEpisodes ?? undefined}
-                          posterPath={item.posterPath || ""}
-                        />
-                      )}
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
-            </CatalogRailShell>
-          ) : (
-            <CatalogRailShell bleed={bleed}>
-              <CatalogRailSkeleton horizontal={horizontal} bleed={bleed} />
-            </CatalogRailShell>
-          )}
+          <CatalogRailShell bleed={bleed}>
+            <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+              <CarouselContent
+                viewportClassName={catalogRailViewportClass(bleed)}
+                className={RAIL_TRACK}
+              >
+                {bleed ? <SidebarBleedStartSpacer /> : null}
+                {youMightLike.map((item) => (
+                  <CarouselItem
+                    key={`${item.catalogId}-${item.malId ?? "na"}`}
+                    className={horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL}
+                  >
+                    {horizontal ? (
+                      <HorizontalCatalogCard
+                        id={item.catalogId}
+                        title={item.title}
+                        year={item.year}
+                        type="tv"
+                        posterPath={item.posterPath || ""}
+                        backdropPath={item.backdropPath || ""}
+                      />
+                    ) : (
+                      <SmallCard
+                        id={item.catalogId}
+                        title={item.title}
+                        year={item.year}
+                        type="tv"
+                        runtimeSeconds={item.runtimeSeconds ?? undefined}
+                        seasonAmount={item.seasonAmount ?? 0}
+                        numberOfEpisodes={item.numberOfEpisodes ?? undefined}
+                        posterPath={item.posterPath || ""}
+                      />
+                    )}
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+          </CatalogRailShell>
         </section>
       ) : null}
 

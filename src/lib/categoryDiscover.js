@@ -408,7 +408,9 @@ export async function fetchCategoryHero(col, slug, preferences = null) {
 
   const { anime, baseFilter } = resolved;
   const popularDocs = await fetchPopularDocs(col, baseFilter, { anime, limit: RAIL_LIMIT });
-  if (anime) await enrichAnimeDocsWithTmdbBackdrops(popularDocs);
+  if (anime) {
+    await enrichAnimeDocsWithTmdbBackdrops(popularDocs.slice(0, TRENDING_LIMIT));
+  }
   const featuredDocs = popularDocs.slice(0, FEATURED_SIZE);
   const featured = featuredDocs.map((doc) => mapTvRow(doc, { anime }));
   const popular = dedupeCatalogEntries(popularDocs).map((doc) => mapTvRow(doc, { anime }));

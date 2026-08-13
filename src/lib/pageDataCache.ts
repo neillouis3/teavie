@@ -394,19 +394,11 @@ export async function fetchCategoryDiscoverHero(
   return withDayCache(
     categoryDiscoverHeroCacheKey(slug, preferences),
     async () => {
-      const first = await loadCategoryDiscoverPart(slug, preferences, "hero");
-      if (isCategoryHeroCacheable(first)) {
-        return {
-          featured: first.featured,
-          trending: first.trending,
-          popular: first.popular,
-        };
-      }
-      const retry = await loadCategoryDiscoverPart(slug, preferences, "hero");
+      const hero = await loadCategoryDiscoverPart(slug, preferences, "hero");
       return {
-        featured: retry.featured,
-        trending: retry.trending,
-        popular: retry.popular,
+        featured: hero.featured,
+        trending: hero.trending,
+        popular: hero.popular,
       };
     },
     { isCacheable: isCategoryHeroCacheable }
@@ -494,6 +486,33 @@ export function categoryDiscoverCacheKey(
   preferences: UserPreferences | null = null
 ): string {
   return `${PREFIX}.category-discover.v20:${slug}:${preferencesCacheKey(preferences)}`;
+}
+
+export function categoryDiscoverPartNeeds(
+  data: CategoryDiscoverPayload
+): {
+  hero: boolean;
+  topRated: boolean;
+  newEpisodes: boolean;
+  genres: boolean;
+} {
+  return {
+    hero: !isCategoryHeroCacheable(data),
+    topRated: !hasCatalogItems(data.topRated),
+    newEpisodes: !hasCatalogItems(data.newEpisodes),
+    genres:
+      !Array.isArray(data.genres) ||
+      !data.genres.some((genre) => (genre.count ?? 0) > 0),
+  };
+}
+
+/** Instant category hub paint from split day cache (hero + rails merged). */
+export function peekCategoryDiscoverInitial(
+  slug: string,
+  preferences: UserPreferences | null = null
+): CategoryDiscoverPayload {
+  if (typeof window === "undefined") return EMPTY_CATEGORY;
+  return peekCategoryDiscoverSplitCache(slug, preferences);
 }
 
 export function peekCategoryDiscoverSplitCache(
