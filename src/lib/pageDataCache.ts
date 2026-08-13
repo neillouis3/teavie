@@ -319,7 +319,7 @@ export function categoryDiscoverCacheKey(
   slug: string,
   preferences: UserPreferences | null = null
 ): string {
-  return `${PREFIX}.category-discover.v13:${slug}:${preferencesCacheKey(preferences)}`;
+  return `${PREFIX}.category-discover.v14:${slug}:${preferencesCacheKey(preferences)}`;
 }
 
 export function peekCategoryDiscoverCache(

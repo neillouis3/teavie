@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { catalogDisplayTitle } from '@/lib/catalogDisplayTitle';
-import { tmdbImageUrl } from '@/lib/tmdbImage';
+import { tmdbPosterUrl } from '@/lib/tmdbImage';
 import CatalogCardHoverActions from '@/components/catalog/CatalogCardHoverActions';
 import {
   buildCatalogDetailsSeed,
@@ -40,6 +40,8 @@ interface SmallCardProps {
   onDismiss?: () => void;
   /** Hover actions: favorite (star) and watch later (plus). */
   showHoverActions?: boolean;
+  /** LCP hint for above-the-fold grid tiles. */
+  priority?: boolean;
 }
 
 function MetaChip({ children }: { children: React.ReactNode }) {
@@ -65,11 +67,12 @@ export default function SmallCard({
   metaChips: metaChipsProp,
   onDismiss,
   showHoverActions = true,
+  priority = false,
 }: SmallCardProps) {
   const typeLower = (type ?? '').toLowerCase();
   const mediaType = typeLower === 'tv' ? 'tv' : 'movie';
   const hasPoster = Boolean(posterPath?.trim());
-  const imageUrl = tmdbImageUrl(posterPath);
+  const imageUrl = tmdbPosterUrl(posterPath);
   const defaultHref = typeLower === 'tv' ? `/shows/${id}` : `/movies/${id}`;
   const resolvedHref = String(linkHref ?? '').trim() || defaultHref;
   const external = /^https?:\/\//i.test(resolvedHref);
@@ -99,6 +102,7 @@ export default function SmallCard({
           alt={title}
           fill
           unoptimized
+          priority={priority}
           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 20vw, 140px"
           className="object-cover transition-opacity duration-300 group-hover:opacity-90"
         />

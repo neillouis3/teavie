@@ -7,7 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { InformationCircleIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
 import { preferHighResAnimeImageUrl } from "@/lib/animePoster";
-import { tmdbImageUrl, tmdbImageUrlOr } from "@/lib/tmdbImage";
+import { tmdbBackdropUrl, tmdbImageUrl, tmdbImageUrlOr, tmdbPosterUrl } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import {
   buildCatalogDetailsSeed,
@@ -191,6 +191,7 @@ function HeroCardOverlay({
         )}
         style={showActions ? { transform: "translateY(-264px)" } : undefined}
       >
+        <div className="min-h-[2.5em] w-full">
         {logoUrl ? (
           <div
             className={cn(
@@ -207,7 +208,7 @@ function HeroCardOverlay({
           </div>
         ) : (
           <h1
-            className={`line-clamp-2 font-bold leading-tight text-white ${
+            className={`line-clamp-2 min-h-[2.5em] font-bold leading-tight text-white ${
               compact
                 ? "text-xl sm:text-2xl md:text-3xl"
                 : "text-2xl sm:text-3xl md:text-4xl"
@@ -216,6 +217,7 @@ function HeroCardOverlay({
             {title}
           </h1>
         )}
+        </div>
 
         {!compact && overviewText ? (
           <p className="line-clamp-2 w-full min-w-0 text-base leading-snug text-white/75">
@@ -326,9 +328,14 @@ export default function LargeCard({
   const primaryPath = preferPoster
     ? tmdbImageUrlOr(posterPath, tmdbImageUrlOr(backdropPath, ""))
     : tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, ""));
+  const sizedHeroPath = hero
+    ? preferPoster
+      ? tmdbPosterUrl(posterPath) || tmdbBackdropUrl(backdropPath)
+      : tmdbBackdropUrl(backdropPath) || tmdbPosterUrl(posterPath)
+    : primaryPath;
   const imageUrl =
-    preferHighResAnimeImageUrl(primaryPath) ||
-    primaryPath ||
+    preferHighResAnimeImageUrl(sizedHeroPath) ||
+    sizedHeroPath ||
     "/placeholder.jpg";
 
   const href = typeLower === "tv" ? `/shows/${id}` : `/movies/${id}`;
@@ -356,6 +363,8 @@ export default function LargeCard({
         <img
           src={imageUrl}
           alt={title}
+          fetchPriority={hero ? "high" : undefined}
+          loading={hero ? "eager" : "lazy"}
           className={cn(
             "h-full w-full transition-all duration-500",
             contain ? "object-contain" : "object-cover group-hover:scale-105",

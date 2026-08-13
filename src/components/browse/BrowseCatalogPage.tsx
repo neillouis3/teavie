@@ -282,11 +282,19 @@ function BrowseCatalogPageContent({
                 <h1 className="text-base tracking-tight text-foreground">{pageName}</h1>
                 
               </div>
-              {!loading && total > 0 ? (
-                <span className="shrink-0 rounded-full bg-foreground/8 px-4 py-2 text-xs text-default-500 dark:bg-white/8">
-                  {total.toLocaleString()} titles
+              {!loading ? (
+                <span
+                  className={`shrink-0 rounded-full bg-foreground/8 px-4 py-2 text-xs text-default-500 dark:bg-white/8 ${total > 0 ? "" : "invisible"}`}
+                  aria-hidden={total <= 0}
+                >
+                  {total > 0 ? `${total.toLocaleString()} titles` : "0 titles"}
                 </span>
-              ) : null}
+              ) : (
+                <span
+                  className="inline-block h-8 w-24 shrink-0 animate-pulse rounded-full bg-default-200 dark:bg-white/10"
+                  aria-hidden
+                />
+              )}
             </div>
 
             <div className="mb-5 lg:hidden">

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import NewEpisodesRail from "@/components/category/NewEpisodesRail";
+import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import CategoryBrowseBar from "@/components/category/CategoryBrowseBar";
 import CategoryGenreRail from "@/components/category/CategoryGenreRail";
-import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
+import NewEpisodesRail from "@/components/category/NewEpisodesRail";
 import TrendingHero from "@/components/catalog/trendingHero";
 import {
   getCatalogCategory,
@@ -12,6 +12,7 @@ import {
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 import {
   RAIL_AFTER_SPOTLIGHT,
+  RAIL_INNER_CLASS,
   RAIL_STACK_CLASS,
 } from "@/lib/catalogGrid";
 import {
@@ -26,6 +27,8 @@ import { useUserData } from "@/contexts/userDataContext";
 import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 import { cn } from "@/lib/utils";
+
+const CATEGORY_HUB_INSET = `${MOBILE_CONTENT_INSET_LEFT} pr-4 lg:pr-24`;
 
 type CategoryPageTemplateProps = {
   slug: string;
@@ -118,12 +121,15 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           </section>
         ) : null}
         {useExploreSpotlight ? (
-          <div className={`${MOBILE_CONTENT_INSET_LEFT} pb-8`}>
-            <div className="mb-8 h-[7.5rem] animate-pulse rounded-2xl bg-default-200 dark:bg-default-100/10" />
+          <div className={`${CATEGORY_HUB_INSET} pb-8`}>
+            <div className={`${RAIL_INNER_CLASS} mb-8`}>
+              <div className="h-5 w-32 animate-pulse rounded bg-default-200 dark:bg-default-100/10" />
+              <CatalogRailSkeleton count={8} />
+            </div>
             <CatalogRailSkeleton count={8} />
           </div>
         ) : null}
-        <div className={`space-y-8 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
+        <div className={`space-y-8 pb-8 ${CATEGORY_HUB_INSET}`}>
           <CatalogRailSkeleton count={8} />
           <CatalogRailSkeleton count={8} />
         </div>
@@ -165,39 +171,25 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             rounded={false}
             flushLeft={false}
           />
-          {useExploreSpotlight && categoryGenres.length > 0 ? (
-            <CategoryGenreRail
-              category={category}
-              genres={categoryGenres}
-              overlay
-            />
+          {useExploreSpotlight ? (
+            <CategoryBrowseBar category={category} overlay />
           ) : null}
         </section>
       )}
 
-      {!hasTrending && useExploreSpotlight && categoryGenres.length > 0 ? (
-        <div className={cn(MOBILE_CONTENT_INSET_LEFT, "mb-8 mt-2")}>
-          <CategoryGenreRail category={category} genres={categoryGenres} />
+      {!hasTrending && useExploreSpotlight ? (
+        <div className={cn(CATEGORY_HUB_INSET, "mb-8 mt-2")}>
+          <CategoryBrowseBar category={category} />
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          MOBILE_CONTENT_INSET_LEFT,
-          hasTrending ? "-mt-2" : "mt-2",
-          hasNewEpisodes ? "mb-8" : RAIL_AFTER_SPOTLIGHT
-        )}
-      >
-        <CategoryBrowseBar category={category} />
-      </div>
-
       {hasNewEpisodes ? (
-        <div className={cn(MOBILE_CONTENT_INSET_LEFT, "mb-8")}>
+        <div className={cn(CATEGORY_HUB_INSET, "mb-8", hasTrending && "mt-2")}>
           <NewEpisodesRail items={data.newEpisodes} />
         </div>
       ) : null}
 
-      <div className={`${RAIL_STACK_CLASS} pb-10 ${MOBILE_CONTENT_INSET_LEFT}`}>
+      <div className={`${RAIL_STACK_CLASS} pb-10 ${CATEGORY_HUB_INSET}`}>
         {hasContent ? (
           <>
             <CatalogRail
@@ -211,6 +203,10 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
               items={data.topRated}
               titleVariant="explore"
             />
+
+            {categoryGenres.length > 0 ? (
+              <CategoryGenreRail category={category} genres={categoryGenres} />
+            ) : null}
           </>
         ) : (
           <p className="py-12 text-center text-sm text-default-500">

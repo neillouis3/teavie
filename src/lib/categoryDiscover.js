@@ -256,13 +256,13 @@ function isoDaysAgo(days) {
 async function fetchNewEpisodesRail(
   col,
   baseFilter,
-  { anime = false, limit = RAIL_LIMIT } = {}
+  { anime = false, limit = RAIL_LIMIT, lookbackDays = 7 } = {}
 ) {
-  const yesterday = isoDaysAgo(1);
+  const cutoff = isoDaysAgo(lookbackDays);
 
   const rows = await col
-    .find({ $and: [baseFilter, { last_air_date: yesterday }] })
-    .sort({ popularity: -1, _id: -1 })
+    .find({ $and: [baseFilter, { last_air_date: { $gte: cutoff } }] })
+    .sort({ last_air_date: -1, popularity: -1, _id: -1 })
     .limit(limit)
     .toArray();
 

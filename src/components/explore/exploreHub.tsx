@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
-import TrendingHero from "@/components/catalog/trendingHero";
+import TrendingHero, { SPOTLIGHT_SKELETON_H } from "@/components/catalog/trendingHero";
 import { cn } from "@/lib/utils";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import GenreRail from "@/components/explore/genreRail";
@@ -62,6 +62,9 @@ export default function ExploreHub() {
     peekExploreInitialCore(preferences, watchedMovieIds)
   );
   const [userRails, setUserRails] = useState<UserRailRows>(EMPTY_RAILS);
+  const [userRailsLoading, setUserRailsLoading] = useState(
+    () => watchHistoryEntries.length > 0
+  );
   const [awaitingPersonalized, setAwaitingPersonalized] = useState(
     () =>
       hasUserPreferences(preferences) &&
@@ -79,13 +82,23 @@ export default function ExploreHub() {
   );
 
   const loadUserRails = useCallback(async () => {
-    const rails = await fetchUserRailRows({
-      historyEntries: watchHistoryEntries,
-      watchLaterEntries: [],
-      favoriteEntries: [],
-      progressLabel: watchHistoryProgressLabel,
-    });
-    setUserRails(rails);
+    if (watchHistoryEntries.length === 0) {
+      setUserRails(EMPTY_RAILS);
+      setUserRailsLoading(false);
+      return;
+    }
+    setUserRailsLoading(true);
+    try {
+      const rails = await fetchUserRailRows({
+        historyEntries: watchHistoryEntries,
+        watchLaterEntries: [],
+        favoriteEntries: [],
+        progressLabel: watchHistoryProgressLabel,
+      });
+      setUserRails(rails);
+    } finally {
+      setUserRailsLoading(false);
+    }
   }, [watchHistoryEntries]);
 
   const payload = useMemo<ExplorePagePayload | null>(
@@ -202,7 +215,12 @@ export default function ExploreHub() {
           )}
           aria-hidden
         >
-          <div className="min-h-[52vh] animate-pulse bg-default-200 sm:min-h-[62vh] lg:min-h-[80vh] dark:bg-default-100/10" />
+          <div
+            className={cn(
+              "animate-pulse bg-default-200 dark:bg-default-100/10",
+              SPOTLIGHT_SKELETON_H
+            )}
+          />
         </section>
         <div className={cn(RAIL_STACK_CLASS, MOBILE_CONTENT_INSET_LEFT, "pb-8")}>
           <CatalogRailSkeleton count={8} />
@@ -260,7 +278,14 @@ export default function ExploreHub() {
           hasTrending ? "mt-0" : "mt-2"
         )}
       >
-        <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
+        {userRailsLoading && watchHistoryEntries.length > 0 && historyRows.length === 0 ? (
+          <section aria-label="Continue watching" aria-busy="true">
+            <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+            <CatalogRailSkeleton count={6} />
+          </section>
+        ) : (
+          <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
+        )}
         {showRecommendedSlot ? (
           awaitingPersonalized && !hasRecommended ? (
             <CatalogRailSkeleton count={6} />

@@ -20,6 +20,9 @@ const TRENDING_CAROUSEL_H =
 const SPOTLIGHT_UNDER_NAV_H =
   "h-[calc(min(52vh,400px)+3.5rem)] sm:h-[calc(min(62vh,480px)+3.5rem)] lg:h-[calc(85vh+3.5rem)]";
 
+/** Loading shell height — must match loaded spotlight hero. */
+export const SPOTLIGHT_SKELETON_H = SPOTLIGHT_UNDER_NAV_H;
+
 const TRENDING_ARROW_CLASS =
   "top-1/2 z-20 h-10 w-10 -translate-y-1/2 border-none bg-black/45 text-white backdrop-blur-sm hover:bg-black/60 disabled:opacity-40";
 
