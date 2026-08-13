@@ -869,6 +869,24 @@ export default function ShowTemplate({
     selectedEpisode,
   ]);
 
+  const handleVidrockProgress = useCallback(
+    (progress: { seconds: number; season: number; episode: number }) => {
+      const s = progress.season || selectedSeason;
+      const e = progress.episode || selectedEpisode;
+      const sec = Math.floor(Number(progress.seconds) || 0);
+      markEpisodeWatchedFromPlayback(s, e, sec);
+      saveEpisodePlaybackPosition(String(id), s, e, sec);
+      watchParty.noteHostPlayback(sec);
+    },
+    [
+      id,
+      selectedSeason,
+      selectedEpisode,
+      watchParty,
+      markEpisodeWatchedFromPlayback,
+    ]
+  );
+
   const handleStremioProgress = useCallback(
     (seconds: number) => {
       const s = selectedSeason;
@@ -1389,6 +1407,7 @@ export default function ShowTemplate({
           episode={playerCoords.episode}
           startSeconds={server === "stremio" ? playerStartSeconds : 0}
           onStremioProgress={server === "stremio" ? handleStremioProgress : undefined}
+          onVidrockProgress={server === "vidrock" ? handleVidrockProgress : undefined}
           onEmbedLoad={
             server === "vidcore"
               ? () =>

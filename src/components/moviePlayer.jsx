@@ -11,6 +11,7 @@ import {
   VIDCORE_EMBED_BASE,
   VIDCORE_THEME_QUERY,
   VIDROCK_EMBED_BASE,
+  VIDROCK_MOVIE_QUERY,
 } from '@/lib/embedHosts';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +24,7 @@ export const MOVIE_SERVERS = {
   vidrock: {
     base: VIDROCK_EMBED_BASE,
     path: (id) => `/movie/${id}`,
-    suffix: () => '',
+    suffix: () => VIDROCK_MOVIE_QUERY,
   },
   movies111: {
     base: MOVIES111_EMBED_BASE,
@@ -54,6 +55,7 @@ export const MOVIE_SERVERS = {
  * @param {number} [props.startSeconds] Stremio resume position
  * @param {boolean} [props.immersive] Full-viewport watch page (no rounded shell)
  * @param {(seconds: number) => void} [props.onStremioProgress]
+ * @param {(progress: import('@/lib/vidrockProgress').VidrockProgress) => void} [props.onVidrockProgress]
  */
 const MoviePlayer = ({
   videoId,
@@ -66,6 +68,7 @@ const MoviePlayer = ({
   startSeconds = 0,
   immersive = false,
   onStremioProgress,
+  onVidrockProgress,
 }) => {
   const [streamQuality, setStreamQuality] = useState(streamQualityProp ?? null);
 
@@ -160,6 +163,8 @@ const MoviePlayer = ({
           title="Movie player"
           src={playerUrl}
           className="absolute inset-0 h-full w-full border-0"
+          vidrockTmdbId={String(videoId ?? '')}
+          onVidrockProgress={server === 'vidrock' ? onVidrockProgress : undefined}
         />
       ) : (
         <PlayerEmbedSkeleton />

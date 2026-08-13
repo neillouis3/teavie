@@ -267,6 +267,13 @@ export default function MovieTemplate({
     [id, server, watchParty]
   );
 
+  const handleVidrockProgress = useCallback(
+    (progress: { seconds: number }) => {
+      handleStremioProgress(progress.seconds);
+    },
+    [handleStremioProgress]
+  );
+
   const handleCreateParty = useCallback(
     async (nickname: string) => {
       const roomId = await watchParty.createRoom(nickname);
@@ -807,6 +814,9 @@ export default function MovieTemplate({
             startSeconds={server === 'stremio' ? playerStartSeconds : 0}
             onStremioProgress={
               server === 'stremio' ? handleStremioProgress : undefined
+            }
+            onVidrockProgress={
+              server === 'vidrock' ? handleVidrockProgress : undefined
             }
             streamQuality={inferMovieStreamQuality(
               movie.release_dates,

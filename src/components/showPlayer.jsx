@@ -12,13 +12,14 @@ import {
   VIDCORE_EMBED_BASE,
   VIDCORE_THEME_QUERY,
   VIDROCK_EMBED_BASE,
+  VIDROCK_TV_QUERY,
 } from '@/lib/embedHosts';
 
 export const SHOW_SERVERS = {
   vidrock: {
     base: VIDROCK_EMBED_BASE,
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
-    suffix: () => '',
+    suffix: () => VIDROCK_TV_QUERY,
   },
   movies111: {
     base: MOVIES111_EMBED_BASE,
@@ -71,6 +72,7 @@ function buildEmbedUrl(p) {
  * @param {string} [props.server]
  * @param {number} [props.startSeconds] Stremio resume position
  * @param {(seconds: number) => void} [props.onStremioProgress]
+ * @param {(progress: import('@/lib/vidrockProgress').VidrockProgress) => void} [props.onVidrockProgress]
  * @param {() => void} [props.onEmbedLoad]
  */
 export default function ShowPlayer({
@@ -84,6 +86,7 @@ export default function ShowPlayer({
   server = 'vidrock',
   startSeconds = 0,
   onStremioProgress,
+  onVidrockProgress,
   onEmbedLoad,
 }) {
   const { url, error } = useMemo(
@@ -135,6 +138,10 @@ export default function ShowPlayer({
           title="Episode player"
           src={url}
           className="absolute inset-0 h-full w-full border-0"
+          vidrockTmdbId={String(videoId ?? '')}
+          vidrockSeason={season}
+          vidrockEpisode={episode}
+          onVidrockProgress={server === 'vidrock' ? onVidrockProgress : undefined}
           onLoad={onEmbedLoad}
         />
       ) : (
