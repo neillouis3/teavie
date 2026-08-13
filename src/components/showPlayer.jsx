@@ -141,6 +141,7 @@ export default function ShowPlayer({
         backdropUrl={backdropUrl}
         onPlaybackProgress={onStremioProgress ? stremioProgressHandler : undefined}
       />
+      </div>
     );
   }
 

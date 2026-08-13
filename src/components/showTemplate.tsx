@@ -26,7 +26,7 @@ import {
 } from "@/lib/watchProgress";
 import type { VideasyProgressMessage } from "@/lib/videasyProgress";
 import type { MegaPlayMessage } from "@/lib/megaPlayProgress";
-import { recordMovieInWatchHistory, touchWatchHistory } from "@/lib/watchHistory";
+import { recordMovieInWatchHistory, touchWatchHistory, WATCH_HISTORY_MIN_PLAY_SECONDS } from "@/lib/watchHistory";
 import {
   saveMoviePlaybackPosition,
 } from "@/lib/movieWatchProgress";
@@ -877,6 +877,13 @@ export default function ShowTemplate({
       markEpisodeWatchedFromPlayback(s, e, msg.timestamp);
       saveEpisodePlaybackPosition(String(id), s, e, msg.timestamp);
       watchParty.noteHostPlayback(msg.timestamp);
+      if (msg.timestamp >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
+        touchWatchHistory(String(id), {
+          mediaType: "tv",
+          lastSeason: s,
+          lastEpisode: e,
+        });
+      }
 
       if (!watchParty.isHost || !watchParty.room || server !== "videasy") return;
       const now = Date.now();
@@ -904,6 +911,13 @@ export default function ShowTemplate({
       markEpisodeWatchedFromPlayback(s, e, sec);
       saveEpisodePlaybackPosition(String(id), s, e, sec);
       watchParty.noteHostPlayback(sec);
+      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
+        touchWatchHistory(String(id), {
+          mediaType: "tv",
+          lastSeason: s,
+          lastEpisode: e,
+        });
+      }
       if (!watchParty.isHost || !watchParty.room || server !== "stremio") return;
       const now = Date.now();
       if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
@@ -965,6 +979,13 @@ export default function ShowTemplate({
       markEpisodeWatchedFromPlayback(selectedSeason, selectedEpisode, sec);
       saveEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode, sec);
       watchParty.noteHostPlayback(sec);
+      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
+        touchWatchHistory(String(id), {
+          mediaType: "tv",
+          lastSeason: selectedSeason,
+          lastEpisode: selectedEpisode,
+        });
+      }
       if (!watchParty.isHost || !watchParty.room) return;
       const now = Date.now();
       if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;

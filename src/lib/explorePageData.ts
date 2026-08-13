@@ -23,11 +23,10 @@ const EMPTY_FEED = {
 
 const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v3:";
 
-export type ExploreHistoryRow = ContentItem & {
-  progressLabel: string;
-  lastSeason: number;
-  lastEpisode: number;
-};
+import type { ExploreHistoryRow } from "@/lib/continueWatchingRows";
+import { fetchContinueWatchingRows } from "@/lib/continueWatchingRows";
+
+export type { ExploreHistoryRow };
 
 export type ExplorePagePayload = {
   discover: TmdbDiscoverPayload;
@@ -145,79 +144,11 @@ export function peekExploreUserRails(
   };
 }
 
-const historyRowsInflight = new Map<string, Promise<ExploreHistoryRow[]>>();
-
-async function fetchExploreHistoryRowsImpl(
-  entries: WatchHistoryEntry[],
-  progressLabel: (entry: WatchHistoryEntry) => string,
-  cacheKey: string,
-  cached: ExploreHistoryRow[] | null
-): Promise<ExploreHistoryRow[]> {
-  try {
-    const res = await fetch("/api/catalog/history", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        entries: entries.map((e) => ({
-          catalogId: e.catalogId,
-          mediaType: e.mediaType,
-        })),
-      }),
-    });
-    if (!res.ok) return cached?.length ? mergeHistoryRows(cached, entries, progressLabel) : [];
-    const json = (await res.json()) as { items?: ContentItem[] };
-    const byId = new Map((json.items ?? []).map((item) => [String(item.id), item]));
-    const rows: ExploreHistoryRow[] = [];
-    for (const entry of entries) {
-      const item =
-        byId.get(entry.catalogId) ??
-        (json.items ?? []).find((row) =>
-          catalogIdsMatch(entry.catalogId, row.id)
-        );
-      if (!item) continue;
-      rows.push({
-        ...item,
-        id: entry.catalogId,
-        progressLabel: progressLabel(entry),
-        lastSeason: entry.lastSeason,
-        lastEpisode: entry.lastEpisode,
-      });
-    }
-    if (rows.length > 0) {
-      writeClientDayCache(cacheKey, rows);
-    }
-    return rows;
-  } catch {
-    return cached?.length ? mergeHistoryRows(cached, entries, progressLabel) : [];
-  }
-}
-
 export async function fetchExploreHistoryRows(
   entries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
 ): Promise<ExploreHistoryRow[]> {
-  if (entries.length === 0) return [];
-
-  const cacheKey = historyCacheKey(entries);
-  const cached = readClientDayCache<ExploreHistoryRow[]>(cacheKey);
-  if (cached && cached.length > 0) {
-    const merged = mergeHistoryRows(cached, entries, progressLabel);
-    if (historyRowsCoverEntries(merged, entries)) return merged;
-  }
-
-  const inflight = historyRowsInflight.get(cacheKey);
-  if (inflight) return inflight;
-
-  const promise = fetchExploreHistoryRowsImpl(
-    entries,
-    progressLabel,
-    cacheKey,
-    cached
-  ).finally(() => {
-    historyRowsInflight.delete(cacheKey);
-  });
-  historyRowsInflight.set(cacheKey, promise);
-  return promise;
+  return fetchContinueWatchingRows(entries, progressLabel);
 }
 
 /** Rebuild history rows from existing rail data (no network). Returns null if a new title needs fetch. */
