@@ -3,6 +3,9 @@ import {
   fetchCategoryDiscover,
   fetchCategoryHero,
   fetchCategoryRails,
+  fetchCategoryTopRated,
+  fetchCategoryNewEpisodes,
+  fetchCategoryGenreTiles,
 } from "@/lib/categoryDiscover";
 import { isValidCatalogCategorySlug } from "@/lib/catalogCategories";
 import { resolveRequestPreferences } from "@/lib/api/resolveRequestPreferences";
@@ -11,6 +14,9 @@ import {
   getCachedCategoryDiscover,
   getCachedCategoryHero,
   getCachedCategoryRails,
+  getCachedCategoryTopRated,
+  getCachedCategoryNewEpisodes,
+  getCachedCategoryGenreTiles,
 } from "@/lib/api/categoryDiscoverCache";
 
 const EMPTY_DISCOVER = {
@@ -26,13 +32,37 @@ async function fetchDiscoverPart(slug, part, preferences = null) {
   const client = await clientPromise;
   const col = client.db("teavie").collection("content");
 
-  if (part === "hero") {
-    return fetchCategoryHero(col, slug, preferences);
+  switch (part) {
+    case "hero":
+      return fetchCategoryHero(col, slug, preferences);
+    case "rails":
+      return fetchCategoryRails(col, slug, preferences);
+    case "topRated":
+      return { topRated: await fetchCategoryTopRated(col, slug, preferences) };
+    case "newEpisodes":
+      return { newEpisodes: await fetchCategoryNewEpisodes(col, slug, preferences) };
+    case "genres":
+      return { genres: await fetchCategoryGenreTiles(col, slug, preferences) };
+    default:
+      return fetchCategoryDiscover(col, slug, preferences);
   }
-  if (part === "rails") {
-    return fetchCategoryRails(col, slug, preferences);
+}
+
+async function fetchCachedDiscoverPart(slug, part) {
+  switch (part) {
+    case "hero":
+      return getCachedCategoryHero(slug);
+    case "rails":
+      return getCachedCategoryRails(slug);
+    case "topRated":
+      return { topRated: await getCachedCategoryTopRated(slug) };
+    case "newEpisodes":
+      return { newEpisodes: await getCachedCategoryNewEpisodes(slug) };
+    case "genres":
+      return { genres: await getCachedCategoryGenreTiles(slug) };
+    default:
+      return getCachedCategoryDiscover(slug);
   }
-  return fetchCategoryDiscover(col, slug, preferences);
 }
 
 async function handleCategoryDiscover(slug, preferences = null, part = null) {
@@ -42,11 +72,7 @@ async function handleCategoryDiscover(slug, preferences = null, part = null) {
 
   const data =
     preferences == null
-      ? part === "hero"
-        ? await getCachedCategoryHero(slug)
-        : part === "rails"
-          ? await getCachedCategoryRails(slug)
-          : await getCachedCategoryDiscover(slug)
+      ? await fetchCachedDiscoverPart(slug, part)
       : await fetchDiscoverPart(slug, part, preferences);
 
   if (!data) {

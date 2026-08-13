@@ -44,7 +44,7 @@ const TILE_POSTERS = 5;
 const RAIL_LIMIT = 24;
 const TRENDING_LIMIT = 16;
 const FEATURED_SIZE = 2;
-const ANILIST_NEW_EPISODES_TIMEOUT_MS = 2500;
+const ANILIST_NEW_EPISODES_TIMEOUT_MS = 1200;
 
 const AGG_OPTS = { allowDiskUse: true };
 
@@ -251,30 +251,28 @@ async function fetchNewEpisodesRail(
   { anime = false, limit = RAIL_LIMIT, lookbackDays = 7 } = {}
 ) {
   if (anime) {
+    const mongoFallback = fetchNewEpisodesFromMongo(col, baseFilter, {
+      anime: true,
+      limit,
+      lookbackDays,
+    });
+
     try {
       const live = await Promise.race([
         fetchAnimeNewEpisodesFromAnilist(col, baseFilter, {
           limit,
           lookbackDays,
         }),
-        new Promise((_, reject) => {
-          setTimeout(
-            () => reject(new Error("AniList new episodes timeout")),
-            ANILIST_NEW_EPISODES_TIMEOUT_MS
-          );
+        new Promise((resolve) => {
+          setTimeout(() => resolve([]), ANILIST_NEW_EPISODES_TIMEOUT_MS);
         }),
       ]);
       if (live.length > 0) return live;
     } catch (err) {
-      if (err?.message !== "AniList new episodes timeout") {
-        console.error("[categoryDiscover] AniList new episodes:", err);
-      }
+      console.error("[categoryDiscover] AniList new episodes:", err);
     }
-    return fetchNewEpisodesFromMongo(col, baseFilter, {
-      anime: true,
-      limit,
-      lookbackDays,
-    });
+
+    return mongoFallback;
   }
 
   return fetchNewEpisodesFromMongo(col, baseFilter, {
@@ -438,24 +436,46 @@ export async function fetchCategoryHero(col, slug, preferences = null) {
  * @param {import("mongodb").Collection} col
  * @param {string} slug
  */
+export async function fetchCategoryTopRated(col, slug, preferences = null) {
+  const resolved = resolveCategoryBaseFilter(slug, preferences);
+  if (!resolved) return [];
+
+  const { anime, baseFilter } = resolved;
+  return fetchRail(col, baseFilter, { anime, sort: "top_rated" });
+}
+
+export async function fetchCategoryNewEpisodes(col, slug, preferences = null) {
+  const resolved = resolveCategoryBaseFilter(slug, preferences);
+  if (!resolved) return [];
+
+  const { anime, baseFilter } = resolved;
+  return fetchNewEpisodesRail(col, baseFilter, { anime });
+}
+
+export async function fetchCategoryGenreTiles(col, slug, preferences = null) {
+  const resolved = resolveCategoryBaseFilter(slug, preferences);
+  if (!resolved) return [];
+
+  const genres = await rankCategoryGenres(col, resolved.baseFilter);
+  return hasUserPreferences(preferences)
+    ? orderGenreRowsByPreference(genres, preferences.genres)
+    : genres;
+}
+
 export async function fetchCategoryRails(col, slug, preferences = null) {
   const resolved = resolveCategoryBaseFilter(slug, preferences);
   if (!resolved) return null;
 
-  const { anime, baseFilter } = resolved;
-
   const [topRated, newEpisodes, genres] = await Promise.all([
-    fetchRail(col, baseFilter, { anime, sort: "top_rated" }),
-    fetchNewEpisodesRail(col, baseFilter, { anime }),
-    rankCategoryGenres(col, baseFilter),
+    fetchCategoryTopRated(col, slug, preferences),
+    fetchCategoryNewEpisodes(col, slug, preferences),
+    fetchCategoryGenreTiles(col, slug, preferences),
   ]);
 
   return {
     topRated,
     newEpisodes,
-    genres: hasUserPreferences(preferences)
-      ? orderGenreRowsByPreference(genres, preferences.genres)
-      : genres,
+    genres,
   };
 }
 

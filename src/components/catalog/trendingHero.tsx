@@ -185,10 +185,7 @@ export default function TrendingHero({
         imageFit={preserveImageAspect ? "contain" : "cover"}
         preferPoster={preserveImageAspect}
         logoPath={logoByKey[logoKey] ?? null}
-        showHeroActions={false}
-        spotlightStyle={variant === "spotlight"}
-        releaseDateStyle={variant === "spotlight" ? "phrase" : "short"}
-        reserveSpotlightRail={variant === "spotlight" && showSpotlightSelector}
+        showHeroActions={variant === "spotlight"}
       />
     );
   }

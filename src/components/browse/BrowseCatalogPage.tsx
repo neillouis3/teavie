@@ -13,6 +13,7 @@ import type { ContentItem } from "@/types/content";
 import {
   bustInflightDayCache,
   browseCatalogCacheKey,
+  BROWSE_CATALOG_PAGE_LIMIT,
   fetchBrowseCatalogPayload,
   fetchBrowseCatalogPageResults,
   peekBrowseCatalogCache,
@@ -21,6 +22,35 @@ import {
 import { CONTENT_INSET_X } from "@/lib/contentInset";
 import type { PageBrowseBackdrop } from "@/lib/pageBackdrop";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
+
+function inferBrowseHasMore(
+  loadedCount: number,
+  {
+    nextCursor,
+    page,
+    totalPages,
+    total,
+    lastBatchSize,
+  }: {
+    nextCursor: string | null;
+    page: number;
+    totalPages: number;
+    total: number;
+    lastBatchSize: number;
+  }
+): boolean {
+  if (nextCursor) return true;
+  if (total > 0 && loadedCount < total) return true;
+  if (page < totalPages) return true;
+  if (
+    lastBatchSize >= BROWSE_CATALOG_PAGE_LIMIT &&
+    total <= 0 &&
+    totalPages <= 1
+  ) {
+    return true;
+  }
+  return false;
+}
 
 type BrowseCatalogPageProps = {
   pageName: string;
@@ -55,7 +85,7 @@ function BrowseCatalogPageContent({
 
   const filterQueryString = useMemo(() => {
     const qs = new URLSearchParams();
-    qs.set("limit", "28");
+    qs.set("limit", String(BROWSE_CATALOG_PAGE_LIMIT));
     qs.set("sort_by", sortParam);
     if (genreParam) qs.set("genre", genreParam);
     if (yearMinParam) qs.set("year_min", yearMinParam);
@@ -92,9 +122,40 @@ function BrowseCatalogPageContent({
   });
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const pageRef = useRef(1);
+  const nextCursorRef = useRef<string | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const loadingMoreInFlightRef = useRef(false);
+
+  const syncBrowsePagination = useCallback(
+    (
+      loadedCount: number,
+      meta: {
+        nextCursor: string | null;
+        page: number;
+        totalPages: number;
+        total: number;
+        lastBatchSize: number;
+      }
+    ) => {
+      pageRef.current = meta.page;
+      nextCursorRef.current = meta.nextCursor;
+      setHasMore(inferBrowseHasMore(loadedCount, meta));
+    },
+    []
+  );
+
+  const warmNextBrowsePage = useCallback(
+    (cursor: string | null | undefined, page = 2) => {
+      if (cursor) {
+        prefetchBrowseCatalogPage(namespace, apiPath, filterQueryString, { after: cursor });
+        return;
+      }
+      prefetchBrowseCatalogPage(namespace, apiPath, filterQueryString, { page });
+    },
+    [namespace, apiPath, filterQueryString]
+  );
 
   const loadFirstPage = useCallback(() => {
     const query = new URLSearchParams(filterQueryString);
@@ -118,9 +179,18 @@ function BrowseCatalogPageContent({
         setItems(data.results);
         setTotalPages(data.totalPages);
         setTotal(data.total);
+        syncBrowsePagination(data.results.length, {
+          nextCursor: data.nextCursor ?? null,
+          page: 1,
+          totalPages: data.totalPages,
+          total: data.total,
+          lastBatchSize: data.results.length,
+        });
         if (data.genreSlugs) setGenreSlugs(data.genreSlugs);
-        if (data.totalPages > 1) {
-          prefetchBrowseCatalogPage(namespace, apiPath, filterQueryString, 2);
+        if (data.nextCursor) {
+          warmNextBrowsePage(data.nextCursor);
+        } else if (data.totalPages > 1) {
+          warmNextBrowsePage(null, 2);
         }
       })
       .catch(() => {
@@ -132,7 +202,7 @@ function BrowseCatalogPageContent({
       .finally(() => {
         setLoading(false);
       });
-  }, [namespace, apiPath, filterQueryString, genreApiPath]);
+  }, [namespace, apiPath, filterQueryString, genreApiPath, warmNextBrowsePage, syncBrowsePagination]);
 
   const bustBrowseInflight = useCallback(() => {
     const query = new URLSearchParams(filterQueryString);
@@ -147,6 +217,8 @@ function BrowseCatalogPageContent({
   useEffect(() => {
     let cancelled = false;
     pageRef.current = 1;
+    nextCursorRef.current = null;
+    setHasMore(false);
 
     const queryString = firstPageQuery;
     const cached = peekBrowseCatalogCache(namespace, queryString);
@@ -154,10 +226,20 @@ function BrowseCatalogPageContent({
       setItems(cached.results);
       setTotalPages(cached.totalPages);
       setTotal(cached.total);
+      syncBrowsePagination(cached.results.length, {
+        nextCursor: cached.nextCursor ?? null,
+        page: 1,
+        totalPages: cached.totalPages,
+        total: cached.total,
+        lastBatchSize: cached.results.length,
+      });
       if (cached.genreSlugs) setGenreSlugs(cached.genreSlugs);
       setLoading(false);
       setLoadFailed(false);
     } else {
+      setItems([]);
+      setTotal(0);
+      setTotalPages(1);
       setLoading(true);
       setLoadFailed(false);
     }
@@ -171,6 +253,13 @@ function BrowseCatalogPageContent({
             setItems([]);
             setTotalPages(1);
             setTotal(0);
+            syncBrowsePagination(0, {
+              nextCursor: null,
+              page: 1,
+              totalPages: 1,
+              total: 0,
+              lastBatchSize: 0,
+            });
           }
           return;
         }
@@ -178,9 +267,18 @@ function BrowseCatalogPageContent({
         setItems(data.results);
         setTotalPages(data.totalPages);
         setTotal(data.total);
+        syncBrowsePagination(data.results.length, {
+          nextCursor: data.nextCursor ?? null,
+          page: 1,
+          totalPages: data.totalPages,
+          total: data.total,
+          lastBatchSize: data.results.length,
+        });
         if (data.genreSlugs) setGenreSlugs(data.genreSlugs);
-        if (data.totalPages > 1) {
-          prefetchBrowseCatalogPage(namespace, apiPath, filterQueryString, 2);
+        if (data.nextCursor) {
+          warmNextBrowsePage(data.nextCursor);
+        } else if (data.totalPages > 1) {
+          warmNextBrowsePage(null, 2);
         }
       })
       .catch(() => {
@@ -190,6 +288,13 @@ function BrowseCatalogPageContent({
           setItems([]);
           setTotalPages(1);
           setTotal(0);
+          syncBrowsePagination(0, {
+            nextCursor: null,
+            page: 1,
+            totalPages: 1,
+            total: 0,
+            lastBatchSize: 0,
+          });
         }
       })
       .finally(() => {
@@ -199,74 +304,153 @@ function BrowseCatalogPageContent({
     return () => {
       cancelled = true;
     };
-  }, [namespace, apiPath, firstPageQuery, filterQueryString, genreApiPath]);
+  }, [
+    namespace,
+    apiPath,
+    firstPageQuery,
+    filterQueryString,
+    genreApiPath,
+    warmNextBrowsePage,
+    syncBrowsePagination,
+  ]);
 
   useResumeFetchWhenVisible(loading, () => {
     void loadFirstPage();
   }, bustBrowseInflight);
 
   const loadMore = useCallback(async () => {
-    if (
-      loading ||
-      loadingMore ||
-      loadingMoreInFlightRef.current ||
-      pageRef.current >= totalPages
-    ) {
+    if (loading || loadingMore || loadingMoreInFlightRef.current || !hasMore) {
       return;
     }
 
     loadingMoreInFlightRef.current = true;
     setLoadingMore(true);
-    const nextPage = pageRef.current + 1;
-    const query = new URLSearchParams(filterQueryString);
-    query.set("page", String(nextPage));
+    const loadedBefore = items.length;
+    const cursor = nextCursorRef.current;
+
+    const fetchPage = (queryString: string) =>
+      fetchBrowseCatalogPageResults(namespace, apiPath, queryString);
+
+    const buildQuery = (opts: { cursor?: string | null; page?: number }) => {
+      const query = new URLSearchParams(filterQueryString);
+      if (opts.cursor) {
+        query.delete("page");
+        query.set("after", opts.cursor);
+      } else if (opts.page != null) {
+        query.set("page", String(opts.page));
+      }
+      return query.toString();
+    };
 
     try {
-      const data = await fetchBrowseCatalogPageResults(
-        namespace,
-        apiPath,
-        query.toString()
+      let data = await fetchPage(
+        buildQuery({
+          cursor,
+          page: cursor ? undefined : pageRef.current + 1,
+        })
       );
-      if (data.results.length === 0) return;
 
+      if (data.results.length === 0 && cursor) {
+        data = await fetchPage(
+          buildQuery({
+            page: Math.max(2, Math.floor(loadedBefore / BROWSE_CATALOG_PAGE_LIMIT) + 1),
+          })
+        );
+      }
+
+      if (data.results.length === 0) {
+        syncBrowsePagination(loadedBefore, {
+          nextCursor: null,
+          page: pageRef.current,
+          totalPages: pageRef.current,
+          total,
+          lastBatchSize: 0,
+        });
+        return;
+      }
+
+      let mergedCount = loadedBefore;
       setItems((current) => {
         const seen = new Set(current.map((item) => `${item.type ?? viewer}:${item.id}`));
-        return [
+        const merged = [
           ...current,
           ...data.results.filter((item) => !seen.has(`${item.type ?? viewer}:${item.id}`)),
         ];
+        mergedCount = merged.length;
+        return merged;
       });
-      pageRef.current = nextPage;
-      if (typeof data.totalPages === "number") setTotalPages(data.totalPages);
-      if (typeof data.total === "number") setTotal(data.total);
-      if (data.results.length < 28) {
-        setTotalPages(nextPage);
-      } else if (nextPage < totalPages) {
-        prefetchBrowseCatalogPage(
-          namespace,
-          apiPath,
-          filterQueryString,
-          nextPage + 1
-        );
+
+      if (mergedCount === loadedBefore) {
+        syncBrowsePagination(mergedCount, {
+          nextCursor: null,
+          page: pageRef.current,
+          totalPages: pageRef.current,
+          total,
+          lastBatchSize: 0,
+        });
+        return;
+      }
+
+      const nextPage = cursor ? pageRef.current : pageRef.current + 1;
+      const resolvedTotal =
+        typeof data.total === "number" ? data.total : total;
+      const resolvedTotalPages =
+        typeof data.totalPages === "number" ? data.totalPages : totalPages;
+
+      if (!cursor) {
+        setTotalPages(resolvedTotalPages);
+      }
+      if (typeof data.total === "number") {
+        setTotal(data.total);
+      }
+
+      syncBrowsePagination(mergedCount, {
+        nextCursor: data.nextCursor ?? null,
+        page: nextPage,
+        totalPages: cursor ? totalPages : resolvedTotalPages,
+        total: resolvedTotal,
+        lastBatchSize: data.results.length,
+      });
+
+      if (data.nextCursor) {
+        warmNextBrowsePage(data.nextCursor);
+      } else if (
+        nextPage < resolvedTotalPages &&
+        data.results.length >= BROWSE_CATALOG_PAGE_LIMIT
+      ) {
+        warmNextBrowsePage(null, nextPage + 1);
       }
     } finally {
       loadingMoreInFlightRef.current = false;
       setLoadingMore(false);
     }
-  }, [apiPath, filterQueryString, loading, loadingMore, namespace, totalPages, viewer]);
+  }, [
+    apiPath,
+    filterQueryString,
+    hasMore,
+    items.length,
+    loading,
+    loadingMore,
+    namespace,
+    syncBrowsePagination,
+    total,
+    totalPages,
+    viewer,
+    warmNextBrowsePage,
+  ]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
-    if (!target || loading || pageRef.current >= totalPages) return;
+    if (!target || loading || !hasMore) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) void loadMore();
       },
-      { rootMargin: "700px 0px" }
+      { rootMargin: "1200px 0px" }
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [items.length, loadMore, loading, totalPages]);
+  }, [hasMore, items.length, loadMore, loading]);
 
   return (
     <div className="relative min-h-screen w-full pb-10">
@@ -343,7 +527,7 @@ function BrowseCatalogPageContent({
           </>
         )}
 
-            {!loading && items.length > 0 ? (
+            {!loading && items.length > 0 && hasMore ? (
               <div ref={loadMoreRef} className="flex min-h-24 items-center justify-center pt-6">
                 {loadingMore ? <Spinner size="sm" color="success" label="Loading more" /> : null}
               </div>

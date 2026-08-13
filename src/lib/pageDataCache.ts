@@ -176,6 +176,7 @@ export type BrowseCatalogPayload = {
   results: ContentItem[];
   totalPages: number;
   total: number;
+  nextCursor?: string | null;
   genreSlugs?: string[];
   ok?: boolean;
 };
@@ -184,8 +185,12 @@ export type BrowseCatalogPageResults = {
   results: ContentItem[];
   totalPages?: number;
   total?: number;
+  nextCursor?: string | null;
   ok?: boolean;
 };
+
+/** Client page size for browse /all grids — keep in sync with API default limit. */
+export const BROWSE_CATALOG_PAGE_LIMIT = 48;
 
 const EMPTY_CATEGORY: CategoryDiscoverPayload = {
   featured: [],
@@ -302,7 +307,7 @@ export async function fetchExploreBundle(): Promise<ExploreBundle> {
 async function loadCategoryDiscoverPart(
   slug: string,
   preferences: UserPreferences | null,
-  part: "hero" | "rails" | null
+  part: "hero" | "rails" | "topRated" | "newEpisodes" | "genres" | null
 ): Promise<CategoryDiscoverPayload> {
   try {
     const query = part ? `?part=${part}` : "";
@@ -347,14 +352,35 @@ export function categoryDiscoverHeroCacheKey(
   slug: string,
   preferences: UserPreferences | null = null
 ): string {
-  return `${PREFIX}.category-discover-hero.v1:${slug}:${preferencesCacheKey(preferences)}`;
+  return `${PREFIX}.category-discover-hero.v2:${slug}:${preferencesCacheKey(preferences)}`;
+}
+
+export function categoryDiscoverTopRatedCacheKey(
+  slug: string,
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.category-discover-top-rated.v1:${slug}:${preferencesCacheKey(preferences)}`;
+}
+
+export function categoryDiscoverNewEpisodesCacheKey(
+  slug: string,
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.category-discover-new-episodes.v1:${slug}:${preferencesCacheKey(preferences)}`;
+}
+
+export function categoryDiscoverGenresCacheKey(
+  slug: string,
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.category-discover-genres.v1:${slug}:${preferencesCacheKey(preferences)}`;
 }
 
 export function categoryDiscoverRailsCacheKey(
   slug: string,
   preferences: UserPreferences | null = null
 ): string {
-  return `${PREFIX}.category-discover-rails.v2:${slug}:${preferencesCacheKey(preferences)}`;
+  return `${PREFIX}.category-discover-rails.v3:${slug}:${preferencesCacheKey(preferences)}`;
 }
 
 export async function fetchCategoryDiscoverHero(
@@ -372,7 +398,6 @@ export async function fetchCategoryDiscoverHero(
           popular: first.popular,
         };
       }
-      await new Promise((r) => setTimeout(r, 400));
       const retry = await loadCategoryDiscoverPart(slug, preferences, "hero");
       return {
         featured: retry.featured,
@@ -384,31 +409,65 @@ export async function fetchCategoryDiscoverHero(
   );
 }
 
+export async function fetchCategoryDiscoverTopRated(
+  slug: string,
+  preferences: UserPreferences | null = null
+): Promise<Pick<CategoryDiscoverPayload, "topRated">> {
+  return withDayCache(
+    categoryDiscoverTopRatedCacheKey(slug, preferences),
+    async () => {
+      const data = await loadCategoryDiscoverPart(slug, preferences, "topRated");
+      return { topRated: data.topRated ?? [] };
+    },
+    { isCacheable: (data) => hasCatalogItems(data.topRated) }
+  );
+}
+
+export async function fetchCategoryDiscoverNewEpisodes(
+  slug: string,
+  preferences: UserPreferences | null = null
+): Promise<Pick<CategoryDiscoverPayload, "newEpisodes">> {
+  return withDayCache(
+    categoryDiscoverNewEpisodesCacheKey(slug, preferences),
+    async () => {
+      const data = await loadCategoryDiscoverPart(slug, preferences, "newEpisodes");
+      return { newEpisodes: data.newEpisodes ?? [] };
+    },
+    { isCacheable: (data) => hasCatalogItems(data.newEpisodes) }
+  );
+}
+
+export async function fetchCategoryDiscoverGenres(
+  slug: string,
+  preferences: UserPreferences | null = null
+): Promise<Pick<CategoryDiscoverPayload, "genres">> {
+  return withDayCache(
+    categoryDiscoverGenresCacheKey(slug, preferences),
+    async () => {
+      const data = await loadCategoryDiscoverPart(slug, preferences, "genres");
+      return { genres: data.genres ?? [] };
+    },
+    {
+      isCacheable: (data) =>
+        Array.isArray(data.genres) && data.genres.some((g) => (g.count ?? 0) > 0),
+    }
+  );
+}
+
 export async function fetchCategoryDiscoverRails(
   slug: string,
   preferences: UserPreferences | null = null
 ): Promise<CategoryDiscoverRailsPayload> {
-  return withDayCache(
-    categoryDiscoverRailsCacheKey(slug, preferences),
-    async () => {
-      const first = await loadCategoryDiscoverPart(slug, preferences, "rails");
-      if (isCategoryRailsCacheable(first)) {
-        return {
-          topRated: first.topRated,
-          newEpisodes: first.newEpisodes,
-          genres: first.genres,
-        };
-      }
-      await new Promise((r) => setTimeout(r, 400));
-      const retry = await loadCategoryDiscoverPart(slug, preferences, "rails");
-      return {
-        topRated: retry.topRated,
-        newEpisodes: retry.newEpisodes,
-        genres: retry.genres,
-      };
-    },
-    { isCacheable: isCategoryRailsCacheable }
-  );
+  const [topRated, newEpisodes, genres] = await Promise.all([
+    fetchCategoryDiscoverTopRated(slug, preferences),
+    fetchCategoryDiscoverNewEpisodes(slug, preferences),
+    fetchCategoryDiscoverGenres(slug, preferences),
+  ]);
+  return {
+    topRated: topRated.topRated,
+    newEpisodes: newEpisodes.newEpisodes,
+    genres: genres.genres,
+  };
 }
 
 export async function fetchCategoryDiscover(
@@ -432,7 +491,7 @@ export function categoryDiscoverCacheKey(
   slug: string,
   preferences: UserPreferences | null = null
 ): string {
-  return `${PREFIX}.category-discover.v19:${slug}:${preferencesCacheKey(preferences)}`;
+  return `${PREFIX}.category-discover.v20:${slug}:${preferencesCacheKey(preferences)}`;
 }
 
 export function peekCategoryDiscoverCache(
@@ -548,6 +607,8 @@ async function loadBrowseCatalogList(
       totalPages:
         typeof listJson.totalPages === "number" ? listJson.totalPages : undefined,
       total: typeof listJson.total === "number" ? listJson.total : undefined,
+      nextCursor:
+        typeof listJson.nextCursor === "string" ? listJson.nextCursor : null,
       ok: true,
     };
   } catch {
@@ -567,7 +628,7 @@ export async function fetchBrowseCatalogPageResults(
   apiPath: string,
   queryString: string
 ): Promise<BrowseCatalogPageResults> {
-  const cacheKey = `${PREFIX}.browse-page.v1:${namespace}:${queryString}`;
+  const cacheKey = `${PREFIX}.browse-page.v3:${namespace}:${queryString}`;
   return withDayCache(
     cacheKey,
     () => loadBrowseCatalogList(apiPath, queryString),
@@ -580,11 +641,18 @@ export function prefetchBrowseCatalogPage(
   namespace: string,
   apiPath: string,
   filterQueryString: string,
-  page: number
+  opts: { page?: number; after?: string | null } = {}
 ): void {
-  if (page < 2 || typeof window === "undefined") return;
+  if (typeof window === "undefined") return;
   const query = new URLSearchParams(filterQueryString);
-  query.set("page", String(page));
+  if (opts.after) {
+    query.delete("page");
+    query.set("after", opts.after);
+  } else if (opts.page != null && opts.page >= 2) {
+    query.set("page", String(opts.page));
+  } else {
+    return;
+  }
   void fetchBrowseCatalogPageResults(namespace, apiPath, query.toString());
 }
 
@@ -592,7 +660,7 @@ export function browseCatalogCacheKey(
   namespace: string,
   queryString: string
 ): string {
-  return `${PREFIX}.browse.v13:${namespace}:${queryString}`;
+  return `${PREFIX}.browse.v15:${namespace}:${queryString}`;
 }
 
 export function peekBrowseCatalogCache(
@@ -639,6 +707,7 @@ export async function fetchBrowseCatalogPayload(
           results: listData.results,
           totalPages: listData.totalPages ?? 1,
           total: listData.total ?? 0,
+          nextCursor: listData.nextCursor ?? null,
           genreSlugs,
           ok: true,
         };

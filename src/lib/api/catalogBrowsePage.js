@@ -13,6 +13,38 @@ import {
   mongoTopRatedVoteExpr,
   mongoTopRatedSortExpr,
 } from "@/lib/catalogPopularity.js";
+import {
+  browseCursorMatch,
+  encodeBrowseCursor,
+  parseBrowseCursor,
+} from "@/lib/api/catalogBrowseCursor.js";
+
+export { parseBrowseCursor };
+
+/** @param {Record<string, unknown>} doc */
+function stripBrowseComputedFields(doc) {
+  const {
+    _topRatedVote,
+    _topRatedSort,
+    _voteWeight,
+    _catalogPop,
+    _catalogVote,
+    ...rest
+  } = doc;
+  return rest;
+}
+
+/** @param {Record<string, unknown>[]} results @param {string} sortBy @param {number} limit @param {{ anime?: boolean }} opts */
+function packBrowsePage(results, sortBy, limit, opts = {}) {
+  const nextCursor =
+    results.length >= limit
+      ? encodeBrowseCursor(results[results.length - 1], sortBy, opts)
+      : null;
+  return {
+    results: results.map(stripBrowseComputedFields),
+    nextCursor,
+  };
+}
 
 /** Atlas caps in-memory sort at 32MB; free/shared tiers may ignore allowDiskUse. */
 const AGG_OPTS = { allowDiskUse: true };
@@ -33,14 +65,14 @@ async function fetchIndexedBrowsePage(
     .toArray();
 
   if (!includeTotal) {
-    return { total: undefined, results: await resultsPromise };
+    return { total: undefined, results: await resultsPromise, nextCursor: null };
   }
 
   const [total, results] = await Promise.all([
     collection.countDocuments(filter),
     resultsPromise,
   ]);
-  return { total, results };
+  return { total, results, nextCursor: null };
 }
 
 /**
@@ -51,7 +83,7 @@ async function fetchIndexedBrowsePage(
  * @param {number} skip
  * @param {number} limit
  * @param {object | null} popExpr Mongo expression for computed popularity sort
- * @param {{ includeTotal?: boolean; anime?: boolean; indexedPopularity?: boolean; qualityPopular?: boolean }} [options]
+ * @param {{ includeTotal?: boolean; anime?: boolean; indexedPopularity?: boolean; qualityPopular?: boolean; after?: string | null }} [options]
  */
 export async function fetchCatalogBrowsePage(
   collection,
@@ -61,8 +93,12 @@ export async function fetchCatalogBrowsePage(
   skip,
   limit,
   popExpr = null,
-  { includeTotal = true, anime = false, indexedPopularity = false, qualityPopular = false } = {}
+  { includeTotal = true, anime = false, indexedPopularity = false, qualityPopular = false, after = null } = {}
 ) {
+  const cursor = parseBrowseCursor(after, sortBy);
+  const cursorMatch = cursor ? browseCursorMatch(cursor, sortBy, { anime }) : null;
+  const useCursor = Boolean(cursorMatch);
+
   if (sortBy === "rating") {
     const voteExpr = mongoTopRatedVoteExpr({ anime });
     const baseStages = [
@@ -75,26 +111,29 @@ export async function fetchCatalogBrowsePage(
         },
       },
       { $match: mongoTopRatedQualityMatch({ anime }) },
-      {
-        $sort: anime
-          ? { _topRatedVote: -1, _id: -1 }
-          : { _topRatedSort: -1, _voteWeight: -1, _id: -1 },
-      },
     ];
+    if (useCursor) {
+      baseStages.push({ $match: cursorMatch });
+    }
+    baseStages.push({
+      $sort: anime
+        ? { _topRatedVote: -1, _id: -1 }
+        : { _topRatedSort: -1, _voteWeight: -1, _id: -1 },
+    });
 
-    if (!includeTotal) {
+    if (!includeTotal || useCursor) {
       const results = await collection
         .aggregate(
           [
             ...baseStages,
-            { $skip: skip },
+            ...(useCursor ? [] : [{ $skip: skip }]),
             { $limit: limit },
-            { $project: { _topRatedVote: 0, _topRatedSort: 0, _voteWeight: 0 } },
           ],
           AGG_OPTS
         )
         .toArray();
-      return { total: undefined, results };
+      const packed = packBrowsePage(results, sortBy, limit, { anime });
+      return { total: undefined, ...packed };
     }
 
     const [facet] = await collection
@@ -107,7 +146,6 @@ export async function fetchCatalogBrowsePage(
               results: [
                 { $skip: skip },
                 { $limit: limit },
-                { $project: { _topRatedVote: 0, _topRatedSort: 0, _voteWeight: 0 } },
               ],
             },
           },
@@ -116,9 +154,11 @@ export async function fetchCatalogBrowsePage(
       )
       .toArray();
 
+    const results = facet?.results ?? [];
+    const packed = packBrowsePage(results, sortBy, limit, { anime });
     return {
       total: facet?.metadata?.[0]?.total ?? 0,
-      results: facet?.results ?? [],
+      ...packed,
     };
   }
 
@@ -129,7 +169,7 @@ export async function fetchCatalogBrowsePage(
       { popularity: -1, _id: -1 },
       skip,
       limit,
-      includeTotal
+      includeTotal && !useCursor
     );
   }
 
@@ -154,22 +194,25 @@ export async function fetchCatalogBrowsePage(
     if (qualityPopular) {
       baseStages.push({ $match: mongoPopularBrowseQualityMatch({ anime }) });
     }
+    if (useCursor) {
+      baseStages.push({ $match: cursorMatch });
+    }
 
     baseStages.push({ $sort: { _catalogPop: -1, _id: -1 } });
 
-    if (!includeTotal) {
+    if (!includeTotal || useCursor) {
       const results = await collection
         .aggregate(
           [
             ...baseStages,
-            { $skip: skip },
+            ...(useCursor ? [] : [{ $skip: skip }]),
             { $limit: limit },
-            { $project: { _catalogPop: 0, _catalogVote: 0 } },
           ],
           AGG_OPTS
         )
         .toArray();
-      return { total: undefined, results };
+      const packed = packBrowsePage(results, sortBy, limit, { anime });
+      return { total: undefined, ...packed };
     }
 
     const [facet] = await collection
@@ -182,7 +225,6 @@ export async function fetchCatalogBrowsePage(
               results: [
                 { $skip: skip },
                 { $limit: limit },
-                { $project: { _catalogPop: 0, _catalogVote: 0 } },
               ],
             },
           },
@@ -191,9 +233,11 @@ export async function fetchCatalogBrowsePage(
       )
       .toArray();
 
+    const results = facet?.results ?? [];
+    const packed = packBrowsePage(results, sortBy, limit, { anime });
     return {
       total: facet?.metadata?.[0]?.total ?? 0,
-      results: facet?.results ?? [],
+      ...packed,
     };
   }
 
@@ -203,7 +247,7 @@ export async function fetchCatalogBrowsePage(
     sort,
     skip,
     limit,
-    includeTotal
+    includeTotal && !useCursor
   );
 }
 
