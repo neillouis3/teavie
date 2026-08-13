@@ -5,7 +5,7 @@ import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import StreamQualityBadge from "@/components/ui/streamQualityBadge";
 import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
-import StremioPlayer from "@/components/stremioPlayer";
+import StremioPlayer from "@/components/stremioPlayerLazy";
 import {
   MOVIES111_EMBED_BASE,
   PEACHIFY_EMBED_BASE,

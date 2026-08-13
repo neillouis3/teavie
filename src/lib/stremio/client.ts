@@ -1,4 +1,4 @@
-import type { PlayableStream, StremioStream } from "./types";
+import type { ClientMediaCapabilities, PlayableStream, StremioStream } from "./types";
 
 const MANIFEST_TIMEOUT_MS = 12_000;
 /** Stream catalogs often scrape/debrid; 8s was too aggressive. */
@@ -133,11 +133,76 @@ export function stremioAddonCount(): number {
   return configuredAddons().length;
 }
 
+export function attachStreamEndpoints(
+  streams: PlayableStream[],
+  opts: {
+    type: "movie" | "series";
+    resourceId: string;
+    addonIndex: number;
+    caps: ClientMediaCapabilities;
+  }
+): PlayableStream[] {
+  return streams.map((stream, index) => {
+    const endpointParams = new URLSearchParams({
+      type: opts.type,
+      id: opts.resourceId,
+      index: String(index),
+      addonIndex: String(opts.addonIndex),
+      safari: opts.caps.preferSafari ? "1" : "0",
+      ac3: opts.caps.ac3 ? "1" : "0",
+    }).toString();
+    return {
+      ...stream,
+      remuxUrl: `/api/streams/remux?${endpointParams}`,
+      audioTracksUrl: `/api/streams/tracks?${endpointParams}`,
+    };
+  });
+}
+
+export type StreamSourceMeta = {
+  addonIndex: number;
+  hasMoreAddons: boolean;
+  unsupported: number;
+  errors: { addon: string; message: string }[];
+};
+
+export function streamFetchErrorMessage(
+  body: Record<string, unknown>,
+  streams: PlayableStream[]
+): string | null {
+  if (streams.length > 0) return null;
+  const providerErrors = Array.isArray(body.errors)
+    ? body.errors
+        .map((entry) =>
+          entry && typeof entry === "object" && "message" in entry
+            ? String((entry as { message?: unknown }).message ?? "")
+            : ""
+        )
+        .filter(Boolean)
+    : [];
+  const providerError = providerErrors[0] ?? null;
+  if (providerError) {
+    const allTimedOut = providerErrors.every((message) =>
+      /took too long|timeout/i.test(message)
+    );
+    return allTimedOut
+      ? "Stream addons timed out. They may be slow or overloaded — try again in a moment."
+      : `The configured addon could not return streams: ${providerError}`;
+  }
+  if (Number(body.unsupported) > 0) {
+    return `The addon returned ${body.unsupported} torrent or non-web stream${body.unsupported === 1 ? "" : "s"}. Configure it with a direct-link provider to use this browser player.`;
+  }
+  const detail = providerErrors.length > 0 ? providerErrors.slice(0, 3).join(" · ") : null;
+  return detail
+    ? `No playable streams for this IMDb id. ${detail}`
+    : "No streams found for this IMDb id. Check the id, season, and episode, then try again.";
+}
+
 export async function resolveStremioStreams(
   type: "movie" | "series",
   id: string,
   addonIndex = 0,
-  preferSafari = false,
+  caps: ClientMediaCapabilities = { ac3: false, preferSafari: false },
   clientIp?: string | null
 ) {
   const addons = configuredAddons();
@@ -150,10 +215,10 @@ export async function resolveStremioStreams(
     };
   }
 
-  const result = await fetchAddonStreams(addon, type, id, preferSafari, clientIp);
+  const result = await fetchAddonStreams(addon, type, id, caps, clientIp);
   if (result.streams.length > 0) {
     return {
-      streams: rankPlayableStreams(result.streams, preferSafari),
+      streams: rankPlayableStreams(result.streams, caps),
       unsupported: result.unsupported,
       errors: result.error ? [result.error] : [],
     };
@@ -170,7 +235,7 @@ async function fetchAddonStreams(
   { manifestUrl, streamBaseUrl }: AddonConfig,
   type: "movie" | "series",
   id: string,
-  preferSafari: boolean,
+  caps: ClientMediaCapabilities,
   clientIp?: string | null
 ): Promise<{
   streams: PlayableStream[];
@@ -196,8 +261,9 @@ async function fetchAddonStreams(
         title: stream.title?.trim() || stream.description?.trim() || null,
         addon: addonName,
         bingeGroup: stream.behaviorHints?.bingeGroup ?? null,
+        filename: stream.behaviorHints?.filename?.trim() || null,
       }));
-    const rankedStreams = rankPlayableStreams(playableStreams, preferSafari);
+    const rankedStreams = rankPlayableStreams(playableStreams, caps);
     return {
       streams: rankedStreams,
       unsupported: streams.length - playableStreams.length,
@@ -215,31 +281,80 @@ async function fetchAddonStreams(
   }
 }
 
-function rankPlayableStreams(streams: PlayableStream[], preferSafari: boolean): PlayableStream[] {
+/** Everything the addon told us about the release — the codec is often only in the filename. */
+function streamLabel(stream: PlayableStream): string {
+  return `${stream.name} ${stream.title ?? ""} ${stream.filename ?? ""}`.toLowerCase();
+}
+
+/** Codecs every browser can decode. Their presence makes a surround tag harmless. */
+function hasBrowserSafeAudio(label: string): boolean {
+  return /\b(?:aac|mp3|mpeg|opus|flac|vorbis)\b/i.test(label);
+}
+
+/** Dolby Digital / Digital Plus — decodable only where the platform licenses it. */
+function hasDolbyDigitalAudio(label: string): boolean {
+  return /\b(?:e[ ._-]?)?ac[ ._-]?3\b|\bddp?\b|\bdd\+|\bdd[p+]?[ ._-]?[257][ ._-]?[01]\b/i.test(
+    label
+  );
+}
+
+/** DTS, TrueHD and Atmos have no browser decoder at all. */
+function hasUndecodableAudio(label: string): boolean {
+  return /\bdts(?:[ ._-]?(?:hd|es|x))?\b|\bdts:x\b|\btrue[ ._-]?hd\b|\batmos\b/i.test(label);
+}
+
+/**
+ * Chrome and Firefox ship no AC3/E-AC3 decoder, so a 1080p DDP5.1 release plays
+ * as silent video. Scoring alone still let those win on resolution, so unplayable
+ * audio is filtered out up front and only restored if nothing else is left.
+ */
+function canDecodeAudio(stream: PlayableStream, caps: ClientMediaCapabilities): boolean {
+  const label = streamLabel(stream);
+  if (hasBrowserSafeAudio(label)) return true;
+  if (hasUndecodableAudio(label)) return false;
+  if (hasDolbyDigitalAudio(label)) return caps.ac3;
+  return true;
+}
+
+function rankPlayableStreams(
+  streams: PlayableStream[],
+  caps: ClientMediaCapabilities
+): PlayableStream[] {
   const nonRipStreams = streams.filter((stream) => !isRip(stream));
-  const safariStreams = preferSafari ? nonRipStreams.filter(isSafariDirectStream) : [];
-  return (safariStreams.length > 0 ? safariStreams : nonRipStreams).sort((a, b) => {
+  const base = nonRipStreams.length > 0 ? nonRipStreams : streams;
+
+  const audible = base.filter((stream) => canDecodeAudio(stream, caps));
+  const withAudio = audible.length > 0 ? audible : base;
+
+  const safariStreams = caps.preferSafari ? withAudio.filter(isSafariDirectStream) : [];
+  const pool = safariStreams.length > 0 ? safariStreams : withAudio;
+
+  return [...pool].sort((a, b) => {
+    const audioOrder = browserAudioRank(a, caps) - browserAudioRank(b, caps);
+    if (audioOrder !== 0) return audioOrder;
     const resolutionOrder = resolutionRank(a) - resolutionRank(b);
     if (resolutionOrder !== 0) return resolutionOrder;
-    const audioOrder = browserAudioRank(a) - browserAudioRank(b);
-    if (audioOrder !== 0) return audioOrder;
     const seederOrder = seederCount(b) - seederCount(a);
     if (seederOrder !== 0) return seederOrder;
     const releaseOrder = releaseSourceRank(a) - releaseSourceRank(b);
     if (releaseOrder !== 0) return releaseOrder;
-    return browserCompatibilityScore(b, preferSafari) - browserCompatibilityScore(a, preferSafari);
+    return (
+      browserCompatibilityScore(b, caps.preferSafari) -
+      browserCompatibilityScore(a, caps.preferSafari)
+    );
   });
 }
 
-function browserAudioRank(stream: PlayableStream): number {
-  const label = `${stream.name} ${stream.title ?? ""}`;
-  if (/\b(?:aac[ ._-]?2(?:\.0)?|2[ ._-]?0|stereo|mp3)\b/i.test(label)) return 0;
-  if (/\b(?:5[ ._-]?1|7[ ._-]?1|6[ ._-]?ch|8[ ._-]?ch|surround|ddp|e[ ._-]?ac[ ._-]?3|ac[ ._-]?3|true[ ._-]?hd|dts(?:[ ._-]?hd)?|atmos)/i.test(label)) return 2;
-  return 1;
+function browserAudioRank(stream: PlayableStream, caps: ClientMediaCapabilities): number {
+  const label = streamLabel(stream);
+  if (hasBrowserSafeAudio(label)) return 0;
+  if (hasUndecodableAudio(label)) return 3;
+  if (hasDolbyDigitalAudio(label)) return caps.ac3 ? 1 : 3;
+  return 2;
 }
 
 function isSafariDirectStream(stream: PlayableStream): boolean {
-  const label = `${stream.name} ${stream.title ?? ""} ${stream.url}`;
+  const label = `${streamLabel(stream)} ${stream.url}`;
   if (/\.m3u8(?:$|[?&])/i.test(stream.url)) return true;
   const safeContainer = /\.(?:mp4|m4v)(?:$|[?&/])|\b(?:mp4|m4v)\b/i.test(label);
   const safeVideo = /\b(?:h[ ._-]?264|x264|avc)\b/i.test(label);

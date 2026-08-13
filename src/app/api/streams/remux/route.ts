@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { Readable } from "node:stream";
 
 import { clientIpFromRequest, resolveStremioStreams } from "@/lib/stremio/client";
+import { parseClientMediaCapabilities } from "@/lib/stremio/parseStreamsRequest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,8 +18,6 @@ export async function GET(request: Request) {
     0,
     Number.parseInt(params.get("addonIndex") ?? (params.get("fallback") === "1" ? "1" : "0"), 10) || 0
   );
-  const preferSafari = params.get("safari") === "1";
-
   if (type !== "movie" && type !== "series") {
     return Response.json({ error: "Invalid media type" }, { status: 400 });
   }
@@ -30,7 +29,7 @@ export async function GET(request: Request) {
     type,
     resourceId,
     addonIndex,
-    preferSafari,
+    parseClientMediaCapabilities(request),
     clientIpFromRequest(request)
   );
   const stream = result.streams[index];

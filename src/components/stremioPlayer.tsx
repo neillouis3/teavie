@@ -4,26 +4,26 @@ import Hls from "hls.js";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, ButtonGroup, Card, CardBody, Modal, ModalContent, Select, SelectItem, Slider, Switch } from "@heroui/react";
+import { Switch } from "@heroui/react";
 import {
+  AirplayLineIcon,
   ArrowRight01Icon,
   Cancel01Icon,
   ComputerIcon,
   FullscreenIcon,
   GoBackward10SecIcon,
   GoForward10SecIcon,
+  HelpCircleIcon,
   PauseIcon,
   PictureInPictureOnIcon,
   PlayIcon,
   Settings01Icon,
-  SlidersHorizontalIcon,
   SubtitleIcon,
-  UserGroupIcon,
   VolumeHighIcon,
   VolumeMute01Icon,
 } from "@hugeicons/core-free-icons";
-import type { PlayableStream } from "@/lib/stremio/types";
-import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
+import type { ClientMediaCapabilities, PlayableStream } from "@/lib/stremio/types";
+import { consumeStreamSource } from "@/lib/stremio/consumeStreamSource";
 import { useWatchPartyNav } from "@/contexts/watchPartyNavContext";
 
 type Props = {
@@ -59,7 +59,8 @@ export default function StremioPlayer({
   const [resolvedImdbId, setResolvedImdbId] = useState<string | null>(() =>
     imdbId ? normalizeImdbId(imdbId) : null
   );
-  const [resolvingImdb, setResolvingImdb] = useState(() => !imdbId);
+  const [playRequested, setPlayRequested] = useState(false);
+  const [resolvingImdb, setResolvingImdb] = useState(false);
   const effectiveImdbId = resolvedImdbId;
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -74,7 +75,7 @@ export default function StremioPlayer({
   const [addonIndex, setAddonIndex] = useState(0);
   const [hasMoreAddons, setHasMoreAddons] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -90,37 +91,16 @@ export default function StremioPlayer({
   const [controlsVisible, setControlsVisible] = useState(true);
 
   useEffect(() => {
-    if (imdbId) {
-      setResolvedImdbId(normalizeImdbId(imdbId));
-      setResolvingImdb(false);
-      return;
-    }
-    const key = String(catalogKey ?? "").trim();
-    if (!/^\d+$/.test(key)) {
-      setResolvedImdbId(null);
-      setResolvingImdb(false);
-      return;
-    }
-    let cancelled = false;
-    setResolvingImdb(true);
-    const endpoint = type === "series" ? "/api/tv/resolve" : "/api/movie/resolve";
-    void fetch(`${endpoint}?id=${encodeURIComponent(key)}`)
-      .then(async (response) => (response.ok ? response.json() : null))
-      .then((body) => {
-        if (cancelled) return;
-        const next =
-          typeof body?.imdbId === "string" ? normalizeImdbId(body.imdbId) : null;
-        setResolvedImdbId(next);
-      })
-      .catch(() => {
-        if (!cancelled) setResolvedImdbId(null);
-      })
-      .finally(() => {
-        if (!cancelled) setResolvingImdb(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    setResolvedImdbId(imdbId ? normalizeImdbId(imdbId) : null);
+    setPlayRequested(false);
+    setResolvingImdb(false);
+    setLoading(false);
+    setError(null);
+    setStreams([]);
+    setActiveIndex(0);
+    setAddonIndex(0);
+    setHasMoreAddons(false);
+    autoSkipCountRef.current = 0;
   }, [imdbId, catalogKey, type]);
 
   const query = useMemo(() => {
@@ -129,6 +109,9 @@ export default function StremioPlayer({
       q.set("season", String(season ?? ""));
       q.set("episode", String(episode ?? ""));
     }
+    const caps = detectMediaCapabilities();
+    q.set("ac3", caps.ac3 ? "1" : "0");
+    q.set("safari", caps.preferSafari ? "1" : "0");
     return q.toString();
   }, [type, effectiveImdbId, season, episode]);
 
@@ -136,10 +119,42 @@ export default function StremioPlayer({
     setAddonIndex(0);
     setHasMoreAddons(false);
     autoSkipCountRef.current = 0;
-  }, [query]);
+    if (playRequested) setReloadNonce((nonce) => nonce + 1);
+  }, [query, playRequested]);
+
+  const resolveImdbForPlayback = useCallback(async (): Promise<string | null> => {
+    if (effectiveImdbId) return effectiveImdbId;
+    const key = String(catalogKey ?? "").trim();
+    if (!/^\d+$/.test(key)) return null;
+    setResolvingImdb(true);
+    try {
+      const endpoint = type === "series" ? "/api/tv/resolve" : "/api/movie/resolve";
+      const response = await fetch(`${endpoint}?id=${encodeURIComponent(key)}`);
+      const body = response.ok ? await response.json() : null;
+      const next =
+        typeof body?.imdbId === "string" ? normalizeImdbId(body.imdbId) : null;
+      setResolvedImdbId(next);
+      return next;
+    } catch {
+      setResolvedImdbId(null);
+      return null;
+    } finally {
+      setResolvingImdb(false);
+    }
+  }, [catalogKey, effectiveImdbId, type]);
+
+  const beginPlayback = useCallback(async () => {
+    setPlayRequested(true);
+    setError(null);
+    if (effectiveImdbId) return;
+    const next = await resolveImdbForPlayback();
+    if (!next) {
+      setError("No playback source available for this title.");
+    }
+  }, [effectiveImdbId, resolveImdbForPlayback]);
 
   useEffect(() => {
-    if (!effectiveImdbId) return;
+    if (!playRequested || !effectiveImdbId) return;
     const controller = new AbortController();
     setLoading(true);
     setError(null);
@@ -147,77 +162,48 @@ export default function StremioPlayer({
     setActiveIndex(0);
     rejectedStreamIndexesRef.current.clear();
     autoSkipCountRef.current = 0;
-    fetch(`/api/streams?${query}&addonIndex=${addonIndex}`, { signal: controller.signal })
-      .then(async (response) => {
-        const raw = await response.text();
-        let body: Record<string, unknown> = {};
-        if (raw.trim()) {
-          try {
-            body = JSON.parse(raw) as Record<string, unknown>;
-          } catch {
-            throw new Error(
-              response.ok
-                ? "The stream service returned an invalid response."
-                : `The stream service failed (HTTP ${response.status}).`
-            );
+
+    const collected: PlayableStream[] = [];
+    let sawStream = false;
+
+    void consumeStreamSource(
+      `/api/streams/source?${query}&addonIndex=${addonIndex}`,
+      controller.signal,
+      {
+        onStream: (index, stream) => {
+          sawStream = true;
+          collected[index] = stream;
+          setStreams([...collected.filter(Boolean)]);
+          if (index === 0) setLoading(false);
+        },
+        onMeta: (meta) => {
+          setHasMoreAddons(meta.hasMoreAddons);
+          if (!sawStream) {
+            const providerError = meta.errors[0]?.message ?? null;
+            if (providerError) {
+              setError(
+                /took too long|timeout/i.test(providerError)
+                  ? "Stream addons timed out. They may be slow or overloaded — try again in a moment."
+                  : `The configured addon could not return streams: ${providerError}`
+              );
+            } else if (meta.unsupported > 0) {
+              setError(
+                `The addon returned ${meta.unsupported} torrent or non-web stream${meta.unsupported === 1 ? "" : "s"}. Configure it with a direct-link provider to use this browser player.`
+              );
+            } else {
+              setError(
+                "No streams found for this IMDb id. Check the id, season, and episode, then try again."
+              );
+            }
           }
-        }
-        if (!response.ok) {
-          throw new Error(
-            typeof body.error === "string" ? body.error : "Could not load streams"
-          );
-        }
-        if (!raw.trim()) throw new Error("The stream service returned an empty response.");
-        return body;
-      })
-      .then((body) => {
-        const next = Array.isArray(body.streams) ? body.streams : [];
-        setHasMoreAddons(Boolean(body.hasMoreAddons));
-        setStreams(next);
-        if (!next.length) {
-          const providerErrors = Array.isArray(body.errors)
-            ? body.errors
-                .map((entry) =>
-                  entry && typeof entry === "object" && "message" in entry
-                    ? String((entry as { message?: unknown }).message ?? "")
-                    : ""
-                )
-                .filter(Boolean)
-            : [];
-          const providerError = providerErrors[0] ?? null;
-          if (providerError) {
-            const allTimedOut = providerErrors.every((message) =>
-              /took too long|timeout/i.test(message)
-            );
-            setError(
-              allTimedOut
-                ? "Stream addons timed out. They may be slow or overloaded — try again in a moment."
-                : `The configured addon could not return streams: ${providerError}`
-            );
-          } else if (Number(body.unsupported) > 0) {
-            setError(
-              `The addon returned ${body.unsupported} torrent or non-web stream${body.unsupported === 1 ? "" : "s"}. Configure it with a direct-link provider to use this browser player.`
-            );
-          } else {
-            const detail =
-              providerErrors.length > 0
-                ? providerErrors.slice(0, 3).join(" · ")
-                : null;
-            setError(
-              detail
-                ? `No playable streams for this IMDb id. ${detail}`
-                : "No streams found for this IMDb id. Check the id, season, and episode, then try again."
-            );
-          }
-        }
-      })
-      .catch((reason) => {
-        if (reason instanceof DOMException && reason.name === "AbortError") return;
-        if (reason?.name !== "AbortError") setError(reason?.message || "Could not load streams");
-      })
-      .finally(() => setLoading(false));
+        },
+        onError: (message) => setError(message),
+        onDone: () => setLoading(false),
+      }
+    );
+
     return () => controller.abort();
-  }, [query, effectiveImdbId, addonIndex, reloadNonce]);
+  }, [playRequested, query, effectiveImdbId, addonIndex, reloadNonce]);
 
   useEffect(() => {
     const stream = streams[activeIndex];
@@ -308,11 +294,13 @@ export default function StremioPlayer({
   const tryAlternateAddon = () => {
     if (!hasMoreAddons) return;
     setError(null);
+    setPlayRequested(true);
     setAddonIndex((index) => index + 1);
   };
 
   const retryStreams = () => {
     setError(null);
+    setPlayRequested(true);
     setReloadNonce((nonce) => nonce + 1);
   };
 
@@ -364,12 +352,7 @@ export default function StremioPlayer({
     onPlaybackProgress(currentTime);
   }, [currentTime, onPlaybackProgress]);
 
-  if (!effectiveImdbId && !resolvingImdb) {
-    return (
-      <PlayerMessage text="No playback source available for this title." />
-    );
-  }
-  if (error) {
+  if (error && playRequested) {
     return (
       <PlayerMessage text={error}>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
@@ -394,15 +377,43 @@ export default function StremioPlayer({
     );
   }
 
+  if (!playRequested) {
+    return (
+      <PlayGate
+        title={title}
+        type={type}
+        season={season}
+        episode={episode}
+        posterUrl={posterUrl}
+        backdropUrl={backdropUrl}
+        onBack={() => router.back()}
+        onPlay={() => void beginPlayback()}
+      />
+    );
+  }
+
   return (
-    <div ref={playerRef} onPointerMove={revealControls} onPointerDown={revealControls} onMouseLeave={() => { if (playing && !settingsOpen) setControlsVisible(false); }} className="group relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
-      <WatchPlayerBackButton />
+    <div
+      ref={playerRef}
+      onPointerMove={revealControls}
+      onPointerDown={revealControls}
+      onMouseLeave={() => {
+        if (playing && !settingsOpen) setControlsVisible(false);
+      }}
+      className="group relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black"
+    >
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        onClick={() => { revealControls(); togglePlayback(videoRef.current); }}
-        onPlay={() => { setPlaying(true); setNeedsPlaybackTap(false); }}
+        onClick={() => {
+          revealControls();
+          togglePlayback(videoRef.current);
+        }}
+        onPlay={() => {
+          setPlaying(true);
+          setNeedsPlaybackTap(false);
+        }}
         onPause={() => setPlaying(false)}
         onCanPlay={(event) => {
           if (!event.currentTarget.paused) return;
@@ -412,10 +423,57 @@ export default function StremioPlayer({
         onDurationChange={(event) => {
           setDuration(event.currentTarget.duration || 0);
         }}
-        onVolumeChange={(event) => setMuted(event.currentTarget.muted || event.currentTarget.volume === 0)}
+        onVolumeChange={(event) =>
+          setMuted(event.currentTarget.muted || event.currentTarget.volume === 0)
+        }
         onError={(event) => handlePlaybackError(event.currentTarget.currentSrc)}
         className="h-full w-full bg-black object-contain"
       />
+
+      {/* Top bar */}
+      {!loading && streams.length > 0 ? (
+        <div
+          className={`pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/75 via-black/35 to-transparent px-4 pb-10 pt-3 transition-opacity duration-300 sm:px-5 sm:pt-4 ${
+            controlsVisible || settingsOpen ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div className="pointer-events-auto flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                aria-label="Go back"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/90 ring-1 ring-white/20 transition hover:bg-white/10"
+              >
+                <span aria-hidden className="text-xl leading-none">
+                  ‹
+                </span>
+              </button>
+              {title ? (
+                <p className="truncate text-sm font-medium text-white/95 sm:text-[15px]">
+                  {title}
+                  {type === "series" && season != null && episode != null
+                    ? ` · S${season}E${episode}`
+                    : ""}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <ControlButton label="Cast" onClick={() => {}} className="h-9 w-9 ring-1 ring-white/15">
+                <HugeiconsIcon icon={AirplayLineIcon} size={18} />
+              </ControlButton>
+              <ControlButton
+                label="Help"
+                onClick={() => setSettingsOpen(true)}
+                className="h-9 w-9 ring-1 ring-white/15"
+              >
+                <HugeiconsIcon icon={HelpCircleIcon} size={18} />
+              </ControlButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {needsPlaybackTap && !loading ? (
         <button
           type="button"
@@ -430,31 +488,33 @@ export default function StremioPlayer({
           <HugeiconsIcon icon={PlayIcon} size={32} />
         </button>
       ) : null}
+
       {!loading && streams.length > 0 ? (
-        <div className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-4 pb-4 pt-14 text-white transition-opacity duration-300 sm:px-6 ${controlsVisible ? "opacity-100" : "pointer-events-none opacity-0"}`}>
-          <input
-            aria-label="Seek"
-            type="range"
-            min={0}
-            max={duration || 0}
-            step={0.1}
-            value={Math.min(currentTime, duration || 0)}
-            onChange={(event) => {
-              const next = Number(event.target.value);
+        <div
+          className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-4 pt-16 text-white transition-opacity duration-300 sm:px-5 ${
+            controlsVisible && !settingsOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}
+        >
+          <SeekBar
+            currentTime={currentTime}
+            duration={duration}
+            onSeek={(next) => {
               if (videoRef.current) videoRef.current.currentTime = next;
               setCurrentTime(next);
             }}
-            className="mb-3 h-1 w-full cursor-pointer accent-white"
           />
-          <div className="flex items-center gap-2 sm:gap-3">
-            <ControlButton label={playing ? "Pause" : "Play"} onClick={() => togglePlayback(videoRef.current)}>
-              <HugeiconsIcon icon={playing ? PauseIcon : PlayIcon} size={24} />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ControlButton
+              label={playing ? "Pause" : "Play"}
+              onClick={() => togglePlayback(videoRef.current)}
+            >
+              <HugeiconsIcon icon={playing ? PauseIcon : PlayIcon} size={22} />
             </ControlButton>
             <ControlButton label="Back 10 seconds" onClick={() => seekBy(videoRef.current, -10)}>
-              <HugeiconsIcon icon={GoBackward10SecIcon} size={24} />
+              <HugeiconsIcon icon={GoBackward10SecIcon} size={22} />
             </ControlButton>
             <ControlButton label="Forward 10 seconds" onClick={() => seekBy(videoRef.current, 10)}>
-              <HugeiconsIcon icon={GoForward10SecIcon} size={24} />
+              <HugeiconsIcon icon={GoForward10SecIcon} size={22} />
             </ControlButton>
             <ControlButton
               label={muted ? "Unmute" : "Mute"}
@@ -463,58 +523,75 @@ export default function StremioPlayer({
                 videoRef.current.muted = !videoRef.current.muted;
               }}
             >
-              <HugeiconsIcon icon={muted ? VolumeMute01Icon : VolumeHighIcon} size={24} />
+              <HugeiconsIcon icon={muted ? VolumeMute01Icon : VolumeHighIcon} size={22} />
             </ControlButton>
-            <span className="ml-1 whitespace-nowrap text-sm tabular-nums text-white/90">
+            <div className="ml-1 hidden min-w-0 flex-col sm:flex">
+              <span className="truncate text-xs tabular-nums text-white/90 sm:text-sm">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </span>
+              {duration > 0 ? (
+                <span className="truncate text-[11px] text-white/45">
+                  {formatEndTime(currentTime, duration)}
+                </span>
+              ) : null}
+            </div>
+            <span className="ml-1 truncate text-xs tabular-nums text-white/90 sm:hidden">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
-            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <div className="ml-auto flex items-center gap-1 sm:gap-2">
               <ControlButton
                 label="Picture in picture"
                 onClick={() => void togglePictureInPicture(videoRef.current)}
               >
-                <HugeiconsIcon icon={PictureInPictureOnIcon} size={23} />
+                <HugeiconsIcon icon={PictureInPictureOnIcon} size={20} />
               </ControlButton>
-              <ControlButton label="Playback settings" onClick={() => setSettingsOpen(true)}>
-                <HugeiconsIcon icon={Settings01Icon} size={24} />
+              <ControlButton label="Subtitles" onClick={() => setSettingsOpen(true)}>
+                <HugeiconsIcon icon={SubtitleIcon} size={20} />
               </ControlButton>
-              <ControlButton label="Toggle fullscreen" onClick={() => void toggleFullscreen(playerRef.current, videoRef.current)}>
-                <HugeiconsIcon icon={FullscreenIcon} size={24} />
+              <ControlButton label="Settings" onClick={() => setSettingsOpen(true)}>
+                <HugeiconsIcon icon={Settings01Icon} size={20} />
+              </ControlButton>
+              <ControlButton
+                label="Fullscreen"
+                onClick={() => void toggleFullscreen(playerRef.current, videoRef.current)}
+              >
+                <HugeiconsIcon icon={FullscreenIcon} size={20} />
               </ControlButton>
             </div>
           </div>
         </div>
       ) : null}
-      <Modal
-        isOpen={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        size="5xl"
-        placement="center"
-        scrollBehavior="inside"
-        backdrop="blur"
-        hideCloseButton
-        classNames={{
-          base: "bg-transparent shadow-none",
-          backdrop: "bg-black/45 backdrop-blur-md",
-        }}
-      >
-        <ModalContent>
-          {activeStream ? (
-            <PlayerSettingsMenu
-              preferredQuality={preferredQuality}
-              selectQuality={selectQuality}
-              audioTracks={audioTracks}
-              selectedAudioIndex={selectedAudioIndex}
-              selectAudioTrack={selectAudioTrack}
-              video={videoRef.current}
-              close={() => setSettingsOpen(false)}
-              openWatchParty={openTeaParty}
-              subtitleLabel={activeSubtitle(videoRef.current)}
-              audioLabel={streamAudio(streamLabel)}
-            />
-          ) : null}
-        </ModalContent>
-      </Modal>
+
+      {settingsOpen && activeStream ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close settings"
+            className="absolute inset-0 z-30 bg-black/35 backdrop-blur-[2px]"
+            onClick={() => setSettingsOpen(false)}
+          />
+          <PlayerSettingsPanel
+            preferredQuality={preferredQuality}
+            selectQuality={selectQuality}
+            streams={streams}
+            activeIndex={activeIndex}
+            audioTracks={audioTracks}
+            selectedAudioIndex={selectedAudioIndex}
+            selectAudioTrack={selectAudioTrack}
+            video={videoRef.current}
+            close={() => setSettingsOpen(false)}
+            openWatchParty={openTeaParty}
+            subtitleLabel={activeSubtitle(videoRef.current)}
+            audioLabel={streamAudio(streamLabel)}
+            hasMoreAddons={hasMoreAddons}
+            onTryAlternateAddon={tryAlternateAddon}
+            onTryNextStream={() => {
+              if (activeIndex + 1 < streams.length) setActiveIndex((index) => index + 1);
+            }}
+            type={type}
+          />
+        </>
+      ) : null}
       {loading || resolvingImdb ? (
         <div className="absolute inset-0 z-20 flex items-center justify-center overflow-hidden bg-black text-white">
           {backdropUrl ? (
@@ -559,20 +636,206 @@ export default function StremioPlayer({
   );
 }
 
-function SettingTile({ icon, label, value }: { icon: Parameters<typeof HugeiconsIcon>[0]["icon"]; label: string; value: string }) {
+function PlayGate({
+  title,
+  type,
+  season,
+  episode,
+  posterUrl,
+  backdropUrl,
+  onBack,
+  onPlay,
+}: {
+  title: string;
+  type: "movie" | "series";
+  season?: number;
+  episode?: number;
+  posterUrl?: string | null;
+  backdropUrl?: string | null;
+  onBack: () => void;
+  onPlay: () => void;
+}) {
   return (
-    <Card className="min-w-0 border border-white/10 bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md">
-      <CardBody className="p-4 text-sm">
-        <div className="flex items-center gap-2 font-normal"><HugeiconsIcon icon={icon} size={19} className="text-white/65" />{label}</div>
-        <p className="mt-1 truncate pl-7 text-sm font-normal text-white/45">{value}</p>
-      </CardBody>
-    </Card>
+    <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden bg-black text-white">
+      {backdropUrl ? (
+        <div
+          className="absolute -inset-8 scale-110 bg-cover bg-center opacity-35 blur-2xl"
+          style={{ backgroundImage: `url(${JSON.stringify(backdropUrl).slice(1, -1)})` }}
+          aria-hidden
+        />
+      ) : null}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/60 to-black/95" aria-hidden />
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Go back"
+        className="absolute left-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-2xl text-white backdrop-blur-md transition hover:bg-white/20"
+      >
+        <span aria-hidden>‹</span>
+      </button>
+      <div className="relative z-10 flex max-w-sm flex-col items-center px-6 text-center">
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt=""
+            className="mb-5 h-48 w-32 rounded-xl object-cover shadow-2xl ring-1 ring-white/15 sm:h-56 sm:w-[9.35rem]"
+          />
+        ) : null}
+        {title ? <h2 className="text-xl font-semibold sm:text-2xl">{title}</h2> : null}
+        {type === "series" && season != null && episode != null ? (
+          <p className="mt-2 text-sm text-white/45">
+            Season {season} · Episode {episode}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={onPlay}
+          className="mt-8 flex h-14 w-14 items-center justify-center rounded-full bg-white text-black shadow-xl transition hover:scale-105 hover:bg-white/90"
+          aria-label="Play"
+        >
+          <HugeiconsIcon icon={PlayIcon} size={28} />
+        </button>
+      </div>
+    </div>
   );
 }
 
-function PlayerSettingsMenu({ preferredQuality, selectQuality, audioTracks, selectedAudioIndex, selectAudioTrack, video, close, openWatchParty, subtitleLabel, audioLabel }: {
+function SeekBar({
+  currentTime,
+  duration,
+  onSeek,
+}: {
+  currentTime: number;
+  duration: number;
+  onSeek: (seconds: number) => void;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const pct =
+    duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+
+  const seekFromClientX = (clientX: number) => {
+    const track = trackRef.current;
+    if (!track || duration <= 0) return;
+    const rect = track.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    onSeek(ratio * duration);
+  };
+
+  return (
+    <div
+      ref={trackRef}
+      role="slider"
+      aria-label="Seek"
+      aria-valuemin={0}
+      aria-valuemax={Math.floor(duration)}
+      aria-valuenow={Math.floor(currentTime)}
+      tabIndex={0}
+      className="group/seek relative mb-3 h-5 cursor-pointer touch-none"
+      onPointerDown={(event) => {
+        event.stopPropagation();
+        seekFromClientX(event.clientX);
+        const onMove = (moveEvent: PointerEvent) => seekFromClientX(moveEvent.clientX);
+        const onUp = () => {
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+      }}
+      onKeyDown={(event) => {
+        if (duration <= 0) return;
+        const step = event.shiftKey ? 30 : 10;
+        if (event.key === "ArrowRight") onSeek(Math.min(duration, currentTime + step));
+        if (event.key === "ArrowLeft") onSeek(Math.max(0, currentTime - step));
+      }}
+    >
+      <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-white/20 transition-all group-hover/seek:h-1" />
+      <div
+        className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-white transition-all group-hover/seek:h-1"
+        style={{ width: `${pct}%` }}
+      />
+      <div
+        className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 shadow transition group-hover/seek:opacity-100"
+        style={{ left: `${pct}%` }}
+      />
+    </div>
+  );
+}
+
+function SettingsSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0">
+      <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function SettingsRow({
+  label,
+  value,
+  onClick,
+  icon,
+}: {
+  label: string;
+  value?: string;
+  onClick?: () => void;
+  icon?: Parameters<typeof HugeiconsIcon>[0]["icon"];
+}) {
+  const Tag = onClick ? "button" : "div";
+  return (
+    <Tag
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={`flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-left transition ${
+        onClick ? "hover:bg-white/[0.05]" : ""
+      }`}
+    >
+      <div className="flex min-w-0 items-center gap-2.5">
+        {icon ? <HugeiconsIcon icon={icon} size={18} className="shrink-0 text-white/55" /> : null}
+        <span className="text-sm text-white/85">{label}</span>
+      </div>
+      {value ? (
+        <span className="flex shrink-0 items-center gap-1 text-sm text-white/45">
+          {value}
+          {onClick ? <HugeiconsIcon icon={ArrowRight01Icon} size={16} /> : null}
+        </span>
+      ) : null}
+    </Tag>
+  );
+}
+
+function PlayerSettingsPanel({
+  preferredQuality,
+  selectQuality,
+  streams,
+  activeIndex,
+  audioTracks,
+  selectedAudioIndex,
+  selectAudioTrack,
+  video,
+  close,
+  openWatchParty,
+  subtitleLabel,
+  audioLabel,
+  hasMoreAddons,
+  onTryAlternateAddon,
+  onTryNextStream,
+  type,
+}: {
   preferredQuality: string;
   selectQuality: (quality: string) => void;
+  streams: PlayableStream[];
+  activeIndex: number;
   audioTracks: AudioTrack[];
   selectedAudioIndex: number;
   selectAudioTrack: (index: number) => void;
@@ -581,121 +844,159 @@ function PlayerSettingsMenu({ preferredQuality, selectQuality, audioTracks, sele
   openWatchParty: () => void;
   subtitleLabel: string;
   audioLabel: string;
+  hasMoreAddons: boolean;
+  onTryAlternateAddon: () => void;
+  onTryNextStream: () => void;
+  type: "movie" | "series";
 }) {
-  const [view, setView] = useState<"main" | "playback" | "color">("main");
-  const [brightness, setBrightness] = useState(100);
-  const [contrast, setContrast] = useState(100);
-  const [saturation, setSaturation] = useState(100);
-  const [hue, setHue] = useState(0);
-  const [colorPreset, setColorPreset] = useState("Default");
-  const [volumeBoost, setVolumeBoost] = useState(false);
+  const [autoplayNext, setAutoplayNext] = useState(false);
+  const qualities = ["480p", "720p", "1080p", "2160p"];
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  const activeStream = streams[activeIndex];
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(sessionStorage.getItem("teavie-player-color") || "null") as { brightness?: number; contrast?: number; saturation?: number; hue?: number; preset?: string } | null;
-      if (!saved) return;
-      setBrightness(saved.brightness ?? 100);
-      setContrast(saved.contrast ?? 100);
-      setSaturation(saved.saturation ?? 100);
-      setHue(saved.hue ?? 0);
-      setColorPreset(saved.preset ?? "Default");
-    } catch {}
+      const saved = localStorage.getItem("teavie-autoplay-next");
+      if (saved != null) setAutoplayNext(saved === "1");
+    } catch {
+      /* ignore */
+    }
   }, []);
 
-  useEffect(() => {
-    if (video) video.style.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) hue-rotate(${hue}deg)`;
-    sessionStorage.setItem("teavie-player-color", JSON.stringify({ brightness, contrast, saturation, hue, preset: colorPreset }));
-  }, [video, brightness, contrast, saturation, hue, colorPreset]);
-
-  const applyPreset = (preset: string) => {
-    const values: Record<string, [number, number, number, number]> = {
-      Cinematic: [95, 110, 90, 0],
-      Vivid: [105, 115, 135, 0],
-      Warm: [103, 105, 112, -8],
-      Cool: [100, 105, 105, 8],
-      Noir: [98, 120, 0, 0],
-      HDR: [115, 118, 112, 0],
-      Default: [100, 100, 100, 0],
-    };
-    const [nextBrightness, nextContrast, nextSaturation, nextHue] = values[preset];
-    setColorPreset(preset);
-    setBrightness(nextBrightness);
-    setContrast(nextContrast);
-    setSaturation(nextSaturation);
-    setHue(nextHue);
-  };
-
   return (
-    <div className="max-h-[82vh] w-full overflow-y-auto rounded-3xl border border-white/15 bg-background/65 p-6 text-sm font-normal text-white shadow-[0_24px_100px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl backdrop-saturate-150 sm:p-8">
-      <div className="mb-5 flex items-center justify-between">
-        {view !== "main" ? (
-          <Button size="sm" variant="light" onPress={() => setView(view === "color" ? "playback" : "main")} startContent={<HugeiconsIcon icon={ArrowRight01Icon} size={18} className="rotate-180" />} className="text-sm font-normal text-white">{view === "color" ? "Advanced color" : "Playback"}</Button>
-        ) : <h2 className="text-sm font-normal">Settings</h2>}
-        <Button isIconOnly size="sm" variant="light" aria-label="Close settings" onPress={close} className="text-white"><HugeiconsIcon icon={Cancel01Icon} size={23} /></Button>
+    <aside className="absolute right-0 top-0 z-40 flex h-full w-full max-w-[min(100%,380px)] flex-col border-l border-white/10 bg-[#141414]/92 shadow-[-24px_0_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <h2 className="text-base font-medium text-white">Settings</h2>
+        <button
+          type="button"
+          aria-label="Close settings"
+          onClick={close}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={20} />
+        </button>
       </div>
-      {view === "main" ? <>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Card className="min-w-0 border border-white/10 bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md">
-            <CardBody className="p-3">
-              <Select
-                label="Quality"
-                aria-label="Preferred quality"
-                size="sm"
-                selectedKeys={new Set([preferredQuality])}
-                onSelectionChange={(keys) => {
-                  const key = Array.from(keys)[0];
-                  if (key != null) selectQuality(String(key));
-                }}
-                startContent={<HugeiconsIcon icon={ComputerIcon} size={18} className="text-white/65" />}
-                classNames={{ label: "text-sm font-normal text-white", value: "text-sm font-normal text-white/55", trigger: "min-h-14 bg-transparent shadow-none", popoverContent: "bg-background/85 backdrop-blur-2xl" }}
-              >
-                {["2160P", "1080P", "720P", "480P"].map((quality) => <SelectItem key={quality.toLowerCase()}>{quality}</SelectItem>)}
-              </Select>
-            </CardBody>
-          </Card>
-          <SettingTile icon={SubtitleIcon} label="Subtitles" value={subtitleLabel} />
-          {audioTracks.length > 1 ? <Card className="min-w-0 border border-white/10 bg-white/[0.055] backdrop-blur-md"><CardBody className="p-3"><Select label="Audio" size="sm" selectedKeys={new Set([String(selectedAudioIndex)])} onSelectionChange={(keys) => { const key = Array.from(keys)[0]; if (key != null) selectAudioTrack(Number(key)); }} startContent={<HugeiconsIcon icon={VolumeHighIcon} size={18} className="text-white/65" />} classNames={{ label: "text-sm font-normal text-white", value: "text-sm font-normal text-white/55", trigger: "min-h-14 bg-transparent shadow-none", popoverContent: "bg-background/85 backdrop-blur-2xl" }}>{audioTracks.map((track) => <SelectItem key={String(track.audioIndex)} textValue={audioTrackLabel(track)}>{audioTrackLabel(track)}</SelectItem>)}</Select></CardBody></Card> : <SettingTile icon={VolumeHighIcon} label="Audio" value={audioLabel} />}
-        </div>
-        <div className="mt-5 space-y-1">
-          <Button fullWidth variant="light" onPress={() => setView("playback")} startContent={<HugeiconsIcon icon={SlidersHorizontalIcon} size={20} className="text-white/60" />} endContent={<HugeiconsIcon icon={ArrowRight01Icon} size={18} className="text-white/50" />} className="h-14 justify-start text-sm font-normal text-white [&>span:nth-child(2)]:flex-1 [&>span:nth-child(2)]:text-left">Playback</Button>
-          <Button fullWidth variant="light" onPress={() => { close(); openWatchParty(); }} startContent={<HugeiconsIcon icon={UserGroupIcon} size={20} className="text-white/60" />} endContent={<HugeiconsIcon icon={ArrowRight01Icon} size={18} className="text-white/50" />} className="h-14 justify-start text-sm font-normal text-white [&>span:nth-child(2)]:flex-1 [&>span:nth-child(2)]:text-left">Watch Party</Button>
-        </div>
-      </> : view === "playback" ? <div className="space-y-6">
-        <ButtonGroup fullWidth variant="flat" className="rounded-xl bg-white/[0.07] p-1">{[0.25, 0.5, 1, 1.5, 2].map((speed) => <Button key={speed} size="sm" onPress={() => { if (video) video.playbackRate = speed; }} className={`min-w-0 text-sm font-normal text-white ${video?.playbackRate === speed ? "bg-white/20" : "bg-transparent"}`}>{speed}×</Button>)}</ButtonGroup>
-        <Slider label="Brightness" minValue={50} maxValue={150} step={1} value={brightness} onChange={(next) => { const value = Array.isArray(next) ? next[0] : next; setBrightness(value); if (video) video.style.filter = `brightness(${value}%)`; }} showTooltip size="sm" color="foreground" classNames={{ label: "text-sm font-normal text-white", value: "text-sm font-normal text-white" }} getValue={(value) => `${value}%`} />
-        <div className="flex items-center justify-between text-sm font-normal"><span>Volume Boost</span><Switch size="sm" isSelected={volumeBoost} onValueChange={(enabled) => { setVolumeBoost(enabled); if (video) video.volume = 1; }} /></div>
-        <Button fullWidth variant="light" onPress={() => setView("color")} endContent={<HugeiconsIcon icon={ArrowRight01Icon} size={18} className="text-white/50" />} className="h-12 justify-start text-sm font-normal text-white [&>span:nth-child(2)]:flex-1 [&>span:nth-child(2)]:text-left">Advanced color</Button>
-      </div> : <div className="space-y-6">
-        <div className="flex flex-wrap gap-2">
-          {["Cinematic", "Vivid", "Warm", "Cool", "Noir", "HDR", "Default"].map((preset) => (
-            <Button key={preset} size="sm" radius="full" variant={colorPreset === preset ? "solid" : "flat"} color={colorPreset === preset ? "default" : undefined} onPress={() => applyPreset(preset)} className={`text-sm font-normal ${colorPreset === preset ? "bg-white text-black" : "bg-white/[0.07] text-white/65"}`}>{preset}</Button>
-          ))}
-        </div>
-        <ColorSlider label="Brightness" value={brightness} min={50} max={150} suffix="%" onChange={(value) => { setColorPreset("Custom"); setBrightness(value); }} />
-        <ColorSlider label="Contrast" value={contrast} min={50} max={150} suffix="%" onChange={(value) => { setColorPreset("Custom"); setContrast(value); }} />
-        <ColorSlider label="Saturation" value={saturation} min={0} max={200} suffix="%" onChange={(value) => { setColorPreset("Custom"); setSaturation(value); }} />
-        <ColorSlider label="Hue" value={hue} min={-180} max={180} suffix="°" onChange={(value) => { setColorPreset("Custom"); setHue(value); }} />
-        <Button fullWidth variant="light" onPress={() => applyPreset("Default")} className="text-sm font-normal text-white/45">Reset all</Button>
-        <p className="text-xs font-normal leading-relaxed text-white/35">Color adjustments are applied through CSS filters and persist for this browser session.</p>
-      </div>}
-    </div>
-  );
-}
 
-function ColorSlider({ label, value, min, max, suffix, onChange }: { label: string; value: number; min: number; max: number; suffix: string; onChange: (value: number) => void }) {
-  return (
-    <Slider
-      label={label}
-      minValue={min}
-      maxValue={max}
-      step={1}
-      value={value}
-      onChange={(next) => onChange(Array.isArray(next) ? next[0] : next)}
-      size="sm"
-      color="foreground"
-      classNames={{ label: "text-sm font-normal text-white/55", value: "text-sm font-normal text-white" }}
-      getValue={(next) => `${next}${suffix}`}
-    />
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        <SettingsSection title="Picture">
+          <div className="mb-4">
+            <p className="mb-2 text-sm text-white/55">Quality</p>
+            <div className="flex flex-wrap gap-2">
+              {qualities.map((quality) => (
+                <button
+                  key={quality}
+                  type="button"
+                  onClick={() => selectQuality(quality)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                    preferredQuality === quality
+                      ? "bg-white text-black"
+                      : "bg-white/10 text-white/70 hover:bg-white/15"
+                  }`}
+                >
+                  {quality.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-sm text-white/55">Speed</p>
+            <div className="flex flex-wrap gap-2">
+              {speeds.map((speed) => (
+                <button
+                  key={speed}
+                  type="button"
+                  onClick={() => {
+                    if (video) video.playbackRate = speed;
+                  }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                    (video?.playbackRate ?? 1) === speed
+                      ? "bg-white text-black"
+                      : "bg-white/10 text-white/70 hover:bg-white/15"
+                  }`}
+                >
+                  {speed}x
+                </button>
+              ))}
+            </div>
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title="Audio and subtitles">
+          <SettingsRow label="Subtitles" value={subtitleLabel} icon={SubtitleIcon} />
+          {audioTracks.length > 1 ? (
+            audioTracks.map((track) => (
+              <SettingsRow
+                key={track.audioIndex}
+                label={audioTrackLabel(track)}
+                value={selectedAudioIndex === track.audioIndex ? "Active" : undefined}
+                onClick={() => selectAudioTrack(track.audioIndex)}
+                icon={VolumeHighIcon}
+              />
+            ))
+          ) : (
+            <SettingsRow label="Audio" value={audioLabel} icon={VolumeHighIcon} />
+          )}
+        </SettingsSection>
+
+        <SettingsSection title="Source">
+          <SettingsRow
+            label="Server"
+            value={activeStream?.name ?? `Source ${activeIndex + 1}`}
+            icon={ComputerIcon}
+          />
+          {activeIndex + 1 < streams.length ? (
+            <SettingsRow label="Try another source" onClick={onTryNextStream} icon={ComputerIcon} />
+          ) : null}
+          {hasMoreAddons ? (
+            <SettingsRow label="Try alternate provider" onClick={onTryAlternateAddon} icon={ComputerIcon} />
+          ) : null}
+        </SettingsSection>
+
+        {type === "series" ? (
+          <SettingsSection title="Playback">
+            <div className="flex items-center justify-between gap-3 py-2">
+              <div>
+                <p className="text-sm text-white/85">Autoplay next episode</p>
+                <p className="text-xs text-white/40">Turn this off before sleeping</p>
+              </div>
+              <Switch
+                size="sm"
+                isSelected={autoplayNext}
+                onValueChange={(enabled) => {
+                  setAutoplayNext(enabled);
+                  try {
+                    localStorage.setItem("teavie-autoplay-next", enabled ? "1" : "0");
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+              />
+            </div>
+          </SettingsSection>
+        ) : null}
+      </div>
+
+      <div className="border-t border-white/10 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/45">
+          <button type="button" className="transition hover:text-white/75">
+            Cast
+          </button>
+          <button
+            type="button"
+            className="transition hover:text-white/75"
+            onClick={() => {
+              close();
+              openWatchParty();
+            }}
+          >
+            Watch Party
+          </button>
+          <button type="button" className="transition hover:text-white/75">
+            Help
+          </button>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -731,10 +1032,12 @@ function ControlButton({
   label,
   onClick,
   children,
+  className = "",
 }: {
   label: string;
   onClick: () => void;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <button
@@ -742,7 +1045,7 @@ function ControlButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/15"
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/15 ${className}`}
     >
       {children}
     </button>
@@ -835,6 +1138,13 @@ function formatTime(seconds: number) {
     : `${minutes}:${String(remainder).padStart(2, "0")}`;
 }
 
+function formatEndTime(currentTime: number, duration: number) {
+  if (!Number.isFinite(duration) || duration <= 0) return "";
+  const remainingMs = Math.max(0, duration - currentTime) * 1000;
+  const end = new Date(Date.now() + remainingMs);
+  return `Ends at ${end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+}
+
 function PlayerMessage({
   text,
   children,
@@ -848,6 +1158,28 @@ function PlayerMessage({
       {children}
     </div>
   );
+}
+
+function canDecode(mimeType: string): boolean {
+  if (window.MediaSource?.isTypeSupported?.(mimeType)) return true;
+  return document.createElement("video").canPlayType(mimeType) === "probably";
+}
+
+/**
+ * Ask the browser what it can actually decode so stream selection can drop
+ * releases that would play as silent video. Chrome and Firefox ship no Dolby
+ * Digital decoder, which is why most 1080p WEB-DL releases have no sound there.
+ */
+function detectMediaCapabilities(): ClientMediaCapabilities {
+  if (typeof window === "undefined") return { ac3: false, preferSafari: false };
+  const userAgent = navigator.userAgent;
+  return {
+    ac3:
+      canDecode('audio/mp4; codecs="ac-3"') || canDecode('audio/mp4; codecs="ec-3"'),
+    preferSafari:
+      /iphone|ipad|ipod/i.test(userAgent) ||
+      (/safari/i.test(userAgent) && !/chrome|chromium|crios|android|edg|opr/i.test(userAgent)),
+  };
 }
 
 function normalizeImdbId(raw: string): string | null {

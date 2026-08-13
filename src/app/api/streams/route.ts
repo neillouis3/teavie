@@ -1,4 +1,10 @@
-import { clientIpFromRequest, hasStremioAddons, resolveStremioStreams, stremioAddonCount } from "@/lib/stremio/client";
+import {
+  attachStreamEndpoints,
+  clientIpFromRequest,
+  resolveStremioStreams,
+  stremioAddonCount,
+} from "@/lib/stremio/client";
+import { parseStreamsRequest } from "@/lib/stremio/parseStreamsRequest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -6,64 +12,25 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const params = new URL(request.url).searchParams;
-  const type = params.get("type");
-  const imdbId = params.get("id")?.trim() ?? "";
-  const season = Number(params.get("season"));
-  const episode = Number(params.get("episode"));
-  const fallback = params.get("fallback") === "1";
-  const addonIndex = Math.max(
-    0,
-    Number.parseInt(params.get("addonIndex") ?? (fallback ? "1" : "0"), 10) || 0
-  );
-  const userAgent = request.headers.get("user-agent") ?? "";
-  const preferSafari = /safari/i.test(userAgent) && !/(chrome|chromium|crios|android)/i.test(userAgent);
-
-  if (type !== "movie" && type !== "series") {
-    return Response.json({ error: "type must be movie or series" }, { status: 400 });
-  }
-  if (!/^tt\d+$/i.test(imdbId)) {
-    return Response.json({ error: "A valid IMDb id is required" }, { status: 400 });
-  }
-  if (!hasStremioAddons()) {
+  const parsed = parseStreamsRequest(request);
+  if (!parsed.ok) {
     return Response.json(
-      { error: "No Stremio addons are configured", code: "not_configured" },
-      { status: 503 }
+      { error: parsed.error, code: parsed.code },
+      { status: parsed.status }
     );
   }
 
-  let resourceId = imdbId.toLowerCase();
-  if (type === "series") {
-    if (!Number.isInteger(season) || season < 0 || !Number.isInteger(episode) || episode < 1) {
-      return Response.json({ error: "A valid season and episode are required" }, { status: 400 });
-    }
-    resourceId += `:${season}:${episode}`;
-  }
+  const { type, resourceId, addonIndex, caps } = parsed;
 
   try {
     const clientIp = clientIpFromRequest(request);
-    const result = await resolveStremioStreams(
-      type,
-      resourceId,
-      addonIndex,
-      preferSafari,
-      clientIp
-    );
+    const result = await resolveStremioStreams(type, resourceId, addonIndex, caps, clientIp);
     if (result.streams.length > 0) {
-      result.streams = result.streams.map((stream, index) => {
-        const endpointParams = new URLSearchParams({
-          type,
-          id: resourceId,
-          index: String(index),
-          addonIndex: String(addonIndex),
-          safari: preferSafari ? "1" : "0",
-        }).toString();
-        return {
-          ...stream,
-          url: stream.url,
-          remuxUrl: `/api/streams/remux?${endpointParams}`,
-          audioTracksUrl: `/api/streams/tracks?${endpointParams}`,
-        };
+      result.streams = attachStreamEndpoints(result.streams, {
+        type,
+        resourceId,
+        addonIndex,
+        caps,
       });
     }
     return Response.json(
