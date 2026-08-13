@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { Image } from "@heroui/react";
 import FavoriteStarIcon from "@/components/favorites/FavoriteStarIcon";
 import CatalogDetailColumns, {
@@ -126,6 +126,75 @@ export function showSubtitleLine(show: {
     parts.push(`${episodes} ${episodes === 1 ? "episode" : "episodes"}`);
   }
   return parts.join(" • ");
+}
+
+const OVERVIEW_TEXT =
+  "text-base leading-relaxed text-foreground/85 dark:text-white/75";
+
+function CatalogOverview({
+  overview,
+  tagline,
+}: {
+  overview: string;
+  tagline?: string | null;
+}) {
+  const synopsis = overview?.trim() || "";
+  const quote = tagline?.trim() || "";
+  const [expanded, setExpanded] = useState(false);
+  const [truncated, setTruncated] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+
+  useLayoutEffect(() => {
+    if (expanded || !synopsis) {
+      setTruncated(false);
+      return;
+    }
+    const el = textRef.current;
+    if (!el) return;
+
+    const check = () => {
+      setTruncated(el.scrollHeight > el.clientHeight + 1);
+    };
+
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [synopsis, expanded]);
+
+  return (
+    <>
+      <p
+        ref={textRef}
+        className={`${OVERVIEW_TEXT} ${expanded ? "" : "line-clamp-3"}`}
+      >
+        {synopsis || "No overview available."}
+      </p>
+      {synopsis && truncated && !expanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="mt-1.5 text-sm font-medium text-default-400 transition-colors hover:text-foreground"
+        >
+          Show more
+        </button>
+      ) : null}
+      {synopsis && expanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="mt-1.5 text-sm font-medium text-default-400 transition-colors hover:text-foreground"
+        >
+          Show less
+        </button>
+      ) : null}
+      {quote ? (
+        <p className="mt-2 text-base italic text-default-500">
+          &ldquo;{quote}&rdquo;
+        </p>
+      ) : null}
+    </>
+  );
 }
 
 export type CatalogTitleBlockProps = {
@@ -325,14 +394,7 @@ export default function CatalogMediaPanel({
 
   const overviewBlock = (
     <div className="w-full max-w-[80%] px-4">
-      <p className="text-base leading-relaxed text-foreground/85 dark:text-white/75">
-        {overview?.trim() ? overview : "No overview available."}
-      </p>
-      {tagline?.trim() ? (
-        <p className="mt-2 text-base italic text-default-500">
-          &ldquo;{tagline.trim()}&rdquo;
-        </p>
-      ) : null}
+      <CatalogOverview overview={overview} tagline={tagline} />
     </div>
   );
 
@@ -358,13 +420,10 @@ export default function CatalogMediaPanel({
           <div className="min-w-0 flex-1">
             {titleBlock}
             {synopsis || quote ? (
-              <div className="mt-4 max-w-3xl space-y-2">
+              <div className="mt-4 max-w-3xl">
                 {synopsis ? (
-                  <p className="text-base leading-relaxed text-foreground/85 sm:text-[15px]">
-                    {synopsis}
-                  </p>
-                ) : null}
-                {quote ? (
+                  <CatalogOverview overview={synopsis} tagline={quote || null} />
+                ) : quote ? (
                   <p className="text-sm italic text-default-500">
                     &ldquo;{quote}&rdquo;
                   </p>

@@ -151,12 +151,14 @@ export type BrowseCatalogPayload = {
   totalPages: number;
   total: number;
   genreSlugs?: string[];
+  ok?: boolean;
 };
 
 export type BrowseCatalogPageResults = {
   results: ContentItem[];
   totalPages?: number;
   total?: number;
+  ok?: boolean;
 };
 
 const EMPTY_CATEGORY: CategoryDiscoverPayload = {
@@ -207,6 +209,7 @@ export type TmdbDiscoverPayload = {
 export type ExploreBundle = {
   discover: TmdbDiscoverPayload;
   genres: CatalogGenreRow[];
+  feed?: DiscoverFeedPayload;
 };
 
 const EMPTY_DISCOVER: TmdbDiscoverPayload = {
@@ -216,27 +219,52 @@ const EMPTY_DISCOVER: TmdbDiscoverPayload = {
   popularTv: [],
 };
 
+const EMPTY_FEED: DiscoverFeedPayload = {
+  newContent: [],
+  updatedContent: [],
+  upcomingContent: [],
+};
+
+function parseExploreApiPayload(data: Record<string, unknown>): ExploreBundle {
+  const discover = data.discover as Record<string, unknown> | undefined;
+  const feedRaw = data.feed as Record<string, unknown> | undefined;
+  return {
+    discover: {
+      trendingMovies: (discover?.trendingMovies as ContentItem[]) ?? [],
+      trendingTv: (discover?.trendingTv as ContentItem[]) ?? [],
+      popularMovies: (discover?.popularMovies as ContentItem[]) ?? [],
+      popularTv: (discover?.popularTv as ContentItem[]) ?? [],
+    },
+    genres: Array.isArray(data.genres) ? (data.genres as CatalogGenreRow[]) : [],
+    feed: feedRaw
+      ? {
+          newContent: (feedRaw.newContent as ContentItem[]) ?? [],
+          updatedContent: (feedRaw.updatedContent as ContentItem[]) ?? [],
+          upcomingContent: (feedRaw.upcomingContent as ContentItem[]) ?? [],
+        }
+      : undefined,
+  };
+}
+
+export function peekExploreBundleCache(): ExploreBundle | null {
+  const cached = readClientDayCache<ExploreBundle>(`${PREFIX}.explore.bundle.v2`);
+  if (cached && isExploreBundleCacheable(cached)) return cached;
+  return null;
+}
+
 export async function fetchExploreBundle(): Promise<ExploreBundle> {
   return withDayCache(
-    `${PREFIX}.explore.bundle.v1`,
+    `${PREFIX}.explore.bundle.v2`,
     async () => {
       try {
         const res = await fetch("/api/explore");
         if (!res.ok) {
-          return { discover: EMPTY_DISCOVER, genres: [] };
+          return { discover: EMPTY_DISCOVER, genres: [], feed: EMPTY_FEED };
         }
-        const data = await res.json();
-        return {
-          discover: {
-            trendingMovies: data.discover?.trendingMovies ?? [],
-            trendingTv: data.discover?.trendingTv ?? [],
-            popularMovies: data.discover?.popularMovies ?? [],
-            popularTv: data.discover?.popularTv ?? [],
-          },
-          genres: Array.isArray(data.genres) ? data.genres : [],
-        };
+        const data = (await res.json()) as Record<string, unknown>;
+        return parseExploreApiPayload(data);
       } catch {
-        return { discover: EMPTY_DISCOVER, genres: [] };
+        return { discover: EMPTY_DISCOVER, genres: [], feed: EMPTY_FEED };
       }
     },
     { isCacheable: isExploreBundleCacheable }
@@ -396,17 +424,29 @@ async function loadBrowseCatalogList(
   apiPath: string,
   queryString: string
 ): Promise<BrowseCatalogPageResults> {
-  const listRes = await fetch(`${apiPath}?${queryString}`);
-  if (!listRes.ok) {
-    return { results: [] };
+  try {
+    const listRes = await fetch(`${apiPath}?${queryString}`);
+    if (!listRes.ok) {
+      return { results: [], ok: false };
+    }
+    const listJson = await listRes.json();
+    return {
+      results: listJson.results ?? [],
+      totalPages:
+        typeof listJson.totalPages === "number" ? listJson.totalPages : undefined,
+      total: typeof listJson.total === "number" ? listJson.total : undefined,
+      ok: true,
+    };
+  } catch {
+    return { results: [], ok: false };
   }
-  const listJson = await listRes.json();
-  return {
-    results: listJson.results ?? [],
-    totalPages:
-      typeof listJson.totalPages === "number" ? listJson.totalPages : undefined,
-    total: typeof listJson.total === "number" ? listJson.total : undefined,
-  };
+}
+
+function isBrowsePayloadCacheable(data: BrowseCatalogPayload): boolean {
+  return (
+    hasCatalogItems(data.results) ||
+    (typeof data.total === "number" && data.total > 0)
+  );
 }
 
 export async function fetchBrowseCatalogPageResults(
@@ -439,7 +479,7 @@ export function browseCatalogCacheKey(
   namespace: string,
   queryString: string
 ): string {
-  return `${PREFIX}.browse.v4:${namespace}:${queryString}`;
+  return `${PREFIX}.browse.v5:${namespace}:${queryString}`;
 }
 
 export async function fetchBrowseCatalogPayload(
@@ -463,8 +503,12 @@ export async function fetchBrowseCatalogPayload(
             : Promise.resolve(undefined),
         ]);
 
-        if (listData.results.length === 0 && !listData.total) {
-          return { results: [], totalPages: 1, total: 0, genreSlugs };
+        if (listData.ok === false) {
+          throw new Error("browse list failed");
+        }
+
+        if (listData.results.length === 0 && listData.total === undefined) {
+          throw new Error("browse list incomplete");
         }
 
         return {
@@ -472,19 +516,19 @@ export async function fetchBrowseCatalogPayload(
           totalPages: listData.totalPages ?? 1,
           total: listData.total ?? 0,
           genreSlugs,
+          ok: true,
         };
       } catch {
-        return { results: [], totalPages: 1, total: 0, genreSlugs: undefined };
+        return {
+          results: [],
+          totalPages: 1,
+          total: 0,
+          genreSlugs: undefined,
+          ok: false,
+        };
       }
     },
-    {
-      // Cache real pages (including legitimately empty filtered views that still
-      // report a total / genre list). Never stick a hard network failure.
-      isCacheable: (data) =>
-        hasCatalogItems(data.results) ||
-        (typeof data.total === "number" && data.total > 0) ||
-        (Array.isArray(data.genreSlugs) && data.genreSlugs.length > 0),
-    }
+    { isCacheable: isBrowsePayloadCacheable }
   );
 }
 

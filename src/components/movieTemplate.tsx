@@ -54,6 +54,7 @@ import {
   fetchMovieDetailsCached,
   fetchMovieResolveCached,
 } from '@/lib/catalogDetailsPrefetch';
+import { resolveFrozenModalHeroBanner } from '@/lib/catalogModalHeroBanner';
 
 interface Movie {
   id: number;
@@ -214,6 +215,7 @@ export default function MovieTemplate({
   const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
   const [playerEpoch, setPlayerEpoch] = useState(0);
   const partyPlaybackBroadcastRef = useRef(0);
+  const modalHeroBannerRef = useRef<string | null>(null);
   const titleLogoPath = useTmdbTitleLogo(
     "movie",
     detailsModal ? null : id
@@ -374,6 +376,10 @@ export default function MovieTemplate({
     }
     router.replace(watchHref);
   }, [viewMode, partyRoomId, loading, movie, movieReleased, watchHref, router]);
+
+  useEffect(() => {
+    modalHeroBannerRef.current = null;
+  }, [id, detailsModal]);
 
   useEffect(() => {
     if (!detailsModal) return;
@@ -590,7 +596,7 @@ export default function MovieTemplate({
     ? pickYoutubeTrailerEmbedUrl(movie.videos)
     : null;
 
-  if (loading) {
+  if (loading && !(detailsModal && movie)) {
     const seedBanner =
       detailsModal && detailsSeed
         ? tmdbImageUrl(seedBannerPath(detailsSeed) ?? "")
@@ -603,6 +609,10 @@ export default function MovieTemplate({
   }
 
   if (!movie) {
+    const unavailableBanner =
+      detailsModal && detailsSeed
+        ? tmdbImageUrl(seedBannerPath(detailsSeed) ?? "")
+        : null;
     return (
       <CatalogUnavailable
         reason={
@@ -610,6 +620,8 @@ export default function MovieTemplate({
             ? 'content_policy'
             : 'not_found'
         }
+        variant={detailsModal ? 'modal' : 'page'}
+        backdropUrl={unavailableBanner}
       />
     );
   }
@@ -716,7 +728,14 @@ export default function MovieTemplate({
   );
 
   if (viewMode === 'details') {
-    const detailsBannerUrl = resolveMovieDetailsBannerUrl(movie);
+    const detailsBannerUrl = detailsModal
+      ? resolveFrozenModalHeroBanner(modalHeroBannerRef, {
+          mediaType: 'movie',
+          catalogId: id,
+          seed: detailsSeed,
+          resolveFromDoc: () => resolveMovieDetailsBannerUrl(movie),
+        })
+      : resolveMovieDetailsBannerUrl(movie);
     const hasDetailsHero = Boolean(detailsBannerUrl);
 
     return (

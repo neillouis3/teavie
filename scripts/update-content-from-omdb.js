@@ -202,6 +202,7 @@ function buildSetPayload(doc, omdb, imdbHelpers) {
     country: omdb.Country && omdb.Country !== "N/A" ? omdb.Country : null,
     awards: omdb.Awards && omdb.Awards !== "N/A" ? omdb.Awards : null,
     metascore: parseNumber(omdb.Metascore),
+    imdbRating: voteAverage,
     imdbVotes: parseNumber(omdb.imdbVotes),
     totalSeasons: seasonAmount,
   };

@@ -67,6 +67,7 @@ function BrowseCatalogPageContent({
   const [total, setTotal] = useState(0);
   const [genreSlugs, setGenreSlugs] = useState<string[] | undefined>();
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const pageRef = useRef(1);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -75,8 +76,18 @@ function BrowseCatalogPageContent({
   const loadFirstPage = useCallback(() => {
     const query = new URLSearchParams(filterQueryString);
     query.set("page", "1");
+    setLoading(true);
+    setLoadFailed(false);
     return fetchBrowseCatalogPayload(namespace, apiPath, query.toString(), genreApiPath)
       .then((data) => {
+        if (data.ok === false) {
+          setLoadFailed(true);
+          setItems([]);
+          setTotalPages(1);
+          setTotal(0);
+          return;
+        }
+        setLoadFailed(false);
         setItems(data.results);
         setTotalPages(data.totalPages);
         setTotal(data.total);
@@ -86,6 +97,7 @@ function BrowseCatalogPageContent({
         }
       })
       .catch(() => {
+        setLoadFailed(true);
         setItems([]);
         setTotalPages(1);
         setTotal(0);
@@ -108,6 +120,7 @@ function BrowseCatalogPageContent({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadFailed(false);
 
     pageRef.current = 1;
     const query = new URLSearchParams(filterQueryString);
@@ -116,6 +129,14 @@ function BrowseCatalogPageContent({
     void fetchBrowseCatalogPayload(namespace, apiPath, query.toString(), genreApiPath)
       .then((data) => {
         if (cancelled) return;
+        if (data.ok === false) {
+          setLoadFailed(true);
+          setItems([]);
+          setTotalPages(1);
+          setTotal(0);
+          return;
+        }
+        setLoadFailed(false);
         setItems(data.results);
         setTotalPages(data.totalPages);
         setTotal(data.total);
@@ -126,6 +147,7 @@ function BrowseCatalogPageContent({
       })
       .catch(() => {
         if (cancelled) return;
+        setLoadFailed(true);
         setItems([]);
         setTotalPages(1);
         setTotal(0);
@@ -140,7 +162,7 @@ function BrowseCatalogPageContent({
   }, [namespace, apiPath, filterQueryString, genreApiPath]);
 
   useResumeFetchWhenVisible(
-    loading,
+    loading || loadFailed,
     () => {
       void loadFirstPage();
     },
@@ -245,6 +267,22 @@ function BrowseCatalogPageContent({
 
             {loading ? (
           <CatalogGridLoading />
+        ) : loadFailed ? (
+          <div className="py-16 text-center">
+            <p className="text-sm text-default-500">
+              Couldn&apos;t load titles right now.
+            </p>
+            <button
+              type="button"
+              className="mt-3 text-sm text-success hover:underline"
+              onClick={() => {
+                bustBrowseInflight();
+                void loadFirstPage();
+              }}
+            >
+              Try again
+            </button>
+          </div>
         ) : items.length === 0 ? (
           <p className="py-16 text-center text-sm text-default-500">
             No titles match these filters. Try adjusting your search.

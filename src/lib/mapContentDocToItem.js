@@ -1,7 +1,7 @@
 /**
  * Map a `content` collection document to a ContentItem-style payload for rails/cards.
  */
-import { catalogPopularityScore } from "@/lib/catalogPopularity";
+import { catalogPopularityScore, catalogDisplayVoteAverage } from "@/lib/catalogPopularity";
 import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster.js";
 import { genreNamesFromDoc, imdbGenresForDoc } from "@/lib/imdbGenres";
 
@@ -124,7 +124,7 @@ export function mapCatalogListDoc(doc) {
     genres: genreNamesFromDoc(doc),
     imdb_genres: imdbGenresForDoc(doc),
     certification: usCertificationFromDoc(doc),
-    vote_average: doc.vote_average ?? null,
+    vote_average: catalogDisplayVoteAverage(doc),
   };
 }
 
@@ -150,7 +150,7 @@ export function mapContentDocToItem(doc) {
       doc,
       isAnimeRow ? { anime: true } : undefined
     ),
-    vote_average: doc.vote_average ?? null,
+    vote_average: catalogDisplayVoteAverage(doc),
     genres: genreNamesFromDoc(doc),
     imdb_genres: imdbGenresForDoc(doc),
     original_language: doc.original_language ?? null,

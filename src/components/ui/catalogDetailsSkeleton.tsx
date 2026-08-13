@@ -2,7 +2,11 @@
 
 import React from "react";
 import { CatalogMediaPanelSkeleton } from "@/components/ui/catalogMediaPanel";
-import { SHOW_DETAILS_HERO_OVERLAP } from "@/components/show/ShowDetailsHero";
+import {
+  SHOW_DETAILS_HERO_OVERLAP,
+  SHOW_DETAILS_MODAL_HERO_HEIGHT,
+  SHOW_DETAILS_MODAL_HERO_MB,
+} from "@/components/show/ShowDetailsHero";
 import { SHOW_CONTENT_INSET_X } from "@/lib/contentInset";
 
 /**
@@ -19,13 +23,21 @@ export default function CatalogDetailsSkeleton({
   bannerUrl?: string | null;
 }) {
   return (
-    <div className="flex w-full flex-col overflow-x-hidden bg-background pb-32">
+    <div
+      className={`flex w-full flex-col overflow-x-hidden pb-32 ${
+        modal ? "bg-transparent" : "bg-background"
+      }`}
+    >
       <section
-        className={`relative z-0 -mt-14 mb-0 w-full shrink-0 overflow-hidden rounded-tl-2xl ${
-          bannerUrl ? "bg-default-200" : "animate-pulse bg-default-200/80 dark:bg-default-100/15"
-        } ${modal ? "min-h-[26rem]" : "min-h-[20rem]"}`}
+        className={`relative z-0 -mt-14 w-full shrink-0 overflow-hidden rounded-tl-2xl ${
+          modal ? `${SHOW_DETAILS_MODAL_HERO_MB} min-h-[26rem]` : "mb-0 min-h-[20rem]"
+        } ${
+          bannerUrl
+            ? "bg-default-200"
+            : "animate-pulse bg-default-200/80 dark:bg-default-100/15"
+        }`}
         style={{
-          height: modal ? "calc(56vh + 3.5rem)" : "calc(40vh + 3.5rem)",
+          height: modal ? SHOW_DETAILS_MODAL_HERO_HEIGHT : "calc(40vh + 3.5rem)",
         }}
         aria-hidden
       >
@@ -34,11 +46,15 @@ export default function CatalogDetailsSkeleton({
           <img
             src={bannerUrl}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover object-[center_25%]"
           />
         ) : null}
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background from-0% via-background/45 via-40% to-transparent"
+          className={`pointer-events-none absolute inset-0 bg-gradient-to-t ${
+            modal
+              ? "from-background from-0% via-background/80 via-30% to-transparent to-75% dark:from-[#101214] dark:via-[#101214]/85"
+              : "from-background from-0% via-background/45 via-40% to-transparent dark:from-[#101214] dark:via-[#101214]/55"
+          }`}
           aria-hidden
         />
       </section>
@@ -46,17 +62,19 @@ export default function CatalogDetailsSkeleton({
         className={`relative z-10 flex w-full flex-col gap-6 ${SHOW_CONTENT_INSET_X} ${SHOW_DETAILS_HERO_OVERLAP}`}
       >
         <CatalogMediaPanelSkeleton />
-        <div className="space-y-3 pt-4" aria-hidden>
-          <div className="h-5 w-36 animate-pulse rounded bg-default-200" />
-          <div className="flex gap-3 overflow-hidden">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-52 w-36 shrink-0 animate-pulse rounded-lg bg-default-200"
-              />
-            ))}
+        {modal ? null : (
+          <div className="space-y-3 pt-4" aria-hidden>
+            <div className="h-5 w-36 animate-pulse rounded bg-default-200" />
+            <div className="flex gap-3 overflow-hidden">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-52 w-36 shrink-0 animate-pulse rounded-lg bg-default-200"
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

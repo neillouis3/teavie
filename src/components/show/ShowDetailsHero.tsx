@@ -6,6 +6,14 @@ import React from "react";
 export const SHOW_DETAILS_HERO_OVERLAP =
   "-mt-[164px] sm:-mt-[164px] md:-mt-[164px] lg:-mt-[164px]";
 
+/** Modal hero with title overlay — pairs with SHOW_DETAILS_HERO_OVERLAP. */
+export const SHOW_DETAILS_MODAL_HERO_MB = "mb-40";
+
+export const SHOW_DETAILS_MODAL_HERO_HEIGHT = "calc(56vh + 3.5rem)";
+
+const HERO_BANNER_IMG =
+  "absolute inset-0 h-full w-full object-cover object-[center_25%]";
+
 type ShowDetailsHeroProps = {
   bannerUrl: string;
   accentColor?: string | null;
@@ -29,16 +37,12 @@ export default function ShowDetailsHero({
   if (overlayContent) {
     return (
       <section
-        className="relative z-0 -mt-14 mb-40 w-full shrink-0 overflow-hidden rounded-tl-2xl min-h-[26rem]"
-        style={{ height: "calc(56vh + 3.5rem)" }}
+        className={`relative z-0 -mt-14 ${SHOW_DETAILS_MODAL_HERO_MB} w-full shrink-0 overflow-hidden rounded-tl-2xl min-h-[26rem]`}
+        style={{ height: SHOW_DETAILS_MODAL_HERO_HEIGHT }}
         aria-label="Show banner"
       >
-        <img
-          src={bannerUrl}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover object-[center_25%]"
-        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={bannerUrl} alt="" aria-hidden className={HERO_BANNER_IMG} />
         {tint ? (
           <div
             className="pointer-events-none absolute inset-0 opacity-20 mix-blend-multiply dark:opacity-25"
@@ -63,12 +67,8 @@ export default function ShowDetailsHero({
       style={{ height: "calc(40vh + 3.5rem)" }}
       aria-label="Show banner"
     >
-      <img
-        src={bannerUrl}
-        alt=""
-        aria-hidden
-        className="absolute inset-0 h-full w-full object-cover object-[center_25%]"
-      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={bannerUrl} alt="" aria-hidden className={HERO_BANNER_IMG} />
       {tint ? (
         <div
           className="pointer-events-none absolute inset-0 opacity-20 mix-blend-multiply dark:opacity-25"

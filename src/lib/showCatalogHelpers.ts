@@ -3,8 +3,14 @@ import {
   tmdbSeasonEpisodeFromAbsolute,
 } from "@/lib/cumulativeTvEpisode";
 import { imdbGenresFromAnimeSources } from "@/lib/imdbGenres";
-import { tmdbImageUrl } from "@/lib/tmdbImage";
-import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster.js";
+import { tmdbImageUrl, catalogHeroImageUrl } from "@/lib/tmdbImage";
+import {
+  animeBackdropFromDoc,
+  animeHeroBannerFromDoc,
+  animePosterFromDoc,
+  isAnimePortraitCoverUrl,
+  isTmdbImagePath,
+} from "@/lib/animePoster.js";
 import {
   mergedSplitCourEpisodeCount,
   primaryMalForSplitCourMal,
@@ -102,8 +108,23 @@ export function isAnimeShowPage(show: Show, routeId: string): boolean {
 }
 
 export function resolveTvHeroBannerUrl(show: Show): string | null {
-  const backdrop = tmdbImageUrl(show.backdrop_path);
+  const backdrop = catalogHeroImageUrl(show.backdrop_path);
   return backdrop || null;
+}
+
+/** Best widescreen hero path when merging anime catalog + TMDB payloads. */
+export function pickAnimeShowHeroBackdrop(
+  show: Show,
+  fallback?: Show | null
+): string | null {
+  const tmdbBackdrop = isTmdbImagePath(show.backdrop_path)
+    ? show.backdrop_path
+    : null;
+  const fromFallback = fallback
+    ? animeHeroBannerFromDoc(fallback) ?? animeBackdropFromDoc(fallback)
+    : null;
+  const fromShow = animeHeroBannerFromDoc(show) ?? animeBackdropFromDoc(show);
+  return tmdbBackdrop || fromFallback || fromShow || null;
 }
 
 export function resolveShowDetailsBannerUrl(
@@ -113,12 +134,11 @@ export function resolveShowDetailsBannerUrl(
   fetchedAnimeBannerUrl: string | null
 ): string | null {
   if (isAnimeShowPage(show, routeId)) {
-    return (
-      resolveAnimeHeroBannerUrl(show, routeId, posterUrl) ||
-      fetchedAnimeBannerUrl ||
-      posterUrl ||
-      null
-    );
+    const hero = resolveAnimeHeroBannerUrl(show, routeId, posterUrl);
+    const fetched = fetchedAnimeBannerUrl?.trim();
+    if (hero && !isAnimePortraitCoverUrl(hero)) return hero;
+    if (fetched) return catalogHeroImageUrl(fetched) || fetched;
+    return hero || posterUrl || null;
   }
   return resolveTvHeroBannerUrl(show);
 }
@@ -131,11 +151,11 @@ export function resolveAnimeHeroBannerUrl(
   const doc = { ...show, id: show.id ?? routeId };
   const candidates = [
     show.anilist?.bannerImage,
+    animeHeroBannerFromDoc(doc),
     animeBackdropFromDoc(doc),
-    animePosterFromDoc(doc),
+    show.backdrop_path,
     show.anilist?.coverImage?.extraLarge,
     show.anilist?.coverImage?.large,
-    show.backdrop_path,
     show.poster_path,
     posterUrl,
   ];
@@ -143,7 +163,7 @@ export function resolveAnimeHeroBannerUrl(
   for (const value of candidates) {
     const raw = typeof value === "string" ? value.trim() : "";
     if (!raw) continue;
-    const url = tmdbImageUrl(raw) || raw;
+    const url = catalogHeroImageUrl(raw);
     if (url) return url;
   }
   return null;

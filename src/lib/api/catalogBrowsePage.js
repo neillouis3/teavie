@@ -4,6 +4,7 @@
 
 import {
   mongoCatalogDisplayVoteExpr,
+  mongoCatalogAudienceVoteCountExpr,
   mongoTopRatedQualityMatch,
 } from "@/lib/catalogPopularity.js";
 
@@ -31,12 +32,17 @@ export async function fetchCatalogBrowsePage(
     const voteExpr = mongoCatalogDisplayVoteExpr({ anime });
     const baseStages = [
       { $match: filter },
-      { $addFields: { _catalogVote: voteExpr } },
+      {
+        $addFields: {
+          _catalogVote: voteExpr,
+          _voteWeight: mongoCatalogAudienceVoteCountExpr(),
+        },
+      },
       { $match: mongoTopRatedQualityMatch({ anime }) },
       {
         $sort: anime
           ? { _catalogVote: -1, _id: -1 }
-          : { _catalogVote: -1, vote_count: -1, _id: -1 },
+          : { _catalogVote: -1, _voteWeight: -1, _id: -1 },
       },
     ];
 
@@ -46,7 +52,7 @@ export async function fetchCatalogBrowsePage(
           ...baseStages,
           { $skip: skip },
           { $limit: limit },
-          { $project: { _catalogVote: 0 } },
+          { $project: { _catalogVote: 0, _voteWeight: 0 } },
         ])
         .toArray();
       return { total: undefined, results };
@@ -61,7 +67,7 @@ export async function fetchCatalogBrowsePage(
             results: [
               { $skip: skip },
               { $limit: limit },
-              { $project: { _catalogVote: 0 } },
+              { $project: { _catalogVote: 0, _voteWeight: 0 } },
             ],
           },
         },
@@ -74,10 +80,13 @@ export async function fetchCatalogBrowsePage(
     };
   }
 
-  if (sortBy === "popularity" && popExpr) {
+  if (sortBy === "popularity") {
+    const pop = popExpr ?? {
+      $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
+    };
     const baseStages = [
       { $match: filter },
-      { $addFields: { _catalogPop: popExpr } },
+      { $addFields: { _catalogPop: pop } },
       { $sort: { _catalogPop: -1, _id: -1 } },
     ];
 

@@ -8,11 +8,18 @@ import { contentItemMatchesPreferences, sortContentItemsByPreferenceRank } from 
 import {
   fetchExploreBundle,
   fetchDiscoverFeed,
-  type TmdbDiscoverPayload,
+  peekExploreBundleCache,
   type ExploreBundle,
+  type TmdbDiscoverPayload,
 } from "@/lib/pageDataCache";
 
 export type { TmdbDiscoverPayload };
+
+const EMPTY_FEED = {
+  newContent: [] as ContentItem[],
+  updatedContent: [] as ContentItem[],
+  upcomingContent: [] as ContentItem[],
+};
 
 const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v2:";
 
@@ -466,22 +473,41 @@ export function bustExploreCoreInflight(
   exploreCoreInflight.delete(exploreCoreCacheKey(preferences, excludeMovieIds));
 }
 
-export async function loadExploreCorePayload(
+export function peekExploreCoreCache(): ExploreCorePayload | null {
+  const bundle = peekExploreBundleCache();
+  if (!bundle) return null;
+  const feed = bundle.feed ?? EMPTY_FEED;
+  return {
+    discover: bundle.discover,
+    genres: bundle.genres,
+    recommendedRows: [],
+    newContent: feed.newContent,
+    upcomingContent: feed.upcomingContent,
+    personalized: null,
+  };
+}
+
+function buildCoreFromBundle(
+  bundle: ExploreBundle,
+  feed: { newContent: ContentItem[]; upcomingContent: ContentItem[] }
+): ExploreCorePayload {
+  return {
+    discover: bundle.discover,
+    genres: bundle.genres,
+    recommendedRows: [],
+    newContent: feed.newContent,
+    upcomingContent: feed.upcomingContent,
+    personalized: null,
+  };
+}
+
+function applyPersonalizedToCore(
+  shell: ExploreCorePayload,
+  bundle: ExploreBundle,
+  personalized: PersonalizedExploreBundle | null,
   preferences: UserPreferences | null,
-  options?: { excludeMovieIds?: string[] }
-): Promise<ExploreCorePayload> {
-  const excludeMovieIds = options?.excludeMovieIds ?? [];
-  const inflightKey = exploreCoreCacheKey(preferences, excludeMovieIds);
-  const existing = exploreCoreInflight.get(inflightKey);
-  if (existing) return existing;
-
-  const promise = (async () => {
-  const [bundle, feed, personalized] = await Promise.all([
-    fetchExploreBundle(),
-    fetchDiscoverFeed(),
-    fetchPersonalizedExploreBundle(preferences, excludeMovieIds),
-  ]);
-
+  excludeMovieIds: string[]
+): ExploreCorePayload {
   const excludeSet = new Set(excludeMovieIds.map(String));
   const personalizedRecommended = (personalized?.recommended ?? []).filter(
     (item) => !(item.type === "movie" && excludeSet.has(String(item.id)))
@@ -503,6 +529,8 @@ export async function loadExploreCorePayload(
     );
   }
 
+  const feed = bundle.feed;
+
   return {
     discover: buildDiscoverFromPersonalized(bundle, personalized, preferences),
     genres: bundle.genres,
@@ -511,14 +539,79 @@ export async function loadExploreCorePayload(
       personalized &&
       (personalized.newContent.length > 0 || hasUserPreferences(preferences))
         ? filterRailByPreferences(personalized.newContent, preferences)
-        : feed.newContent,
+        : feed?.newContent ?? shell.newContent,
     upcomingContent:
       personalized &&
       (personalized.upcomingContent.length > 0 || hasUserPreferences(preferences))
         ? filterRailByPreferences(personalized.upcomingContent, preferences)
-        : feed.upcomingContent,
+        : feed?.upcomingContent ?? shell.upcomingContent,
     personalized,
   };
+}
+
+/** Fast path: cached explore bundle + embedded feed (no personalized). */
+export async function loadExploreCoreShell(): Promise<ExploreCorePayload> {
+  const bundle = await fetchExploreBundle();
+  const feed = bundle.feed ?? (await fetchDiscoverFeed());
+  return buildCoreFromBundle(bundle, feed);
+}
+
+/** Apply preference-personalized rails onto an already-loaded shell. */
+export async function enrichExploreCoreWithPreferences(
+  shell: ExploreCorePayload,
+  preferences: UserPreferences | null,
+  excludeMovieIds: string[] = []
+): Promise<ExploreCorePayload> {
+  if (!preferences || !hasUserPreferences(preferences)) return shell;
+  const bundle = await fetchExploreBundle();
+  const personalized = await fetchPersonalizedExploreBundle(
+    preferences,
+    excludeMovieIds
+  );
+  return applyPersonalizedToCore(
+    shell,
+    bundle,
+    personalized,
+    preferences,
+    excludeMovieIds
+  );
+}
+
+export async function loadExploreCorePayload(
+  preferences: UserPreferences | null,
+  options?: { excludeMovieIds?: string[] }
+): Promise<ExploreCorePayload> {
+  const excludeMovieIds = options?.excludeMovieIds ?? [];
+  const inflightKey = exploreCoreCacheKey(preferences, excludeMovieIds);
+  const existing = exploreCoreInflight.get(inflightKey);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const bundle = await fetchExploreBundle();
+    const feed =
+      bundle.feed ??
+      (await fetchDiscoverFeed().catch(() => ({
+        newContent: [] as ContentItem[],
+        updatedContent: [] as ContentItem[],
+        upcomingContent: [] as ContentItem[],
+      })));
+    const shell = buildCoreFromBundle(bundle, feed);
+
+    if (!preferences || !hasUserPreferences(preferences)) {
+      return shell;
+    }
+
+    const personalized = await fetchPersonalizedExploreBundle(
+      preferences,
+      excludeMovieIds
+    );
+    return applyPersonalizedToCore(
+      shell,
+      bundle,
+      personalized,
+      preferences,
+      excludeMovieIds
+    );
   })().finally(() => {
     exploreCoreInflight.delete(inflightKey);
   });

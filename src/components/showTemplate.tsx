@@ -48,7 +48,7 @@ import { PlayerEmbedSkeleton, PLAYER_SHELL_CLASS } from "@/components/ui/playerE
 import CatalogComingSoon from "@/components/ui/catalogComingSoon";
 import CatalogUnavailable from "@/components/ui/catalogUnavailable";
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
-import { tmdbImageUrl } from "@/lib/tmdbImage";
+import { tmdbImageUrl, catalogHeroImageUrl } from "@/lib/tmdbImage";
 import {
   isBlockedAdultAnimeDoc,
   isBlockedAdultTmdbTvShow,
@@ -78,6 +78,7 @@ import {
   fetchTvDetailsCached,
   fetchTvResolveCached,
 } from "@/lib/catalogDetailsPrefetch";
+import { resolveFrozenModalHeroBanner } from "@/lib/catalogModalHeroBanner";
 
 import {
   type Season,
@@ -85,6 +86,7 @@ import {
   type ShowTemplateViewMode,
   isAnimeShowPage,
   resolveShowDetailsBannerUrl,
+  pickAnimeShowHeroBackdrop,
   catalogAnilistId,
   isKdramaShow,
   malIdFromAnimeCatalogRouteId,
@@ -128,6 +130,16 @@ function showToSeedFallback(show: Show | null | undefined): CatalogSeedFallback 
     vote_average: show.vote_average,
     imdb_genres: show.imdb_genres,
     omdb: show.omdb,
+  };
+}
+
+function applyAnimeHeroArt(show: Show, fallback?: Show | null): Show {
+  const poster = animePosterFromDoc(show);
+  const backdrop = pickAnimeShowHeroBackdrop(show, fallback);
+  return {
+    ...show,
+    ...(poster ? { poster_path: poster } : {}),
+    ...(backdrop ? { backdrop_path: backdrop } : {}),
   };
 }
 
@@ -203,6 +215,7 @@ export default function ShowTemplate({
   const [fetchedBannerUrl, setFetchedBannerUrl] = useState<string | null>(null);
   const partyPlaybackBroadcastRef = useRef(0);
   const lastPartyEpRef = useRef<string | null>(null);
+  const modalHeroBannerRef = useRef<string | null>(null);
   const titleLogoId =
     animeMovieTmdbId ??
     (/^\d+$/.test(String(resolvedPlayerId)) ? String(resolvedPlayerId) : null);
@@ -210,6 +223,10 @@ export default function ShowTemplate({
     animeMovieTmdbId ? "movie" : "tv",
     detailsModal ? null : titleLogoId
   );
+
+  useEffect(() => {
+    modalHeroBannerRef.current = null;
+  }, [id, detailsModal]);
 
   useEffect(() => {
     if (!detailsModal) return;
@@ -286,10 +303,13 @@ export default function ShowTemplate({
           adminBypass?: boolean;
         } | null;
         if (!resolvedObj) {
+          setShow(null);
           setShowUnavailableReason("not_found");
+          setLoading(false);
           return;
         }
         if (resolvedObj?.error) {
+          setShow(null);
           if (resolvedObj.error === "unauthorized") {
             setShowUnavailableReason("unauthorized");
           } else if (resolvedObj.error === "content_policy" || resolvedObj.error === "not_found") {
@@ -297,6 +317,7 @@ export default function ShowTemplate({
           } else {
             setShowUnavailableReason("not_found");
           }
+          setLoading(false);
           return;
         }
         bypassPolicy = resolvedObj?.adminBypass === true;
@@ -353,22 +374,19 @@ export default function ShowTemplate({
           const merged = detailsModal
             ? finalizeAnimeShowForUi(fallbackShow, id)
             : await fetchAnilistAndMerge(fallbackShow, fallbackShow, id);
-          const poster = animePosterFromDoc(merged);
-          if (poster) merged.poster_path = poster;
-          const backdrop = animeBackdropFromDoc(merged);
-          if (backdrop) merged.backdrop_path = backdrop;
+          const withArt = applyAnimeHeroArt(merged, fallbackShow);
           if (
-            merged.is_anime &&
+            withArt.is_anime &&
             Array.isArray(fallbackShow.tmdb_playback_seasons) &&
             fallbackShow.tmdb_playback_seasons.length > 0
           ) {
-            merged.tmdb_playback_seasons = fallbackShow.tmdb_playback_seasons;
+            withArt.tmdb_playback_seasons = fallbackShow.tmdb_playback_seasons;
           }
           const today = catalogTodayYmdUtc();
-          if (merged.seasons?.length && !merged.is_anime) {
-            merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
+          if (withArt.seasons?.length && !withArt.is_anime) {
+            withArt.seasons = filterReleasedSeasons(withArt.seasons, today) ?? withArt.seasons;
           }
-          const withTrailer = await attachAnimeTrailerVideos(merged);
+          const withTrailer = await attachAnimeTrailerVideos(withArt);
           setShow((prev) =>
             detailsModal
               ? mergeModalShow(
@@ -381,6 +399,22 @@ export default function ShowTemplate({
           );
           pickFirstSeason(withTrailer.seasons);
           setSelectedEpisode(1);
+          if (detailsModal) {
+            void fetchAnilistAndMerge(fallbackShow, fallbackShow, id).then((enriched) => {
+              const upgraded = applyAnimeHeroArt(
+                finalizeAnimeShowForUi(enriched, id),
+                fallbackShow
+              );
+              setShow((prev) =>
+                mergeModalShow(
+                  prev,
+                  withSeed(upgraded),
+                  detailsSeed,
+                  showToSeedFallback(fallbackShow)
+                )
+              );
+            });
+          }
           return;
         }
 
@@ -395,15 +429,12 @@ export default function ShowTemplate({
             const merged = detailsModal
             ? finalizeAnimeShowForUi(fallbackShow, id)
             : await fetchAnilistAndMerge(fallbackShow, fallbackShow, id);
-            const poster = animePosterFromDoc(merged);
-            if (poster) merged.poster_path = poster;
-            const backdrop = animeBackdropFromDoc(merged);
-            if (backdrop) merged.backdrop_path = backdrop;
+            const withArt = applyAnimeHeroArt(merged, fallbackShow);
             const today = catalogTodayYmdUtc();
-            if (merged.seasons?.length && !merged.is_anime) {
-              merged.seasons = filterReleasedSeasons(merged.seasons, today) ?? merged.seasons;
+            if (withArt.seasons?.length && !withArt.is_anime) {
+              withArt.seasons = filterReleasedSeasons(withArt.seasons, today) ?? withArt.seasons;
             }
-            const withTrailer = await attachAnimeTrailerVideos(merged);
+            const withTrailer = await attachAnimeTrailerVideos(withArt);
             setShow((prev) =>
               detailsModal
                 ? mergeModalShow(
@@ -445,20 +476,21 @@ export default function ShowTemplate({
           (isBlockedAdultAnimeDoc(blockedDoc) ||
             isBlockedAdultTmdbTvShow(data as unknown as Record<string, unknown>))
         ) {
+          setShow(null);
           setShowUnavailableReason("content_policy");
+          setLoading(false);
           return;
         }
-        if (fallbackShow?.is_anime) data.is_anime = true;
         const todayYmd = catalogTodayYmdUtc();
         if (!data.is_anime && Array.isArray(data.seasons) && data.seasons.length) {
           const rel = filterReleasedSeasons(data.seasons as Season[], todayYmd);
           if (rel?.length) data.seasons = rel as Show["seasons"];
         }
         if (fallbackShow?.is_anime) {
-          const poster = animePosterFromDoc(fallbackShow);
-          if (poster) data.poster_path = poster;
-          const backdrop = animeBackdropFromDoc(fallbackShow);
-          if (backdrop) data.backdrop_path = backdrop;
+          data.is_anime = true;
+          const withArt = applyAnimeHeroArt(data, fallbackShow);
+          data.poster_path = withArt.poster_path;
+          data.backdrop_path = withArt.backdrop_path;
         } else {
           if (fallbackShow && !data?.poster_path && fallbackShow.poster_path) {
             data.poster_path = fallbackShow.poster_path;
@@ -494,15 +526,12 @@ export default function ShowTemplate({
           mal_id: data.mal_id ?? fallbackShow?.mal_id ?? undefined,
           external_ids: data.external_ids ?? fallbackShow?.external_ids ?? undefined,
         };
-        const merged = detailsModal
+        const mergedBase = detailsModal
           ? forAni.is_anime || fallbackShow?.is_anime
             ? finalizeAnimeShowForUi(forAni, id)
             : forAni
           : await fetchAnilistAndMerge(forAni, fallbackShow, id);
-        const poster = animePosterFromDoc(merged);
-        if (poster) merged.poster_path = poster;
-        const backdrop = animeBackdropFromDoc(merged);
-        if (backdrop) merged.backdrop_path = backdrop;
+        const merged = applyAnimeHeroArt(mergedBase, fallbackShow);
         if (merged.seasons?.length && !merged.is_anime) {
           merged.seasons = filterReleasedSeasons(merged.seasons, todayYmd) ?? merged.seasons;
         }
@@ -517,6 +546,23 @@ export default function ShowTemplate({
         );
         pickFirstSeason(finalShow.seasons);
         setSelectedEpisode(1);
+
+        if (detailsModal && (merged.is_anime || fallbackShow?.is_anime)) {
+          void fetchAnilistAndMerge(forAni, fallbackShow, id).then((enriched) => {
+            const upgraded = applyAnimeHeroArt(
+              finalizeAnimeShowForUi(enriched, id),
+              fallbackShow
+            );
+            setShow((prev) =>
+              mergeModalShow(
+                prev,
+                withSeed(upgraded),
+                detailsSeed,
+                showToSeedFallback(fallbackShow)
+              )
+            );
+          });
+        }
 
         if (detailsModal && /^\d+$/.test(targetTmdbId)) {
           void (async () => {
@@ -541,11 +587,12 @@ export default function ShowTemplate({
               mal_id: fullData.mal_id ?? fallbackShow?.mal_id ?? undefined,
               external_ids: fullData.external_ids ?? fallbackShow?.external_ids ?? undefined,
             };
-            const mergedFull = detailsModal
+            const mergedFullBase = detailsModal
               ? forAniFull.is_anime || fallbackShow?.is_anime
                 ? finalizeAnimeShowForUi(forAniFull, id)
                 : forAniFull
               : await fetchAnilistAndMerge(forAniFull, fallbackShow, id);
+            const mergedFull = applyAnimeHeroArt(mergedFullBase, fallbackShow);
             const withTrailer = await attachAnimeTrailerVideos(mergedFull);
             setShow((prev) =>
               mergeModalShow(
@@ -636,14 +683,14 @@ export default function ShowTemplate({
               : typeof data.coverImage?.large === "string"
                 ? data.coverImage.large.trim()
                 : "";
-        if (banner) setFetchedBannerUrl(tmdbImageUrl(banner) || banner);
+        if (banner) setFetchedBannerUrl(catalogHeroImageUrl(banner) || banner);
       })
       .catch(() => {});
 
     return () => {
       cancelled = true;
     };
-  }, [loading, show, id, viewMode, detailsModal]);
+  }, [loading, show, id, viewMode]);
 
   useEffect(() => {
     const displayName = showDisplayTitle(show);
@@ -1232,10 +1279,10 @@ export default function ShowTemplate({
     </>
   );
 
-  if (loading) {
+  if (loading && !(detailsModal && show)) {
     const seedBanner =
       detailsModal && detailsSeed
-        ? tmdbImageUrl(seedBannerPath(detailsSeed) ?? "")
+        ? catalogHeroImageUrl(seedBannerPath(detailsSeed) ?? "")
         : null;
     return viewMode === "details" ? (
       <CatalogDetailsSkeleton modal={detailsModal} bannerUrl={seedBanner} />
@@ -1245,6 +1292,10 @@ export default function ShowTemplate({
   }
 
   if (!show) {
+    const unavailableBanner =
+      detailsModal && detailsSeed
+        ? catalogHeroImageUrl(seedBannerPath(detailsSeed) ?? "")
+        : null;
     return (
       <CatalogUnavailable
         reason={
@@ -1254,6 +1305,8 @@ export default function ShowTemplate({
               ? "unauthorized"
               : "not_found"
         }
+        variant={detailsModal ? "modal" : "page"}
+        backdropUrl={unavailableBanner}
       />
     );
   }
@@ -1375,12 +1428,15 @@ export default function ShowTemplate({
 
   if (viewMode === "details") {
     const isAnimeDetails = isAnimeShowPage(show, id);
-    const detailsBannerUrl = resolveShowDetailsBannerUrl(
-      show,
-      id,
-      imageUrl,
-      fetchedBannerUrl
-    );
+    const detailsBannerUrl = detailsModal
+      ? resolveFrozenModalHeroBanner(modalHeroBannerRef, {
+          mediaType: "show",
+          catalogId: id,
+          seed: detailsSeed,
+          resolveFromDoc: () =>
+            resolveShowDetailsBannerUrl(show, id, imageUrl, null),
+        })
+      : resolveShowDetailsBannerUrl(show, id, imageUrl, fetchedBannerUrl);
     const hasDetailsHero = Boolean(detailsBannerUrl);
     const heroAccentColor = isAnimeDetails ? animeAccentColor : null;
 

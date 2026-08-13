@@ -1,3 +1,5 @@
+import { preferHighResAnimeImageUrl } from "./animePoster.js";
+
 /** TMDB image CDN — full resolution for posters, backdrops, and stills. */
 export const TMDB_IMAGE_ORIGINAL = "https://image.tmdb.org/t/p/original";
 
@@ -12,6 +14,12 @@ export function tmdbImageUrl(path) {
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   return `${TMDB_IMAGE_ORIGINAL}${normalized}`;
+}
+
+/** Hero/backdrop URL with anime CDN size upgrades applied. */
+export function catalogHeroImageUrl(path) {
+  const upgraded = preferHighResAnimeImageUrl(path) ?? path;
+  return tmdbImageUrl(upgraded) || (typeof upgraded === "string" ? upgraded : "");
 }
 
 /** @param {string | null | undefined} path @param {string} [fallback] */

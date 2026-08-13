@@ -8,6 +8,7 @@ import ShowTemplate from "@/components/showTemplate";
 import {
   installCatalogDetailsPrefetchListeners,
   prefetchCatalogDetailsPath,
+  preloadHeroBannerFromSeed,
 } from "@/lib/catalogDetailsPrefetch";
 import {
   CATALOG_SEED_ATTR,
@@ -75,6 +76,7 @@ export default function CatalogDetailsModalController() {
 
       event.preventDefault();
       const seed = parseCatalogSeed(anchor.getAttribute(CATALOG_SEED_ATTR));
+      preloadHeroBannerFromSeed(seed);
       prefetchCatalogDetailsPath(url.pathname, { full: true });
       setTarget({ ...next, seed });
     };

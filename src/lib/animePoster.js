@@ -143,3 +143,64 @@ export function animeBackdropFromDoc(doc) {
   const poster = animePosterFromDoc(doc);
   return poster ?? preferHighResAnimeImageUrl(stored) ?? stored ?? null;
 }
+
+/**
+ * Portrait AniList/MAL covers are soft when stretched to modal hero width.
+ * @param {unknown} url
+ * @returns {boolean}
+ */
+export function isAnimePortraitCoverUrl(url) {
+  const raw = pickString(url);
+  if (!raw) return false;
+  if (isTmdbImagePath(raw)) return false;
+  const lower = raw.toLowerCase();
+  if (/\/banner\//i.test(lower)) return false;
+  return /\/cover\//i.test(lower) || /\/images\/anime\/\d+\/\d+/i.test(lower);
+}
+
+/**
+ * Widescreen hero art only — skips portrait poster fallbacks used on cards/rails.
+ * @param {unknown} doc
+ * @returns {string | null}
+ */
+export function animeHeroBannerFromDoc(doc) {
+  if (!isAnimeCatalogDoc(doc)) {
+    const stored = pickString(doc?.backdrop_path);
+    if (stored && isTmdbImagePath(stored)) return stored;
+    return preferHighResAnimeImageUrl(stored) ?? stored ?? null;
+  }
+
+  const stored = pickString(doc?.backdrop_path);
+  if (isTmdbImagePath(stored)) return stored;
+
+  const fromAniBanner = embeddedAnilistBanner(doc);
+  if (fromAniBanner) return fromAniBanner;
+
+  if (
+    stored &&
+    !isSharedOmdbAnimePoster(stored) &&
+    stored !== pickString(doc?.poster_path) &&
+    !isAnimePortraitCoverUrl(stored)
+  ) {
+    return preferHighResAnimeImageUrl(stored) ?? stored;
+  }
+
+  return null;
+}
+
+/**
+ * Prefer fetched/catalog hero art over card seed posters during modal merge.
+ * @param {unknown} incoming
+ * @param {unknown} seedPath
+ * @returns {boolean}
+ */
+export function shouldPreferAnimeHeroBackdrop(incoming, seedPath) {
+  const inc = pickString(incoming);
+  const seed = pickString(seedPath);
+  if (!inc) return false;
+  if (!seed || inc === seed) return Boolean(inc);
+  if (isTmdbImagePath(inc) && !isTmdbImagePath(seed)) return true;
+  if (!isAnimePortraitCoverUrl(inc) && isAnimePortraitCoverUrl(seed)) return true;
+  if (/\/banner\//i.test(inc) && !/\/banner\//i.test(seed)) return true;
+  return false;
+}

@@ -20,6 +20,15 @@ export const CATALOG_TOP_RATED_MIN_VOTE_AVERAGE = 7;
 /** Minimum TMDB vote_count for top-rated TV / movie browse (blocks lone 10.0 scores). */
 export const CATALOG_TOP_RATED_MIN_VOTE_COUNT = 50;
 
+/** TMDB vote_count before we show a rating on cards without IMDb/OMDb enrichment. */
+export const CATALOG_DISPLAY_MIN_TMDB_VOTE_COUNT = 200;
+
+/** Minimum IMDb vote count (from OMDb) for top-rated browse inclusion. */
+export const CATALOG_TOP_RATED_MIN_IMDB_VOTES = 250;
+
+/** TMDB vote_count fallback for top-rated when OMDb votes are missing. */
+export const CATALOG_TOP_RATED_MIN_TMDB_VOTE_COUNT = 2000;
+
 /**
  * @param {unknown} row TMDB list row or catalog item with vote_average / vote_count.
  * @param {{ minVoteAverage?: number; minVoteCount?: number }} [opts]
@@ -154,8 +163,36 @@ export function normalizedCatalogVoteAverage(raw) {
 }
 
 /**
- * Single 0–10 display score for catalog cards/API: prefer TMDB/Jikan `vote_average`,
- * else AniList `averageScore` (0–100) scaled to 0–10 for `anime_*` rows.
+ * IMDb vote count from OMDb enrichment, else TMDB vote_count.
+ * @param {Record<string, unknown>} doc
+ */
+export function catalogAudienceVoteCount(doc) {
+  const omdb = doc.omdb;
+  if (omdb && typeof omdb === "object") {
+    const imdbVotes = Number(
+      /** @type {Record<string, unknown>} */ (omdb).imdbVotes
+    );
+    if (Number.isFinite(imdbVotes) && imdbVotes > 0) return imdbVotes;
+  }
+  const tmdb = Number(doc.vote_count);
+  return Number.isFinite(tmdb) && tmdb > 0 ? tmdb : 0;
+}
+
+/** Row has OMDb IMDb rating (vote_average was sourced from imdbRating on enrich). */
+export function hasOmdbImdbRating(doc) {
+  if (!doc || typeof doc !== "object") return false;
+  const omdb = /** @type {Record<string, unknown>} */ (doc).omdb;
+  if (!omdb || typeof omdb !== "object") return false;
+  const imdbVotes = Number(
+    /** @type {Record<string, unknown>} */ (omdb).imdbVotes
+  );
+  return Number.isFinite(imdbVotes) && imdbVotes >= 50;
+}
+
+/**
+ * Single 0–10 display score for catalog cards/API.
+ * Movies/TV: prefer OMDb/IMDb-backed `vote_average`; else TMDB only with enough voters.
+ * Anime: AniList averageScore, else TMDB/Jikan vote_average.
  * @param {unknown} doc
  */
 export function catalogDisplayVoteAverage(doc) {
@@ -172,7 +209,25 @@ export function catalogDisplayVoteAverage(doc) {
     return quantizeVoteAverage(aniAvg / 10);
   }
 
-  return normalizedCatalogVoteAverage(d.vote_average);
+  const vote = normalizedCatalogVoteAverage(d.vote_average);
+  const omdb = d.omdb;
+  const omdbRating =
+    omdb && typeof omdb === "object"
+      ? normalizedCatalogVoteAverage(
+          /** @type {Record<string, unknown>} */ (omdb).imdbRating
+        )
+      : null;
+  const displayVote = omdbRating ?? vote;
+  if (!displayVote) return null;
+
+  if (hasOmdbImdbRating(d)) return displayVote;
+
+  const tmdbCount = Number(d.vote_count);
+  if (Number.isFinite(tmdbCount) && tmdbCount >= CATALOG_DISPLAY_MIN_TMDB_VOTE_COUNT) {
+    return displayVote;
+  }
+
+  return null;
 }
 
 /**
@@ -183,6 +238,15 @@ export function mongoCatalogDisplayVoteExpr(opts = {}) {
   const tmdbVote = {
     $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
   };
+  const omdbImdbVote = {
+    $convert: {
+      input: "$omdb.imdbRating",
+      to: "double",
+      onError: 0,
+      onNull: 0,
+    },
+  };
+  const resolvedVote = { $max: [omdbImdbVote, tmdbVote] };
   const anilistVote = {
     $cond: {
       if: { $gt: [{ $ifNull: ["$anilist.averageScore", 0] }, 0] },
@@ -190,7 +254,7 @@ export function mongoCatalogDisplayVoteExpr(opts = {}) {
       else: 0,
     },
   };
-  const animeVote = { $max: [tmdbVote, anilistVote] };
+  const animeVote = { $max: [resolvedVote, anilistVote] };
 
   if (opts.anime === true) return animeVote;
 
@@ -203,27 +267,60 @@ export function mongoCatalogDisplayVoteExpr(opts = {}) {
         },
       },
       then: animeVote,
-      else: tmdbVote,
+      else: resolvedVote,
     },
   };
 }
 
 /**
- * `$match` clause excluding noisy TMDB 10.0 rows for top-rated browse.
+ * `$match` clause for top-rated browse — requires a real audience, not TMDB noise.
  * @param {{ anime?: boolean; minVoteAverage?: number; minVoteCount?: number }} [opts]
  */
 export function mongoTopRatedQualityMatch(opts = {}) {
   const minVoteAverage =
     opts.minVoteAverage ?? CATALOG_TOP_RATED_MIN_VOTE_AVERAGE;
-  const match = {
-    _catalogVote: { $gte: minVoteAverage },
-  };
-  if (opts.anime !== true) {
-    match.vote_count = {
-      $gte: opts.minVoteCount ?? CATALOG_TOP_RATED_MIN_VOTE_COUNT,
-    };
+
+  if (opts.anime === true) {
+    return { _catalogVote: { $gte: minVoteAverage } };
   }
-  return match;
+
+  const minImdbVotes = opts.minVoteCount ?? CATALOG_TOP_RATED_MIN_IMDB_VOTES;
+
+  return {
+    $and: [
+      { _catalogVote: { $gte: minVoteAverage } },
+      {
+        $or: [
+          { "omdb.imdbVotes": { $gte: minImdbVotes } },
+          { vote_count: { $gte: CATALOG_TOP_RATED_MIN_TMDB_VOTE_COUNT } },
+        ],
+      },
+    ],
+  };
+}
+
+/** Mongo expression for tie-breaking top-rated sorts (IMDb votes preferred). */
+export function mongoCatalogAudienceVoteCountExpr() {
+  return {
+    $max: [
+      {
+        $convert: {
+          input: "$omdb.imdbVotes",
+          to: "double",
+          onError: 0,
+          onNull: 0,
+        },
+      },
+      {
+        $convert: {
+          input: "$vote_count",
+          to: "double",
+          onError: 0,
+          onNull: 0,
+        },
+      },
+    ],
+  };
 }
 
 /**
@@ -253,13 +350,7 @@ export function mongoMixedTvCatalogPopularityExpr() {
       },
       then: mongoAnimeCatalogPopularityExpr(),
       else: {
-        $cond: {
-          if: {
-            $in: [{ $type: "$popularity" }, ["double", "decimal", "int", "long"]],
-          },
-          then: { $ifNull: ["$popularity", 0] },
-          else: 0,
-        },
+        $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
       },
     },
   };

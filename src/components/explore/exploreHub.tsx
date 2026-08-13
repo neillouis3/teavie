@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import PageSplash from "@/components/ui/pageSplash";
-import CatalogRail from "@/components/catalog/catalogRail";
+import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import TrendingHero from "@/components/catalog/trendingHero";
 import { cn } from "@/lib/utils";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
@@ -13,8 +12,10 @@ import FavoritesRail from "@/components/explore/favoritesRail";
 import UpcomingRail from "@/components/explore/upcomingRail";
 import NewContentRail from "@/components/explore/newContentRail";
 import {
-  loadExploreCorePayload,
+  loadExploreCoreShell,
+  enrichExploreCoreWithPreferences,
   bustExploreCoreInflight,
+  peekExploreCoreCache,
   fetchUserRailRows,
   projectExploreHistoryRows,
   buildSpotlightItems,
@@ -23,11 +24,11 @@ import {
   type TmdbDiscoverPayload,
   type UserRailRows,
 } from "@/lib/explorePageData";
+import { hasUserPreferences } from "@/types/user";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 import { watchHistoryProgressLabel, WATCH_HISTORY_CHANGED_EVENT } from "@/lib/watchHistory";
 import { WATCH_LATER_CHANGED_EVENT } from "@/lib/watchLater";
 import { FAVORITES_CHANGED_EVENT } from "@/lib/favorites";
-import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 
@@ -62,11 +63,11 @@ function listSignature(entries: { catalogId: string; mediaType: string }[]) {
 }
 
 export default function ExploreHub() {
-  const { loading: authLoading, profileLoading, user } = useAuth();
   const { preferences, watchHistoryEntries, watchLaterEntries, favoriteEntries, watchedMovieIds } =
     useUserData();
-  const [core, setCore] = useState<ExploreCorePayload | null>(null);
+  const [core, setCore] = useState<ExploreCorePayload | null>(() => peekExploreCoreCache());
   const [userRails, setUserRails] = useState<UserRailRows>(EMPTY_RAILS);
+  const [personalizing, setPersonalizing] = useState(false);
 
   const preferencesSig = useMemo(() => JSON.stringify(preferences), [preferences]);
   const watchedMoviesSig = useMemo(
@@ -120,19 +121,9 @@ export default function ExploreHub() {
     [core, preferencesSig, preferences]
   );
 
-  const loadCore = useCallback(() => {
-    if (authLoading) return;
-    if (user && profileLoading) return;
-    void loadExploreCorePayload(preferences, {
-      excludeMovieIds: watchedMovieIds,
-    }).then(setCore);
-  }, [
-    authLoading,
-    profileLoading,
-    user,
-    preferences,
-    watchedMovieIds,
-  ]);
+  const loadShell = useCallback(() => {
+    void loadExploreCoreShell().then(setCore);
+  }, []);
 
   const bustCoreInflight = useCallback(() => {
     bustExploreCoreInflight(preferences, watchedMovieIds);
@@ -143,33 +134,38 @@ export default function ExploreHub() {
   }, []);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (user && profileLoading) return;
     let cancelled = false;
-    void loadExploreCorePayload(preferences, {
-      excludeMovieIds: watchedMovieIds,
-    }).then((nextCore) => {
-      if (!cancelled) setCore(nextCore);
-    });
+
+    void (async () => {
+      const shell = await loadExploreCoreShell();
+      if (cancelled) return;
+      setCore(shell);
+
+      if (!hasUserPreferences(preferences)) return;
+
+      setPersonalizing(true);
+      try {
+        const enriched = await enrichExploreCoreWithPreferences(
+          shell,
+          preferences,
+          watchedMovieIds
+        );
+        if (!cancelled) setCore(enriched);
+      } finally {
+        if (!cancelled) setPersonalizing(false);
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [
-    authLoading,
-    profileLoading,
-    user,
-    preferencesSig,
-    watchedMoviesSig,
-    preferences,
-    watchedMovieIds,
-  ]);
+  }, [preferencesSig, watchedMoviesSig, preferences, watchedMovieIds]);
 
-  useResumeFetchWhenVisible(!core, loadCore, bustCoreInflight);
+  useResumeFetchWhenVisible(!core, loadShell, bustCoreInflight);
 
   useEffect(() => {
-    if (authLoading) return;
     void loadUserRails();
-  }, [authLoading, historySig, watchLaterSig, favoritesSig, loadUserRails]);
+  }, [historySig, watchLaterSig, favoritesSig, loadUserRails]);
 
   useEffect(() => {
     const onUserRailsChange = () => void loadUserRails();
@@ -209,7 +205,24 @@ export default function ExploreHub() {
   }, [watchHistoryEntries, loadUserRails]);
 
   if (!core || !payload) {
-    return <PageSplash ariaLabel="Loading Explore" />;
+    return (
+      <div className="flex w-full flex-col bg-background">
+        <section
+          className={cn(
+            "relative z-0 -mt-14 w-full overflow-hidden rounded-tl-2xl",
+            RAIL_AFTER_SPOTLIGHT
+          )}
+          aria-hidden
+        >
+          <div className="min-h-[52vh] animate-pulse bg-default-200 sm:min-h-[62vh] lg:min-h-[80vh] dark:bg-default-100/10" />
+        </section>
+        <div className={cn(RAIL_STACK_CLASS, MOBILE_CONTENT_INSET_LEFT, "pb-8")}>
+          <CatalogRailSkeleton count={8} />
+          <CatalogRailSkeleton count={8} />
+          <CatalogRailSkeleton count={8} />
+        </div>
+      </div>
+    );
   }
 
   const {
@@ -262,7 +275,9 @@ export default function ExploreHub() {
         )}
       >
         <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
-        {hasRecommended ? (
+        {personalizing && !hasRecommended ? (
+          <CatalogRailSkeleton count={6} />
+        ) : hasRecommended ? (
           <CatalogRail
             title="Recommended for you"
             items={recommendedRows}

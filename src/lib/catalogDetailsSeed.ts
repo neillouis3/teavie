@@ -1,6 +1,4 @@
-/**
- * Card → modal instant paint: embed minimal catalog fields on detail links.
- */
+import { shouldPreferAnimeHeroBackdrop } from "@/lib/animePoster.js";
 
 export type CatalogDetailsSeed = {
   title: string;
@@ -132,9 +130,13 @@ function pickOverview(
 export function preserveSeedBackdrop<
   T extends { backdrop_path?: string | null; poster_path?: string | null },
 >(doc: T, seed: CatalogDetailsSeed | null | undefined): T {
-  const path = seedBannerPath(seed);
-  if (!path) return doc;
-  return { ...doc, backdrop_path: path };
+  const seedPath = seedBannerPath(seed);
+  if (!seedPath) return doc;
+  const incoming = String(doc.backdrop_path ?? "").trim();
+  if (shouldPreferAnimeHeroBackdrop(incoming, seedPath)) {
+    return doc;
+  }
+  return { ...doc, backdrop_path: seedPath };
 }
 
 /** Merge modal fetch results without wiping card/catalog fields with empty TMDB values. */

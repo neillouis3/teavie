@@ -1,29 +1,25 @@
-import { loadTmdbDiscoverRails } from "@/lib/api/tmdbDiscoverRails";
-import { loadPopularGenres } from "@/lib/api/popularGenres";
+import {
+  EXPLORE_CACHE_HEADERS,
+  getCachedExplorePayload,
+} from "@/lib/api/exploreCache";
 
 export async function GET() {
   try {
-    const [discover, genres] = await Promise.all([
-      loadTmdbDiscoverRails(),
-      loadPopularGenres(false),
-    ]);
-
-    if (discover.error) {
-      return Response.json(
-        { error: discover.error, discover: { trendingMovies: [], trendingTv: [], popularMovies: [], popularTv: [] }, genres: [] },
-        { status: 500 }
-      );
-    }
-
-    const { error: _e, ...discoverPayload } = discover;
-    return Response.json({ discover: discoverPayload, genres });
+    const payload = await getCachedExplorePayload();
+    return Response.json(payload, { headers: EXPLORE_CACHE_HEADERS });
   } catch (err) {
     console.error(err);
     return Response.json(
       {
         error: "explore failed",
-        discover: { trendingMovies: [], trendingTv: [], popularMovies: [], popularTv: [] },
+        discover: {
+          trendingMovies: [],
+          trendingTv: [],
+          popularMovies: [],
+          popularTv: [],
+        },
         genres: [],
+        feed: { newContent: [], updatedContent: [], upcomingContent: [] },
       },
       { status: 500 }
     );
