@@ -81,7 +81,6 @@ export default function ShowEpisodesGrid({
     fallbackStillPath,
     watchedKeys,
     onSeasonChange,
-    onEpisodeChange,
     handleSelect,
   } = useEpisodePicker();
 
@@ -125,7 +124,6 @@ export default function ShowEpisodesGrid({
   const handleSeasonSelect = (seasonNumber: number) => {
     if (seasonNumber === selectedSeason) return;
     onSeasonChange(seasonNumber);
-    onEpisodeChange(seasonNumber, 1);
   };
 
   return (

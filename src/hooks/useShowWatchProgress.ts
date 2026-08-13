@@ -57,11 +57,15 @@ export function useShowWatchProgress(
     const urlSeason = urlSeasonRaw != null ? parseInt(urlSeasonRaw, 10) : NaN;
     const cap = catalogAnimeEpisodeCount(show, id);
 
-    if (Number.isFinite(urlEp) && urlEp >= 1) {
+    if (Number.isFinite(urlSeason) && urlSeason >= 1) {
+      const season = urlSeason;
+      const epRaw = Number.isFinite(urlEp) && urlEp >= 1 ? urlEp : 1;
+      const ep = cap != null ? Math.min(epRaw, cap) : epRaw;
+      setSelectedSeason(season);
+      setSelectedEpisode(ep);
+    } else if (Number.isFinite(urlEp) && urlEp >= 1) {
       const ep = cap != null ? Math.min(urlEp, cap) : urlEp;
-      setSelectedSeason(
-        Number.isFinite(urlSeason) && urlSeason >= 1 ? urlSeason : 1
-      );
+      setSelectedSeason(1);
       setSelectedEpisode(ep);
     } else if (progressAppliedForIdRef.current !== id && saved) {
       const list = tmdbSeasonsWithEpisodes(show.seasons);

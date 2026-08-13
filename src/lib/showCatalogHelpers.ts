@@ -591,8 +591,10 @@ export function buildShowWatchHref(
   }
 ): string {
   const params = new URLSearchParams();
-  if (options.season > 1) params.set("season", String(options.season));
-  if (options.episode > 1) params.set("episode", String(options.episode));
+  if (options.season !== 1 || options.episode !== 1) {
+    params.set("season", String(options.season));
+    params.set("episode", String(options.episode));
+  }
   if (options.party) params.set("party", options.party);
   const base = `/shows/${encodeURIComponent(catalogId)}/watch`;
   const q = params.toString();
