@@ -11,6 +11,7 @@ import {
   catalogItemYear,
 } from "@/lib/catalogRailCard";
 import type { ExploreHistoryRow } from "@/lib/explorePageData";
+import { catalogIdsMatch } from "@/lib/explorePageData";
 import { useUserData } from "@/contexts/userDataContext";
 
 type WatchHistoryLogRailProps = {
@@ -33,14 +34,14 @@ export default function WatchHistoryLogRail({
   const { watchHistoryLogEntries, removeHistoryLogItem } = useUserData();
   const { horizontal } = useCatalogRailLayout(layout);
 
-  const entryById = React.useMemo(
-    () => new Map(watchHistoryLogEntries.map((e) => [e.catalogId, e] as const)),
-    [watchHistoryLogEntries]
-  );
-
   const visibleItems = React.useMemo(
-    () => items.filter((item) => entryById.has(String(item.id))),
-    [items, entryById]
+    () =>
+      items.filter((item) =>
+        watchHistoryLogEntries.some((entry) =>
+          catalogIdsMatch(entry.catalogId, item.id)
+        )
+      ),
+    [items, watchHistoryLogEntries]
   );
 
   return (
@@ -55,7 +56,9 @@ export default function WatchHistoryLogRail({
       className={className}
       getItemKey={(item) => `history-${catalogItemMediaType(item)}-${item.id}`}
       renderItem={(item) => {
-        const entry = entryById.get(String(item.id));
+        const entry = watchHistoryLogEntries.find((candidate) =>
+          catalogIdsMatch(candidate.catalogId, item.id)
+        );
         if (!entry) return null;
 
         const titleText = catalogItemTitle(item);

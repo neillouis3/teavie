@@ -18,10 +18,12 @@ import {
   fetchExploreHistoryRows,
   peekExploreHistoryRows,
   exploreHistoryRowsMatch,
+  historyRowsCoverEntries,
   type ExploreHistoryRow,
 } from "@/lib/explorePageData";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
-import { RAIL_STACK_CLASS } from "@/lib/catalogGrid";
+import { RAIL_INNER_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
+import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 
@@ -58,16 +60,20 @@ export default function ActivityPage() {
   });
   const [loading, setLoading] = useState(() => {
     if (typeof window === "undefined") return true;
-    const cached = readClientDayCache<ActivityPayload>(cacheKey);
-    return !(cached && (cached.historyRows.length > 0 || cached.historyLogRows.length > 0));
+    return false;
   });
-  const loadUserRails = useCallback(async () => {
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  const logEntries = useMemo(() => {
     const continueIds = new Set(watchHistoryEntries.map((e) => e.catalogId));
-    const logEntries = watchHistoryLogEntries.filter(
-      (e) => !continueIds.has(e.catalogId)
-    );
-    const hasPending =
-      watchHistoryEntries.length > 0 || logEntries.length > 0;
+    return watchHistoryLogEntries.filter((e) => !continueIds.has(e.catalogId));
+  }, [watchHistoryEntries, watchHistoryLogEntries]);
+
+  const hasLocalHistory =
+    watchHistoryEntries.length > 0 || logEntries.length > 0;
+
+  const loadUserRails = useCallback(async () => {
+    const hasPending = hasLocalHistory;
     const cached = readClientDayCache<ActivityPayload>(cacheKey);
     const peekedHistory = peekExploreHistoryRows(
       watchHistoryEntries,
@@ -76,8 +82,8 @@ export default function ActivityPage() {
     const peekedLog = peekExploreHistoryRows(logEntries, watchHistoryLogLabel);
     const cacheComplete =
       hasPending &&
-      peekedHistory.length === watchHistoryEntries.length &&
-      peekedLog.length === logEntries.length;
+      historyRowsCoverEntries(peekedHistory, watchHistoryEntries) &&
+      historyRowsCoverEntries(peekedLog, logEntries);
 
     if (cacheComplete) {
       setHistoryRows((prev) =>
@@ -87,15 +93,14 @@ export default function ActivityPage() {
         exploreHistoryRowsMatch(prev, peekedLog) ? prev : peekedLog
       );
       setLoading(false);
+      setLoadFailed(false);
       return;
     }
 
-    if (
-      hasPending &&
-      !(cached?.historyRows.length || cached?.historyLogRows.length)
-    ) {
+    if (hasPending) {
       setLoading(true);
     }
+    setLoadFailed(false);
     try {
       const [rails, logRows] = await Promise.all([
         fetchUserRailRows({
@@ -113,6 +118,7 @@ export default function ActivityPage() {
         exploreHistoryRowsMatch(prev, logRows) ? prev : logRows
       );
       const loaded = rails.historyRows.length > 0 || logRows.length > 0;
+      setLoadFailed(hasPending && !loaded);
       if (loaded) {
         writeClientDayCache(cacheKey, {
           historyRows: rails.historyRows,
@@ -120,6 +126,7 @@ export default function ActivityPage() {
         });
       }
     } catch {
+      setLoadFailed(hasPending);
       if (peekedHistory.length > 0 || peekedLog.length > 0) {
         setHistoryRows((prev) =>
           exploreHistoryRowsMatch(prev, peekedHistory) ? prev : peekedHistory
@@ -127,14 +134,11 @@ export default function ActivityPage() {
         setHistoryLogRows((prev) =>
           exploreHistoryRowsMatch(prev, peekedLog) ? prev : peekedLog
         );
-      } else {
-        setHistoryRows([]);
-        setHistoryLogRows([]);
       }
     } finally {
       setLoading(false);
     }
-  }, [cacheKey, watchHistoryEntries, watchHistoryLogEntries]);
+  }, [cacheKey, watchHistoryEntries, logEntries, hasLocalHistory]);
 
   useEffect(() => {
     document.title = "Activity - Teavie";
@@ -154,8 +158,9 @@ export default function ActivityPage() {
     };
   }, [loadUserRails]);
 
-  const isEmpty =
-    !loading && historyRows.length === 0 && historyLogRows.length === 0;
+  const isEmpty = !hasLocalHistory && !loading && historyRows.length === 0 && historyLogRows.length === 0;
+  const showLoading =
+    hasLocalHistory && loading && historyRows.length === 0 && historyLogRows.length === 0;
 
   return (
     <UserPageShell
@@ -206,6 +211,28 @@ export default function ActivityPage() {
               </Button>
             </div>
           ) : null}
+        </div>
+      ) : showLoading ? (
+        <div className={`${RAIL_STACK_CLASS} w-full items-center`}>
+          <section className={RAIL_INNER_CLASS} aria-label="Continue watching" aria-busy="true">
+            <ExploreSectionTitle className="justify-center" variant="explore">
+              Continue watching
+            </ExploreSectionTitle>
+            <CatalogRailSkeleton count={6} />
+          </section>
+        </div>
+      ) : loadFailed ? (
+        <div className="flex w-full max-w-lg flex-col items-center space-y-4 text-center">
+          <p className="text-sm text-white/50">
+            Couldn&apos;t load your activity.{" "}
+            <button
+              type="button"
+              className="text-success hover:underline"
+              onClick={() => void loadUserRails()}
+            >
+              Try again
+            </button>
+          </p>
         </div>
       ) : (
         <div className={`${RAIL_STACK_CLASS} w-full items-center`}>

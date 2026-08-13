@@ -11,6 +11,7 @@ import {
   catalogItemYear,
 } from "@/lib/catalogRailCard";
 import type { ExploreHistoryRow } from "@/lib/explorePageData";
+import { catalogIdsMatch } from "@/lib/explorePageData";
 import { useUserData } from "@/contexts/userDataContext";
 
 type WatchHistoryRailProps = {
@@ -33,14 +34,14 @@ export default function WatchHistoryRail({
   const { watchHistoryEntries, removeHistoryItem } = useUserData();
   const { horizontal } = useCatalogRailLayout(layout);
 
-  const progressById = React.useMemo(
-    () => new Map(watchHistoryEntries.map((e) => [e.catalogId, e] as const)),
-    [watchHistoryEntries]
-  );
-
   const visibleItems = React.useMemo(
-    () => items.filter((item) => progressById.has(String(item.id))),
-    [items, progressById]
+    () =>
+      items.filter((item) =>
+        watchHistoryEntries.some((entry) =>
+          catalogIdsMatch(entry.catalogId, item.id)
+        )
+      ),
+    [items, watchHistoryEntries]
   );
 
   return (
@@ -55,7 +56,9 @@ export default function WatchHistoryRail({
       className={className}
       getItemKey={(item) => `${catalogItemMediaType(item)}-${item.id}`}
       renderItem={(item) => {
-        const progress = progressById.get(String(item.id));
+        const progress = watchHistoryEntries.find((entry) =>
+          catalogIdsMatch(entry.catalogId, item.id)
+        );
         if (!progress) return null;
 
         const titleText = catalogItemTitle(item);

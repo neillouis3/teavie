@@ -61,24 +61,50 @@ function historyCacheKey(entries: WatchHistoryEntry[]): string {
   return `${EXPLORE_HISTORY_CACHE_PREFIX}${sig || "empty"}`;
 }
 
+/** True when two catalog ids refer to the same title (e.g. anime MAL aliases). */
+export function catalogIdsMatch(
+  catalogId: string,
+  itemId: string | number
+): boolean {
+  const left = String(catalogId ?? "").trim();
+  const right = String(itemId ?? "").trim();
+  if (!left || !right) return false;
+  if (left === right) return true;
+  if (left === `anime_${right}` || right === `anime_${left}`) return true;
+  return false;
+}
+
+export function historyRowsCoverEntries(
+  rows: ExploreHistoryRow[],
+  entries: WatchHistoryEntry[]
+): boolean {
+  if (entries.length === 0) return true;
+  if (rows.length === 0) return false;
+  return entries.every((entry) =>
+    rows.some((row) => catalogIdsMatch(entry.catalogId, row.id))
+  );
+}
+
 function mergeHistoryRows(
   cached: ExploreHistoryRow[],
   entries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
 ): ExploreHistoryRow[] {
-  const entryById = new Map(entries.map((e) => [e.catalogId, e]));
-  return cached
-    .map((row) => {
-      const entry = entryById.get(String(row.id));
-      if (!entry) return null;
-      return {
-        ...row,
-        lastSeason: entry.lastSeason,
-        lastEpisode: entry.lastEpisode,
-        progressLabel: progressLabel(entry),
-      };
-    })
-    .filter((row): row is ExploreHistoryRow => row != null);
+  const out: ExploreHistoryRow[] = [];
+  for (const entry of entries) {
+    const row = cached.find((candidate) =>
+      catalogIdsMatch(entry.catalogId, candidate.id)
+    );
+    if (!row) continue;
+    out.push({
+      ...row,
+      id: entry.catalogId,
+      lastSeason: entry.lastSeason,
+      lastEpisode: entry.lastEpisode,
+      progressLabel: progressLabel(entry),
+    });
+  }
+  return out;
 }
 
 /** Synchronous cache read for instant continue-watching rails on revisit. */
@@ -145,7 +171,9 @@ async function fetchExploreHistoryRowsImpl(
     for (const entry of entries) {
       const item =
         byId.get(entry.catalogId) ??
-        (json.items ?? []).find((row) => String(row.id) === entry.catalogId);
+        (json.items ?? []).find((row) =>
+          catalogIdsMatch(entry.catalogId, row.id)
+        );
       if (!item) continue;
       rows.push({
         ...item,
@@ -174,7 +202,7 @@ export async function fetchExploreHistoryRows(
   const cached = readClientDayCache<ExploreHistoryRow[]>(cacheKey);
   if (cached && cached.length > 0) {
     const merged = mergeHistoryRows(cached, entries, progressLabel);
-    if (merged.length === entries.length) return merged;
+    if (historyRowsCoverEntries(merged, entries)) return merged;
   }
 
   const inflight = historyRowsInflight.get(cacheKey);
@@ -199,10 +227,17 @@ export function projectExploreHistoryRows(
   progressLabel: (entry: WatchHistoryEntry) => string
 ): ExploreHistoryRow[] | null {
   if (entries.length === 0) return [];
-  const byId = new Map(existingRows.map((r) => [String(r.id), r]));
-  if (!entries.every((e) => byId.has(e.catalogId))) return null;
+  if (
+    !entries.every((entry) =>
+      existingRows.some((row) => catalogIdsMatch(entry.catalogId, row.id))
+    )
+  ) {
+    return null;
+  }
   return entries.map((entry) => {
-    const row = byId.get(entry.catalogId)!;
+    const row = existingRows.find((candidate) =>
+      catalogIdsMatch(entry.catalogId, candidate.id)
+    )!;
     return {
       ...row,
       lastSeason: entry.lastSeason,

@@ -20,6 +20,7 @@ import {
   projectExploreHistoryRows,
   peekExploreUserRails,
   exploreHistoryRowsMatch,
+  historyRowsCoverEntries,
   buildSpotlightItems,
   type ExploreCorePayload,
   type ExplorePagePayload,
@@ -67,6 +68,8 @@ export default function ExploreHub() {
     if (typeof window === "undefined") return EMPTY_RAILS;
     return peekExploreUserRails(watchHistoryEntries, watchHistoryProgressLabel);
   });
+  const [userRailsLoading, setUserRailsLoading] = useState(false);
+  const [userRailsFailed, setUserRailsFailed] = useState(false);
 
   const preferencesSig = useMemo(() => JSON.stringify(preferences), [preferences]);
   const watchedMoviesSig = useMemo(
@@ -81,6 +84,8 @@ export default function ExploreHub() {
   const loadUserRails = useCallback(async () => {
     if (watchHistoryEntries.length === 0) {
       setUserRails(EMPTY_RAILS);
+      setUserRailsLoading(false);
+      setUserRailsFailed(false);
       return;
     }
 
@@ -88,13 +93,17 @@ export default function ExploreHub() {
       watchHistoryEntries,
       watchHistoryProgressLabel
     );
-    if (cached.historyRows.length === watchHistoryEntries.length) {
+    if (historyRowsCoverEntries(cached.historyRows, watchHistoryEntries)) {
       setUserRails((prev) =>
         exploreHistoryRowsMatch(prev.historyRows, cached.historyRows) ? prev : cached
       );
+      setUserRailsLoading(false);
+      setUserRailsFailed(false);
       return;
     }
 
+    setUserRailsLoading(true);
+    setUserRailsFailed(false);
     try {
       const rails = await fetchUserRailRows({
         historyEntries: watchHistoryEntries,
@@ -105,10 +114,16 @@ export default function ExploreHub() {
       setUserRails((prev) =>
         exploreHistoryRowsMatch(prev.historyRows, rails.historyRows) ? prev : rails
       );
+      setUserRailsFailed(
+        rails.historyRows.length === 0 && watchHistoryEntries.length > 0
+      );
     } catch {
+      setUserRailsFailed(true);
       setUserRails((prev) =>
         cached.historyRows.length > 0 ? cached : prev.historyRows.length > 0 ? prev : EMPTY_RAILS
       );
+    } finally {
+      setUserRailsLoading(false);
     }
   }, [watchHistoryEntries]);
 
@@ -284,8 +299,33 @@ export default function ExploreHub() {
           hasTrending ? "mt-0" : "mt-2"
         )}
       >
-        {historyRows.length > 0 ? (
-          <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
+        {watchHistoryEntries.length > 0 ? (
+          historyRows.length > 0 ? (
+            <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
+          ) : userRailsLoading ? (
+            <section
+              className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
+              aria-label="Continue watching"
+              aria-busy="true"
+            >
+              <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+              <CatalogRailSkeleton count={6} />
+            </section>
+          ) : userRailsFailed ? (
+            <section className={RAIL_INNER_CLASS} aria-label="Continue watching">
+              <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+              <p className="text-sm text-default-500">
+                Couldn&apos;t load your titles.{" "}
+                <button
+                  type="button"
+                  className="text-success hover:underline"
+                  onClick={() => void loadUserRails()}
+                >
+                  Try again
+                </button>
+              </p>
+            </section>
+          ) : null
         ) : null}
         {hasRecommended ? (
           <CatalogRail

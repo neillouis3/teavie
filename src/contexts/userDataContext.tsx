@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -208,7 +209,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
   }, []);
 
