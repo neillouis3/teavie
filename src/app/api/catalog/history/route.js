@@ -55,6 +55,14 @@ function expandCatalogLookupIds(rawId) {
   return [...out];
 }
 
+/** MAL ids only come from `anime_` catalog ids; plain TMDB ids collide with unrelated anime. */
+function malLookupId(rawId) {
+  const id = String(rawId ?? "").trim();
+  if (!id.startsWith("anime_")) return null;
+  const tail = id.slice("anime_".length);
+  return /^\d+$/.test(tail) ? Number(tail) : null;
+}
+
 function catalogAliasKeys(doc) {
   const keys = new Set([String(doc.id)]);
   if (typeof doc.tmdb_id === "number" && doc.tmdb_id > 0) {
@@ -72,31 +80,27 @@ function catalogAliasKeys(doc) {
   return keys;
 }
 
+/** Alias keys can collide across media types (e.g. TMDB movie id vs MAL id), so match on type. */
 function lookupCatalogItem(entry, byKey) {
   for (const key of expandCatalogLookupIds(entry.catalogId)) {
     const item = byKey.get(String(key));
-    if (item) return item;
+    if (!item) continue;
+    if (item.type !== entry.mediaType) continue;
+    return item;
   }
   return null;
 }
 
 async function resolveEntryItem(entry, byKey, reqSignal) {
   if (reqSignal?.aborted) return null;
-
-  const item = lookupCatalogItem(entry, byKey);
-  if (item) {
-    if (entry.mediaType === "movie" && item.type !== "movie") return null;
-    if (entry.mediaType === "tv" && item.type !== "tv") return null;
-    if (entry.mediaType === "movie" && isBlockedMovieTmdbId(entry.catalogId)) {
-      return null;
-    }
-    return { ...item, id: entry.catalogId };
-  }
-
-  if (!/^\d+$/.test(entry.catalogId)) return null;
   if (entry.mediaType === "movie" && isBlockedMovieTmdbId(entry.catalogId)) {
     return null;
   }
+
+  const item = lookupCatalogItem(entry, byKey);
+  if (item) return { ...item, id: entry.catalogId };
+
+  if (!/^\d+$/.test(entry.catalogId)) return null;
 
   try {
     const path =
@@ -150,10 +154,13 @@ export async function POST(req) {
     }
 
     const lookupIds = new Set();
+    const malIds = new Set();
     for (const entry of entries) {
       for (const id of expandCatalogLookupIds(entry.catalogId)) {
         lookupIds.add(typeof id === "number" ? id : String(id));
       }
+      const malId = malLookupId(entry.catalogId);
+      if (malId != null) malIds.add(malId);
     }
     const idList = [...lookupIds];
     const numeric = idList
@@ -162,7 +169,10 @@ export async function POST(req) {
 
     const or = [{ id: { $in: idList } }];
     if (numeric.length) {
-      or.push({ tmdb_id: { $in: numeric } }, { mal_id: { $in: numeric } });
+      or.push({ tmdb_id: { $in: numeric } });
+    }
+    if (malIds.size) {
+      or.push({ mal_id: { $in: [...malIds] } });
     }
 
     const client = await clientPromise;

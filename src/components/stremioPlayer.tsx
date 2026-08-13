@@ -216,31 +216,9 @@ export default function StremioPlayer({
       return;
     }
     const sourceUrl = audioOverrideUrl ?? stream.url;
-    if (sourceUrl.startsWith("/")) {
-      setPlaybackSrc(sourceUrl);
-      return;
-    }
-    let cancelled = false;
-    setPlaybackSrc(null);
-
-    void (async () => {
-      try {
-        const response = await fetch(
-          `/api/streams/resolve?url=${encodeURIComponent(sourceUrl)}`
-        );
-        const body = (await response.json()) as { url?: string };
-        if (cancelled) return;
-        setPlaybackSrc(
-          typeof body.url === "string" && body.url.trim() ? body.url.trim() : sourceUrl
-        );
-      } catch {
-        if (!cancelled) setPlaybackSrc(sourceUrl);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    // Load stream URLs in the browser so IP-pinned CDN links stay tied to the viewer.
+    // Server-side HEAD/GET in /api/streams/resolve pins ElfHosted and similar hosts to Vercel.
+    setPlaybackSrc(sourceUrl);
   }, [streams, activeIndex, audioOverrideUrl]);
 
   useEffect(() => {

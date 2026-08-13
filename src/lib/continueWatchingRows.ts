@@ -1,12 +1,24 @@
 import type { ContentItem } from "@/types/content";
 import type { WatchHistoryEntry } from "@/lib/watchHistory";
-import { catalogIdsMatch } from "@/lib/explorePageData";
 
 export type ExploreHistoryRow = ContentItem & {
   progressLabel: string;
   lastSeason: number;
   lastEpisode: number;
 };
+
+/** True when two catalog ids refer to the same title (e.g. anime MAL aliases). */
+export function catalogIdsMatch(
+  catalogId: string,
+  itemId: string | number
+): boolean {
+  const left = String(catalogId ?? "").trim();
+  const right = String(itemId ?? "").trim();
+  if (!left || !right) return false;
+  if (left === right) return true;
+  if (left === `anime_${right}` || right === `anime_${left}`) return true;
+  return false;
+}
 
 /** Fetch poster/title rows for continue watching — no client cache. */
 export async function fetchContinueWatchingRows(

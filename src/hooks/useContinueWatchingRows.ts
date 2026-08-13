@@ -40,7 +40,6 @@ export function useContinueWatchingRows(
     try {
       const next = await fetchContinueWatchingRows(entries, progressLabel);
       setRows(next);
-      setFailed(next.length === 0);
     } catch {
       setRows([]);
       setFailed(true);

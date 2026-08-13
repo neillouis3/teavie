@@ -24,9 +24,13 @@ const EMPTY_FEED = {
 const EXPLORE_HISTORY_CACHE_PREFIX = "teavie.cache.explore.history.v3:";
 
 import type { ExploreHistoryRow } from "@/lib/continueWatchingRows";
-import { fetchContinueWatchingRows } from "@/lib/continueWatchingRows";
+import {
+  catalogIdsMatch,
+  fetchContinueWatchingRows,
+} from "@/lib/continueWatchingRows";
 
 export type { ExploreHistoryRow };
+export { catalogIdsMatch };
 
 export type ExplorePagePayload = {
   discover: TmdbDiscoverPayload;
@@ -58,19 +62,6 @@ function historyCacheKey(entries: WatchHistoryEntry[]): string {
     .sort()
     .join("|");
   return `${EXPLORE_HISTORY_CACHE_PREFIX}${sig || "empty"}`;
-}
-
-/** True when two catalog ids refer to the same title (e.g. anime MAL aliases). */
-export function catalogIdsMatch(
-  catalogId: string,
-  itemId: string | number
-): boolean {
-  const left = String(catalogId ?? "").trim();
-  const right = String(itemId ?? "").trim();
-  if (!left || !right) return false;
-  if (left === right) return true;
-  if (left === `anime_${right}` || right === `anime_${left}`) return true;
-  return false;
 }
 
 export function historyRowsCoverEntries(

@@ -39,28 +39,17 @@ export default function ActivityPage() {
 
   const hasLocalHistory =
     watchHistoryEntries.length > 0 || logEntries.length > 0;
+  const hasRows = historyRows.length > 0 || historyLogRows.length > 0;
   const loading =
-    hasLocalHistory &&
-    continueLoading &&
-    logLoading &&
-    historyRows.length === 0 &&
-    historyLogRows.length === 0;
+    hasLocalHistory && (continueLoading || logLoading) && !hasRows;
   const loadFailed =
-    hasLocalHistory &&
-    !loading &&
-    (continueFailed || logFailed) &&
-    historyRows.length === 0 &&
-    historyLogRows.length === 0;
+    hasLocalHistory && !loading && (continueFailed || logFailed) && !hasRows;
 
   useEffect(() => {
     document.title = "Activity - Teavie";
   }, []);
 
-  const isEmpty =
-    !hasLocalHistory &&
-    !loading &&
-    historyRows.length === 0 &&
-    historyLogRows.length === 0;
+  const isEmpty = !loading && !loadFailed && !hasRows;
 
   const retry = () => {
     void reloadContinue();
