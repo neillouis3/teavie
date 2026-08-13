@@ -261,13 +261,6 @@ export default function StremioPlayer({
     setAudioTracks([]);
     setSelectedAudioIndex(0);
     setAudioOverrideUrl(null);
-    if (!activeStream?.audioTracksUrl) return;
-    const controller = new AbortController();
-    fetch(activeStream.audioTracksUrl, { signal: controller.signal })
-      .then((response) => response.json())
-      .then((body) => setAudioTracks(Array.isArray(body.tracks) ? body.tracks : []))
-      .catch(() => {});
-    return () => controller.abort();
   }, [activeStream]);
 
   const selectAudioTrack = (audioIndex: number) => {

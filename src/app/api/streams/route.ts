@@ -1,4 +1,4 @@
-import { hasStremioAddons, resolveStremioStreams } from "@/lib/stremio/client";
+import { clientIpFromRequest, hasStremioAddons, resolveStremioStreams } from "@/lib/stremio/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,11 +37,13 @@ export async function GET(request: Request) {
   }
 
   try {
+    const clientIp = clientIpFromRequest(request);
     const result = await resolveStremioStreams(
       type,
       resourceId,
       fallback ? 1 : 0,
-      preferSafari
+      preferSafari,
+      clientIp
     );
     if (result.streams.length > 0) {
       result.streams = result.streams.map((stream, index) => {

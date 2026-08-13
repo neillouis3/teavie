@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { Readable } from "node:stream";
 
-import { resolveStremioStreams } from "@/lib/stremio/client";
+import { clientIpFromRequest, resolveStremioStreams } from "@/lib/stremio/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +23,13 @@ export async function GET(request: Request) {
     return Response.json({ error: "Invalid stream request" }, { status: 400 });
   }
 
-  const result = await resolveStremioStreams(type, resourceId, fallback ? 1 : 0, preferSafari);
+  const result = await resolveStremioStreams(
+    type,
+    resourceId,
+    fallback ? 1 : 0,
+    preferSafari,
+    clientIpFromRequest(request)
+  );
   const stream = result.streams[index];
   if (!stream) {
     return Response.json({ error: "Stream is no longer available" }, { status: 404 });

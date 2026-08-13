@@ -7,6 +7,22 @@ const STREAM_FETCH_RETRIES = 1;
 
 type AddonConfig = { manifestUrl: URL; streamBaseUrl: URL };
 
+export function clientIpFromRequest(request: Request): string | null {
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (forwarded) return forwarded;
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  return realIp || null;
+}
+
+function addonRequestHeaders(clientIp?: string | null): Record<string, string> {
+  const headers: Record<string, string> = { accept: "application/json" };
+  if (clientIp) {
+    headers["X-Forwarded-For"] = clientIp;
+    headers["X-Real-IP"] = clientIp;
+  }
+  return headers;
+}
+
 function configuredAddons(): AddonConfig[] {
   return [
     process.env.STREMIO_ADDON_URLS_DEFAULT ?? "",
@@ -38,14 +54,19 @@ function configuredAddons(): AddonConfig[] {
     });
 }
 
-async function getJson(url: URL, timeoutMs: number, retries = 0): Promise<unknown> {
+async function getJson(
+  url: URL,
+  timeoutMs: number,
+  retries = 0,
+  clientIp?: string | null
+): Promise<unknown> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
       const response = await fetch(url, {
         cache: "no-store",
         signal: AbortSignal.timeout(timeoutMs),
-        headers: { accept: "application/json" },
+        headers: addonRequestHeaders(clientIp),
       });
       if (!response.ok) throw new Error(`Addon returned HTTP ${response.status}`);
       return response.json();
@@ -80,51 +101,9 @@ function stremioStreamPath(type: "movie" | "series", id: string): string {
   return `stream/${safeType}/${safeId}.json`;
 }
 
-async function resolveStreamPlaybackUrl(url: string): Promise<string> {
-  const trimmed = String(url ?? "").trim();
-  if (!trimmed) return trimmed;
-  try {
-    const parsed = new URL(trimmed);
-    if (!["http:", "https:"].includes(parsed.protocol)) return trimmed;
-  } catch {
-    return trimmed;
-  }
-
-  try {
-    const response = await fetch(trimmed, {
-      method: "HEAD",
-      redirect: "follow",
-      signal: AbortSignal.timeout(25_000),
-      headers: {
-        accept: "*/*",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      },
-    });
-    if (response.url && response.url !== trimmed) return response.url;
-    if (response.ok) return response.url || trimmed;
-  } catch {
-    /* try GET range fallback below */
-  }
-
-  try {
-    const response = await fetch(trimmed, {
-      method: "GET",
-      redirect: "follow",
-      signal: AbortSignal.timeout(25_000),
-      headers: {
-        accept: "*/*",
-        range: "bytes=0-1",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      },
-    });
-    if (response.url) return response.url;
-  } catch {
-    /* keep original */
-  }
-
-  return trimmed;
+/** Return the URL unchanged — never prefetch IP-pinned stream hosts from the server. */
+function resolveStreamPlaybackUrl(url: string): string {
+  return String(url ?? "").trim();
 }
 
 export { resolveStreamPlaybackUrl };
@@ -154,11 +133,12 @@ export async function resolveStremioStreams(
   type: "movie" | "series",
   id: string,
   startAt = 0,
-  preferSafari = false
+  preferSafari = false,
+  clientIp?: string | null
 ) {
   const addons = configuredAddons().slice(startAt);
   const results = await Promise.all(
-    addons.map((addon) => fetchAddonStreams(addon, type, id, preferSafari))
+    addons.map((addon) => fetchAddonStreams(addon, type, id, preferSafari, clientIp))
   );
 
   const errors: { addon: string; message: string }[] = [];
@@ -191,20 +171,21 @@ async function fetchAddonStreams(
   { manifestUrl, streamBaseUrl }: AddonConfig,
   type: "movie" | "series",
   id: string,
-  preferSafari: boolean
+  preferSafari: boolean,
+  clientIp?: string | null
 ): Promise<{
   streams: PlayableStream[];
   unsupported: number;
   error: { addon: string; message: string } | null;
 }> {
   try {
-    const manifest = (await getJson(manifestUrl, MANIFEST_TIMEOUT_MS)) as {
+    const manifest = (await getJson(manifestUrl, MANIFEST_TIMEOUT_MS, 0, clientIp)) as {
       name?: unknown;
       resources?: unknown;
     };
     const addonName = typeof manifest.name === "string" ? manifest.name : manifestUrl.hostname;
     const streamUrl = new URL(stremioStreamPath(type, id), streamBaseUrl);
-    const payload = (await getJson(streamUrl, STREAM_TIMEOUT_MS, STREAM_FETCH_RETRIES)) as {
+    const payload = (await getJson(streamUrl, STREAM_TIMEOUT_MS, STREAM_FETCH_RETRIES, clientIp)) as {
       streams?: unknown;
     };
     const streams = Array.isArray(payload.streams) ? (payload.streams as StremioStream[]) : [];

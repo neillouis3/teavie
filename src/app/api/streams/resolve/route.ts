@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "Invalid url protocol" }, { status: 400 });
   }
 
-  const resolved = await resolveStreamPlaybackUrl(raw);
+  const resolved = resolveStreamPlaybackUrl(raw);
   return Response.json(
     { url: resolved },
     { headers: { "Cache-Control": "private, max-age=300" } }
