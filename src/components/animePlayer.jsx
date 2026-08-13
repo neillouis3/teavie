@@ -5,6 +5,7 @@ import { useAnimeSource } from "@/contexts/animeSourceContext";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
 import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
 import StreamQualityBadge from "@/components/ui/streamQualityBadge";
+import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
 import {
   sanitizeAnimeEmbedUrl,
   withMegaPlayStartTime,
@@ -117,7 +118,8 @@ export default function AnimePlayer({
 
   return (
     <div className="relative flex h-full min-h-0 w-full touch-auto flex-col rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
-      <StreamQualityBadge quality="hd" />
+      <WatchPlayerBackButton />
+      <StreamQualityBadge quality="hd" className="left-auto right-2 top-2 sm:right-3 sm:top-3" />
       <div className="relative min-h-0 flex-1">
         {loading ? (
           <PlayerEmbedSkeleton />

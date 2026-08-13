@@ -4,7 +4,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from 'react';
@@ -13,9 +13,14 @@ import { MOVIE_SERVERS } from '@/components/moviePlayer';
 export type StreamServerId = keyof typeof MOVIE_SERVERS;
 
 const STORAGE_KEY = 'teavie-streaming-server';
-const DEFAULT_SERVER: StreamServerId = 'peachify';
+const DEFAULT_SERVER: StreamServerId = 'movies111';
 
-const ORDER: StreamServerId[] = ['peachify', 'stremio', 'movies111', 'vidcore', 'videasy'];
+const ORDER: StreamServerId[] = ['movies111', 'peachify', 'vidcore', 'videasy', 'stremio'];
+
+/** Legacy / mistyped values saved in localStorage. */
+const SERVER_ALIASES: Record<string, StreamServerId> = {
+  '111movies': 'movies111',
+};
 
 export function streamServerLabel(id: StreamServerId): string {
   switch (id) {
@@ -36,6 +41,15 @@ export function streamServerLabel(id: StreamServerId): string {
 
 export const STREAM_SERVER_OPTIONS: StreamServerId[] = [...ORDER];
 
+function normalizeStored(raw: string | null): StreamServerId | null {
+  if (!raw) return null;
+  const aliased = SERVER_ALIASES[raw] ?? raw;
+  if (aliased in MOVIE_SERVERS && aliased !== 'stremio') {
+    return aliased as StreamServerId;
+  }
+  return null;
+}
+
 function readStored(): StreamServerId {
   if (typeof window === 'undefined') return DEFAULT_SERVER;
   try {
@@ -44,7 +58,13 @@ function readStored(): StreamServerId {
       localStorage.setItem(STORAGE_KEY, DEFAULT_SERVER);
       return DEFAULT_SERVER;
     }
-    if (v && v in MOVIE_SERVERS && v !== 'stremio') return v as StreamServerId;
+    const normalized = normalizeStored(v);
+    if (normalized) {
+      if (v !== normalized) {
+        localStorage.setItem(STORAGE_KEY, normalized);
+      }
+      return normalized;
+    }
   } catch {
     /* ignore */
   }
@@ -54,6 +74,7 @@ function readStored(): StreamServerId {
 type StreamingSourceContextValue = {
   server: StreamServerId;
   setServer: (id: StreamServerId) => void;
+  hydrated: boolean;
 };
 
 const StreamingSourceContext = createContext<StreamingSourceContextValue | null>(
@@ -64,9 +85,16 @@ export function StreamingSourceProvider({ children }: { children: React.ReactNod
   const [server, setServerState] = useState<StreamServerId>(DEFAULT_SERVER);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setServerState(readStored());
     setHydrated(true);
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY) return;
+      setServerState(readStored());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const setServer = useCallback((id: StreamServerId) => {
@@ -81,8 +109,9 @@ export function StreamingSourceProvider({ children }: { children: React.ReactNod
 
   const value = useMemo(
     () => ({
-      server: hydrated ? server : DEFAULT_SERVER,
+      server,
       setServer,
+      hydrated,
     }),
     [hydrated, server, setServer]
   );

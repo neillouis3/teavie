@@ -24,6 +24,7 @@ import {
   VolumeMute01Icon,
 } from "@hugeicons/core-free-icons";
 import type { PlayableStream } from "@/lib/stremio/types";
+import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
 import { useWatchPartyNav } from "@/contexts/watchPartyNavContext";
 
 type Props = {
@@ -395,6 +396,7 @@ export default function StremioPlayer({
 
   return (
     <div ref={playerRef} onPointerMove={revealControls} onPointerDown={revealControls} onMouseLeave={() => { if (playing && !settingsOpen) setControlsVisible(false); }} className="group relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+      <WatchPlayerBackButton />
       <video
         ref={videoRef}
         autoPlay

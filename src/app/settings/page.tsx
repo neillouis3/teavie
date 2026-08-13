@@ -85,7 +85,7 @@ function SegmentControl<T extends string>({
 export default function SettingsPage() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { mode: cardLayout, setMode: setCardLayout } = useCatalogCardStyle();
-  const { server: streamServer, setServer: setStreamServer } = useStreamingSource();
+  const { server: streamServer, setServer: setStreamServer, hydrated: streamHydrated } = useStreamingSource();
   const { audio: animeAudio, setAudio: setAnimeAudio } = useAnimeAudio();
   const { source: animeSource, setSource: setAnimeSource } = useAnimeSource();
   const [mounted, setMounted] = useState(false);
@@ -154,13 +154,17 @@ export default function SettingsPage() {
           <CatalogStreamingOutageAlert />
         </div>
         <PageCardRow label="Movies & TV">
-          <SegmentControl
-            options={STREAM_SERVER_OPTIONS}
-            value={streamServer}
-            onChange={setStreamServer}
-            label={streamServerLabel}
-            disabled={(id) => id === 'stremio'}
-          />
+          {!mounted || !streamHydrated ? (
+            <div className="h-9 w-56 animate-pulse rounded-lg bg-white/10" />
+          ) : (
+            <SegmentControl
+              options={STREAM_SERVER_OPTIONS}
+              value={streamServer}
+              onChange={setStreamServer}
+              label={streamServerLabel}
+              disabled={(id) => id === 'stremio'}
+            />
+          )}
         </PageCardRow>
 
         <PageCardRow label="Anime player">

@@ -3,8 +3,9 @@
 import { useCallback, useMemo } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
-import StreamQualityBadge from '@/components/ui/streamQualityBadge';
-import StremioPlayer from '@/components/stremioPlayer';
+import StreamQualityBadge from "@/components/ui/streamQualityBadge";
+import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
+import StremioPlayer from "@/components/stremioPlayer";
 import {
   VIDEASY_PLAYER_BASE,
   VIDEASY_TV_QUERY_PREFIX,
@@ -92,7 +93,7 @@ export default function ShowPlayer({
   backdropUrl,
   season,
   episode,
-  server = 'peachify',
+  server = 'movies111',
   startSeconds = 0,
   onVideasyProgress,
   onStremioProgress,
@@ -126,7 +127,9 @@ export default function ShowPlayer({
 
   if (server === 'stremio') {
     return (
-      <StremioPlayer
+      <div className="relative h-full min-h-0 w-full">
+        <WatchPlayerBackButton />
+        <StremioPlayer
         type="series"
         imdbId={imdbId}
         catalogKey={videoId != null ? String(videoId) : null}
@@ -151,7 +154,8 @@ export default function ShowPlayer({
 
   return (
     <div className="relative h-full min-h-0 w-full touch-auto rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
-      <StreamQualityBadge quality="hd" />
+      <WatchPlayerBackButton />
+      <StreamQualityBadge quality="hd" className="left-auto right-2 top-2 sm:right-3 sm:top-3" />
       {url ? (
         <VideoEmbedFrame
           key={url}

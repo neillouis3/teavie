@@ -174,7 +174,7 @@ export default function ShowTemplate({
   detailsSeed?: CatalogDetailsSeed | null;
   onDetailsNavigate?: () => void;
 }) {
-  const { server } = useStreamingSource();
+  const { server, hydrated: streamHydrated } = useStreamingSource();
   const { audio: animeAudio } = useAnimeAudio();
   const router = useRouter();
   const pathname = usePathname();
@@ -1325,6 +1325,9 @@ export default function ShowTemplate({
         animeMovieResolving ? (
           <PlayerEmbedSkeleton rounded="rounded-xl" />
         ) : animeMovieTmdbId ? (
+          !streamHydrated ? (
+            <PlayerEmbedSkeleton rounded="rounded-xl" />
+          ) : (
           <MoviePlayer
             key={`movie-${id}`}
             videoId={animeMovieTmdbId}
@@ -1344,6 +1347,7 @@ export default function ShowTemplate({
                 : undefined
             }
           />
+          )
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-black/80 px-6 text-center text-sm text-white/70">
             No playback source available for this page yet. Try again later.
@@ -1381,6 +1385,8 @@ export default function ShowTemplate({
           startSeconds={playerStartSeconds}
           onMegaPlayMessage={handleMegaPlayMessage}
         />
+      ) : !streamHydrated ? (
+        <PlayerEmbedSkeleton rounded="rounded-xl" />
       ) : (
         <ShowPlayer
           key={`${id}-${playerCoords.season}-${playerCoords.episode}-${playerEpoch}`}

@@ -4,8 +4,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '@heroui/react';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import AssetMaskIcon from '@/components/ui/assetMaskIcon';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
@@ -28,6 +26,7 @@ import CatalogMediaPanel, { CatalogTitleBlock } from './ui/catalogMediaPanel';
 import { ImmersiveWatchPageSkeleton } from '@/components/ui/watchPageSkeleton';
 import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
+import WatchPlayerBackButton from '@/components/ui/watchPlayerBackButton';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { recordMovieInWatchHistory } from '@/lib/watchHistory';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
@@ -202,7 +201,7 @@ export default function MovieTemplate({
   detailsSeed?: CatalogDetailsSeed | null;
   onDetailsNavigate?: () => void;
 }) {
-  const { server } = useStreamingSource();
+  const { server, hydrated: streamHydrated } = useStreamingSource();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -227,17 +226,6 @@ export default function MovieTemplate({
     setPlayerStartSeconds(plan.targetSeconds);
     if (plan.remount) setPlayerEpoch((n) => n + 1);
   }, []);
-
-  const watchBackButton = (
-    <button
-      type="button"
-      onClick={() => router.back()}
-      aria-label="Go back"
-      className="absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition hover:bg-black/55 sm:right-5 sm:top-5"
-    >
-      <HugeiconsIcon icon={ArrowLeft01Icon} size={22} strokeWidth={2} />
-    </button>
-  );
 
   const partyRoomId = searchParams.get('party');
   const watchHref = buildMovieWatchHref(id, { party: partyRoomId });
@@ -639,7 +627,7 @@ export default function MovieTemplate({
     if (viewMode === 'watch' && !detailsModal) {
       return (
         <div className="fixed inset-0 z-0 flex h-[100dvh] w-full items-center justify-center bg-black px-6">
-          {watchBackButton}
+          <WatchPlayerBackButton />
           {unavailable}
         </div>
       );
@@ -775,9 +763,10 @@ export default function MovieTemplate({
   return (
     <div className="fixed inset-0 z-0 flex h-[100dvh] w-full flex-col bg-black">
       <div className="relative min-h-0 flex-1 w-full">
-        {watchBackButton}
         {!movieReleased ? (
-          trailerEmbedUrl ? (
+          <>
+            <WatchPlayerBackButton />
+            {trailerEmbedUrl ? (
             <MovieTrailerEmbed
               src={trailerEmbedUrl}
               title={`${movie.title} trailer`}
@@ -791,7 +780,10 @@ export default function MovieTemplate({
                 links={movieDetailLinks(movie)}
               />
             </div>
-          )
+          )}
+          </>
+        ) : !streamHydrated ? (
+          <ImmersiveWatchPageSkeleton />
         ) : (
           <MoviePlayer
             key={`movie-${resolvedTmdbId}-${playerEpoch}`}

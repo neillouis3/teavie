@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import StreamQualityBadge from '@/components/ui/streamQualityBadge';
+import WatchPlayerBackButton from '@/components/ui/watchPlayerBackButton';
 import StremioPlayer from '@/components/stremioPlayer';
 import {
   VIDEASY_MOVIE_QUERY,
@@ -70,7 +71,7 @@ const MoviePlayer = ({
   title,
   posterUrl,
   backdropUrl,
-  server = 'peachify',
+  server = 'movies111',
   streamQuality: streamQualityProp,
   startSeconds = 0,
   immersive = false,
@@ -159,7 +160,8 @@ const MoviePlayer = ({
 
   return (
     server === 'stremio' ? (
-      <div className={immersive ? 'h-full min-h-0 w-full' : undefined}>
+      <div className={immersive ? 'relative h-full min-h-0 w-full' : undefined}>
+        {immersive ? <WatchPlayerBackButton /> : null}
         <StremioPlayer
           type="movie"
           imdbId={imdbId}
@@ -173,7 +175,13 @@ const MoviePlayer = ({
       </div>
     ) : (
     <div className={shellClass}>
-      {streamQuality ? <StreamQualityBadge quality={streamQuality} /> : null}
+      <WatchPlayerBackButton />
+      {streamQuality ? (
+        <StreamQualityBadge
+          quality={streamQuality}
+          className="left-auto right-2 top-2 sm:right-3 sm:top-3"
+        />
+      ) : null}
       {playerUrl ? (
         <VideoEmbedFrame
           key={playerUrl}
