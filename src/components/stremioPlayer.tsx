@@ -975,7 +975,7 @@ function ImdbEntryPanel({
               if (error) setError(null);
             }}
             autoComplete="off"
-            spellCheck={false}
+            spellCheck="false"
             isInvalid={Boolean(error)}
             errorMessage={error ?? undefined}
             classNames={{
