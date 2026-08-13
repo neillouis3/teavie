@@ -13,7 +13,10 @@ export async function GET(request: Request) {
   const resourceId = params.get("id")?.trim() ?? "";
   const index = Number(params.get("index") ?? "0");
   const audio = Number(params.get("audio") ?? "0");
-  const fallback = params.get("fallback") === "1";
+  const addonIndex = Math.max(
+    0,
+    Number.parseInt(params.get("addonIndex") ?? (params.get("fallback") === "1" ? "1" : "0"), 10) || 0
+  );
   const preferSafari = params.get("safari") === "1";
 
   if (type !== "movie" && type !== "series") {
@@ -26,7 +29,7 @@ export async function GET(request: Request) {
   const result = await resolveStremioStreams(
     type,
     resourceId,
-    fallback ? 1 : 0,
+    addonIndex,
     preferSafari,
     clientIpFromRequest(request)
   );

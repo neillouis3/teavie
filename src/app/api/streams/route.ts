@@ -1,4 +1,4 @@
-import { clientIpFromRequest, hasStremioAddons, resolveStremioStreams } from "@/lib/stremio/client";
+import { clientIpFromRequest, hasStremioAddons, resolveStremioStreams, stremioAddonCount } from "@/lib/stremio/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +12,10 @@ export async function GET(request: Request) {
   const season = Number(params.get("season"));
   const episode = Number(params.get("episode"));
   const fallback = params.get("fallback") === "1";
+  const addonIndex = Math.max(
+    0,
+    Number.parseInt(params.get("addonIndex") ?? (fallback ? "1" : "0"), 10) || 0
+  );
   const userAgent = request.headers.get("user-agent") ?? "";
   const preferSafari = /safari/i.test(userAgent) && !/(chrome|chromium|crios|android)/i.test(userAgent);
 
@@ -41,7 +45,7 @@ export async function GET(request: Request) {
     const result = await resolveStremioStreams(
       type,
       resourceId,
-      fallback ? 1 : 0,
+      addonIndex,
       preferSafari,
       clientIp
     );
@@ -51,7 +55,7 @@ export async function GET(request: Request) {
           type,
           id: resourceId,
           index: String(index),
-          fallback: fallback ? "1" : "0",
+          addonIndex: String(addonIndex),
           safari: preferSafari ? "1" : "0",
         }).toString();
         return {
@@ -62,9 +66,16 @@ export async function GET(request: Request) {
         };
       });
     }
-    return Response.json(result, {
-      headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
-    });
+    return Response.json(
+      {
+        ...result,
+        addonIndex,
+        hasMoreAddons: addonIndex + 1 < stremioAddonCount(),
+      },
+      {
+        headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
+      }
+    );
   } catch (error) {
     console.error("GET /api/streams", error);
     return Response.json(

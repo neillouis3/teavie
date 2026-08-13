@@ -63,14 +63,17 @@ export default function StremioPlayer({
   const effectiveImdbId = resolvedImdbId;
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const fallbackRequestedRef = useRef(false);
   const rejectedStreamIndexesRef = useRef(new Set<string>());
+  const autoSkipCountRef = useRef(0);
   const audioResumeTimeRef = useRef(0);
   const ignorePlaybackErrorsUntilRef = useRef(0);
   const controlsTimerRef = useRef<number | null>(null);
   const lastProgressReportRef = useRef(0);
   const [streams, setStreams] = useState<PlayableStream[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [addonIndex, setAddonIndex] = useState(0);
+  const [hasMoreAddons, setHasMoreAddons] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -130,15 +133,21 @@ export default function StremioPlayer({
   }, [type, effectiveImdbId, season, episode]);
 
   useEffect(() => {
+    setAddonIndex(0);
+    setHasMoreAddons(false);
+    autoSkipCountRef.current = 0;
+  }, [query]);
+
+  useEffect(() => {
     if (!effectiveImdbId) return;
     const controller = new AbortController();
     setLoading(true);
     setError(null);
     setStreams([]);
     setActiveIndex(0);
-    fallbackRequestedRef.current = false;
     rejectedStreamIndexesRef.current.clear();
-    fetch(`/api/streams?${query}`, { signal: controller.signal })
+    autoSkipCountRef.current = 0;
+    fetch(`/api/streams?${query}&addonIndex=${addonIndex}`, { signal: controller.signal })
       .then(async (response) => {
         const raw = await response.text();
         let body: Record<string, unknown> = {};
@@ -163,6 +172,7 @@ export default function StremioPlayer({
       })
       .then((body) => {
         const next = Array.isArray(body.streams) ? body.streams : [];
+        setHasMoreAddons(Boolean(body.hasMoreAddons));
         setStreams(next);
         if (!next.length) {
           const providerErrors = Array.isArray(body.errors)
@@ -207,7 +217,7 @@ export default function StremioPlayer({
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [query, effectiveImdbId]);
+  }, [query, effectiveImdbId, addonIndex, reloadNonce]);
 
   useEffect(() => {
     const stream = streams[activeIndex];
@@ -277,33 +287,33 @@ export default function StremioPlayer({
   };
 
   const advancePastFailedStream = () => {
-    const rejectionKey = `${fallbackRequestedRef.current ? "fallback" : "primary"}:${activeIndex}`;
+    const rejectionKey = `${addonIndex}:${activeIndex}`;
     if (rejectedStreamIndexesRef.current.has(rejectionKey)) return;
     rejectedStreamIndexesRef.current.add(rejectionKey);
 
-    if (activeIndex + 1 < streams.length) {
+    const maxAutoSkips = 2;
+    if (activeIndex + 1 < streams.length && autoSkipCountRef.current < maxAutoSkips) {
+      autoSkipCountRef.current += 1;
       setActiveIndex((index) => index + 1);
       return;
     }
-    if (fallbackRequestedRef.current) {
-      setError("No compatible English stream could be played in this browser.");
-      return;
-    }
-    fallbackRequestedRef.current = true;
-    setLoading(true);
-    fetch(`/api/streams?${query}&fallback=1`)
-      .then(async (response) => {
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.error || "Fallback provider failed");
-        const next = Array.isArray(body.streams) ? body.streams : [];
-        if (!next.length) throw new Error("The fallback provider returned no compatible streams.");
-        rejectedStreamIndexesRef.current.clear();
-        const fallbackStartIndex = streams.length;
-        setStreams((current) => [...current, ...next]);
-        setActiveIndex(fallbackStartIndex);
-      })
-      .catch((reason) => setError(reason?.message || "No compatible stream was found."))
-      .finally(() => setLoading(false));
+
+    setError(
+      hasMoreAddons
+        ? "This stream couldn't be played. Try another source below, or switch servers in Settings."
+        : "This stream couldn't be played. Try again or switch servers in Settings."
+    );
+  };
+
+  const tryAlternateAddon = () => {
+    if (!hasMoreAddons) return;
+    setError(null);
+    setAddonIndex((index) => index + 1);
+  };
+
+  const retryStreams = () => {
+    setError(null);
+    setReloadNonce((nonce) => nonce + 1);
   };
 
   useEffect(() => {
@@ -359,7 +369,30 @@ export default function StremioPlayer({
       <PlayerMessage text="No playback source available for this title." />
     );
   }
-  if (error) return <PlayerMessage text={error} />;
+  if (error) {
+    return (
+      <PlayerMessage text={error}>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={retryStreams}
+            className="rounded-full bg-white/15 px-4 py-2 text-sm text-white transition hover:bg-white/25"
+          >
+            Retry
+          </button>
+          {hasMoreAddons ? (
+            <button
+              type="button"
+              onClick={tryAlternateAddon}
+              className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-white/90"
+            >
+              Try another source
+            </button>
+          ) : null}
+        </div>
+      </PlayerMessage>
+    );
+  }
 
   return (
     <div ref={playerRef} onPointerMove={revealControls} onPointerDown={revealControls} onMouseLeave={() => { if (playing && !settingsOpen) setControlsVisible(false); }} className="group relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
@@ -377,11 +410,7 @@ export default function StremioPlayer({
         }}
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onDurationChange={(event) => {
-          const nextDuration = event.currentTarget.duration || 0;
-          setDuration(nextDuration);
-          if (nextDuration > 0 && nextDuration <= 35) {
-            advancePastFailedStream();
-          }
+          setDuration(event.currentTarget.duration || 0);
         }}
         onVolumeChange={(event) => setMuted(event.currentTarget.muted || event.currentTarget.volume === 0)}
         onError={(event) => handlePlaybackError(event.currentTarget.currentSrc)}
@@ -806,10 +835,17 @@ function formatTime(seconds: number) {
     : `${minutes}:${String(remainder).padStart(2, "0")}`;
 }
 
-function PlayerMessage({ text }: { text: string }) {
+function PlayerMessage({
+  text,
+  children,
+}: {
+  text: string;
+  children?: ReactNode;
+}) {
   return (
-    <div className="flex h-full min-h-0 w-full items-center justify-center rounded-lg bg-black px-6 text-center text-sm text-white/70 ring-1 ring-white/10">
-      {text}
+    <div className="flex h-full min-h-0 w-full flex-col items-center justify-center rounded-lg bg-black px-6 text-center text-sm text-white/70 ring-1 ring-white/10">
+      <p>{text}</p>
+      {children}
     </div>
   );
 }

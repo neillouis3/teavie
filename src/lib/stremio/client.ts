@@ -129,42 +129,41 @@ export function hasStremioAddons(): boolean {
   );
 }
 
+export function stremioAddonCount(): number {
+  return configuredAddons().length;
+}
+
 export async function resolveStremioStreams(
   type: "movie" | "series",
   id: string,
-  startAt = 0,
+  addonIndex = 0,
   preferSafari = false,
   clientIp?: string | null
 ) {
-  const addons = configuredAddons().slice(startAt);
-  const results = await Promise.all(
-    addons.map((addon) => fetchAddonStreams(addon, type, id, preferSafari, clientIp))
-  );
-
-  const errors: { addon: string; message: string }[] = [];
-  let unsupported = 0;
-  const merged: PlayableStream[] = [];
-  const seenUrls = new Set<string>();
-
-  for (const result of results) {
-    if (result.error) errors.push(result.error);
-    unsupported += result.unsupported;
-    for (const stream of result.streams) {
-      if (seenUrls.has(stream.url)) continue;
-      seenUrls.add(stream.url);
-      merged.push(stream);
-    }
-  }
-
-  if (merged.length > 0) {
+  const addons = configuredAddons();
+  const addon = addons[addonIndex];
+  if (!addon) {
     return {
-      streams: rankPlayableStreams(merged, preferSafari),
-      unsupported,
-      errors,
+      streams: [],
+      unsupported: 0,
+      errors: [{ addon: "stremio", message: "No stream addon is configured for this slot." }],
     };
   }
 
-  return { streams: [], unsupported, errors };
+  const result = await fetchAddonStreams(addon, type, id, preferSafari, clientIp);
+  if (result.streams.length > 0) {
+    return {
+      streams: rankPlayableStreams(result.streams, preferSafari),
+      unsupported: result.unsupported,
+      errors: result.error ? [result.error] : [],
+    };
+  }
+
+  return {
+    streams: [],
+    unsupported: result.unsupported,
+    errors: result.error ? [result.error] : [],
+  };
 }
 
 async function fetchAddonStreams(
