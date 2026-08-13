@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { cn } from "@/lib/utils";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
@@ -16,6 +17,7 @@ import {
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
 import {
   EXPLORE_RAIL_MAX_ITEMS,
+  LIBRARY_GRID_CLASS,
   RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE,
@@ -32,8 +34,11 @@ type UserContentRailProps<T extends ContentItem> = {
   layout?: "explore" | "profile";
   /** Extend rail under the sidebar (Explore). Off for Library-style pages. */
   bleed?: boolean;
+  /** Carousel rail (default) or centered grid (Library / Activity). */
+  display?: "rail" | "grid";
   maxItems?: number;
   className?: string;
+  sectionTitleClassName?: string;
   getItemKey: (item: T) => string;
   renderItem: (item: T) => React.ReactNode;
 };
@@ -44,8 +49,10 @@ export default function UserContentRail<T extends ContentItem>({
   items,
   layout = "explore",
   bleed = true,
+  display = "rail",
   maxItems = EXPLORE_RAIL_MAX_ITEMS,
   className = "",
+  sectionTitleClassName,
   getItemKey,
   renderItem,
 }: UserContentRailProps<T>) {
@@ -65,9 +72,35 @@ export default function UserContentRail<T extends ContentItem>({
 
   if (visibleItems.length === 0) return null;
 
+  if (display === "grid") {
+    return (
+      <section
+        className={cn(RAIL_INNER_CLASS, "items-center", className)}
+        aria-label={ariaLabel}
+      >
+        <ExploreSectionTitle
+          variant="explore"
+          className={cn("justify-center text-lg text-white", sectionTitleClassName)}
+        >
+          {title}
+        </ExploreSectionTitle>
+        <div className={LIBRARY_GRID_CLASS}>
+          {visibleItems.map((item) => (
+            <div key={getItemKey(item)}>{renderItem(item)}</div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={`${RAIL_INNER_CLASS} ${className}`} aria-label={ariaLabel}>
-      <ExploreSectionTitle variant="explore">{title}</ExploreSectionTitle>
+      <ExploreSectionTitle
+        variant="explore"
+        className={sectionTitleClassName}
+      >
+        {title}
+      </ExploreSectionTitle>
       <SidebarBleedRail>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent

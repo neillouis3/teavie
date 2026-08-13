@@ -9,7 +9,7 @@ import {
   Moon02Icon,
   Sun03Icon,
 } from '@hugeicons/core-free-icons';
-import Header from '@/components/ui/header';
+import UserPageShell from '@/components/ui/userPageShell';
 import { PageCard, PageCardRow } from '@/components/ui/pageCard';
 import {
   useCatalogCardStyle,
@@ -30,7 +30,6 @@ import {
   useStreamingSource,
 } from '@/contexts/streamingSourceContext';
 import { animeAudioLabel } from '@/lib/animePlayEmbed';
-import { CONTENT_INSET_X } from '@/lib/contentInset';
 import CatalogStreamingOutageAlert from '@/components/ui/catalogStreamingOutageAlert';
 import { cn } from '@/lib/utils';
 
@@ -51,7 +50,7 @@ function SegmentControl<T extends string>({
 }) {
   return (
     <div
-      className="inline-flex max-w-full flex-wrap gap-1 rounded-lg bg-default-100/80 p-1 dark:bg-white/[0.06]"
+      className="inline-flex max-w-full flex-wrap gap-1 rounded-lg bg-white/8 p-1"
       role="group"
     >
       {options.map((id) => {
@@ -68,10 +67,10 @@ function SegmentControl<T extends string>({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
               optionDisabled
-                ? 'cursor-not-allowed bg-transparent text-default-300 opacity-45 dark:text-white/30'
+                ? 'cursor-not-allowed bg-transparent text-white/30 opacity-45'
                 : selected
-                ? 'bg-background text-foreground shadow-sm dark:bg-default-100/10'
-                : 'text-default-500 hover:text-foreground'
+                ? 'bg-white/15 text-white shadow-sm'
+                : 'text-white/60 hover:text-white'
             )}
           >
             {icon?.(id)}
@@ -103,83 +102,84 @@ export default function SettingsPage() {
   const cardLayoutOptions = ['vertical', 'horizontal'] as const satisfies readonly CatalogCardLayoutMode[];
 
   return (
-    <div className="bg-main min-h-screen w-full">
-      <Header pageName="Settings" />
-      <div className={`max-w-2xl space-y-5 pb-12 pt-4 ${CONTENT_INSET_X}`}>
-        <PageCard title="Appearance">
-          <PageCardRow label="Theme">
-            {!mounted ? (
-              <div className="h-9 w-40 animate-pulse rounded-lg bg-default-200" />
-            ) : (
-              <SegmentControl
-                options={['light', 'dark'] as const}
-                value={activeTheme === 'dark' ? 'dark' : 'light'}
-                onChange={(next) => setTheme(next)}
-                label={(id) => (id === 'light' ? 'Light' : 'Dark')}
-                icon={(id) => (
-                  <HugeiconsIcon
-                    icon={id === 'light' ? Sun03Icon : Moon02Icon}
-                    size={16}
-                    className="shrink-0"
-                  />
-                )}
-              />
-            )}
-          </PageCardRow>
-
-          <PageCardRow label="Catalog cards">
+    <UserPageShell
+      title="Settings"
+      description="Appearance and playback preferences for this device."
+      contentClassName="space-y-5"
+    >
+      <PageCard title="Appearance">
+        <PageCardRow label="Theme">
+          {!mounted ? (
+            <div className="h-9 w-40 animate-pulse rounded-lg bg-white/10" />
+          ) : (
             <SegmentControl
-              options={cardLayoutOptions}
-              value={cardLayout}
-              onChange={setCardLayout}
-              label={(id) => (id === 'vertical' ? 'Vertical' : 'Horizontal')}
+              options={['light', 'dark'] as const}
+              value={activeTheme === 'dark' ? 'dark' : 'light'}
+              onChange={(next) => setTheme(next)}
+              label={(id) => (id === 'light' ? 'Light' : 'Dark')}
               icon={(id) => (
                 <HugeiconsIcon
-                  icon={id === 'vertical' ? LayoutGridIcon : LayoutTwoRowIcon}
+                  icon={id === 'light' ? Sun03Icon : Moon02Icon}
                   size={16}
                   className="shrink-0"
                 />
               )}
             />
-          </PageCardRow>
-        </PageCard>
+          )}
+        </PageCardRow>
 
-        <PageCard
-          title="Playback"
-          footer="Third-party players may show ads we don't control. Settings are saved on this device."
-        >
-          <div className="px-4 pb-2 pt-1 sm:px-6">
-            <CatalogStreamingOutageAlert />
-          </div>
-          <PageCardRow label="Movies & TV">
-            <SegmentControl
-              options={STREAM_SERVER_OPTIONS}
-              value={streamServer}
-              onChange={setStreamServer}
-              label={streamServerLabel}
-              disabled={(id) => id === 'stremio'}
-            />
-          </PageCardRow>
+        <PageCardRow label="Catalog cards">
+          <SegmentControl
+            options={cardLayoutOptions}
+            value={cardLayout}
+            onChange={setCardLayout}
+            label={(id) => (id === 'vertical' ? 'Vertical' : 'Horizontal')}
+            icon={(id) => (
+              <HugeiconsIcon
+                icon={id === 'vertical' ? LayoutGridIcon : LayoutTwoRowIcon}
+                size={16}
+                className="shrink-0"
+              />
+            )}
+          />
+        </PageCardRow>
+      </PageCard>
 
-          <PageCardRow label="Anime player">
-            <SegmentControl
-              options={ANIME_SOURCE_OPTIONS}
-              value={animeSource}
-              onChange={setAnimeSource}
-              label={animeSourceLabel}
-            />
-          </PageCardRow>
+      <PageCard
+        title="Playback"
+        footer="Third-party players may show ads we don't control. Settings are saved on this device."
+      >
+        <div className="px-4 pb-2 pt-1 sm:px-6">
+          <CatalogStreamingOutageAlert />
+        </div>
+        <PageCardRow label="Movies & TV">
+          <SegmentControl
+            options={STREAM_SERVER_OPTIONS}
+            value={streamServer}
+            onChange={setStreamServer}
+            label={streamServerLabel}
+            disabled={(id) => id === 'stremio'}
+          />
+        </PageCardRow>
 
-          <PageCardRow label="Anime audio">
-            <SegmentControl
-              options={ANIME_AUDIO_OPTIONS}
-              value={animeAudio}
-              onChange={setAnimeAudio}
-              label={animeAudioLabel}
-            />
-          </PageCardRow>
-        </PageCard>
-      </div>
-    </div>
+        <PageCardRow label="Anime player">
+          <SegmentControl
+            options={ANIME_SOURCE_OPTIONS}
+            value={animeSource}
+            onChange={setAnimeSource}
+            label={animeSourceLabel}
+          />
+        </PageCardRow>
+
+        <PageCardRow label="Anime audio">
+          <SegmentControl
+            options={ANIME_AUDIO_OPTIONS}
+            value={animeAudio}
+            onChange={setAnimeAudio}
+            label={animeAudioLabel}
+          />
+        </PageCardRow>
+      </PageCard>
+    </UserPageShell>
   );
 }

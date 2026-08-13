@@ -16,6 +16,8 @@ import { useUserData } from "@/contexts/userDataContext";
 type WatchHistoryRailProps = {
   items: ExploreHistoryRow[];
   layout?: "explore" | "profile";
+  bleed?: boolean;
+  display?: "rail" | "grid";
   maxItems?: number;
   className?: string;
 };
@@ -23,6 +25,8 @@ type WatchHistoryRailProps = {
 export default function WatchHistoryRail({
   items,
   layout = "explore",
+  bleed = true,
+  display = "rail",
   maxItems,
   className,
 }: WatchHistoryRailProps) {
@@ -45,6 +49,8 @@ export default function WatchHistoryRail({
       ariaLabel="Watch history"
       items={visibleItems}
       layout={layout}
+      bleed={bleed}
+      display={display}
       maxItems={maxItems}
       className={className}
       getItemKey={(item) => `${catalogItemMediaType(item)}-${item.id}`}

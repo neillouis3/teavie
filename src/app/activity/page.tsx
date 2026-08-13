@@ -3,11 +3,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@heroui/react";
-import Header from "@/components/ui/header";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import WatchHistoryRail from "@/components/explore/watchHistoryRail";
 import WatchHistoryLogRail from "@/components/explore/watchHistoryLogRail";
+import UserPageShell from "@/components/ui/userPageShell";
+import SmallCardLoading from "@/components/ui/smallCardLoading";
 import {
   watchHistoryLogLabel,
   watchHistoryProgressLabel,
@@ -20,12 +20,11 @@ import {
   type ExploreHistoryRow,
 } from "@/lib/explorePageData";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
-import { CONTENT_INSET_X } from "@/lib/contentInset";
-import { RAIL_STACK_CLASS } from "@/lib/catalogGrid";
+import { LIBRARY_GRID_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 
-const ACTIVITY_CACHE_PREFIX = "teavie.cache.activity.v1:";
+const ACTIVITY_CACHE_PREFIX = "teavie.cache.activity.v2:";
 
 type ActivityPayload = {
   historyRows: ExploreHistoryRow[];
@@ -34,6 +33,16 @@ type ActivityPayload = {
 
 function listSignature(entries: { catalogId: string; mediaType: string }[]) {
   return entries.map((e) => `${e.mediaType}:${e.catalogId}`).sort().join("|");
+}
+
+function ActivityGridSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className={LIBRARY_GRID_CLASS} aria-hidden>
+      {Array.from({ length: count }).map((_, i) => (
+        <SmallCardLoading key={i} />
+      ))}
+    </div>
+  );
 }
 
 export default function ActivityPage() {
@@ -141,28 +150,37 @@ export default function ActivityPage() {
   const isEmpty = !loading && !hasContinue && !hasHistoryLog;
 
   return (
-    <div className="bg-main min-h-screen w-full">
-      <Header pageName="Activity" />
-
+    <UserPageShell
+      title="Activity"
+      description="Continue watching and your watch history."
+      contentMaxWidth="6xl"
+      contentClassName="flex flex-col items-center"
+    >
       {isEmpty ? (
-        <div className={`mt-8 max-w-2xl space-y-6 ${CONTENT_INSET_X}`}>
+        <div className="flex w-full max-w-lg flex-col items-center space-y-8 text-center">
           <section className="space-y-2">
-            <ExploreSectionTitle className="pl-0 text-lg" variant="explore">
+            <ExploreSectionTitle
+              className="justify-center text-lg text-white"
+              variant="explore"
+            >
               Continue watching
             </ExploreSectionTitle>
-            <p className="text-sm text-default-500">
+            <p className="text-sm text-white/50">
               Titles you play will show up here and on Explore.
             </p>
           </section>
           <section className="space-y-2">
-            <ExploreSectionTitle className="pl-0 text-lg" variant="explore">
+            <ExploreSectionTitle
+              className="justify-center text-lg text-white"
+              variant="explore"
+            >
               Watch history
             </ExploreSectionTitle>
-            <p className="text-sm text-default-500">
+            <p className="text-sm text-white/50">
               A longer record of movies and shows you have watched.
             </p>
           </section>
-          <p className="text-sm text-default-500">
+          <p className="text-sm text-white/50">
             Favorites and watch later live in{" "}
             <Link href="/library" className="text-success hover:underline">
               Library
@@ -170,7 +188,7 @@ export default function ActivityPage() {
             .
           </p>
           {!user ? (
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap justify-center gap-2 pt-2">
               <Button as={Link} href="/login" color="success" size="sm">
                 Sign in
               </Button>
@@ -180,35 +198,51 @@ export default function ActivityPage() {
             </div>
           ) : null}
         </div>
-      ) : null}
+      ) : (
+        <div className={`${RAIL_STACK_CLASS} w-full items-center`}>
+          {loading && watchHistoryEntries.length > 0 && historyRows.length === 0 ? (
+            <section className="flex w-full flex-col items-center gap-4" aria-busy="true">
+              <ExploreSectionTitle
+                className="justify-center text-lg text-white"
+                variant="explore"
+              >
+                Continue watching
+              </ExploreSectionTitle>
+              <ActivityGridSkeleton count={4} />
+            </section>
+          ) : null}
 
-      <div className={`${RAIL_STACK_CLASS} ${CONTENT_INSET_X} mt-6 pb-12`}>
-        {loading && watchHistoryEntries.length > 0 && historyRows.length === 0 ? (
-          <section aria-label="Continue watching" aria-busy="true">
-            <ExploreSectionTitle className="pl-0 text-lg" variant="explore">
-              Continue watching
-            </ExploreSectionTitle>
-            <CatalogRailSkeleton count={6} />
-          </section>
-        ) : null}
+          {historyRows.length > 0 ? (
+            <WatchHistoryRail
+              items={historyRows}
+              layout="profile"
+              bleed={false}
+              display="grid"
+            />
+          ) : null}
 
-        {historyRows.length > 0 ? (
-          <WatchHistoryRail items={historyRows} layout="profile" />
-        ) : null}
+          {loading && pendingLogCount > 0 && historyLogRows.length === 0 ? (
+            <section className="flex w-full flex-col items-center gap-4" aria-busy="true">
+              <ExploreSectionTitle
+                className="justify-center text-lg text-white"
+                variant="explore"
+              >
+                Watch history
+              </ExploreSectionTitle>
+              <ActivityGridSkeleton count={4} />
+            </section>
+          ) : null}
 
-        {loading && pendingLogCount > 0 && historyLogRows.length === 0 ? (
-          <section aria-label="Watch history" aria-busy="true">
-            <ExploreSectionTitle className="pl-0 text-lg" variant="explore">
-              Watch history
-            </ExploreSectionTitle>
-            <CatalogRailSkeleton count={6} />
-          </section>
-        ) : null}
-
-        {historyLogRows.length > 0 ? (
-          <WatchHistoryLogRail items={historyLogRows} layout="profile" />
-        ) : null}
-      </div>
-    </div>
+          {historyLogRows.length > 0 ? (
+            <WatchHistoryLogRail
+              items={historyLogRows}
+              layout="profile"
+              bleed={false}
+              display="grid"
+            />
+          ) : null}
+        </div>
+      )}
+    </UserPageShell>
   );
 }

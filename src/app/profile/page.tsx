@@ -3,8 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Avatar, Button, Input } from "@heroui/react";
-import Header from "@/components/ui/header";
-import { PageCard, PageCardRow } from "@/components/ui/pageCard";
+import UserPageShell from "@/components/ui/userPageShell";
+import { PageCard, PageCardRow, PAGE_CARD } from "@/components/ui/pageCard";
 import { avatarInitials } from "@/lib/partyNickname";
 import {
   loadGuestAvatarUrl,
@@ -16,7 +16,6 @@ import {
   uploadUserAvatar,
   validateAvatarFile,
 } from "@/lib/uploadUserAvatar";
-import { CONTENT_INSET_X } from "@/lib/contentInset";
 import { useAuth, ONBOARDING_REQUEST_EVENT } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 import { hasUserPreferences } from "@/types/user";
@@ -134,172 +133,170 @@ export default function ProfilePage() {
 
   if (authLoading) {
     return (
-      <div className="bg-main min-h-screen w-full">
-        <Header pageName="Profile" />
-        <div className={`max-w-2xl pt-8 ${CONTENT_INSET_X}`}>
-          <div className="h-40 animate-pulse rounded-xl bg-default-200" />
-        </div>
-      </div>
+      <UserPageShell title="Profile" description="Your account and preferences.">
+        <div className="h-40 animate-pulse rounded-xl bg-white/10" />
+      </UserPageShell>
     );
   }
 
   return (
-    <div className="bg-main min-h-screen w-full">
-      <Header pageName="Profile" />
-      <div className={`max-w-2xl space-y-5 pb-12 pt-4 ${CONTENT_INSET_X}`}>
-        {!user ? (
-          <PageCard
-            title="Account"
-            footer="Sign in to sync preferences, favorites, and watch later across devices."
-          >
-            <PageCardRow label="Get started">
-              <div className="flex flex-wrap gap-2">
-                <Button as={Link} href="/login" color="success" size="sm">
-                  Sign in
-                </Button>
-                <Button as={Link} href="/signup" variant="flat" size="sm">
-                  Create account
-                </Button>
-              </div>
-            </PageCardRow>
-          </PageCard>
-        ) : null}
-
+    <UserPageShell
+      title="Profile"
+      description="Your account, display name, and personalized recommendations."
+      contentClassName="space-y-5"
+    >
+      {!user ? (
         <PageCard
-          title="Profile"
-          footer={!user ? "Browsing as a guest on this device." : undefined}
+          title="Account"
+          footer="Sign in to sync preferences, favorites, and watch later across devices."
         >
-          <div>
-            <div className="flex items-center gap-4">
-              <Avatar
-                src={avatarUrl}
-                name={displayNick}
-                getInitials={() => avatarInitials(displayNick)}
-                classNames={{
-                  base: "h-16 w-16 bg-success/20 text-success",
-                  name: "text-xl font-semibold",
-                }}
-              />
-              <button
-                type="button"
-                disabled={avatarUploading}
-                onClick={() => fileRef.current?.click()}
-                className="text-sm text-default-500 transition-colors hover:text-foreground disabled:opacity-50"
-              >
-                {avatarUploading ? "Uploading…" : "Change photo"}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleAvatarFile(file);
-                  e.target.value = "";
-                }}
-              />
-            </div>
-            {avatarError ? <p className="mt-2 text-xs text-danger">{avatarError}</p> : null}
-          </div>
-
-          <PageCardRow label="Display name" stackOnMobile={false}>
-            <div className="flex w-full max-w-md items-center gap-2">
-              <Input
-                id="profile-display-name"
-                value={nickname}
-                onValueChange={setNickname}
-                maxLength={64}
-                className="flex-1"
-                isDisabled={!user}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleSave();
-                }}
-              />
-              <Button
-                size="md"
-                color="success"
-                isDisabled={!user || !dirty}
-                onPress={() => void handleSave()}
-              >
-                Save
+          <PageCardRow label="Get started">
+            <div className="flex flex-wrap gap-2">
+              <Button as={Link} href="/login" color="success" size="sm">
+                Sign in
+              </Button>
+              <Button as={Link} href="/signup" variant="flat" size="sm">
+                Create account
               </Button>
             </div>
           </PageCardRow>
-
-          {user ? (
-            <div className="flex sm:justify-start">
-              <Button
-                size="md"
-                variant="light"
-                color="danger"
-                onPress={() => void signOut()}
-              >
-                Sign out
-              </Button>
-            </div>
-          ) : null}
         </PageCard>
+      ) : null}
+
+      <PageCard
+        title="Profile"
+        footer={!user ? "Browsing as a guest on this device." : undefined}
+      >
+        <div>
+          <div className="flex items-center gap-4">
+            <Avatar
+              src={avatarUrl}
+              name={displayNick}
+              getInitials={() => avatarInitials(displayNick)}
+              classNames={{
+                base: "h-16 w-16 bg-success/20 text-success",
+                name: "text-xl font-semibold",
+              }}
+            />
+            <button
+              type="button"
+              disabled={avatarUploading}
+              onClick={() => fileRef.current?.click()}
+              className="text-sm text-white/55 transition-colors hover:text-white disabled:opacity-50"
+            >
+              {avatarUploading ? "Uploading…" : "Change photo"}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleAvatarFile(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
+          {avatarError ? <p className="mt-2 text-xs text-danger">{avatarError}</p> : null}
+        </div>
+
+        <PageCardRow label="Display name" stackOnMobile={false}>
+          <div className="flex w-full max-w-md items-center gap-2">
+            <Input
+              id="profile-display-name"
+              value={nickname}
+              onValueChange={setNickname}
+              maxLength={64}
+              className="flex-1"
+              isDisabled={!user}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleSave();
+              }}
+            />
+            <Button
+              size="md"
+              color="success"
+              isDisabled={!user || !dirty}
+              onPress={() => void handleSave()}
+            >
+              Save
+            </Button>
+          </div>
+        </PageCardRow>
 
         {user ? (
-          <section className="rounded-xl border border-default-200/80 bg-content1/50 p-5 dark:border-white/10">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">
-                  Your preferences
-                </h2>
-                <p className="mt-1 text-sm text-default-500">
-                  Used for Recommended for you and Explore rails.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                color="success"
-                variant="flat"
-                onPress={openPreferenceEditor}
-              >
-                Edit
+          <div className="flex sm:justify-start">
+            <Button
+              size="md"
+              variant="light"
+              color="danger"
+              onPress={() => void signOut()}
+            >
+              Sign out
+            </Button>
+          </div>
+        ) : null}
+      </PageCard>
+
+      {user ? (
+        <section className={PAGE_CARD}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-white">
+                Your preferences
+              </h2>
+              <p className="mt-1 text-sm text-white/50">
+                Used for Recommended for you and Explore rails.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              color="success"
+              variant="flat"
+              onPress={openPreferenceEditor}
+            >
+              Edit
+            </Button>
+          </div>
+
+          {preferenceGroups ? (
+            <div className="mt-5 space-y-5">
+              {preferenceGroups.map((group) => (
+                <div key={group.label} className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-white/45">
+                    {group.label}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.items.map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex items-center rounded-md border border-white/10 bg-white/8 px-2.5 py-1 text-sm text-white/85"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 space-y-3">
+              <p className="text-sm text-white/50">
+                No preferences yet. Set categories, genres, and languages to
+                personalize Explore.
+              </p>
+              <Button size="sm" color="success" onPress={openPreferenceEditor}>
+                Set preferences
               </Button>
             </div>
+          )}
 
-            {preferenceGroups ? (
-              <div className="mt-5 space-y-5">
-                {preferenceGroups.map((group) => (
-                  <div key={group.label} className="space-y-2">
-                    <p className="text-xs font-medium tracking-wide text-default-500">
-                      {group.label}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {group.items.map((item) => (
-                        <span
-                          key={item}
-                          className="inline-flex items-center rounded-md border border-default-200/70 bg-default-100/60 px-2.5 py-1 text-sm text-foreground dark:border-default-100/25 dark:bg-default-100/10"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-5 space-y-3">
-                <p className="text-sm text-default-500">
-                  No preferences yet. Set categories, genres, and languages to
-                  personalize Explore.
-                </p>
-                <Button size="sm" color="success" onPress={openPreferenceEditor}>
-                  Set preferences
-                </Button>
-              </div>
-            )}
-
-            <p className="mt-5 text-xs leading-relaxed text-default-500">
-              Saved to your account and synced across devices.
-            </p>
-          </section>
-        ) : null}
-      </div>
-    </div>
+          <p className="mt-5 text-xs leading-relaxed text-white/45">
+            Saved to your account and synced across devices.
+          </p>
+        </section>
+      ) : null}
+    </UserPageShell>
   );
 }

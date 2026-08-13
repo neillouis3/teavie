@@ -19,18 +19,7 @@ import {
   prefetchBrowseCatalogPage,
 } from "@/lib/pageDataCache";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
-import { tmdbBackdropUrl, tmdbPosterUrl } from "@/lib/tmdbImage";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
-
-function browseBackdropUrl(items: ContentItem[]): string | null {
-  for (const row of items.slice(0, 8)) {
-    const fromBackdrop = tmdbBackdropUrl(row.backdrop_path);
-    if (fromBackdrop) return fromBackdrop;
-    const fromPoster = tmdbPosterUrl(row.poster_path);
-    if (fromPoster) return fromPoster;
-  }
-  return null;
-}
 
 type BrowseCatalogPageProps = {
   pageName: string;
@@ -276,11 +265,9 @@ function BrowseCatalogPageContent({
     return () => observer.disconnect();
   }, [items.length, loadMore, loading, totalPages]);
 
-  const backdropUrl = useMemo(() => browseBackdropUrl(items), [items]);
-
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden pb-10">
-      <PageBlurredBackdrop imageUrl={backdropUrl} />
+      <PageBlurredBackdrop variant="browse" />
       <div className={`relative z-10 ${CONTENT_INSET_X}`}>
         <div className="flex items-start gap-8">
           <BrowseCatalogSidebar
@@ -291,12 +278,12 @@ function BrowseCatalogPageContent({
           <main className="min-w-0 flex-1">
             <div className="mb-5 flex items-end justify-between gap-4">
               <div>
-                <h1 className="text-base tracking-tight text-foreground">{pageName}</h1>
+                <h1 className="text-base font-medium tracking-tight text-white">{pageName}</h1>
                 
               </div>
               {!loading ? (
                 <span
-                  className={`shrink-0 rounded-full bg-foreground/8 px-4 py-2 text-xs text-default-500 dark:bg-white/8 ${total > 0 ? "" : "invisible"}`}
+                  className={`shrink-0 rounded-full bg-white/10 px-4 py-2 text-xs text-white/70 ${total > 0 ? "" : "invisible"}`}
                   aria-hidden={total <= 0}
                 >
                   {total > 0 ? `${total.toLocaleString()} titles` : "0 titles"}
@@ -361,7 +348,7 @@ function BrowseCatalogPageContent({
 function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden">
-      <PageBlurredBackdrop />
+      <PageBlurredBackdrop variant="browse" />
       <div className={`relative z-10 pb-8 pt-2 ${CONTENT_INSET_X}`}>
         <Header pageName={pageName} />
         <CatalogGridLoading />

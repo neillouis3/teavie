@@ -265,32 +265,40 @@ export function catalogTvBrowseReleasedClause(dateField, todayIso) {
 }
 
 /**
+ * K-Drama browse: Korean TV (non-anime) with credible Korean origin + language.
+ * Tagged rows must still pass — avoids mis-tagged Western titles in browse.
+ * @returns {Record<string, unknown>}
+ */
+export function catalogKdramaKoreanOriginClause() {
+  return {
+    $or: [
+      { origin_country: "KR" },
+      { "omdb.country": { $regex: "Korea", $options: "i" } },
+    ],
+  };
+}
+
+/** @returns {Record<string, unknown>} */
+export function catalogKdramaKoreanLanguageClause() {
+  return {
+    $or: [
+      { original_language: "ko" },
+      { "omdb.language": { $regex: "Korean", $options: "i" } },
+    ],
+  };
+}
+
+/**
  * K-Drama browse: Korean TV (non-anime), tagged or inferred from origin + language.
  * @returns {Record<string, unknown>}
  */
 export function catalogKdramaClause() {
   return {
-    $or: [
-      { catalog_categories: "kdrama" },
-      { is_kdrama: true },
-      {
-        $and: [
-          { type: "tv" },
-          catalogNotAnimeCatalogIdMongoExpr(),
-          {
-            $or: [
-              { origin_country: "KR" },
-              { "omdb.country": { $regex: "Korea", $options: "i" } },
-            ],
-          },
-          {
-            $or: [
-              { original_language: "ko" },
-              { "omdb.language": { $regex: "Korean", $options: "i" } },
-            ],
-          },
-        ],
-      },
+    $and: [
+      { type: "tv" },
+      catalogNotAnimeCatalogIdMongoExpr(),
+      catalogKdramaKoreanOriginClause(),
+      catalogKdramaKoreanLanguageClause(),
     ],
   };
 }

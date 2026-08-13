@@ -462,10 +462,6 @@ export function isKdramaDoc(doc) {
   const idStr = String(doc.id ?? "");
   if (idStr.startsWith("anime_") || doc.is_anime === true) return false;
 
-  const categories = doc.catalog_categories;
-  if (Array.isArray(categories) && categories.includes("kdrama")) return true;
-  if (doc.is_kdrama === true) return true;
-
   const origins = doc.origin_country;
   const hasKr =
     (Array.isArray(origins) &&

@@ -69,6 +69,11 @@ const genreIcons = {
   thriller: AdventureIcon,
 } as const;
 
+const sidebarItemClass =
+  "min-h-8 rounded-lg px-3 py-1 text-xs font-normal text-white/80 transition-colors data-[hover=true]:bg-white/8 data-[hover=true]:text-white data-[focus=true]:bg-white/8 data-[focus-visible=true]:bg-white/8 data-[pressed=true]:bg-white/8 data-[selected=true]:bg-white/15 data-[selected=true]:text-white data-[selected=true]:backdrop-blur-md data-[selected=true]:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]";
+
+const sidebarIconClass = "shrink-0 text-current opacity-90";
+
 export default function BrowseCatalogSidebar({
   label,
   genreSlugs,
@@ -142,10 +147,10 @@ export default function BrowseCatalogSidebar({
                   icon={item.icon}
                   size={16}
                   strokeWidth={1.75}
-                  className="shrink-0 text-default-400"
+                  className={sidebarIconClass}
                 />
               }
-              className="min-h-8 rounded-lg px-3 py-1 text-xs font-normal text-default-300 transition-colors data-[hover=true]:bg-transparent data-[focus=true]:bg-transparent data-[focus-visible=true]:bg-transparent data-[pressed=true]:bg-transparent data-[hover=true]:text-foreground data-[selected=true]:bg-white/10 data-[selected=true]:text-foreground data-[selected=true]:backdrop-blur-md data-[selected=true]:backdrop-saturate-150 data-[selected=true]:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+              className={sidebarItemClass}
             >
               {item.label === "All" ? `All ${label}` : item.label}
             </ListboxItem>
@@ -156,7 +161,7 @@ export default function BrowseCatalogSidebar({
           classNames={{
             base: "mt-2",
             group: "space-y-0",
-            heading: "px-3 pb-1.5 pt-2 text-xs font-normal text-default-500",
+            heading: "px-3 pb-1.5 pt-2 text-xs font-medium uppercase tracking-wide text-white/50",
           }}
         >
           {genres.map((genre) => (
@@ -168,10 +173,10 @@ export default function BrowseCatalogSidebar({
                   icon={genreIcons[genre.slug as keyof typeof genreIcons]}
                   size={16}
                   strokeWidth={1.75}
-                  className="shrink-0 text-default-400"
+                  className={sidebarIconClass}
                 />
               }
-              className="min-h-8 rounded-lg px-3 py-1 text-xs font-normal text-default-300 transition-colors data-[hover=true]:bg-transparent data-[focus=true]:bg-transparent data-[focus-visible=true]:bg-transparent data-[pressed=true]:bg-transparent data-[hover=true]:text-foreground data-[selected=true]:bg-white/10 data-[selected=true]:text-foreground data-[selected=true]:backdrop-blur-md data-[selected=true]:backdrop-saturate-150 data-[selected=true]:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+              className={sidebarItemClass}
             >
               {genre.label}
             </ListboxItem>
