@@ -26,7 +26,7 @@ const SERVER_ALIASES: Record<string, StreamServerId> = {
 export function streamServerLabel(id: StreamServerId): string {
   switch (id) {
     case 'stremio':
-      return 'Custom player · Experimental';
+      return 'Stremio';
     case 'movies111':
       return '111movies';
     case 'peachify':
@@ -43,7 +43,7 @@ export const STREAM_SERVER_OPTIONS: StreamServerId[] = [...ORDER];
 function normalizeStored(raw: string | null): StreamServerId | null {
   if (!raw) return null;
   const aliased = SERVER_ALIASES[raw] ?? raw;
-  if (aliased in MOVIE_SERVERS && aliased !== 'stremio') {
+  if (aliased in MOVIE_SERVERS) {
     return aliased as StreamServerId;
   }
   return null;
@@ -53,10 +53,6 @@ function readStored(): StreamServerId {
   if (typeof window === 'undefined') return DEFAULT_SERVER;
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === 'stremio') {
-      localStorage.setItem(STORAGE_KEY, DEFAULT_SERVER);
-      return DEFAULT_SERVER;
-    }
     const normalized = normalizeStored(v);
     if (normalized) {
       if (v !== normalized) {
@@ -97,7 +93,6 @@ export function StreamingSourceProvider({ children }: { children: React.ReactNod
   }, []);
 
   const setServer = useCallback((id: StreamServerId) => {
-    if (id === 'stremio') return;
     setServerState(id);
     try {
       localStorage.setItem(STORAGE_KEY, id);

@@ -4,13 +4,12 @@ import Hls from "hls.js";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, ButtonGroup, Card, CardBody, Input, Modal, ModalContent, Select, SelectItem, Slider, Switch } from "@heroui/react";
+import { Button, ButtonGroup, Card, CardBody, Modal, ModalContent, Select, SelectItem, Slider, Switch } from "@heroui/react";
 import {
   ArrowRight01Icon,
   Cancel01Icon,
   ComputerIcon,
   FullscreenIcon,
-  Globe02Icon,
   GoBackward10SecIcon,
   GoForward10SecIcon,
   PauseIcon,
@@ -30,7 +29,7 @@ import { useWatchPartyNav } from "@/contexts/watchPartyNavContext";
 type Props = {
   type: "movie" | "series";
   imdbId?: string | null;
-  /** Persist a manual IMDb override for this title (e.g. TMDB / catalog id). */
+  /** Catalog id used to resolve IMDb when missing from metadata. */
   catalogKey?: string | null;
   season?: number;
   episode?: number;
@@ -57,12 +56,11 @@ export default function StremioPlayer({
 }: Props) {
   const router = useRouter();
   const { openTeaParty } = useWatchPartyNav();
-  const overrideStorageKey = useMemo(
-    () => imdbOverrideStorageKey(type, catalogKey, title, season, episode),
-    [type, catalogKey, title, season, episode]
+  const [resolvedImdbId, setResolvedImdbId] = useState<string | null>(() =>
+    imdbId ? normalizeImdbId(imdbId) : null
   );
-  const [manualImdbId, setManualImdbId] = useState<string | null>(null);
-  const effectiveImdbId = imdbId ?? manualImdbId;
+  const [resolvingImdb, setResolvingImdb] = useState(() => !imdbId);
+  const effectiveImdbId = resolvedImdbId;
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackRequestedRef = useRef(false);
@@ -89,32 +87,38 @@ export default function StremioPlayer({
   const [controlsVisible, setControlsVisible] = useState(true);
 
   useEffect(() => {
-    if (imdbId || !overrideStorageKey) return;
-    try {
-      const saved = sessionStorage.getItem(overrideStorageKey);
-      const normalized = saved ? normalizeImdbId(saved) : null;
-      if (normalized) setManualImdbId(normalized);
-    } catch {
-      /* ignore */
+    if (imdbId) {
+      setResolvedImdbId(normalizeImdbId(imdbId));
+      setResolvingImdb(false);
+      return;
     }
-  }, [imdbId, overrideStorageKey]);
-
-  const applyManualImdbId = useCallback(
-    (raw: string) => {
-      const normalized = normalizeImdbId(raw);
-      if (!normalized) return false;
-      setManualImdbId(normalized);
-      if (overrideStorageKey) {
-        try {
-          sessionStorage.setItem(overrideStorageKey, normalized);
-        } catch {
-          /* ignore */
-        }
-      }
-      return true;
-    },
-    [overrideStorageKey]
-  );
+    const key = String(catalogKey ?? "").trim();
+    if (!/^\d+$/.test(key)) {
+      setResolvedImdbId(null);
+      setResolvingImdb(false);
+      return;
+    }
+    let cancelled = false;
+    setResolvingImdb(true);
+    const endpoint = type === "series" ? "/api/tv/resolve" : "/api/movie/resolve";
+    void fetch(`${endpoint}?id=${encodeURIComponent(key)}`)
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (cancelled) return;
+        const next =
+          typeof body?.imdbId === "string" ? normalizeImdbId(body.imdbId) : null;
+        setResolvedImdbId(next);
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedImdbId(null);
+      })
+      .finally(() => {
+        if (!cancelled) setResolvingImdb(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [imdbId, catalogKey, type]);
 
   const query = useMemo(() => {
     const q = new URLSearchParams({ type, id: effectiveImdbId ?? "" });
@@ -379,17 +383,9 @@ export default function StremioPlayer({
     onPlaybackProgress(currentTime);
   }, [currentTime, onPlaybackProgress]);
 
-  if (!effectiveImdbId) {
+  if (!effectiveImdbId && !resolvingImdb) {
     return (
-      <ImdbEntryPanel
-        title={title}
-        posterUrl={posterUrl}
-        backdropUrl={backdropUrl}
-        catalogKey={catalogKey}
-        mediaType={type === "series" ? "tv" : "movie"}
-        onBack={() => router.back()}
-        onSubmit={applyManualImdbId}
-      />
+      <PlayerMessage text="No playback source available for this title." />
     );
   }
   if (error) return <PlayerMessage text={error} />;
@@ -505,10 +501,6 @@ export default function StremioPlayer({
         <ModalContent>
           {activeStream ? (
             <PlayerSettingsMenu
-              streams={streams}
-              activeIndex={activeIndex}
-              setActiveIndex={setActiveIndex}
-              streamLabel={streamLabel}
               preferredQuality={preferredQuality}
               selectQuality={selectQuality}
               audioTracks={audioTracks}
@@ -517,11 +509,13 @@ export default function StremioPlayer({
               video={videoRef.current}
               close={() => setSettingsOpen(false)}
               openWatchParty={openTeaParty}
+              subtitleLabel={activeSubtitle(videoRef.current)}
+              audioLabel={streamAudio(streamLabel)}
             />
           ) : null}
         </ModalContent>
       </Modal>
-      {loading ? (
+      {loading || resolvingImdb ? (
         <div className="absolute inset-0 z-20 flex items-center justify-center overflow-hidden bg-black text-white">
           {backdropUrl ? (
             <div
@@ -576,11 +570,7 @@ function SettingTile({ icon, label, value }: { icon: Parameters<typeof Hugeicons
   );
 }
 
-function PlayerSettingsMenu({ streams, activeIndex, setActiveIndex, streamLabel, preferredQuality, selectQuality, audioTracks, selectedAudioIndex, selectAudioTrack, video, close, openWatchParty }: {
-  streams: PlayableStream[];
-  activeIndex: number;
-  setActiveIndex: (index: number) => void;
-  streamLabel: string;
+function PlayerSettingsMenu({ preferredQuality, selectQuality, audioTracks, selectedAudioIndex, selectAudioTrack, video, close, openWatchParty, subtitleLabel, audioLabel }: {
   preferredQuality: string;
   selectQuality: (quality: string) => void;
   audioTracks: AudioTrack[];
@@ -589,10 +579,9 @@ function PlayerSettingsMenu({ streams, activeIndex, setActiveIndex, streamLabel,
   video: HTMLVideoElement | null;
   close: () => void;
   openWatchParty: () => void;
+  subtitleLabel: string;
+  audioLabel: string;
 }) {
-  const visibleStreams = streams
-    .map((stream, index) => ({ stream, index }))
-    .filter(({ stream }) => streamQualityKey(`${stream.name} ${stream.title ?? ""}`) === preferredQuality);
   const [view, setView] = useState<"main" | "playback" | "color">("main");
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
@@ -646,28 +635,6 @@ function PlayerSettingsMenu({ streams, activeIndex, setActiveIndex, streamLabel,
       </div>
       {view === "main" ? <>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Card className="col-span-2 min-w-0 border border-white/10 bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md sm:col-span-3">
-            <CardBody className="p-3">
-              <Select
-                label="Source"
-                aria-label="Stream source"
-                size="sm"
-                selectedKeys={new Set([String(activeIndex)])}
-                onSelectionChange={(keys) => {
-                  const key = Array.from(keys)[0];
-                  if (key != null) setActiveIndex(Number(key));
-                }}
-                startContent={<HugeiconsIcon icon={Globe02Icon} size={18} className="text-white/65" />}
-                classNames={{ label: "text-sm font-normal text-white", value: "whitespace-normal text-sm font-normal text-white/55", trigger: "min-h-16 bg-transparent shadow-none", popoverContent: "w-[min(60rem,calc(100vw-4rem))] max-w-none bg-background/80 backdrop-blur-2xl" }}
-              >
-                {visibleStreams.map(({ stream, index }) => (
-                  <SelectItem key={String(index)} textValue={`${stream.addon} ${stream.title ?? stream.name}`}>
-                    <span className="whitespace-normal break-words text-sm font-normal">{stream.addon} — {stream.title ?? stream.name}</span>
-                  </SelectItem>
-                ))}
-              </Select>
-            </CardBody>
-          </Card>
           <Card className="min-w-0 border border-white/10 bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md">
             <CardBody className="p-3">
               <Select
@@ -686,8 +653,8 @@ function PlayerSettingsMenu({ streams, activeIndex, setActiveIndex, streamLabel,
               </Select>
             </CardBody>
           </Card>
-          <SettingTile icon={SubtitleIcon} label="Subtitles" value={activeSubtitle(video)} />
-          {audioTracks.length > 1 ? <Card className="min-w-0 border border-white/10 bg-white/[0.055] backdrop-blur-md"><CardBody className="p-3"><Select label="Audio" size="sm" selectedKeys={new Set([String(selectedAudioIndex)])} onSelectionChange={(keys) => { const key = Array.from(keys)[0]; if (key != null) selectAudioTrack(Number(key)); }} startContent={<HugeiconsIcon icon={VolumeHighIcon} size={18} className="text-white/65" />} classNames={{ label: "text-sm font-normal text-white", value: "text-sm font-normal text-white/55", trigger: "min-h-14 bg-transparent shadow-none", popoverContent: "bg-background/85 backdrop-blur-2xl" }}>{audioTracks.map((track) => <SelectItem key={String(track.audioIndex)} textValue={audioTrackLabel(track)}>{audioTrackLabel(track)}</SelectItem>)}</Select></CardBody></Card> : <SettingTile icon={VolumeHighIcon} label="Audio" value={streamAudio(streamLabel)} />}
+          <SettingTile icon={SubtitleIcon} label="Subtitles" value={subtitleLabel} />
+          {audioTracks.length > 1 ? <Card className="min-w-0 border border-white/10 bg-white/[0.055] backdrop-blur-md"><CardBody className="p-3"><Select label="Audio" size="sm" selectedKeys={new Set([String(selectedAudioIndex)])} onSelectionChange={(keys) => { const key = Array.from(keys)[0]; if (key != null) selectAudioTrack(Number(key)); }} startContent={<HugeiconsIcon icon={VolumeHighIcon} size={18} className="text-white/65" />} classNames={{ label: "text-sm font-normal text-white", value: "text-sm font-normal text-white/55", trigger: "min-h-14 bg-transparent shadow-none", popoverContent: "bg-background/85 backdrop-blur-2xl" }}>{audioTracks.map((track) => <SelectItem key={String(track.audioIndex)} textValue={audioTrackLabel(track)}>{audioTrackLabel(track)}</SelectItem>)}</Select></CardBody></Card> : <SettingTile icon={VolumeHighIcon} label="Audio" value={audioLabel} />}
         </div>
         <div className="mt-5 space-y-1">
           <Button fullWidth variant="light" onPress={() => setView("playback")} startContent={<HugeiconsIcon icon={SlidersHorizontalIcon} size={20} className="text-white/60" />} endContent={<HugeiconsIcon icon={ArrowRight01Icon} size={18} className="text-white/50" />} className="h-14 justify-start text-sm font-normal text-white [&>span:nth-child(2)]:flex-1 [&>span:nth-child(2)]:text-left">Playback</Button>
@@ -874,140 +841,6 @@ function PlayerMessage({ text }: { text: string }) {
       {text}
     </div>
   );
-}
-
-function ImdbEntryPanel({
-  title,
-  posterUrl,
-  backdropUrl,
-  catalogKey,
-  mediaType,
-  onBack,
-  onSubmit,
-}: {
-  title?: string;
-  posterUrl?: string | null;
-  backdropUrl?: string | null;
-  catalogKey?: string | null;
-  mediaType: "tv" | "movie";
-  onBack: () => void;
-  onSubmit: (raw: string) => boolean;
-}) {
-  const [value, setValue] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [lookupNote, setLookupNote] = useState<string | null>(null);
-
-  useEffect(() => {
-    const key = String(catalogKey ?? "").trim();
-    if (!/^\d+$/.test(key)) return;
-    let cancelled = false;
-    const endpoint =
-      mediaType === "movie" ? "/api/movie/resolve" : "/api/tv/resolve";
-    void fetch(`${endpoint}?id=${encodeURIComponent(key)}`)
-      .then(async (response) => (response.ok ? response.json() : null))
-      .then((body) => {
-        if (cancelled || !body) return;
-        const imdb =
-          typeof body.imdbId === "string" && /^tt\d+$/i.test(body.imdbId)
-            ? body.imdbId
-            : null;
-        if (imdb) {
-          setValue(imdb);
-          setLookupNote("Filled from TMDB metadata.");
-        } else {
-          setLookupNote("No IMDb id on file — enter one manually.");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setLookupNote(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [catalogKey, mediaType]);
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const ok = onSubmit(value);
-    if (!ok) {
-      setError("Enter a valid IMDb id (e.g. tt1234567) or paste an IMDb URL.");
-    }
-  };
-
-  return (
-    <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
-      {backdropUrl ? (
-        <div
-          className="absolute -inset-8 scale-110 bg-cover bg-center opacity-35 blur-2xl"
-          style={{ backgroundImage: `url(${JSON.stringify(backdropUrl).slice(1, -1)})` }}
-          aria-hidden
-        />
-      ) : null}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/60 to-black/95" aria-hidden />
-      <button
-        type="button"
-        onClick={onBack}
-        aria-label="Go back"
-        className="absolute left-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-2xl text-white backdrop-blur-md transition hover:bg-white/20"
-      >
-        <span aria-hidden>‹</span>
-      </button>
-      <div className="relative z-10 flex w-full max-w-md flex-col items-center px-6 py-8 text-center">
-        {posterUrl ? (
-          <img
-            src={posterUrl}
-            alt=""
-            className="mb-5 h-48 w-32 rounded-xl object-cover shadow-2xl ring-1 ring-white/15 sm:h-56 sm:w-[9.35rem]"
-          />
-        ) : null}
-        {title ? <h2 className="text-xl font-semibold text-white sm:text-2xl">{title}</h2> : null}
-        <p className="mt-3 text-sm text-white/55">
-          This title has no IMDb id in the catalog. Enter one so Teavie can resolve streams.
-        </p>
-        {lookupNote ? (
-          <p className="mt-2 text-xs text-white/45">{lookupNote}</p>
-        ) : null}
-        <form onSubmit={handleSubmit} className="mt-6 w-full space-y-3 text-left">
-          <Input
-            label="IMDb id"
-            placeholder="tt1234567"
-            value={value}
-            onValueChange={(next) => {
-              setValue(next);
-              if (error) setError(null);
-            }}
-            autoComplete="off"
-            spellCheck="false"
-            isInvalid={Boolean(error)}
-            errorMessage={error ?? undefined}
-            classNames={{
-              label: "text-white/70",
-              input: "text-white",
-              inputWrapper: "bg-white/10 border-white/15 data-[hover=true]:bg-white/12",
-            }}
-          />
-          <Button type="submit" color="success" className="w-full font-medium">
-            Load streams
-          </Button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function imdbOverrideStorageKey(
-  type: "movie" | "series",
-  catalogKey: string | null | undefined,
-  title: string,
-  season?: number,
-  episode?: number
-) {
-  const key = String(catalogKey ?? "").trim() || String(title ?? "").trim();
-  if (!key) return null;
-  if (type === "series") {
-    return `teavie.stremio-imdb:${type}:${key}:s${season ?? 0}:e${episode ?? 0}`;
-  }
-  return `teavie.stremio-imdb:${type}:${key}`;
 }
 
 function normalizeImdbId(raw: string): string | null {
