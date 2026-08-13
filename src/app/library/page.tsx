@@ -209,7 +209,6 @@ export default function LibraryPage() {
                 layout="profile"
                 bleed={false}
                 display="grid"
-                showVoteAverage
               />
             ) : null}
 
