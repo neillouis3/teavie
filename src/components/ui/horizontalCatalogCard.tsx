@@ -8,6 +8,10 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 import CatalogCardHoverActions from '@/components/catalog/CatalogCardHoverActions';
+import {
+  buildCatalogDetailsSeed,
+  catalogSeedLinkProps,
+} from '@/lib/catalogDetailsSeed';
 
 export type HorizontalCatalogCardProps = {
   id: number | string;
@@ -16,6 +20,8 @@ export type HorizontalCatalogCardProps = {
   type: 'movie' | 'tv' | string;
   posterPath?: string;
   backdropPath?: string;
+  overview?: string;
+  releaseDate?: string;
   /** Small label above title (e.g. Sequel, Prequel) */
   topNote?: string;
   /** When set (e.g. external AniList URL), used instead of `/shows/` or `/movies/` */
@@ -34,6 +40,8 @@ export default function HorizontalCatalogCard({
   type,
   posterPath = '',
   backdropPath = '',
+  overview,
+  releaseDate,
   href: hrefProp,
   topNote,
   onDismiss,
@@ -52,6 +60,14 @@ export default function HorizontalCatalogCard({
   const backdrop = backdropPath?.trim();
   const poster = posterPath?.trim();
   const src = tmdbImageUrl(backdrop) || tmdbImageUrl(poster) || null;
+  const catalogSeed = buildCatalogDetailsSeed({
+    title,
+    posterPath: poster,
+    backdropPath: backdrop || poster,
+    overview,
+    releaseDate,
+    year,
+  });
 
   return (
     <div className="group relative min-w-0 w-full">
@@ -59,6 +75,7 @@ export default function HorizontalCatalogCard({
         href={href}
         className="block min-w-0 w-full outline-none"
         aria-label={`${title}, ${label}, ${year}`}
+        {...catalogSeedLinkProps(catalogSeed)}
         {...(isExternal
           ? { target: "_blank", rel: "noopener noreferrer" }
           : {})}

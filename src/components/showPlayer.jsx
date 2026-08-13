@@ -10,25 +10,22 @@ import {
   VIDEASY_TV_QUERY_PREFIX,
   withVideasyProgress,
 } from '@/lib/videasyPlayer';
-
-/** 111movies — embed must use the final player host (111movies.net 302s and breaks fullscreen). */
-const MOVIES111_BASE = 'https://player.vidlove.cc';
-
-/** Peachify — embed on peachify.top (docs host; .pro breaks fullscreen). */
-const PEACHIFY_BASE = 'https://peachify.top';
-
-/** VidCore — https://vidcore.net (TMDB ids; theme is hex without #) */
-const VIDCORE_TV_QUERY = '?theme=22c55e&autoPlay=true';
+import {
+  MOVIES111_EMBED_BASE,
+  PEACHIFY_EMBED_BASE,
+  VIDCORE_EMBED_BASE,
+  VIDCORE_THEME_QUERY,
+} from '@/lib/embedHosts';
 
 export const SHOW_SERVERS = {
   movies111: {
-    base: MOVIES111_BASE,
+    base: MOVIES111_EMBED_BASE,
     path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
     suffix: () => '',
     supportsProgress: false,
   },
   peachify: {
-    base: PEACHIFY_BASE,
+    base: PEACHIFY_EMBED_BASE,
     path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
     suffix: () => '',
     supportsProgress: false,
@@ -40,9 +37,9 @@ export const SHOW_SERVERS = {
     supportsProgress: true,
   },
   vidcore: {
-    base: 'https://vidcore.net',
+    base: VIDCORE_EMBED_BASE,
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
-    suffix: () => VIDCORE_TV_QUERY,
+    suffix: () => VIDCORE_THEME_QUERY,
     supportsProgress: false,
   },
 };
@@ -84,6 +81,7 @@ function buildEmbedUrl(p) {
  * @param {string} [props.server]
  * @param {number} [props.startSeconds] Videasy resume position
  * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
+ * @param {(seconds: number) => void} [props.onStremioProgress]
  * @param {() => void} [props.onEmbedLoad]
  */
 export default function ShowPlayer({
@@ -97,6 +95,7 @@ export default function ShowPlayer({
   server = 'peachify',
   startSeconds = 0,
   onVideasyProgress,
+  onStremioProgress,
   onEmbedLoad,
 }) {
   const progressHandler = useCallback(
@@ -104,6 +103,13 @@ export default function ShowPlayer({
       onVideasyProgress?.(msg);
     },
     [onVideasyProgress]
+  );
+
+  const stremioProgressHandler = useCallback(
+    (seconds) => {
+      onStremioProgress?.(seconds);
+    },
+    [onStremioProgress]
   );
 
   const { url, error } = useMemo(
@@ -129,6 +135,7 @@ export default function ShowPlayer({
         title={title}
         posterUrl={posterUrl}
         backdropUrl={backdropUrl}
+        onPlaybackProgress={onStremioProgress ? stremioProgressHandler : undefined}
       />
     );
   }

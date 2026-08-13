@@ -20,6 +20,29 @@ export function watchProgressStorageKey(catalogId: string): string {
   return `teavie.watch.v${WATCH_PROGRESS_VERSION}:${catalogId}`;
 }
 
+export const WATCH_PROGRESS_CHANGED_EVENT = "teavie-watch-progress-changed";
+
+function notifyWatchProgressChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(WATCH_PROGRESS_CHANGED_EVENT));
+}
+
+/** Merge explicit watched keys with episodes that have saved playback time. */
+export function deriveWatchedEpisodeKeys(
+  progress: Pick<WatchProgressPayload, "watched" | "positions">,
+  minSeconds = 1
+): string[] {
+  const keys = new Set(
+    (progress.watched ?? []).filter((key) => typeof key === "string" && key.length > 0)
+  );
+  for (const [key, sec] of Object.entries(progress.positions ?? {})) {
+    if (Number.isFinite(Number(sec)) && Number(sec) >= minSeconds) {
+      keys.add(key);
+    }
+  }
+  return Array.from(keys);
+}
+
 let tvProgressSyncDelegate:
   | ((catalogId: string, payload: Omit<WatchProgressPayload, "v">) => void)
   | null = null;
@@ -70,14 +93,25 @@ export function saveWatchProgress(
   if (typeof window === "undefined") return;
   try {
     const existing = loadWatchProgress(catalogId);
+    const mergedWatched = deriveWatchedEpisodeKeys({
+      watched: Array.from(
+        new Set([...(existing?.watched ?? []), ...payload.watched])
+      ),
+      positions: payload.positions ?? existing?.positions,
+    });
     const full: WatchProgressPayload = {
       v: WATCH_PROGRESS_VERSION,
       lastSeason: payload.lastSeason,
       lastEpisode: payload.lastEpisode,
-      watched: payload.watched,
+      watched: mergedWatched,
       positions: payload.positions ?? existing?.positions,
     };
-    localStorage.setItem(watchProgressStorageKey(catalogId), JSON.stringify(full));
+    const nextRaw = JSON.stringify(full);
+    const prevRaw = existing ? JSON.stringify(existing) : null;
+    if (nextRaw === prevRaw) return;
+
+    localStorage.setItem(watchProgressStorageKey(catalogId), nextRaw);
+    notifyWatchProgressChanged();
     tvProgressSyncDelegate?.(catalogId, {
       lastSeason: full.lastSeason,
       lastEpisode: full.lastEpisode,
@@ -123,6 +157,7 @@ export function clearWatchProgress(catalogId: string): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(watchProgressStorageKey(catalogId));
+    notifyWatchProgressChanged();
   } catch {
     /* quota / private mode */
   }

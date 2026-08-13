@@ -43,6 +43,17 @@ import ShowDetailsHero, {
 import { pickYoutubeTrailerEmbedUrl, type TmdbVideosPayload } from '@/lib/tmdbVideos';
 import { MOVIE_CONTENT_INSET_X } from '@/lib/contentInset';
 import { useTmdbTitleLogo } from '@/hooks/useTmdbTitleLogo';
+import {
+  type CatalogDetailsSeed,
+  type CatalogSeedFallback,
+  mergeModalMovie,
+  preserveSeedBackdrop,
+  seedBannerPath,
+} from '@/lib/catalogDetailsSeed';
+import {
+  fetchMovieDetailsCached,
+  fetchMovieResolveCached,
+} from '@/lib/catalogDetailsPrefetch';
 
 interface Movie {
   id: number;
@@ -119,24 +130,83 @@ function resolveMovieDetailsBannerUrl(movie: Movie): string | null {
   return tmdbImageUrl(movie.poster_path) || null;
 }
 
+function movieFromSeed(id: string, seed: CatalogDetailsSeed): Movie {
+  const releaseDate = seed.releaseDate?.slice(0, 10) ?? '';
+  const placeholderYearOnly =
+    /^\d{4}-01-01$/.test(releaseDate) ? releaseDate.slice(0, 4) : releaseDate;
+  return {
+    id: Number(id) || 0,
+    title: seed.title,
+    release_date: placeholderYearOnly,
+    status: 'Released',
+    overview: seed.overview ?? '',
+    poster_path: seed.posterPath ?? '',
+    backdrop_path: seed.backdropPath ?? seed.posterPath ?? null,
+    vote_average: seed.voteAverage ?? 0,
+    tagline: '',
+    genres: [],
+  };
+}
+
+type CatalogMovieFallback = CatalogSeedFallback & {
+  id?: string | number;
+  title?: string;
+  release_date?: string;
+  overview?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  vote_average?: number;
+  status?: string;
+  imdb_genres?: string[];
+  omdb?: { genre?: string | null };
+  original_language?: string | null;
+};
+
+function movieFromCatalogFallback(
+  tmdbId: string,
+  fallback: CatalogMovieFallback,
+  seed: CatalogDetailsSeed | null
+): Movie {
+  return mergeModalMovie(null, {
+    id: Number(tmdbId) || 0,
+    title: fallback.title ?? seed?.title ?? '',
+    release_date: fallback.release_date ?? seed?.releaseDate?.slice(0, 10) ?? '',
+    status: 'Released',
+    overview: fallback.overview ?? seed?.overview ?? '',
+    poster_path: fallback.poster_path ?? seed?.posterPath ?? '',
+    backdrop_path:
+      fallback.backdrop_path ?? seed?.backdropPath ?? seed?.posterPath ?? null,
+    vote_average: fallback.vote_average ?? seed?.voteAverage ?? 0,
+    tagline: '',
+    genres: [],
+    imdb_genres: fallback.imdb_genres,
+    omdb: fallback.omdb,
+  }, seed, fallback);
+}
+
 
 
 export default function MovieTemplate({
   id,
   viewMode = 'details',
   detailsModal = false,
+  detailsSeed = null,
   onDetailsNavigate,
 }: {
   id: string;
   viewMode?: MovieTemplateViewMode;
   detailsModal?: boolean;
+  detailsSeed?: CatalogDetailsSeed | null;
   onDetailsNavigate?: () => void;
 }) {
   const { server } = useStreamingSource();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [movie, setMovie] = useState<Movie | null>(null);
+  const [movie, setMovie] = useState<Movie | null>(() =>
+    detailsModal && detailsSeed ? movieFromSeed(id, detailsSeed) : null
+  );
+  const [resolvedTmdbId, setResolvedTmdbId] = useState<string>(id);
   const [loading, setLoading] = useState(true);
   const [movieUnavailableReason, setMovieUnavailableReason] = useState<
     'content_policy' | 'not_found' | null
@@ -144,7 +214,10 @@ export default function MovieTemplate({
   const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
   const [playerEpoch, setPlayerEpoch] = useState(0);
   const partyPlaybackBroadcastRef = useRef(0);
-  const titleLogoPath = useTmdbTitleLogo("movie", id);
+  const titleLogoPath = useTmdbTitleLogo(
+    "movie",
+    detailsModal ? null : id
+  );
 
   const applyGuestSync = useCallback((plan: GuestSyncPayload) => {
     setPlayerStartSeconds(plan.targetSeconds);
@@ -181,6 +254,23 @@ export default function MovieTemplate({
       if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
       partyPlaybackBroadcastRef.current = now;
       void watchParty.broadcastPlayback(msg.timestamp);
+    },
+    [id, server, watchParty]
+  );
+
+  const handleStremioProgress = useCallback(
+    (seconds: number) => {
+      const sec = Math.floor(Number(seconds) || 0);
+      saveMoviePlaybackPosition(String(id), sec);
+      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
+        recordMovieInWatchHistory(String(id));
+      }
+      watchParty.noteHostPlayback(sec);
+      if (!watchParty.isHost || !watchParty.room || server !== 'stremio') return;
+      const now = Date.now();
+      if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
+      partyPlaybackBroadcastRef.current = now;
+      void watchParty.broadcastPlayback(sec);
     },
     [id, server, watchParty]
   );
@@ -286,10 +376,24 @@ export default function MovieTemplate({
   }, [viewMode, partyRoomId, loading, movie, movieReleased, watchHref, router]);
 
   useEffect(() => {
+    if (!detailsModal) return;
+    if (detailsSeed) {
+      setMovie(movieFromSeed(id, detailsSeed));
+    } else {
+      setMovie(null);
+    }
+  }, [id, detailsModal, detailsSeed]);
+
+  useEffect(() => {
     const fetchMovieDetails = async () => {
       try {
-        setLoading(true);
         setMovieUnavailableReason(null);
+        if (detailsModal && detailsSeed) {
+          setMovie((current) => current ?? movieFromSeed(id, detailsSeed));
+        } else {
+          setLoading(true);
+          setMovie(null);
+        }
 
         if (isBlockedMovieTmdbId(id)) {
           setMovie(null);
@@ -297,44 +401,50 @@ export default function MovieTemplate({
           return;
         }
 
-        const resolveRes = await fetch(
-          `/api/movie/resolve?id=${encodeURIComponent(id)}`
-        );
+        const resolvePromise = fetchMovieResolveCached(id);
+        const earlyLitePromise =
+          detailsModal && /^\d+$/.test(id)
+            ? fetchMovieDetailsCached(id, { lite: true })
+            : Promise.resolve(null);
 
-        if (!resolveRes.ok) {
-          const err = await resolveRes.json().catch(() => null);
-          if (err?.error === 'content_policy') {
-            setMovie(null);
-            setMovieUnavailableReason('content_policy');
-            return;
-          }
+        const [resolveRes, earlyLite] = await Promise.all([
+          resolvePromise,
+          earlyLitePromise,
+        ]);
+        if (!resolveRes) {
+          if (!(detailsModal && detailsSeed)) setMovie(null);
+          setMovieUnavailableReason('not_found');
+          return;
+        }
+
+        const resolved = resolveRes as {
+          playerId?: number | string | null;
+          fallback?: Record<string, unknown> | null;
+          error?: string;
+        };
+
+        if (resolved?.error === 'content_policy') {
+          setMovie(null);
+          setMovieUnavailableReason('content_policy');
+          return;
+        }
+
+        if (resolved?.error) {
           setMovie(null);
           setMovieUnavailableReason('not_found');
           return;
         }
 
-        const resolved = await resolveRes.json();
-        const catalogFallback: {
-          id?: string | number;
-          title?: string;
-          release_date?: string;
-          overview?: string;
-          poster_path?: string | null;
-          backdrop_path?: string | null;
-          vote_average?: number;
-          status?: string;
-          imdb_genres?: string[];
-          omdb?: { genre?: string | null };
-          original_language?: string | null;
-        } | null =
+        const catalogFallback: CatalogMovieFallback | null =
           resolved?.fallback && typeof resolved.fallback === 'object'
-            ? resolved.fallback
+            ? (resolved.fallback as CatalogMovieFallback)
             : null;
 
         let tmdbId = id;
         if (resolved?.playerId != null) {
           tmdbId = String(resolved.playerId);
         }
+        setResolvedTmdbId(tmdbId);
 
         const applyCatalogFallback = (data: Movie): Movie => {
           if (catalogFallback?.imdb_genres?.length) {
@@ -346,12 +456,37 @@ export default function MovieTemplate({
           if (!data.backdrop_path && catalogFallback?.backdrop_path) {
             data.backdrop_path = catalogFallback.backdrop_path;
           }
+          if (!data.overview?.trim() && catalogFallback?.overview?.trim()) {
+            data.overview = catalogFallback.overview;
+          }
+          if (!data.release_date?.trim() && catalogFallback?.release_date?.trim()) {
+            data.release_date = catalogFallback.release_date;
+          }
           return data;
         };
 
+        const applyModalMovie = (data: Movie) => {
+          setMovie((prev) =>
+            mergeModalMovie(
+              prev,
+              applyCatalogFallback(data),
+              detailsSeed,
+              catalogFallback
+            )
+          );
+        };
+
+        if (detailsModal && earlyLite && /^\d+$/.test(tmdbId) && tmdbId === id) {
+          applyModalMovie(earlyLite as Movie);
+        }
+
+        if (detailsModal && catalogFallback?.title) {
+          applyModalMovie(movieFromCatalogFallback(tmdbId, catalogFallback, detailsSeed));
+        }
+
         if (!/^\d+$/.test(tmdbId)) {
           if (catalogFallback?.title) {
-            setMovie({
+            const fallbackMovie: Movie = {
               id: Number(catalogFallback.id) || 0,
               title: catalogFallback.title,
               release_date: catalogFallback.release_date ?? '',
@@ -365,7 +500,12 @@ export default function MovieTemplate({
               imdb_genres: catalogFallback.imdb_genres,
               omdb: catalogFallback.omdb,
               original_language: catalogFallback.original_language ?? undefined,
-            });
+            };
+            if (detailsModal) {
+              applyModalMovie(fallbackMovie);
+            } else {
+              setMovie(fallbackMovie);
+            }
             return;
           }
           setMovie(null);
@@ -373,11 +513,22 @@ export default function MovieTemplate({
           return;
         }
 
-        const detailsRes = await fetch(
-          `/api/movie/details?id=${encodeURIComponent(tmdbId)}`
-        );
+        if (detailsModal) {
+          const lite =
+            earlyLite && /^\d+$/.test(tmdbId) && tmdbId === id
+              ? earlyLite
+              : await fetchMovieDetailsCached(tmdbId, { lite: true });
+          if (lite) applyModalMovie(lite as Movie);
 
-        if (!detailsRes.ok) {
+          void fetchMovieDetailsCached(tmdbId).then((full) => {
+            if (full) applyModalMovie(full as Movie);
+          });
+          return;
+        }
+
+        const detailsData = await fetchMovieDetailsCached(tmdbId);
+
+        if (!detailsData) {
           if (catalogFallback?.title) {
             setMovie({
               id: Number(tmdbId) || 0,
@@ -399,11 +550,18 @@ export default function MovieTemplate({
           throw new Error('Failed to fetch movie details');
         }
 
-        const data = (await detailsRes.json()) as Movie;
-        setMovie(applyCatalogFallback(data));
+        const data = detailsData as Movie;
+        setMovie(
+          preserveSeedBackdrop(
+            applyCatalogFallback(data),
+            detailsModal ? detailsSeed : null
+          )
+        );
       } catch (err) {
         console.error('Error fetching movie details:', err);
-        setMovie(null);
+        if (!(detailsModal && detailsSeed)) {
+          setMovie(null);
+        }
         setMovieUnavailableReason('not_found');
       } finally {
         setLoading(false);
@@ -411,7 +569,7 @@ export default function MovieTemplate({
     };
 
     fetchMovieDetails();
-  }, [id]);
+  }, [id, detailsModal, detailsSeed]);
 
   useEffect(() => {
     if (!movie?.title) return;
@@ -433,8 +591,12 @@ export default function MovieTemplate({
     : null;
 
   if (loading) {
+    const seedBanner =
+      detailsModal && detailsSeed
+        ? tmdbImageUrl(seedBannerPath(detailsSeed) ?? "")
+        : null;
     return viewMode === 'details' ? (
-      <CatalogDetailsSkeleton />
+      <CatalogDetailsSkeleton modal={detailsModal} bannerUrl={seedBanner} />
     ) : (
       <WatchPageSkeleton />
     );
@@ -585,7 +747,14 @@ export default function MovieTemplate({
               title={`${movie.title} trailer`}
             />
           ) : null}
-          <YouMightLike key={`yml-${id}`} mediaType="movie" id={id} bleed={false} />
+          {/^\d+$/.test(String(resolvedTmdbId)) ? (
+            <YouMightLike
+              key={`yml-${resolvedTmdbId}`}
+              mediaType="movie"
+              id={String(resolvedTmdbId)}
+              bleed={false}
+            />
+          ) : null}
         </div>
       </div>
     );
@@ -621,6 +790,9 @@ export default function MovieTemplate({
               startSeconds={server === 'videasy' || server === 'stremio' ? playerStartSeconds : 0}
               onVideasyProgress={
                 server === 'videasy' ? handleVideasyProgress : undefined
+              }
+              onStremioProgress={
+                server === 'stremio' ? handleStremioProgress : undefined
               }
               streamQuality={inferMovieStreamQuality(
                 movie.release_dates,

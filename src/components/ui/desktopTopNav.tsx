@@ -9,6 +9,8 @@ import ProfileNavAvatar from "@/components/ui/profileNavAvatar";
 import ThemeNavButton from "@/components/ui/themeNavButton";
 import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 import { APP_NAV_ITEMS } from "@/components/ui/navItems";
+import { TEAVIE_LOGO } from "@/lib/brandAssets";
+import { EXPLORE_HOME } from "@/lib/routes";
 
 function SearchFallback() {
   return <div className="h-9 w-44 animate-pulse rounded-full bg-white/10" aria-hidden />;
@@ -20,7 +22,7 @@ function activeNavKey(pathname: string) {
   if (pathname.startsWith("/anime")) return "anime";
   if (pathname.startsWith("/kdrama")) return "kdrama";
   if (pathname.startsWith("/sports")) return "sports";
-  if (pathname.startsWith("/explore")) return "explore";
+  if (pathname.startsWith(EXPLORE_HOME)) return "explore";
   return null;
 }
 
@@ -40,12 +42,12 @@ export default function DesktopTopNav() {
     <header className="pointer-events-none fixed inset-x-0 top-0 z-50 hidden px-4 pt-3 lg:flex lg:justify-center">
       <div className="pointer-events-auto flex h-14 w-full max-w-[80rem] items-center gap-1 rounded-[1.15rem] border border-white/10 bg-background/58 px-2 text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.2)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/44 dark:bg-black/45">
         <Link
-          href="/explore"
+          href={EXPLORE_HOME}
           aria-label="Teavie home"
           className="flex h-9 w-9 shrink-0 items-center justify-center"
         >
           <Image
-            src="/teavie-icon.png"
+            src={TEAVIE_LOGO.icon}
             alt=""
             width={28}
             height={28}

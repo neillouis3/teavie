@@ -183,7 +183,7 @@ const EpisodePickerContext = createContext<EpisodePickerContextValue | null>(
   null
 );
 
-function useEpisodePicker() {
+export function useEpisodePicker() {
   const ctx = useContext(EpisodePickerContext);
   if (!ctx) {
     throw new Error(

@@ -196,13 +196,11 @@ async function pickFeatured(col, filter, { anime = false } = {}) {
         {},
       ];
 
-  for (const tier of tiers) {
-    const docs = await sample(tier);
+  const tierResults = await Promise.all(tiers.map((tier) => sample(tier)));
+  for (const docs of tierResults) {
     if (docs.length >= FEATURED_SIZE) return docs.slice(0, FEATURED_SIZE);
-    if (docs.length > 0) return docs;
   }
-
-  return [];
+  return tierResults.find((docs) => docs.length > 0) ?? [];
 }
 
 async function fetchRail(col, baseFilter, { anime = false, sort = "popular", limit = RAIL_LIMIT, extraClause = null } = {}) {
@@ -221,7 +219,6 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
         { $project: { _catalogPop: 0 } },
       ])
       .toArray();
-    if (anime) await enrichAnimeDocsWithTmdbBackdrops(rows);
     return rows.map((doc) => mapTvRow(doc, { anime }));
   }
 
@@ -242,7 +239,6 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
         { $project: { _vote: 0 } },
       ])
       .toArray();
-    if (anime) await enrichAnimeDocsWithTmdbBackdrops(rows);
     return rows.map((doc) => mapTvRow(doc, { anime }));
   }
 
@@ -251,7 +247,6 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
     .sort({ first_air_date: -1, _id: -1 })
     .limit(limit)
     .toArray();
-  if (anime) await enrichAnimeDocsWithTmdbBackdrops(rows);
   return rows.map((doc) => mapTvRow(doc, { anime }));
 }
 
@@ -345,6 +340,31 @@ export async function fetchCategoryGenres(col, slug) {
   return rankCategoryGenres(col, baseFilter);
 }
 
+function dedupeDocsByCatalogId(docs) {
+  const seen = new Set();
+  const out = [];
+  for (const doc of docs) {
+    const key = String(doc?.id ?? "");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(doc);
+  }
+  return out;
+}
+
+async function fetchPopularDocs(col, baseFilter, { anime = false, limit = RAIL_LIMIT } = {}) {
+  const popExpr = anime ? mongoAnimeCatalogPopularityExpr() : mongoMixedTvCatalogPopularityExpr();
+  return col
+    .aggregate([
+      { $match: baseFilter },
+      { $addFields: { _catalogPop: popExpr } },
+      { $sort: { _catalogPop: -1, _id: -1 } },
+      { $limit: limit },
+      { $project: { _catalogPop: 0 } },
+    ])
+    .toArray();
+}
+
 /**
  * @param {import("mongodb").Collection} col
  * @param {string} slug
@@ -365,24 +385,27 @@ export async function fetchCategoryDiscover(col, slug, preferences = null) {
     });
   }
 
-  const [
-    featuredDocs,
-    trending,
-    popular,
-    topRated,
-    newest,
-    genres,
-  ] = await Promise.all([
+  const [featuredDocs, popularDocs, topRated, newest, genres] = await Promise.all([
     pickFeatured(col, baseFilter, { anime }),
-    fetchRail(col, baseFilter, { anime, sort: "popular", limit: TRENDING_LIMIT }),
-    fetchRail(col, baseFilter, { anime, sort: "popular" }),
+    fetchPopularDocs(col, baseFilter, { anime, limit: RAIL_LIMIT }),
     fetchRail(col, baseFilter, { anime, sort: "top_rated" }),
     fetchRail(col, baseFilter, { anime, sort: "new" }),
     rankCategoryGenres(col, baseFilter),
   ]);
 
-  if (anime) await enrichAnimeDocsWithTmdbBackdrops(featuredDocs);
+  if (anime) {
+    const heroDocs = dedupeDocsByCatalogId([
+      ...featuredDocs,
+      ...popularDocs.slice(0, TRENDING_LIMIT),
+    ]);
+    await enrichAnimeDocsWithTmdbBackdrops(heroDocs);
+  }
+
   const featured = featuredDocs.map((doc) => mapTvRow(doc, { anime }));
+  const popular = popularDocs.map((doc) => mapTvRow(doc, { anime }));
+  const trending = popularDocs
+    .slice(0, TRENDING_LIMIT)
+    .map((doc) => mapTvRow(doc, { anime }));
 
   return {
     featured,

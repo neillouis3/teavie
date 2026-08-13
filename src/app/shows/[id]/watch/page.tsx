@@ -1,24 +1,21 @@
-'use client';
+import { Suspense } from "react";
+import ShowTemplate from "@/components/showTemplate";
+import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
 
-import React, { Suspense } from 'react';
-import { useParams } from 'next/navigation';
-import ShowTemplate from '@/components/showTemplate';
-import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+type ShowWatchPageProps = {
+  params: Promise<{ id: string }>;
+};
 
-function ShowWatchPageInner() {
-  const params = useParams();
+export default async function ShowWatchPage({ params }: ShowWatchPageProps) {
+  const { id } = await params;
 
-  if (!params || typeof params.id !== 'string') {
+  if (!id) {
     return <div>Error: Invalid show ID</div>;
   }
 
-  return <ShowTemplate id={params.id} viewMode="watch" />;
+  return (
+    <Suspense fallback={<WatchPageSkeleton withSeasonPicker />}>
+      <ShowTemplate id={id} viewMode="watch" />
+    </Suspense>
+  );
 }
-
-const ShowWatchPage = () => (
-  <Suspense fallback={<WatchPageSkeleton withSeasonPicker />}>
-    <ShowWatchPageInner />
-  </Suspense>
-);
-
-export default ShowWatchPage;

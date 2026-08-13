@@ -8,8 +8,13 @@ export async function GET(req) {
       return Response.json({ error: "Provide a valid TMDB TV id" }, { status: 400 });
     }
 
+    const lite = searchParams.get("lite") === "1";
+    const append = lite
+      ? "content_ratings"
+      : "content_ratings,aggregate_credits,videos";
+
     const data = await tmdbFetchJson(
-      `https://api.themoviedb.org/3/tv/${id}?language=en-US&append_to_response=content_ratings,aggregate_credits,videos`
+      `https://api.themoviedb.org/3/tv/${id}?language=en-US&append_to_response=${append}`
     );
 
     return Response.json(data, {

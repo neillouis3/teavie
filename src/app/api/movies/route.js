@@ -7,6 +7,10 @@ import {
 } from "@/lib/catalogQuery";
 import { catalogPopularityScore } from "@/lib/catalogPopularity";
 import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
+import {
+  fetchCatalogBrowsePage,
+  CATALOG_BROWSE_CACHE_HEADERS,
+} from "@/lib/api/catalogBrowsePage";
 
 export async function GET(req) {
   try {
@@ -40,18 +44,32 @@ export async function GET(req) {
       ? base
       : { $and: [base, releasedCatalogClause("release_date", todayIso)] };
 
-    const [total, results] = await Promise.all([
-      collection.countDocuments(filter),
-      collection.find(filter).sort(sort).skip(skip).limit(limit).toArray(),
-    ]);
-
-    return Response.json({
-      page,
+    const includeTotal = page <= 1;
+    const { total, results } = await fetchCatalogBrowsePage(
+      collection,
+      filter,
+      sortBy,
+      sort,
+      skip,
       limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-      results: results.map(mapCatalogListDoc),
-    });
+      null,
+      { includeTotal }
+    );
+
+    return Response.json(
+      {
+        page,
+        limit,
+        ...(includeTotal
+          ? {
+              total,
+              totalPages: Math.max(1, Math.ceil((total ?? 0) / limit)),
+            }
+          : {}),
+        results: results.map(mapCatalogListDoc),
+      },
+      { headers: CATALOG_BROWSE_CACHE_HEADERS }
+    );
   } catch (err) {
     console.error(err);
     return Response.json({ error: "Failed to fetch movies" }, { status: 500 });

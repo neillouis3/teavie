@@ -1,14 +1,26 @@
+import { EXPLORE_HOME } from "./routes";
+
 /** Routes whose hero extends under the fixed top nav (exact match or nested subpaths). */
-export const HERO_BLEED_PATHS = ["/explore"] as const;
+export const HERO_BLEED_PATHS = [EXPLORE_HOME] as const;
 
 /** Hub routes with a hero banner, but only the exact route — nested catalog pages
  *  like `/anime/all` must NOT inherit this. */
 export const HERO_BLEED_EXACT_PATHS = ["/anime", "/kdrama"] as const;
 
 const SHOW_DETAIL_HERO_RE = /^\/shows\/([^/]+)\/?$/;
+const SHOW_EPISODES_HERO_RE = /^\/shows\/([^/]+)\/episodes\/?$/;
 const MOVIE_DETAIL_HERO_RE = /^\/movies\/([^/]+)\/?$/;
 const ANIME_DETAIL_HERO_RE = /^\/anime\/([^/]+)\/?$/;
 const KDRAMA_DETAIL_HERO_RE = /^\/kdrama\/([^/]+)\/?$/;
+
+/** Show episodes pages with a full-bleed blurred backdrop (excludes watch, all, admin). */
+export function pathUsesShowEpisodesHeroBleed(pathname: string): boolean {
+  const m = SHOW_EPISODES_HERO_RE.exec(pathname);
+  if (!m) return false;
+  const slug = m[1];
+  if (slug === "all" || slug === "admin") return false;
+  return true;
+}
 
 /** Show detail pages with a hero banner (excludes watch, all, admin). */
 export function pathUsesShowDetailHeroBleed(pathname: string): boolean {
@@ -54,6 +66,7 @@ export function pathUsesHeroBleed(pathname: string): boolean {
     return true;
   }
   return (
+    pathUsesShowEpisodesHeroBleed(pathname) ||
     pathUsesShowDetailHeroBleed(pathname) ||
     pathUsesMovieDetailHeroBleed(pathname) ||
     pathUsesAnimeDetailHeroBleed(pathname) ||

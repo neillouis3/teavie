@@ -4,14 +4,17 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/ui/header";
-import MovieCatalogGrid from "@/components/browse/movieCatalogGrid";
-import ShowCatalogGrid from "@/components/browse/showCatalogGrid";
-import MovieCatalogGridLoading from "@/components/browse/skeleton/movieCatalogGridLoading";
-import BrowseCatalogFilters from "@/components/browse/BrowseCatalogFilters";
+import CatalogGrid from "@/components/browse/catalogGrid";
+import CatalogGridLoading from "@/components/browse/skeleton/catalogGridLoading";
+import CatalogFilterBar from "@/components/browse/CatalogFilterBar";
 import BrowseCatalogSidebar from "@/components/browse/BrowseCatalogSidebar";
 import { Spinner } from "@heroui/react";
 import type { ContentItem } from "@/types/content";
-import { fetchBrowseCatalogPayload } from "@/lib/pageDataCache";
+import {
+  fetchBrowseCatalogPayload,
+  fetchBrowseCatalogPageResults,
+  prefetchBrowseCatalogPage,
+} from "@/lib/pageDataCache";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
 
 type BrowseCatalogPageProps = {
@@ -64,6 +67,7 @@ function BrowseCatalogPageContent({
   const [loadingMore, setLoadingMore] = useState(false);
   const pageRef = useRef(1);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const loadingMoreInFlightRef = useRef(false);
 
   useEffect(() => {
     document.title = documentTitle;
@@ -84,6 +88,9 @@ function BrowseCatalogPageContent({
         setTotalPages(data.totalPages);
         setTotal(data.total);
         if (data.genreSlugs) setGenreSlugs(data.genreSlugs);
+        if (data.totalPages > 1) {
+          prefetchBrowseCatalogPage(namespace, apiPath, filterQueryString, 2);
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -101,18 +108,26 @@ function BrowseCatalogPageContent({
   }, [namespace, apiPath, filterQueryString, genreApiPath]);
 
   const loadMore = useCallback(async () => {
-    if (loading || loadingMore || pageRef.current >= totalPages) return;
+    if (
+      loading ||
+      loadingMore ||
+      loadingMoreInFlightRef.current ||
+      pageRef.current >= totalPages
+    ) {
+      return;
+    }
+
+    loadingMoreInFlightRef.current = true;
     setLoadingMore(true);
     const nextPage = pageRef.current + 1;
     const query = new URLSearchParams(filterQueryString);
     query.set("page", String(nextPage));
 
     try {
-      const data = await fetchBrowseCatalogPayload(
+      const data = await fetchBrowseCatalogPageResults(
         namespace,
         apiPath,
-        query.toString(),
-        genreApiPath
+        query.toString()
       );
       setItems((current) => {
         const seen = new Set(current.map((item) => `${item.type ?? viewer}:${item.id}`));
@@ -122,12 +137,21 @@ function BrowseCatalogPageContent({
         ];
       });
       pageRef.current = nextPage;
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
+      if (typeof data.totalPages === "number") setTotalPages(data.totalPages);
+      if (typeof data.total === "number") setTotal(data.total);
+      if (nextPage < totalPages) {
+        prefetchBrowseCatalogPage(
+          namespace,
+          apiPath,
+          filterQueryString,
+          nextPage + 1
+        );
+      }
     } finally {
+      loadingMoreInFlightRef.current = false;
       setLoadingMore(false);
     }
-  }, [apiPath, filterQueryString, genreApiPath, loading, loadingMore, namespace, totalPages, viewer]);
+  }, [apiPath, filterQueryString, loading, loadingMore, namespace, totalPages, viewer]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -164,8 +188,8 @@ function BrowseCatalogPageContent({
             </div>
 
             <div className="mb-5 lg:hidden">
-              <BrowseCatalogFilters
-                mode={filterMode}
+              <CatalogFilterBar
+                variant="browse"
                 genreSlugs={genreSlugs}
                 defaultSort={defaultSort}
               />
@@ -180,15 +204,16 @@ function BrowseCatalogPageContent({
         ) : null}
 
             {loading ? (
-          <MovieCatalogGridLoading />
+          <CatalogGridLoading />
         ) : items.length === 0 ? (
           <p className="py-16 text-center text-sm text-default-500">
             No titles match these filters. Try adjusting your search.
           </p>
-        ) : viewer === "movie" ? (
-          <MovieCatalogGrid items={items} />
         ) : (
-          <ShowCatalogGrid items={items} />
+          <CatalogGrid
+            items={items}
+            defaultType={viewer === "movie" ? "movie" : "tv"}
+          />
         )}
 
             {!loading && items.length > 0 ? (
@@ -208,7 +233,7 @@ function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
     <div className="bg-main min-h-screen w-full">
       <Header pageName={pageName} />
       <div className={`pb-8 pt-2 ${CONTENT_INSET_X}`}>
-        <MovieCatalogGridLoading />
+        <CatalogGridLoading />
       </div>
     </div>
   );

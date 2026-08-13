@@ -1,24 +1,21 @@
-'use client';
+import { Suspense } from "react";
+import MovieTemplate from "@/components/movieTemplate";
+import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
 
-import React, { Suspense } from 'react';
-import { useParams } from 'next/navigation';
-import MovieTemplate from '@/components/movieTemplate';
-import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+type MovieWatchPageProps = {
+  params: Promise<{ id: string }>;
+};
 
-function MovieWatchPageInner() {
-  const params = useParams();
+export default async function MovieWatchPage({ params }: MovieWatchPageProps) {
+  const { id } = await params;
 
-  if (!params || typeof params.id !== 'string') {
+  if (!id) {
     return <div>Error: Invalid movie ID</div>;
   }
 
-  return <MovieTemplate id={params.id} viewMode="watch" />;
+  return (
+    <Suspense fallback={<WatchPageSkeleton />}>
+      <MovieTemplate id={id} viewMode="watch" />
+    </Suspense>
+  );
 }
-
-const MovieWatchPage = () => (
-  <Suspense fallback={<WatchPageSkeleton />}>
-    <MovieWatchPageInner />
-  </Suspense>
-);
-
-export default MovieWatchPage;

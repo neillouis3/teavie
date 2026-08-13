@@ -134,6 +134,26 @@ export function mergeWatchHistoryLog(entries: WatchHistoryEntry[]): WatchHistory
     .sort((a, b) => b.lastWatchedAt - a.lastWatchedAt)
     .slice(0, WATCH_HISTORY_LOG_MAX);
   writeLog(merged);
+
+  const now = Date.now();
+  const freshContinue = merged.filter(
+    (entry) => now - entry.lastWatchedAt < WATCH_HISTORY_TTL_MS
+  );
+  if (freshContinue.length > 0) {
+    const byId = new Map<string, WatchHistoryEntry>();
+    for (const entry of [...readIndex(), ...freshContinue]) {
+      const prev = byId.get(entry.catalogId);
+      if (!prev || entry.lastWatchedAt >= prev.lastWatchedAt) {
+        byId.set(entry.catalogId, entry);
+      }
+    }
+    writeIndex(
+      [...byId.values()]
+        .sort((a, b) => b.lastWatchedAt - a.lastWatchedAt)
+        .slice(0, WATCH_HISTORY_MAX)
+    );
+  }
+
   return merged;
 }
 
