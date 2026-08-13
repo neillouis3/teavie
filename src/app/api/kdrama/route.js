@@ -8,7 +8,6 @@ import {
 import {
   catalogDisplayVoteAverage,
   catalogPopularityScore,
-  mongoMixedTvCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
 import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
 import {
@@ -66,8 +65,11 @@ export async function GET(req) {
       sort,
       skip,
       limit,
-      mongoMixedTvCatalogPopularityExpr(),
-      { includeTotal }
+      null,
+      {
+        includeTotal,
+        indexedPopularity: sortBy === "popularity",
+      }
     );
 
     return Response.json(

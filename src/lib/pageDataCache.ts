@@ -479,7 +479,7 @@ export function browseCatalogCacheKey(
   namespace: string,
   queryString: string
 ): string {
-  return `${PREFIX}.browse.v5:${namespace}:${queryString}`;
+  return `${PREFIX}.browse.v6:${namespace}:${queryString}`;
 }
 
 export async function fetchBrowseCatalogPayload(

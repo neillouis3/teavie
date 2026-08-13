@@ -5,7 +5,6 @@ import {
   catalogTodayIsoUtc,
   releasedCatalogClause,
 } from "@/lib/catalogQuery";
-import { catalogPopularityScore, mongoCatalogPopularitySortExpr } from "@/lib/catalogPopularity";
 import { mapCatalogListDoc } from "@/lib/mapContentDocToItem";
 import {
   fetchCatalogBrowsePage,
@@ -52,8 +51,8 @@ export async function GET(req) {
       sort,
       skip,
       limit,
-      mongoCatalogPopularitySortExpr(),
-      { includeTotal }
+      null,
+      { includeTotal, indexedPopularity: sortBy === "popularity" }
     );
 
     return Response.json(

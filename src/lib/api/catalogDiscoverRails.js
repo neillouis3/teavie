@@ -19,6 +19,7 @@ import { dedupeContentItems } from "@/lib/dedupeContentItems";
 
 const LIMIT = 50;
 const TRENDING_DAYS = 120;
+const AGG_OPTS = { allowDiskUse: true };
 
 const HAS_ART = {
   $or: [
@@ -87,7 +88,7 @@ async function queryMovieRail(col, { trending = false, qualityPopular = false } 
 
   pipeline.push({ $sort: { _pop: -1, _id: -1 } }, { $limit: LIMIT + 24 });
 
-  const docs = await col.aggregate(pipeline).toArray();
+  const docs = await col.aggregate(pipeline, AGG_OPTS).toArray();
   return capItems(
     docs.map((doc) => ({ ...mapContentDocToItem(doc), type: "movie" }))
   );
@@ -118,7 +119,7 @@ async function queryTvRail(col, { trending = false, qualityPopular = false } = {
 
   pipeline.push({ $sort: { _pop: -1, _id: -1 } }, { $limit: LIMIT + 24 });
 
-  const docs = await col.aggregate(pipeline).toArray();
+  const docs = await col.aggregate(pipeline, AGG_OPTS).toArray();
   return capItems(docs.map((doc) => ({ ...mapContentDocToItem(doc), type: "tv" })));
 }
 

@@ -1,5 +1,7 @@
 /**
- * Single-pass Mongo browse page: count + page rows in one aggregation.
+ * Mongo browse page: count + page rows.
+ * Indexed sorts (title, dates, TMDB popularity) use find + countDocuments.
+ * Computed sorts (anime popularity, top rated) use aggregation with allowDiskUse.
  */
 
 import {
@@ -8,6 +10,29 @@ import {
   mongoTopRatedQualityMatch,
 } from "@/lib/catalogPopularity.js";
 
+/** Atlas caps in-memory sort at 32MB; free/shared tiers may ignore allowDiskUse. */
+const AGG_OPTS = { allowDiskUse: true };
+
+async function fetchIndexedBrowsePage(
+  collection,
+  filter,
+  sort,
+  skip,
+  limit,
+  includeTotal
+) {
+  const total = includeTotal
+    ? await collection.countDocuments(filter)
+    : undefined;
+  const results = await collection
+    .find(filter)
+    .sort(sort)
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+  return { total, results };
+}
+
 /**
  * @param {import("mongodb").Collection} collection
  * @param {object} filter
@@ -15,8 +40,8 @@ import {
  * @param {object} sort
  * @param {number} skip
  * @param {number} limit
- * @param {object | null} popExpr Mongo expression for popularity sort
- * @param {{ includeTotal?: boolean; anime?: boolean }} [options]
+ * @param {object | null} popExpr Mongo expression for computed popularity sort
+ * @param {{ includeTotal?: boolean; anime?: boolean; indexedPopularity?: boolean }} [options]
  */
 export async function fetchCatalogBrowsePage(
   collection,
@@ -26,7 +51,7 @@ export async function fetchCatalogBrowsePage(
   skip,
   limit,
   popExpr = null,
-  { includeTotal = true, anime = false } = {}
+  { includeTotal = true, anime = false, indexedPopularity = false } = {}
 ) {
   if (sortBy === "rating") {
     const voteExpr = mongoCatalogDisplayVoteExpr({ anime });
@@ -48,36 +73,53 @@ export async function fetchCatalogBrowsePage(
 
     if (!includeTotal) {
       const results = await collection
-        .aggregate([
-          ...baseStages,
-          { $skip: skip },
-          { $limit: limit },
-          { $project: { _catalogVote: 0, _voteWeight: 0 } },
-        ])
+        .aggregate(
+          [
+            ...baseStages,
+            { $skip: skip },
+            { $limit: limit },
+            { $project: { _catalogVote: 0, _voteWeight: 0 } },
+          ],
+          AGG_OPTS
+        )
         .toArray();
       return { total: undefined, results };
     }
 
     const [facet] = await collection
-      .aggregate([
-        ...baseStages,
-        {
-          $facet: {
-            metadata: [{ $count: "total" }],
-            results: [
-              { $skip: skip },
-              { $limit: limit },
-              { $project: { _catalogVote: 0, _voteWeight: 0 } },
-            ],
+      .aggregate(
+        [
+          ...baseStages,
+          {
+            $facet: {
+              metadata: [{ $count: "total" }],
+              results: [
+                { $skip: skip },
+                { $limit: limit },
+                { $project: { _catalogVote: 0, _voteWeight: 0 } },
+              ],
+            },
           },
-        },
-      ])
+        ],
+        AGG_OPTS
+      )
       .toArray();
 
     return {
       total: facet?.metadata?.[0]?.total ?? 0,
       results: facet?.results ?? [],
     };
+  }
+
+  if (sortBy === "popularity" && indexedPopularity) {
+    return fetchIndexedBrowsePage(
+      collection,
+      filter,
+      { popularity: -1, _id: -1 },
+      skip,
+      limit,
+      includeTotal
+    );
   }
 
   if (sortBy === "popularity") {
@@ -92,30 +134,36 @@ export async function fetchCatalogBrowsePage(
 
     if (!includeTotal) {
       const results = await collection
-        .aggregate([
-          ...baseStages,
-          { $skip: skip },
-          { $limit: limit },
-          { $project: { _catalogPop: 0 } },
-        ])
+        .aggregate(
+          [
+            ...baseStages,
+            { $skip: skip },
+            { $limit: limit },
+            { $project: { _catalogPop: 0 } },
+          ],
+          AGG_OPTS
+        )
         .toArray();
       return { total: undefined, results };
     }
 
     const [facet] = await collection
-      .aggregate([
-        ...baseStages,
-        {
-          $facet: {
-            metadata: [{ $count: "total" }],
-            results: [
-              { $skip: skip },
-              { $limit: limit },
-              { $project: { _catalogPop: 0 } },
-            ],
+      .aggregate(
+        [
+          ...baseStages,
+          {
+            $facet: {
+              metadata: [{ $count: "total" }],
+              results: [
+                { $skip: skip },
+                { $limit: limit },
+                { $project: { _catalogPop: 0 } },
+              ],
+            },
           },
-        },
-      ])
+        ],
+        AGG_OPTS
+      )
       .toArray();
 
     return {
@@ -124,33 +172,14 @@ export async function fetchCatalogBrowsePage(
     };
   }
 
-  if (!includeTotal) {
-    const results = await collection
-      .find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .toArray();
-    return { total: undefined, results };
-  }
-
-  const [facet] = await collection
-    .aggregate([
-      { $match: filter },
-      { $sort: sort },
-      {
-        $facet: {
-          metadata: [{ $count: "total" }],
-          results: [{ $skip: skip }, { $limit: limit }],
-        },
-      },
-    ])
-    .toArray();
-
-  return {
-    total: facet?.metadata?.[0]?.total ?? 0,
-    results: facet?.results ?? [],
-  };
+  return fetchIndexedBrowsePage(
+    collection,
+    filter,
+    sort,
+    skip,
+    limit,
+    includeTotal
+  );
 }
 
 export const CATALOG_BROWSE_CACHE_HEADERS = {
