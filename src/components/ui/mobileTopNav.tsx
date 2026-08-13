@@ -47,7 +47,9 @@ export default function MobileTopNav() {
   const selectedKey =
     pathname.startsWith('/explore')
       ? 'explore'
-      : pathname.startsWith('/movies')
+      : pathname.startsWith('/library')
+        ? 'library'
+        : pathname.startsWith('/movies')
           ? 'movies'
           : pathname.startsWith('/anime')
             ? 'anime'
@@ -61,6 +63,7 @@ export default function MobileTopNav() {
 
   const settingsActive = pathname.startsWith('/settings');
   const profileActive = pathname.startsWith('/profile');
+  const libraryActive = pathname.startsWith('/library');
   const activityActive = pathname.startsWith('/activity');
   const searchActive = pathname.startsWith('/search');
   const heroBleed = pathUsesHeroBleed(pathname);
@@ -171,6 +174,18 @@ export default function MobileTopNav() {
             </div>
 
             <div className="mt-6 flex flex-col gap-1">
+              <Link
+                href="/library"
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
+                  libraryActive
+                    ? 'bg-success text-success-foreground shadow-sm'
+                    : 'text-foreground hover:bg-default-100'
+                }`}
+              >
+                <AssetMaskIcon src="/ui-icons/bookmark-outline.svg" size={20} />
+                Library
+              </Link>
               <Link
                 href="/profile"
                 onClick={() => setOpen(false)}

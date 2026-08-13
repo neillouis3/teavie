@@ -19,10 +19,12 @@ import {
   runtimeSecondsFromDoc,
   tvEpisodeCountFromDoc,
   tvSeasonCountFromDoc,
+  catalogOverviewFromDoc,
+  usCertificationFromDoc,
 } from "@/lib/mapContentDocToItem";
 import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster";
 import { enrichAnimeDocsWithTmdbBackdrops } from "@/lib/animeTmdbArt";
-import { IMDB_GENRES, orderGenreRowsByPreference } from "@/lib/imdbGenres";
+import { IMDB_GENRES, orderGenreRowsByPreference, genreNamesFromDoc } from "@/lib/imdbGenres";
 import { getCatalogCategory } from "@/lib/catalogCategories";
 import { mergeWithPreferenceFilter } from "@/lib/preferenceMatch";
 import { hasUserPreferences } from "@/types/user";
@@ -70,6 +72,9 @@ function mapTvRow(doc, { anime = false } = {}) {
     number_of_episodes: tvEpisodeCountFromDoc(doc),
     popularity: catalogPopularityScore(doc, { anime }),
     vote_average: catalogDisplayVoteAverage(doc),
+    overview: catalogOverviewFromDoc(doc),
+    genres: genreNamesFromDoc(doc),
+    certification: usCertificationFromDoc(doc),
     poster_path: useAnimeArt
       ? animePosterFromDoc(doc)
       : doc.poster_path ?? null,
@@ -245,59 +250,13 @@ async function fetchNewEpisodesRail(
   baseFilter,
   { anime = false, limit = RAIL_LIMIT } = {}
 ) {
-  const popExpr = anime
-    ? mongoAnimeCatalogPopularityExpr()
-    : mongoMixedTvCatalogPopularityExpr();
+  const yesterday = isoDaysAgo(1);
 
-  const airingFilter = anime
-    ? {
-        $or: [{ status: "Currently Airing" }, { "anilist.status": "RELEASING" }],
-      }
-    : {
-        status: { $in: ["Returning Series", "In Production"] },
-        last_air_date: {
-          $type: "string",
-          $regex: /^\d{4}-\d{2}-\d{2}/,
-          $gte: isoDaysAgo(28),
-        },
-      };
-
-  async function loadRows(matchExtra, sort) {
-    return col
-      .aggregate([
-        { $match: { $and: [baseFilter, matchExtra] } },
-        { $addFields: { _catalogPop: popExpr } },
-        { $sort: sort },
-        { $limit: limit },
-        { $project: { _catalogPop: 0 } },
-      ])
-      .toArray();
-  }
-
-  let rows = await loadRows(
-    airingFilter,
-    anime
-      ? { _catalogPop: -1, _id: -1 }
-      : { last_air_date: -1, _catalogPop: -1, _id: -1 }
-  );
-
-  if (!anime && rows.length < Math.min(8, limit)) {
-    const fallback = await loadRows(
-      {
-        status: "Returning Series",
-        last_air_date: { $type: "string", $regex: /^\d{4}-\d{2}-\d{2}/ },
-      },
-      { last_air_date: -1, _catalogPop: -1, _id: -1 }
-    );
-    const seen = new Set(rows.map((doc) => String(doc.id)));
-    for (const doc of fallback) {
-      const key = String(doc.id);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      rows.push(doc);
-      if (rows.length >= limit) break;
-    }
-  }
+  const rows = await col
+    .find({ $and: [baseFilter, { last_air_date: yesterday }] })
+    .sort({ popularity: -1, _id: -1 })
+    .limit(limit)
+    .toArray();
 
   return rows.map((doc) => mapTvRow(doc, { anime }));
 }

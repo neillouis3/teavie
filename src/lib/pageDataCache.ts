@@ -6,7 +6,7 @@ import { hasUserPreferences } from "@/types/user";
 
 const PREFIX = "teavie.cache";
 
-function preferencesCacheKey(preferences: UserPreferences | null | undefined): string {
+export function preferencesCacheKey(preferences: UserPreferences | null | undefined): string {
   if (!preferences || !hasUserPreferences(preferences)) return "default";
   const sorted = {
     c: [...preferences.categories].sort(),
@@ -319,7 +319,7 @@ export function categoryDiscoverCacheKey(
   slug: string,
   preferences: UserPreferences | null = null
 ): string {
-  return `${PREFIX}.category-discover.v7:${slug}:${preferencesCacheKey(preferences)}`;
+  return `${PREFIX}.category-discover.v10:${slug}:${preferencesCacheKey(preferences)}`;
 }
 
 export function peekCategoryDiscoverCache(
@@ -480,6 +480,17 @@ export function browseCatalogCacheKey(
   queryString: string
 ): string {
   return `${PREFIX}.browse.v6:${namespace}:${queryString}`;
+}
+
+export function peekBrowseCatalogCache(
+  namespace: string,
+  queryString: string
+): BrowseCatalogPayload | null {
+  const cached = readClientDayCache<BrowseCatalogPayload>(
+    browseCatalogCacheKey(namespace, queryString)
+  );
+  if (cached && isBrowsePayloadCacheable(cached)) return cached;
+  return null;
 }
 
 export async function fetchBrowseCatalogPayload(

@@ -20,6 +20,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { avatarInitials } from "@/lib/partyNickname";
 import { useAuth } from "@/contexts/authContext";
+import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 
 export default function ProfileNavAvatar() {
   const pathname = usePathname();
@@ -93,6 +94,16 @@ export default function ProfileNavAvatar() {
           }
         >
           Profile
+        </DropdownItem>
+        <DropdownItem
+          key="library"
+          href="/library"
+          as={Link}
+          startContent={
+            <AssetMaskIcon src="/ui-icons/bookmark-outline.svg" size={16} />
+          }
+        >
+          Library
         </DropdownItem>
         <DropdownItem
           key="activity"

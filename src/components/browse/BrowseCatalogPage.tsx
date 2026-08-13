@@ -15,6 +15,7 @@ import {
   browseCatalogCacheKey,
   fetchBrowseCatalogPayload,
   fetchBrowseCatalogPageResults,
+  peekBrowseCatalogCache,
   prefetchBrowseCatalogPage,
 } from "@/lib/pageDataCache";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
@@ -62,11 +63,32 @@ function BrowseCatalogPageContent({
     return qs.toString();
   }, [sortParam, genreParam, yearMinParam, yearMaxParam, qParam]);
 
-  const [items, setItems] = useState<ContentItem[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [genreSlugs, setGenreSlugs] = useState<string[] | undefined>();
-  const [loading, setLoading] = useState(true);
+  const firstPageQuery = useMemo(() => {
+    const qs = new URLSearchParams(filterQueryString);
+    qs.set("page", "1");
+    return qs.toString();
+  }, [filterQueryString]);
+
+  const [items, setItems] = useState<ContentItem[]>(() => {
+    const cached = peekBrowseCatalogCache(namespace, firstPageQuery);
+    return cached?.results ?? [];
+  });
+  const [totalPages, setTotalPages] = useState(() => {
+    const cached = peekBrowseCatalogCache(namespace, firstPageQuery);
+    return cached?.totalPages ?? 1;
+  });
+  const [total, setTotal] = useState(() => {
+    const cached = peekBrowseCatalogCache(namespace, firstPageQuery);
+    return cached?.total ?? 0;
+  });
+  const [genreSlugs, setGenreSlugs] = useState<string[] | undefined>(() => {
+    const cached = peekBrowseCatalogCache(namespace, firstPageQuery);
+    return cached?.genreSlugs;
+  });
+  const [loading, setLoading] = useState(() => {
+    const cached = peekBrowseCatalogCache(namespace, firstPageQuery);
+    return !(cached && cached.results.length > 0);
+  });
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const pageRef = useRef(1);
@@ -76,9 +98,13 @@ function BrowseCatalogPageContent({
   const loadFirstPage = useCallback(() => {
     const query = new URLSearchParams(filterQueryString);
     query.set("page", "1");
-    setLoading(true);
+    const queryString = query.toString();
+    const cached = peekBrowseCatalogCache(namespace, queryString);
+    if (!cached?.results.length) {
+      setLoading(true);
+    }
     setLoadFailed(false);
-    return fetchBrowseCatalogPayload(namespace, apiPath, query.toString(), genreApiPath)
+    return fetchBrowseCatalogPayload(namespace, apiPath, queryString, genreApiPath)
       .then((data) => {
         if (data.ok === false) {
           setLoadFailed(true);
@@ -119,21 +145,32 @@ function BrowseCatalogPageContent({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setLoadFailed(false);
-
     pageRef.current = 1;
-    const query = new URLSearchParams(filterQueryString);
-    query.set("page", "1");
 
-    void fetchBrowseCatalogPayload(namespace, apiPath, query.toString(), genreApiPath)
+    const queryString = firstPageQuery;
+    const cached = peekBrowseCatalogCache(namespace, queryString);
+    if (cached?.results.length) {
+      setItems(cached.results);
+      setTotalPages(cached.totalPages);
+      setTotal(cached.total);
+      if (cached.genreSlugs) setGenreSlugs(cached.genreSlugs);
+      setLoading(false);
+      setLoadFailed(false);
+    } else {
+      setLoading(true);
+      setLoadFailed(false);
+    }
+
+    void fetchBrowseCatalogPayload(namespace, apiPath, queryString, genreApiPath)
       .then((data) => {
         if (cancelled) return;
         if (data.ok === false) {
-          setLoadFailed(true);
-          setItems([]);
-          setTotalPages(1);
-          setTotal(0);
+          if (!cached?.results.length) {
+            setLoadFailed(true);
+            setItems([]);
+            setTotalPages(1);
+            setTotal(0);
+          }
           return;
         }
         setLoadFailed(false);
@@ -147,10 +184,12 @@ function BrowseCatalogPageContent({
       })
       .catch(() => {
         if (cancelled) return;
-        setLoadFailed(true);
-        setItems([]);
-        setTotalPages(1);
-        setTotal(0);
+        if (!cached?.results.length) {
+          setLoadFailed(true);
+          setItems([]);
+          setTotalPages(1);
+          setTotal(0);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -159,15 +198,11 @@ function BrowseCatalogPageContent({
     return () => {
       cancelled = true;
     };
-  }, [namespace, apiPath, filterQueryString, genreApiPath]);
+  }, [namespace, apiPath, firstPageQuery, filterQueryString, genreApiPath]);
 
-  useResumeFetchWhenVisible(
-    loading || loadFailed,
-    () => {
-      void loadFirstPage();
-    },
-    bustBrowseInflight
-  );
+  useResumeFetchWhenVisible(loading, () => {
+    void loadFirstPage();
+  }, bustBrowseInflight);
 
   const loadMore = useCallback(async () => {
     if (

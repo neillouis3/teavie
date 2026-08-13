@@ -7,16 +7,12 @@ import Header from "@/components/ui/header";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import WatchHistoryRail from "@/components/explore/watchHistoryRail";
 import WatchHistoryLogRail from "@/components/explore/watchHistoryLogRail";
-import WatchLaterRail from "@/components/explore/watchLaterRail";
-import FavoritesRail from "@/components/explore/favoritesRail";
 import {
   watchHistoryLogLabel,
   watchHistoryProgressLabel,
   WATCH_HISTORY_CHANGED_EVENT,
   WATCH_HISTORY_LOG_CHANGED_EVENT,
 } from "@/lib/watchHistory";
-import { WATCH_LATER_CHANGED_EVENT } from "@/lib/watchLater";
-import { FAVORITES_CHANGED_EVENT } from "@/lib/favorites";
 import {
   fetchUserRailRows,
   fetchExploreHistoryRows,
@@ -26,20 +22,12 @@ import { CONTENT_INSET_X } from "@/lib/contentInset";
 import { RAIL_STACK_CLASS } from "@/lib/catalogGrid";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
-import type { ContentItem } from "@/types/content";
 
 export default function ActivityPage() {
   const { user, loading: authLoading } = useAuth();
-  const {
-    watchHistoryEntries,
-    watchHistoryLogEntries,
-    watchLaterEntries,
-    favoriteEntries,
-  } = useUserData();
+  const { watchHistoryEntries, watchHistoryLogEntries } = useUserData();
   const [historyRows, setHistoryRows] = useState<ExploreHistoryRow[]>([]);
   const [historyLogRows, setHistoryLogRows] = useState<ExploreHistoryRow[]>([]);
-  const [watchLaterRows, setWatchLaterRows] = useState<ContentItem[]>([]);
-  const [favoriteRows, setFavoriteRows] = useState<ContentItem[]>([]);
 
   const loadUserRails = useCallback(async () => {
     const continueIds = new Set(watchHistoryEntries.map((e) => e.catalogId));
@@ -49,28 +37,15 @@ export default function ActivityPage() {
     const [rails, logRows] = await Promise.all([
       fetchUserRailRows({
         historyEntries: watchHistoryEntries,
-        watchLaterEntries: watchLaterEntries.map((e) => ({
-          catalogId: e.catalogId,
-          mediaType: e.mediaType,
-        })),
-        favoriteEntries: favoriteEntries.map((e) => ({
-          catalogId: e.catalogId,
-          mediaType: e.mediaType,
-        })),
+        watchLaterEntries: [],
+        favoriteEntries: [],
         progressLabel: watchHistoryProgressLabel,
       }),
       fetchExploreHistoryRows(logEntries, watchHistoryLogLabel),
     ]);
     setHistoryRows(rails.historyRows);
     setHistoryLogRows(logRows);
-    setWatchLaterRows(rails.watchLaterRows);
-    setFavoriteRows(rails.favoriteRows);
-  }, [
-    watchHistoryEntries,
-    watchHistoryLogEntries,
-    watchLaterEntries,
-    favoriteEntries,
-  ]);
+  }, [watchHistoryEntries, watchHistoryLogEntries]);
 
   useEffect(() => {
     document.title = "Activity - Teavie";
@@ -85,23 +60,14 @@ export default function ActivityPage() {
     const onUserRailsChange = () => void loadUserRails();
     window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onUserRailsChange);
     window.addEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, onUserRailsChange);
-    window.addEventListener(WATCH_LATER_CHANGED_EVENT, onUserRailsChange);
-    window.addEventListener(FAVORITES_CHANGED_EVENT, onUserRailsChange);
     return () => {
       window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onUserRailsChange);
       window.removeEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, onUserRailsChange);
-      window.removeEventListener(WATCH_LATER_CHANGED_EVENT, onUserRailsChange);
-      window.removeEventListener(FAVORITES_CHANGED_EVENT, onUserRailsChange);
     };
   }, [loadUserRails]);
 
-  const hasFavorites = favoriteEntries.length > 0;
   const isEmpty =
-    historyRows.length === 0 &&
-    historyLogRows.length === 0 &&
-    favoriteRows.length === 0 &&
-    watchLaterRows.length === 0 &&
-    !hasFavorites;
+    historyRows.length === 0 && historyLogRows.length === 0;
 
   return (
     <div className="bg-main min-h-screen w-full">
@@ -125,22 +91,13 @@ export default function ActivityPage() {
               A longer record of movies and shows you have watched.
             </p>
           </section>
-          <section className="space-y-2">
-            <ExploreSectionTitle className="pl-0 text-lg" variant="explore">
-              Favorites
-            </ExploreSectionTitle>
-            <p className="text-sm text-default-500">
-              Star titles from their detail page or catalog cards to build your list.
-            </p>
-          </section>
-          <section className="space-y-2">
-            <ExploreSectionTitle className="pl-0 text-lg" variant="explore">
-              Watch later
-            </ExploreSectionTitle>
-            <p className="text-sm text-default-500">
-              Save movies and shows from their detail page to build your list.
-            </p>
-          </section>
+          <p className="text-sm text-default-500">
+            Favorites and watch later live in{" "}
+            <Link href="/library" className="text-success hover:underline">
+              Library
+            </Link>
+            .
+          </p>
           {!user ? (
             <div className="flex flex-wrap gap-2 pt-2">
               <Button as={Link} href="/login" color="success" size="sm">
@@ -161,21 +118,6 @@ export default function ActivityPage() {
 
         {historyLogRows.length > 0 ? (
           <WatchHistoryLogRail items={historyLogRows} layout="profile" />
-        ) : null}
-
-        {favoriteRows.length > 0 ? (
-          <FavoritesRail items={favoriteRows} layout="profile" />
-        ) : hasFavorites ? (
-          <section className="max-w-2xl space-y-2">
-            <ExploreSectionTitle className="pl-0 text-lg" variant="explore">
-              Favorites
-            </ExploreSectionTitle>
-            <p className="text-sm text-default-500">Loading your favorites…</p>
-          </section>
-        ) : null}
-
-        {watchLaterRows.length > 0 ? (
-          <WatchLaterRail items={watchLaterRows} layout="profile" />
         ) : null}
       </div>
     </div>

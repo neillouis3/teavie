@@ -5,7 +5,7 @@ export const HERO_BLEED_PATHS = [EXPLORE_HOME] as const;
 
 /** Hub routes with a hero banner, but only the exact route — nested catalog pages
  *  like `/anime/all` must NOT inherit this. */
-export const HERO_BLEED_EXACT_PATHS = ["/anime", "/kdrama"] as const;
+export const HERO_BLEED_EXACT_PATHS = [] as const;
 
 const SHOW_DETAIL_HERO_RE = /^\/shows\/([^/]+)\/?$/;
 const SHOW_EPISODES_HERO_RE = /^\/shows\/([^/]+)\/episodes\/?$/;

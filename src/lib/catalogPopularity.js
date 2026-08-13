@@ -199,14 +199,24 @@ export function catalogDisplayVoteAverage(doc) {
   if (!doc || typeof doc !== "object") return null;
   const d = /** @type {Record<string, unknown>} */ (doc);
   const id = String(d.id ?? "");
+  const isAnime =
+    id.startsWith("anime_") ||
+    d.is_anime === true ||
+    (Array.isArray(d.tags) && d.tags.includes("anime"));
+
   const anilist = d.anilist;
   const aniAvg =
     anilist && typeof anilist === "object"
       ? Number(/** @type {Record<string, unknown>} */ (anilist).averageScore)
       : NaN;
 
-  if (id.startsWith("anime_") && Number.isFinite(aniAvg) && aniAvg > 0) {
-    return quantizeVoteAverage(aniAvg / 10);
+  if (isAnime) {
+    if (Number.isFinite(aniAvg) && aniAvg > 0) {
+      return quantizeVoteAverage(aniAvg / 10);
+    }
+    const malVote = normalizedCatalogVoteAverage(d.vote_average);
+    if (malVote) return malVote;
+    return null;
   }
 
   const vote = normalizedCatalogVoteAverage(d.vote_average);
@@ -225,6 +235,14 @@ export function catalogDisplayVoteAverage(doc) {
   const tmdbCount = Number(d.vote_count);
   if (Number.isFinite(tmdbCount) && tmdbCount >= CATALOG_DISPLAY_MIN_TMDB_VOTE_COUNT) {
     return displayVote;
+  }
+
+  const isKdrama =
+    d.is_kdrama === true ||
+    (Array.isArray(d.catalog_categories) && d.catalog_categories.includes("kdrama"));
+  if (isKdrama && displayVote) {
+    if (!Number.isFinite(tmdbCount) || tmdbCount <= 0) return displayVote;
+    if (tmdbCount >= CATALOG_POPULAR_MIN_VOTE_COUNT) return displayVote;
   }
 
   return null;
@@ -286,12 +304,22 @@ export function mongoTopRatedQualityMatch(opts = {}) {
 
   const minImdbVotes = opts.minVoteCount ?? CATALOG_TOP_RATED_MIN_IMDB_VOTES;
 
+  const isKdrama = {
+    $or: [{ is_kdrama: true }, { catalog_categories: "kdrama" }],
+  };
+
   return {
     $and: [
       { _catalogVote: { $gte: minVoteAverage } },
       {
         $or: [
           { "omdb.imdbVotes": { $gte: minImdbVotes } },
+          {
+            $and: [
+              isKdrama,
+              { vote_count: { $gte: CATALOG_TOP_RATED_MIN_VOTE_COUNT } },
+            ],
+          },
           { vote_count: { $gte: CATALOG_TOP_RATED_MIN_TMDB_VOTE_COUNT } },
         ],
       },

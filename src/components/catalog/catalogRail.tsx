@@ -42,6 +42,8 @@ type CatalogRailProps = {
   loading?: boolean;
   /** Override default release note under card title. */
   getReleaseNote?: (item: ContentItem) => string | undefined;
+  /** When set, replaces year/rating row (e.g. new episode chips). */
+  getMetaChips?: (item: ContentItem) => string[] | undefined;
   titleVariant?: "default" | "explore";
 };
 
@@ -86,6 +88,7 @@ export default function CatalogRail({
   moreLabel = "More",
   showReleaseNote = false,
   getReleaseNote,
+  getMetaChips,
   loading = false,
   titleVariant = "default",
 }: CatalogRailProps) {
@@ -127,6 +130,7 @@ export default function CatalogRail({
                   item.release_date?.split("-")[0] ||
                   item.first_air_date?.split("-")[0] ||
                   "N/A";
+                const metaChips = getMetaChips?.(item);
                 const key = `${item.type ?? "x"}-${item.id}`;
                 return (
                   <CarouselItem key={key} className={itemClass}>
@@ -138,17 +142,23 @@ export default function CatalogRail({
                         type={item.type || "movie"}
                         posterPath={item.poster_path || ""}
                         backdropPath={item.backdrop_path || ""}
+                        topNote={metaChips?.join(" · ")}
                       />
                     ) : (
                       <SmallCard
                         id={item.id}
                         title={titleText}
                         year={year}
-                        voteAverage={item.vote_average}
-                        releaseNote={
-                          getReleaseNote?.(item) ??
-                          (showReleaseNote ? releaseNoteForItem(item) : undefined)
+                        voteAverage={
+                          metaChips?.length ? undefined : item.vote_average
                         }
+                        releaseNote={
+                          metaChips?.length
+                            ? undefined
+                            : getReleaseNote?.(item) ??
+                              (showReleaseNote ? releaseNoteForItem(item) : undefined)
+                        }
+                        metaChips={metaChips}
                         type={item.type || "movie"}
                         runtimeSeconds={item.runtimeSeconds ?? undefined}
                         seasonAmount={item.season_amount ?? 0}

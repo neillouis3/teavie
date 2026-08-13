@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '@heroui/react';
@@ -15,6 +15,7 @@ import {
   fetchGenrePagePayload,
   genrePageCacheKey,
   peekGenrePageCache,
+  preferencesCacheKey,
   type GenrePagePayload,
 } from '@/lib/pageDataCache';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
@@ -77,6 +78,10 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     peekGenrePageCache(slug, type, preferences)
   );
   const [ready, setReady] = useState(() => payload != null);
+  const preferencesSig = useMemo(
+    () => preferencesCacheKey(preferences),
+    [preferences]
+  );
 
   const loadGenrePage = useCallback(() => {
     void fetchGenrePagePayload(slug, type, preferences).then((data) => {
@@ -94,13 +99,13 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   }, [genreLabel]);
 
   useEffect(() => {
-    const cached = peekGenrePageCache(slug, type, preferences);
-    setPayload(cached);
-    setReady(cached != null);
-  }, [slug, type, preferences]);
-
-  useEffect(() => {
     let cancelled = false;
+    const cached = peekGenrePageCache(slug, type, preferences);
+    if (cached) {
+      setPayload(cached);
+      setReady(true);
+    }
+
     void fetchGenrePagePayload(slug, type, preferences).then((data) => {
       if (cancelled) return;
       setPayload(data);
@@ -109,7 +114,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
     return () => {
       cancelled = true;
     };
-  }, [slug, type, preferences]);
+  }, [slug, type, preferencesSig, preferences]);
 
   useResumeFetchWhenVisible(!ready, loadGenrePage, bustGenreInflight);
 

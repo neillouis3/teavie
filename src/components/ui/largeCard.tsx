@@ -123,6 +123,7 @@ function HeroCardOverlay({
   showActions = false,
   watchHref,
   detailsHref,
+  detailsSeedProps,
 }: {
   title: string;
   type: "movie" | "tv";
@@ -140,6 +141,7 @@ function HeroCardOverlay({
   showActions?: boolean;
   watchHref?: string;
   detailsHref?: string;
+  detailsSeedProps?: ReturnType<typeof catalogSeedLinkProps>;
 }) {
   const dateLabel =
     releaseDateStyle === "phrase"
@@ -239,6 +241,7 @@ function HeroCardOverlay({
               variant="flat"
               className="border-0 bg-white/15 text-white shadow-sm backdrop-blur-xl hover:bg-white/20"
               startContent={<HugeiconsIcon icon={InformationCircleIcon} size={21} />}
+              {...detailsSeedProps}
             >
               More info
             </Button>
@@ -404,6 +407,7 @@ export default function LargeCard({
             showActions={showHeroActions}
             watchHref={watchHref}
             detailsHref={href}
+            detailsSeedProps={catalogSeedLinkProps(catalogSeed)}
           />
         )}
       </div>

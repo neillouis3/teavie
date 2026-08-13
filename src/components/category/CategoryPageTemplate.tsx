@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@heroui/react";
+import NewEpisodesRail from "@/components/category/NewEpisodesRail";
 import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
@@ -16,7 +17,6 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
-import type { ContentItem } from "@/types/content";
 import {
   GenreCatalogTile,
   genreTileColor,
@@ -26,7 +26,6 @@ import {
   getCatalogCategory,
 } from "@/lib/catalogCategories";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
-import { formatHeroDate } from "@/lib/formatRelease";
 import {
   RAIL_AFTER_SPOTLIGHT,
   RAIL_CAROUSEL_ITEM_GENRE,
@@ -39,23 +38,13 @@ import {
   categoryDiscoverCacheKey,
   fetchCategoryDiscover,
   peekCategoryDiscoverCache,
+  preferencesCacheKey,
   type CategoryDiscoverPayload,
 } from "@/lib/pageDataCache";
 import { useUserData } from "@/contexts/userDataContext";
 import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 import { cn } from "@/lib/utils";
-
-function newEpisodeReleaseNote(item: ContentItem, slug: string): string | undefined {
-  if (slug === "kdrama") {
-    const latest = formatHeroDate(item.last_air_date);
-    return latest ? `Latest ep · ${latest}` : "Returning series";
-  }
-  if (slug === "anime") {
-    return "Airing now";
-  }
-  return undefined;
-}
 
 type CategoryPageTemplateProps = {
   slug: string;
@@ -68,10 +57,9 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     category ? peekCategoryDiscoverCache(category.slug, preferences) : null
   );
   const [ready, setReady] = useState(() => data != null);
-
-  const getReleaseNote = useCallback(
-    (item: ContentItem) => newEpisodeReleaseNote(item, slug),
-    [slug]
+  const preferencesSig = useMemo(
+    () => preferencesCacheKey(preferences),
+    [preferences]
   );
 
   const loadDiscover = useCallback(() => {
@@ -95,15 +83,14 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
   useEffect(() => {
     if (!category) return;
-    const cached = peekCategoryDiscoverCache(category.slug, preferences);
-    setData(cached);
-    setReady(cached != null);
-  }, [category, preferences]);
-
-  useEffect(() => {
-    if (!category) return;
 
     let cancelled = false;
+    const cached = peekCategoryDiscoverCache(category.slug, preferences);
+    if (cached) {
+      setData(cached);
+      setReady(true);
+    }
+
     void fetchCategoryDiscover(category.slug, preferences).then((payload) => {
       if (cancelled) return;
       setData(payload);
@@ -113,7 +100,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
     return () => {
       cancelled = true;
     };
-  }, [category, preferences]);
+  }, [category, preferencesSig, preferences]);
 
   useResumeFetchWhenVisible(!ready, loadDiscover, bustDiscoverInflight);
 
@@ -147,6 +134,11 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           >
             <div className="min-h-[52vh] animate-pulse bg-default-200 sm:min-h-[62vh] lg:min-h-[80vh] dark:bg-default-100/10" />
           </section>
+        ) : null}
+        {useExploreSpotlight ? (
+          <div className={`${MOBILE_CONTENT_INSET_LEFT} pb-8`}>
+            <CatalogRailSkeleton count={8} />
+          </div>
         ) : null}
         <div className={`space-y-8 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
           <div className="h-14 animate-pulse rounded-xl bg-default-200 dark:bg-default-100/10" />
@@ -194,6 +186,18 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
         </section>
       )}
 
+      {hasNewEpisodes ? (
+        <div
+          className={cn(
+            MOBILE_CONTENT_INSET_LEFT,
+            "mb-8",
+            hasTrending ? "mt-0" : "mt-2"
+          )}
+        >
+          <NewEpisodesRail items={data.newEpisodes} />
+        </div>
+      ) : null}
+
       <div className={`${RAIL_STACK_CLASS} pb-10 ${MOBILE_CONTENT_INSET_LEFT}`}>
         <section
           className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -220,15 +224,6 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
 
         {hasContent ? (
           <>
-            {hasNewEpisodes ? (
-              <CatalogRail
-                title="New episodes"
-                items={data.newEpisodes}
-                titleVariant="explore"
-                getReleaseNote={getReleaseNote}
-              />
-            ) : null}
-
             <CatalogRail
               title="Popular"
               items={data.popular}

@@ -7,8 +7,6 @@ import { cn } from "@/lib/utils";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import GenreRail from "@/components/explore/genreRail";
 import WatchHistoryRail from "@/components/explore/watchHistoryRail";
-import WatchLaterRail from "@/components/explore/watchLaterRail";
-import FavoritesRail from "@/components/explore/favoritesRail";
 import UpcomingRail from "@/components/explore/upcomingRail";
 import NewContentRail from "@/components/explore/newContentRail";
 import {
@@ -29,8 +27,6 @@ import {
 import { hasUserPreferences } from "@/types/user";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 import { watchHistoryProgressLabel, WATCH_HISTORY_CHANGED_EVENT } from "@/lib/watchHistory";
-import { WATCH_LATER_CHANGED_EVENT } from "@/lib/watchLater";
-import { FAVORITES_CHANGED_EVENT } from "@/lib/favorites";
 import { useUserData } from "@/contexts/userDataContext";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 
@@ -60,13 +56,8 @@ function historySignature(
     .join("|");
 }
 
-function listSignature(entries: { catalogId: string; mediaType: string }[]) {
-  return entries.map((e) => `${e.mediaType}:${e.catalogId}`).sort().join("|");
-}
-
 export default function ExploreHub() {
-  const { preferences, watchHistoryEntries, watchLaterEntries, favoriteEntries, watchedMovieIds } =
-    useUserData();
+  const { preferences, watchHistoryEntries, watchedMovieIds } = useUserData();
   const [core, setCore] = useState<ExploreCorePayload | null>(() =>
     peekExploreInitialCore(preferences, watchedMovieIds)
   );
@@ -86,30 +77,16 @@ export default function ExploreHub() {
     () => historySignature(watchHistoryEntries),
     [watchHistoryEntries]
   );
-  const watchLaterSig = useMemo(
-    () => listSignature(watchLaterEntries),
-    [watchLaterEntries]
-  );
-  const favoritesSig = useMemo(
-    () => listSignature(favoriteEntries),
-    [favoriteEntries]
-  );
 
   const loadUserRails = useCallback(async () => {
     const rails = await fetchUserRailRows({
       historyEntries: watchHistoryEntries,
-      watchLaterEntries: watchLaterEntries.map((e) => ({
-        catalogId: e.catalogId,
-        mediaType: e.mediaType,
-      })),
-      favoriteEntries: favoriteEntries.map((e) => ({
-        catalogId: e.catalogId,
-        mediaType: e.mediaType,
-      })),
+      watchLaterEntries: [],
+      favoriteEntries: [],
       progressLabel: watchHistoryProgressLabel,
     });
     setUserRails(rails);
-  }, [watchHistoryEntries, watchLaterEntries, favoriteEntries]);
+  }, [watchHistoryEntries]);
 
   const payload = useMemo<ExplorePagePayload | null>(
     () => (core ? { ...core, ...userRails } : null),
@@ -180,17 +157,13 @@ export default function ExploreHub() {
 
   useEffect(() => {
     void loadUserRails();
-  }, [historySig, watchLaterSig, favoritesSig, loadUserRails]);
+  }, [historySig, loadUserRails]);
 
   useEffect(() => {
-    const onUserRailsChange = () => void loadUserRails();
-    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onUserRailsChange);
-    window.addEventListener(WATCH_LATER_CHANGED_EVENT, onUserRailsChange);
-    window.addEventListener(FAVORITES_CHANGED_EVENT, onUserRailsChange);
+    const onHistoryChange = () => void loadUserRails();
+    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);
     return () => {
-      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onUserRailsChange);
-      window.removeEventListener(WATCH_LATER_CHANGED_EVENT, onUserRailsChange);
-      window.removeEventListener(FAVORITES_CHANGED_EVENT, onUserRailsChange);
+      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);
     };
   }, [loadUserRails]);
 
@@ -244,8 +217,6 @@ export default function ExploreHub() {
     discover,
     genres,
     historyRows,
-    watchLaterRows,
-    favoriteRows,
     recommendedRows,
     newContent,
     upcomingContent,
@@ -255,8 +226,6 @@ export default function ExploreHub() {
     discover.popularMovies.length > 0 || discover.popularTv.length > 0;
   const hasUpcoming = upcomingContent.length > 0;
   const hasNew = newContent.length > 0;
-  const hasWatchLater = watchLaterRows.length > 0;
-  const hasFavorites = favoriteRows.length > 0;
   const hasRecommended = recommendedRows.length > 0;
   const showRecommendedSlot =
     hasUserPreferences(preferences) && (awaitingPersonalized || hasRecommended);
@@ -303,12 +272,6 @@ export default function ExploreHub() {
               titleVariant="explore"
             />
           )
-        ) : null}
-        {hasWatchLater ? (
-          <WatchLaterRail items={watchLaterRows} maxItems={SECTION_MAX_ITEMS} />
-        ) : null}
-        {hasFavorites ? (
-          <FavoritesRail items={favoriteRows} maxItems={SECTION_MAX_ITEMS} />
         ) : null}
         <GenreRail genres={genres} preferredGenreSlugs={preferences.genres} />
         {hasPopular ? (

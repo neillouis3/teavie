@@ -74,6 +74,21 @@ export function tvEpisodeCountFromDoc(doc) {
   return null;
 }
 
+/** Synopsis for cards/heroes — TMDB overview or AniList description. */
+export function catalogOverviewFromDoc(doc) {
+  if (!doc || typeof doc !== "object") return null;
+  const overview = typeof doc.overview === "string" ? doc.overview.trim() : "";
+  if (overview.length > 0) return overview;
+  const anilist = doc.anilist;
+  if (anilist && typeof anilist === "object") {
+    const desc =
+      typeof anilist.description === "string" ? anilist.description.trim() : "";
+    if (desc.length > 0) return desc;
+  }
+  return null;
+}
+
+/** Exported for API mappers (new, etc.). */
 export function usCertificationFromDoc(doc) {
   if (!doc || typeof doc !== "object") return null;
 
@@ -124,6 +139,7 @@ export function mapCatalogListDoc(doc) {
     genres: genreNamesFromDoc(doc),
     imdb_genres: imdbGenresForDoc(doc),
     certification: usCertificationFromDoc(doc),
+    overview: catalogOverviewFromDoc(doc),
     vote_average: catalogDisplayVoteAverage(doc),
   };
 }
@@ -141,7 +157,7 @@ export function mapContentDocToItem(doc) {
     first_air_date: doc.type === "tv" ? doc.first_air_date ?? null : null,
     poster_path: isAnimeRow ? animePosterFromDoc(doc) : doc.poster_path ?? null,
     backdrop_path: isAnimeRow ? animeBackdropFromDoc(doc) : doc.backdrop_path ?? null,
-    overview: doc.overview ?? null,
+    overview: catalogOverviewFromDoc(doc),
     type: doc.type,
     runtimeSeconds: runtimeSecondsFromDoc(doc),
     season_amount: doc.type === "tv" ? tvSeasonCountFromDoc(doc) ?? 0 : 0,

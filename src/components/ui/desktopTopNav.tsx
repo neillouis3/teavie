@@ -10,7 +10,7 @@ import ThemeNavButton from "@/components/ui/themeNavButton";
 import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 import { APP_NAV_ITEMS } from "@/components/ui/navItems";
 import { TEAVIE_LOGO } from "@/lib/brandAssets";
-import { EXPLORE_HOME } from "@/lib/routes";
+import { EXPLORE_HOME, LIBRARY_HOME } from "@/lib/routes";
 
 function SearchFallback() {
   return <div className="h-9 w-44 animate-pulse rounded-full bg-white/10" aria-hidden />;
@@ -22,6 +22,7 @@ function activeNavKey(pathname: string) {
   if (pathname.startsWith("/anime")) return "anime";
   if (pathname.startsWith("/kdrama")) return "kdrama";
   if (pathname.startsWith("/sports")) return "sports";
+  if (pathname.startsWith(LIBRARY_HOME)) return "library";
   if (pathname.startsWith(EXPLORE_HOME)) return "explore";
   return null;
 }

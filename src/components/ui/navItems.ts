@@ -17,7 +17,7 @@ export type AppNavSection = {
   items: AppNavItem[];
 };
 
-import { EXPLORE_HOME } from "@/lib/routes";
+import { EXPLORE_HOME, LIBRARY_HOME } from "@/lib/routes";
 
 export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
@@ -25,6 +25,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     title: null,
     items: [
       { key: "explore", label: "Explore", href: EXPLORE_HOME, icon: { src: "/ui-icons/home-outline.svg", activeSrc: "/ui-icons/home-filled.svg" } },
+      { key: "library", label: "Library", href: LIBRARY_HOME, icon: { src: "/ui-icons/bookmark-outline.svg" } },
       { key: "movies", label: "Movies", href: "/movies/all", icon: { src: "/rail-icons/clapper-open.svg" } },
       { key: "shows", label: "TV Shows", href: "/shows/all", icon: { src: "/rail-icons/tv-retro.svg" } },
       { key: "sports", label: "Sports", href: "/sports", icon: { src: "/rail-icons/football.svg" } },

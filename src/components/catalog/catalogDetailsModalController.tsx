@@ -53,32 +53,41 @@ export default function CatalogDetailsModalController() {
       }
 
       const element = event.target instanceof Element ? event.target : null;
+      if (element?.closest("[data-no-details-modal]")) {
+        return;
+      }
+
+      const anchor = element?.closest<HTMLAnchorElement>("a[href]");
+      if (anchor && anchor.target !== "_blank" && !anchor.hasAttribute("download")) {
+        const url = new URL(anchor.href, window.location.href);
+        if (url.origin === window.location.origin) {
+          const next = targetFromPath(url.pathname);
+          if (next) {
+            event.preventDefault();
+            const seed = parseCatalogSeed(anchor.getAttribute(CATALOG_SEED_ATTR));
+            preloadHeroBannerFromSeed(seed);
+            prefetchCatalogDetailsPath(url.pathname, { full: true });
+            setTarget({ ...next, seed });
+            return;
+          }
+        }
+      }
+
       if (
         element?.closest(
-          "button, input, select, textarea, label, [role='button'], [data-no-details-modal]"
+          "button, input, select, textarea, label, [role='button']"
         )
       ) {
         return;
       }
 
-      const anchor = element?.closest<HTMLAnchorElement>("a[href]");
       if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) {
         return;
       }
 
       const url = new URL(anchor.href, window.location.href);
       if (url.origin !== window.location.origin) return;
-      const next = targetFromPath(url.pathname);
-      if (!next) {
-        setTarget(null);
-        return;
-      }
-
-      event.preventDefault();
-      const seed = parseCatalogSeed(anchor.getAttribute(CATALOG_SEED_ATTR));
-      preloadHeroBannerFromSeed(seed);
-      prefetchCatalogDetailsPath(url.pathname, { full: true });
-      setTarget({ ...next, seed });
+      setTarget(null);
     };
 
     document.addEventListener("click", onDocumentClick, true);
