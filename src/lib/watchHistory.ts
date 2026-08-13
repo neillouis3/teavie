@@ -1,7 +1,10 @@
 /** Client-only index of recently watched titles (newest first). */
 
-import { formatWatchEpKey, loadWatchProgress, saveWatchProgress, clearWatchProgress, setTvPlaybackHistoryDelegate } from "@/lib/watchProgress";
-import { setMoviePlaybackHistoryDelegate } from "@/lib/movieWatchProgress";
+import { loadWatchProgress, clearWatchProgress, setTvPlaybackHistoryDelegate } from "@/lib/watchProgress";
+import {
+  clearMoviePlaybackPosition,
+  setMoviePlaybackHistoryDelegate,
+} from "@/lib/movieWatchProgress";
 import { formatHeroRuntime } from "@/lib/formatRelease";
 
 export const WATCH_HISTORY_VERSION = 1 as const;
@@ -283,20 +286,43 @@ setMoviePlaybackHistoryDelegate((catalogId, seconds) => {
   });
 });
 
-/** Mark a movie as recently watched (continue-watching rail). */
+/**
+ * Mark a movie as recently watched (continue-watching rail).
+ * Deliberately does not write TV episode progress: a `s1e1` blob is
+ * indistinguishable from a real single-season show and makes the movie come
+ * back from sync typed as `tv`.
+ */
 export function recordMovieInWatchHistory(catalogId: string): void {
   const id = String(catalogId ?? "").trim();
   if (!id) return;
-  saveWatchProgress(id, {
-    lastSeason: 1,
-    lastEpisode: 1,
-    watched: [formatWatchEpKey(1, 1)],
-  });
   touchWatchHistory(id, {
     mediaType: "movie",
     lastSeason: 1,
     lastEpisode: 1,
   });
+}
+
+/** Correct a stored entry whose media type disagrees with the resolved catalog item. */
+export function repairWatchHistoryMediaType(
+  catalogId: string,
+  mediaType: WatchHistoryMediaType
+): boolean {
+  const id = String(catalogId ?? "").trim();
+  if (!id) return false;
+
+  const fix = (entries: WatchHistoryEntry[]) =>
+    entries.map((e) => (e.catalogId === id ? { ...e, mediaType } : e));
+
+  const index = readIndex();
+  const log = readLogRaw();
+  const stale =
+    index.some((e) => e.catalogId === id && e.mediaType !== mediaType) ||
+    log.some((e) => e.catalogId === id && e.mediaType !== mediaType);
+  if (!stale) return false;
+
+  writeIndex(fix(index), { silent: true });
+  writeLog(fix(log), { silent: true });
+  return true;
 }
 
 /** Newest-first continue watching; drops TTL-expired rows only. */
@@ -336,6 +362,7 @@ export function removeFromWatchHistory(catalogId: string): void {
   const next = readIndex().filter((e) => e.catalogId !== id);
   writeIndex(next);
   clearWatchProgress(id);
+  clearMoviePlaybackPosition(id);
 }
 
 /** Remove a title from durable watch history (and continue watching). */
@@ -346,6 +373,7 @@ export function removeFromWatchHistoryLog(catalogId: string): void {
   undismissFromContinue(id);
   writeIndex(readIndex().filter((e) => e.catalogId !== id));
   clearWatchProgress(id);
+  clearMoviePlaybackPosition(id);
 }
 
 export function watchHistoryProgressLabel(entry: WatchHistoryEntry): string {

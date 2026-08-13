@@ -1,5 +1,8 @@
 import type { ContentItem } from "@/types/content";
-import type { WatchHistoryEntry } from "@/lib/watchHistory";
+import {
+  repairWatchHistoryMediaType,
+  type WatchHistoryEntry,
+} from "@/lib/watchHistory";
 
 export type ExploreHistoryRow = ContentItem & {
   progressLabel: string;
@@ -49,10 +52,17 @@ export async function fetchContinueWatchingRows(
   for (const entry of entries) {
     const item = items.find((row) => catalogIdsMatch(entry.catalogId, row.id));
     if (!item) continue;
+    // The catalog knows the real media type; a stale entry would otherwise be
+    // labelled (and linked) as the wrong kind of title.
+    const resolved =
+      item.type === "movie" || item.type === "tv" ? item.type : entry.mediaType;
+    if (resolved !== entry.mediaType) {
+      repairWatchHistoryMediaType(entry.catalogId, resolved);
+    }
     rows.push({
       ...item,
       id: entry.catalogId,
-      progressLabel: progressLabel(entry),
+      progressLabel: progressLabel({ ...entry, mediaType: resolved }),
       lastSeason: entry.lastSeason,
       lastEpisode: entry.lastEpisode,
     });

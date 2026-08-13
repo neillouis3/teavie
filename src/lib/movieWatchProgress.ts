@@ -37,7 +37,25 @@ export function loadMoviePlaybackPosition(catalogId: string): number {
   }
 }
 
-export function saveMoviePlaybackPosition(catalogId: string, seconds: number): void {
+export function clearMoviePlaybackPosition(catalogId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(movieProgressStorageKey(catalogId));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export type SaveMoviePlaybackOptions = {
+  /** Writing back a position we just read from the server — don't re-sync or re-touch history. */
+  hydrate?: boolean;
+};
+
+export function saveMoviePlaybackPosition(
+  catalogId: string,
+  seconds: number,
+  options?: SaveMoviePlaybackOptions
+): void {
   if (typeof window === "undefined") return;
   const sec = Math.max(0, Math.floor(Number(seconds)) || 0);
   try {
@@ -46,6 +64,7 @@ export function saveMoviePlaybackPosition(catalogId: string, seconds: number): v
       return;
     }
     localStorage.setItem(movieProgressStorageKey(catalogId), String(sec));
+    if (options?.hydrate) return;
     movieProgressSyncDelegate?.(catalogId, sec);
     moviePlaybackHistoryDelegate?.(catalogId, sec);
   } catch {

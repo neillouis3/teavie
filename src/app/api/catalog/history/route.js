@@ -64,7 +64,7 @@ function malLookupId(rawId) {
 }
 
 function catalogAliasKeys(doc) {
-  const keys = new Set([String(doc.id)]);
+  const keys = new Set();
   if (typeof doc.tmdb_id === "number" && doc.tmdb_id > 0) {
     keys.add(String(doc.tmdb_id));
   }
@@ -77,27 +77,38 @@ function catalogAliasKeys(doc) {
     const tail = idStr.slice("anime_".length);
     if (tail) keys.add(tail);
   }
+  keys.delete(idStr);
   return keys;
 }
 
-/** Alias keys can collide across media types (e.g. TMDB movie id vs MAL id), so match on type. */
-function lookupCatalogItem(entry, byKey) {
-  for (const key of expandCatalogLookupIds(entry.catalogId)) {
-    const item = byKey.get(String(key));
-    if (!item) continue;
-    if (item.type !== entry.mediaType) continue;
-    return item;
-  }
-  return null;
+function typedKey(mediaType, id) {
+  return `${mediaType}:${id}`;
 }
 
-async function resolveEntryItem(entry, byKey, reqSignal) {
+/**
+ * Catalog ids are only unique per media type — TMDB movie 557 is Spider-Man
+ * while TMDB tv 557 is Camp Lazlo — so every match is keyed by type first.
+ * A row found under the other type is still preferred over a TMDB fetch: it
+ * means the stored entry's media type is stale, and fetching the wrong TMDB
+ * endpoint would silently return an unrelated title.
+ */
+function lookupCatalogItem(entry, byTypedKey, byAnyId) {
+  const exact = byTypedKey.get(typedKey(entry.mediaType, entry.catalogId));
+  if (exact) return exact;
+  for (const key of expandCatalogLookupIds(entry.catalogId)) {
+    const item = byTypedKey.get(typedKey(entry.mediaType, key));
+    if (item) return item;
+  }
+  return byAnyId.get(String(entry.catalogId)) ?? null;
+}
+
+async function resolveEntryItem(entry, byTypedKey, byAnyId, reqSignal) {
   if (reqSignal?.aborted) return null;
   if (entry.mediaType === "movie" && isBlockedMovieTmdbId(entry.catalogId)) {
     return null;
   }
 
-  const item = lookupCatalogItem(entry, byKey);
+  const item = lookupCatalogItem(entry, byTypedKey, byAnyId);
   if (item) return { ...item, id: entry.catalogId };
 
   if (!/^\d+$/.test(entry.catalogId)) return null;
@@ -211,17 +222,21 @@ export async function POST(req) {
       .toArray();
 
     /** @type {Map<string, ReturnType<typeof mapContentDocToItem>>} */
-    const byKey = new Map();
+    const byTypedKey = new Map();
+    /** @type {Map<string, ReturnType<typeof mapContentDocToItem>>} */
+    const byAnyId = new Map();
     for (const doc of docs) {
       const item = mapContentDocToItem(doc);
+      byTypedKey.set(typedKey(item.type, doc.id), item);
+      byAnyId.set(String(doc.id), item);
       for (const key of catalogAliasKeys(doc)) {
-        byKey.set(String(key), item);
+        byTypedKey.set(typedKey(item.type, key), item);
       }
     }
 
     const items = (
       await Promise.all(
-        entries.map((entry) => resolveEntryItem(entry, byKey, req.signal))
+        entries.map((entry) => resolveEntryItem(entry, byTypedKey, byAnyId, req.signal))
       )
     ).filter(Boolean);
 

@@ -52,7 +52,6 @@ import {
 } from "@/lib/userPreferences";
 import {
   deriveWatchedEpisodeKeys,
-  formatWatchEpKey,
   loadWatchProgress,
   saveWatchProgress,
   type WatchProgressPayload,
@@ -128,6 +127,89 @@ async function fetchRemoteWatchHistory(): Promise<WatchHistoryEntry[]> {
 
 function watchLaterEntriesSignature(entries: WatchLaterEntry[]): string {
   return entries.map((e) => `${e.mediaType}:${e.catalogId}`).sort().join("|");
+}
+
+/**
+ * Rebuild local history from server-side playback progress.
+ * Runs after the watch-history merge so the stored media type is authoritative —
+ * a progress blob alone cannot tell a movie apart from a one-season show.
+ */
+async function replayRemoteWatchProgress(): Promise<void> {
+  const res = await fetch("/api/user/watch-progress", { credentials: "include" });
+  if (!res.ok) return;
+  const json = (await res.json()) as {
+    rows?: {
+      catalog_id: string;
+      progress?: Record<string, unknown>;
+      movie_position_seconds?: number;
+    }[];
+  };
+
+  const known = new Map(listWatchHistoryLog().map((e) => [e.catalogId, e]));
+  const historyTouches: WatchHistoryEntry[] = [];
+  const now = Date.now();
+
+  for (const row of json.rows ?? []) {
+    const catalogId = String(row.catalog_id);
+    if (isDismissedFromContinue(catalogId)) continue;
+    const prior = known.get(catalogId);
+    const progress = row.progress;
+
+    if (
+      prior?.mediaType !== "movie" &&
+      progress &&
+      typeof progress === "object" &&
+      Object.keys(progress).length > 0
+    ) {
+      const p = progress as {
+        lastSeason?: number;
+        lastEpisode?: number;
+        watched?: string[];
+        positions?: Record<string, number>;
+      };
+      const payload = {
+        lastSeason: Math.max(1, Math.floor(Number(p.lastSeason)) || 1),
+        lastEpisode: Math.max(1, Math.floor(Number(p.lastEpisode)) || 1),
+        watched: Array.isArray(p.watched) ? p.watched : [],
+        positions: p.positions,
+      };
+      saveWatchProgress(catalogId, payload);
+      const maxPosition = Math.max(
+        0,
+        ...Object.values(payload.positions ?? {}).map((value) =>
+          Number.isFinite(Number(value)) ? Number(value) : 0
+        )
+      );
+      const watchedKeys = deriveWatchedEpisodeKeys(payload, WATCH_HISTORY_MIN_PLAY_SECONDS);
+      if (maxPosition >= WATCH_HISTORY_MIN_PLAY_SECONDS || watchedKeys.length > 0) {
+        historyTouches.push({
+          catalogId,
+          mediaType: "tv",
+          lastWatchedAt: prior?.lastWatchedAt ?? now,
+          lastSeason: payload.lastSeason,
+          lastEpisode: payload.lastEpisode,
+        });
+      }
+    }
+
+    const movieSec = Math.max(0, Math.floor(Number(row.movie_position_seconds)) || 0);
+    if (movieSec > 0) {
+      saveMoviePlaybackPosition(catalogId, movieSec, { hydrate: true });
+    }
+    if (movieSec >= WATCH_HISTORY_MIN_PLAY_SECONDS && prior?.mediaType !== "tv") {
+      historyTouches.push({
+        catalogId,
+        mediaType: "movie",
+        lastWatchedAt: prior?.lastWatchedAt ?? now,
+        lastSeason: 1,
+        lastEpisode: 1,
+      });
+    }
+  }
+
+  if (historyTouches.length > 0) {
+    mergeWatchHistoryLog(historyTouches, { silent: true });
+  }
 }
 
 function refreshLocalHistoryState(
@@ -258,6 +340,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
         if (remote.length > 0) {
           mergeWatchHistoryLog(remote, { silent: true });
         }
+        await replayRemoteWatchProgress();
         refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
       } finally {
         remoteHistorySyncPausedRef.current = false;
@@ -475,89 +558,6 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       setMovieProgressSyncDelegate(null);
     };
   }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    void (async () => {
-      remoteHistorySyncPausedRef.current = true;
-      const historyTouches: WatchHistoryEntry[] = [];
-      try {
-        const res = await fetch("/api/user/watch-progress", { credentials: "include" });
-        if (!res.ok) return;
-        const json = (await res.json()) as {
-          rows?: {
-            catalog_id: string;
-            progress?: Record<string, unknown>;
-            movie_position_seconds?: number;
-          }[];
-        };
-        const now = Date.now();
-        for (const row of json.rows ?? []) {
-          const catalogId = row.catalog_id;
-          if (isDismissedFromContinue(catalogId)) continue;
-          const progress = row.progress;
-          if (progress && typeof progress === "object" && Object.keys(progress).length > 0) {
-            const p = progress as {
-              lastSeason?: number;
-              lastEpisode?: number;
-              watched?: string[];
-              positions?: Record<string, number>;
-            };
-            const payload = {
-              lastSeason: Math.max(1, Math.floor(Number(p.lastSeason)) || 1),
-              lastEpisode: Math.max(1, Math.floor(Number(p.lastEpisode)) || 1),
-              watched: Array.isArray(p.watched) ? p.watched : [],
-              positions: p.positions,
-            };
-            saveWatchProgress(catalogId, payload);
-            const maxPosition = Math.max(
-              0,
-              ...Object.values(payload.positions ?? {}).map((value) =>
-                Number.isFinite(Number(value)) ? Number(value) : 0
-              )
-            );
-            const watchedKeys = deriveWatchedEpisodeKeys(payload, WATCH_HISTORY_MIN_PLAY_SECONDS);
-            if (
-              maxPosition >= WATCH_HISTORY_MIN_PLAY_SECONDS ||
-              watchedKeys.length > 0
-            ) {
-              historyTouches.push({
-                catalogId: String(catalogId),
-                mediaType: "tv",
-                lastWatchedAt: now,
-                lastSeason: payload.lastSeason,
-                lastEpisode: payload.lastEpisode,
-              });
-            }
-          }
-          const movieSec = Math.max(0, Math.floor(Number(row.movie_position_seconds)) || 0);
-          if (movieSec > 0) {
-            saveMoviePlaybackPosition(catalogId, movieSec);
-          }
-          if (movieSec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-            saveWatchProgress(String(catalogId), {
-              lastSeason: 1,
-              lastEpisode: 1,
-              watched: [formatWatchEpKey(1, 1)],
-            });
-            historyTouches.push({
-              catalogId: String(catalogId),
-              mediaType: "movie",
-              lastWatchedAt: now,
-              lastSeason: 1,
-              lastEpisode: 1,
-            });
-          }
-        }
-        if (historyTouches.length > 0) {
-          mergeWatchHistoryLog(historyTouches, { silent: true });
-        }
-        refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
-      } finally {
-        remoteHistorySyncPausedRef.current = false;
-      }
-    })();
-  }, [user?.id]);
 
   const value = useMemo(
     () => ({
