@@ -16,6 +16,8 @@ import {
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_INNER_CLASS,
   RAIL_TRACK,
+  FLUSH_RAIL_TRACK,
+  flushRailItemClass,
 } from "@/lib/catalogGrid";
 import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
@@ -42,6 +44,8 @@ type CatalogRailProps = {
   /** When set, replaces year/rating row (e.g. new episode chips). */
   getMetaChips?: (item: ContentItem) => string[] | undefined;
   titleVariant?: "default" | "explore";
+  /** Edge-to-edge cards (category hub pages). */
+  flush?: boolean;
 };
 
 function releaseNoteForItem(item: ContentItem): string | undefined {
@@ -54,19 +58,25 @@ export function CatalogRailSkeleton({
   horizontal = false,
   count = 8,
   bleed = true,
+  flush = false,
 }: {
   horizontal?: boolean;
   count?: number;
   bleed?: boolean;
+  flush?: boolean;
 }) {
-  const itemClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const baseClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const itemClass = flush ? flushRailItemClass(baseClass) : baseClass;
+  const useBleed = bleed && !flush;
   return (
     <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
       <CarouselContent
-        viewportClassName={catalogRailViewportClass(bleed)}
-        className={RAIL_TRACK}
+        viewportClassName={
+          flush ? "w-full overflow-hidden" : catalogRailViewportClass(useBleed)
+        }
+        className={flush ? FLUSH_RAIL_TRACK : RAIL_TRACK}
       >
-        {bleed ? <SidebarBleedStartSpacer /> : null}
+        {useBleed ? <SidebarBleedStartSpacer /> : null}
         {Array.from({ length: count }).map((_, i) => (
           <CarouselItem key={i} className={itemClass}>
             {horizontal ? <HorizontalCatalogCardLoading /> : <SmallCardLoading />}
@@ -86,10 +96,12 @@ export default function CatalogRail({
   getMetaChips,
   loading = false,
   titleVariant = "default",
+  flush = false,
 }: CatalogRailProps) {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === "horizontal";
-  const itemClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const baseItemClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const itemClass = flush ? flushRailItemClass(baseItemClass) : baseItemClass;
 
   const slice = railContentItems(items ?? [], maxItems);
   if (!loading && slice.length === 0) return null;
@@ -98,17 +110,19 @@ export default function CatalogRail({
     <div className={RAIL_INNER_CLASS}>
       <ExploreSectionTitle variant={titleVariant}>{title}</ExploreSectionTitle>
       {loading ? (
-        <CatalogRailShell>
-          <CatalogRailSkeleton horizontal={horizontal} />
+        <CatalogRailShell bleed={!flush}>
+          <CatalogRailSkeleton horizontal={horizontal} flush={flush} bleed={!flush} />
         </CatalogRailShell>
       ) : (
-        <CatalogRailShell>
+        <CatalogRailShell bleed={!flush}>
           <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
             <CarouselContent
-              viewportClassName={catalogRailViewportClass()}
-              className={RAIL_TRACK}
+              viewportClassName={
+                flush ? "w-full overflow-hidden" : catalogRailViewportClass()
+              }
+              className={flush ? FLUSH_RAIL_TRACK : RAIL_TRACK}
             >
-              <SidebarBleedStartSpacer />
+              {!flush ? <SidebarBleedStartSpacer /> : null}
               {slice.map((item) => {
                 const titleText = item.title || item.name || "Untitled";
                 const year =

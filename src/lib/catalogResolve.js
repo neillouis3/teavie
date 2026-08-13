@@ -89,7 +89,13 @@ export function normalizeCatalogResolveFallback(doc, mediaType) {
     imdb_genres,
     omdb:
       doc.omdb && typeof doc.omdb === "object"
-        ? { genre: /** @type {{ genre?: string }} */ (doc.omdb).genre ?? null }
+        ? {
+            genre: /** @type {{ genre?: string }} */ (doc.omdb).genre ?? null,
+            imdbRating:
+              /** @type {{ imdbRating?: number }} */ (doc.omdb).imdbRating ?? null,
+            imdbVotes:
+              /** @type {{ imdbVotes?: number }} */ (doc.omdb).imdbVotes ?? null,
+          }
         : null,
     origin_country: Array.isArray(doc.origin_country) ? doc.origin_country : [],
     original_language:

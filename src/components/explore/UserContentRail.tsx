@@ -5,6 +5,7 @@ import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import SidebarBleedRail, {
   SIDEBAR_BLEED_CAROUSEL_OPTS,
   SidebarBleedStartSpacer,
+  catalogRailViewportClass,
   sidebarBleedViewportClass,
 } from "@/components/ui/sidebarBleedRail";
 import {
@@ -29,6 +30,8 @@ type UserContentRailProps<T extends ContentItem> = {
   ariaLabel: string;
   items: T[];
   layout?: "explore" | "profile";
+  /** Extend rail under the sidebar (Explore). Off for Library-style pages. */
+  bleed?: boolean;
   maxItems?: number;
   className?: string;
   getItemKey: (item: T) => string;
@@ -40,6 +43,7 @@ export default function UserContentRail<T extends ContentItem>({
   ariaLabel,
   items,
   layout = "explore",
+  bleed = true,
   maxItems = EXPLORE_RAIL_MAX_ITEMS,
   className = "",
   getItemKey,
@@ -67,10 +71,14 @@ export default function UserContentRail<T extends ContentItem>({
       <SidebarBleedRail>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
-            viewportClassName={sidebarBleedViewportClass()}
+            viewportClassName={
+              bleed
+                ? sidebarBleedViewportClass()
+                : catalogRailViewportClass(false)
+            }
             className={RAIL_TRACK}
           >
-            <SidebarBleedStartSpacer />
+            {bleed ? <SidebarBleedStartSpacer /> : null}
             {visibleItems.map((item) => (
               <CarouselItem key={getItemKey(item)} className={itemClass}>
                 {renderItem(item)}

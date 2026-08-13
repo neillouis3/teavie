@@ -14,8 +14,10 @@ import {
 import {
   catalogDisplayVoteAverage,
   catalogPopularityScore,
+  mongoImdbVoteCountExpr,
   mongoTopRatedQualityMatch,
   mongoTopRatedVoteExpr,
+  mongoTmdbVoteCountExpr,
 } from "@/lib/catalogPopularity";
 import { imdbGenreLabelFromSlug, isValidImdbGenreSlug } from "@/lib/imdbGenres";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
@@ -220,6 +222,8 @@ export async function queryGenreRail(opts) {
         _pop: popExpr,
         _sortDate: { $ifNull: ["$release_date", "$first_air_date"] },
         _topRatedVote: mongoTopRatedVoteExpr(),
+        _tmdbVoteCount: mongoTmdbVoteCountExpr(),
+        _imdbVoteCount: mongoImdbVoteCountExpr(),
       },
     },
   ];

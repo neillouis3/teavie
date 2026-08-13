@@ -183,13 +183,70 @@ export function hasOmdbImdbRating(doc) {
   const imdbVotes = Number(
     /** @type {Record<string, unknown>} */ (omdb).imdbVotes
   );
-  return Number.isFinite(imdbVotes) && imdbVotes >= 50;
+  return Number.isFinite(imdbVotes) && imdbVotes >= CATALOG_IMDB_RATING_MIN_VOTES;
+}
+
+/** @param {unknown} doc */
+function catalogOmdbRecord(doc) {
+  if (!doc || typeof doc !== "object") return null;
+  const omdb = /** @type {Record<string, unknown>} */ (doc).omdb;
+  return omdb && typeof omdb === "object" ? omdb : null;
 }
 
 /**
- * Single 0–10 display score for catalog cards/API (informational only).
- * Movies/TV: OMDb/IMDb when present, else TMDB vote_average — no vote-count gate.
- * Not used for top-rated browse/rails; those use {@link mongoTopRatedVoteExpr}.
+ * TMDB score + audience from a catalog doc.
+ * Skips root `vote_average` when it was overwritten by OMDb (matches `omdb.imdbRating`).
+ * @param {unknown} doc
+ */
+export function catalogTmdbVoteFromDoc(doc) {
+  if (!doc || typeof doc !== "object") return { vote: null, count: 0 };
+  const d = /** @type {Record<string, unknown>} */ (doc);
+  const tmdb =
+    d.tmdb && typeof d.tmdb === "object"
+      ? /** @type {Record<string, unknown>} */ (d.tmdb)
+      : null;
+
+  const subVote = normalizedCatalogVoteAverage(tmdb?.vote_average);
+  const subCount = Number(tmdb?.vote_count);
+  if (subVote) {
+    return {
+      vote: subVote,
+      count: Number.isFinite(subCount) && subCount > 0 ? subCount : 0,
+      explicit: true,
+    };
+  }
+
+  const omdbRating = normalizedCatalogVoteAverage(catalogOmdbRecord(d)?.imdbRating);
+  const storedVote = normalizedCatalogVoteAverage(d.vote_average);
+  const storedCount = Number(d.vote_count);
+
+  if (storedVote && !(omdbRating != null && storedVote === omdbRating)) {
+    return {
+      vote: storedVote,
+      count: Number.isFinite(storedCount) && storedCount > 0 ? storedCount : 0,
+      explicit: false,
+    };
+  }
+
+  return { vote: null, count: 0, explicit: false };
+}
+
+/** IMDb score + audience from OMDb enrichment. @param {unknown} doc */
+export function catalogImdbVoteFromDoc(doc) {
+  if (!doc || typeof doc !== "object") return { vote: null, count: 0 };
+  const omdb = catalogOmdbRecord(doc);
+  if (!omdb) return { vote: null, count: 0 };
+  const vote = normalizedCatalogVoteAverage(omdb.imdbRating);
+  const count = Number(omdb.imdbVotes);
+  return {
+    vote,
+    count: Number.isFinite(count) && count > 0 ? count : 0,
+  };
+}
+
+/**
+ * Single 0–10 display score for cards, browse, and modals.
+ * Movies/TV: TMDB when it has enough voters, else IMDb when credible, else best available.
  * Anime: AniList averageScore, else TMDB/Jikan vote_average.
  * @param {unknown} doc
  */
@@ -217,43 +274,85 @@ export function catalogDisplayVoteAverage(doc) {
     return null;
   }
 
-  const omdb = d.omdb;
-  const omdbRating =
-    omdb && typeof omdb === "object"
-      ? normalizedCatalogVoteAverage(
-          /** @type {Record<string, unknown>} */ (omdb).imdbRating
-        )
-      : null;
-  const tmdbVote = normalizedCatalogVoteAverage(d.vote_average);
+  const tmdb = catalogTmdbVoteFromDoc(d);
+  const imdb = catalogImdbVoteFromDoc(d);
 
-  if (omdbRating) return omdbRating;
-  return tmdbVote;
+  if (tmdb.explicit && tmdb.vote) return tmdb.vote;
+  if (tmdb.vote && tmdb.count >= CATALOG_POPULAR_MIN_VOTE_COUNT) return tmdb.vote;
+  if (imdb.vote && imdb.count >= CATALOG_IMDB_RATING_MIN_VOTES) return imdb.vote;
+  return tmdb.vote ?? imdb.vote ?? null;
 }
 
-/** Minimum OMDb imdbVotes before Mongo uses IMDb rating over TMDB vote_average. */
+/** Build display vote from partial catalog / TMDB modal fields. @param {unknown} parts */
+export function resolveCatalogDisplayVote(parts) {
+  return catalogDisplayVoteAverage(parts);
+}
+
+/** Minimum OMDb imdbVotes before IMDb is used for display / sort. */
 export const CATALOG_IMDB_RATING_MIN_VOTES = 50;
+
+function mongoConvertDouble(input) {
+  return { $convert: { input, to: "double", onError: 0, onNull: 0 } };
+}
+
+/** Mongo: TMDB vote_count (subdoc first; skip OMDb-overwritten root counts). */
+export function mongoTmdbVoteCountExpr() {
+  const subCount = mongoConvertDouble("$tmdb.vote_count");
+  const rootCount = mongoConvertDouble("$vote_count");
+  const rootVote = mongoConvertDouble("$vote_average");
+  const imdbVote = mongoConvertDouble("$omdb.imdbRating");
+  return {
+    $cond: {
+      if: { $gt: [subCount, 0] },
+      then: subCount,
+      else: {
+        $cond: {
+          if: {
+            $and: [
+              { $gt: [rootCount, 0] },
+              { $ne: [rootVote, imdbVote] },
+            ],
+          },
+          then: rootCount,
+          else: 0,
+        },
+      },
+    },
+  };
+}
+
+/** Mongo: IMDb vote count from OMDb enrichment. */
+export function mongoImdbVoteCountExpr() {
+  return mongoConvertDouble("$omdb.imdbVotes");
+}
+
+/** Mongo: TMDB vote_average (subdoc first; skip OMDb-overwritten root score). */
+export function mongoTmdbVoteAverageExpr() {
+  const subVote = mongoConvertDouble("$tmdb.vote_average");
+  const rootVote = mongoConvertDouble("$vote_average");
+  const imdbVote = mongoConvertDouble("$omdb.imdbRating");
+  return {
+    $cond: {
+      if: { $gt: [subVote, 0] },
+      then: subVote,
+      else: {
+        $cond: {
+          if: {
+            $and: [{ $gt: [rootVote, 0] }, { $ne: [rootVote, imdbVote] }],
+          },
+          then: rootVote,
+          else: 0,
+        },
+      },
+    },
+  };
+}
 
 /** Mongo: prefer OMDb IMDb rating when enough voters; else TMDB vote_average. */
 export function mongoPreferImdbVoteExpr() {
-  const imdbVotes = {
-    $convert: {
-      input: "$omdb.imdbVotes",
-      to: "double",
-      onError: 0,
-      onNull: 0,
-    },
-  };
-  const imdbRating = {
-    $convert: {
-      input: "$omdb.imdbRating",
-      to: "double",
-      onError: 0,
-      onNull: 0,
-    },
-  };
-  const tmdbVote = {
-    $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
-  };
+  const imdbVotes = mongoImdbVoteCountExpr();
+  const imdbRating = mongoConvertDouble("$omdb.imdbRating");
+  const tmdbVote = mongoTmdbVoteAverageExpr();
   return {
     $cond: {
       if: { $gte: [imdbVotes, CATALOG_IMDB_RATING_MIN_VOTES] },
@@ -291,23 +390,14 @@ export function mongoPreferAudienceVoteCountExpr() {
 }
 
 /**
- * Mongo vote helper for popularity / featured tiers — not card display and not top-rated sort.
- * Cards use {@link catalogDisplayVoteAverage}; top-rated browse uses {@link mongoTopRatedVoteExpr}.
+ * Mongo display vote — mirrors {@link catalogDisplayVoteAverage}.
  * @param {{ anime?: boolean }} [opts] Pass `anime: true` when every row is anime.
  */
 export function mongoCatalogDisplayVoteExpr(opts = {}) {
-  const tmdbVote = {
-    $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
-  };
-  const omdbImdbVote = {
-    $convert: {
-      input: "$omdb.imdbRating",
-      to: "double",
-      onError: 0,
-      onNull: 0,
-    },
-  };
-  const imdbPreferredVote = mongoPreferImdbVoteExpr();
+  const tmdbVote = mongoTmdbVoteAverageExpr();
+  const tmdbCount = mongoTmdbVoteCountExpr();
+  const imdbVote = mongoConvertDouble("$omdb.imdbRating");
+  const imdbCount = mongoImdbVoteCountExpr();
   const anilistVote = {
     $cond: {
       if: { $gt: [{ $ifNull: ["$anilist.averageScore", 0] }, 0] },
@@ -316,7 +406,36 @@ export function mongoCatalogDisplayVoteExpr(opts = {}) {
     },
   };
   const animeVote = {
-    $max: [{ $max: [omdbImdbVote, tmdbVote] }, anilistVote],
+    $max: [{ $max: [imdbVote, tmdbVote] }, anilistVote],
+  };
+  const movieTvVote = {
+    $cond: {
+      if: { $gt: [mongoConvertDouble("$tmdb.vote_average"), 0] },
+      then: mongoConvertDouble("$tmdb.vote_average"),
+      else: {
+        $cond: {
+          if: {
+            $and: [
+              { $gte: [tmdbCount, CATALOG_POPULAR_MIN_VOTE_COUNT] },
+              { $gt: [tmdbVote, 0] },
+            ],
+          },
+          then: tmdbVote,
+          else: {
+            $cond: {
+              if: {
+                $and: [
+                  { $gte: [imdbCount, CATALOG_IMDB_RATING_MIN_VOTES] },
+                  { $gt: [imdbVote, 0] },
+                ],
+              },
+              then: imdbVote,
+              else: { $max: [tmdbVote, imdbVote] },
+            },
+          },
+        },
+      },
+    },
   };
 
   if (opts.anime === true) return animeVote;
@@ -330,74 +449,17 @@ export function mongoCatalogDisplayVoteExpr(opts = {}) {
         },
       },
       then: animeVote,
-      else: imdbPreferredVote,
+      else: movieTvVote,
     },
   };
 }
 
 /**
- * Score for top-rated browse/rails/sort only — strict vote-count gates, decoupled from card display.
- * Returns 0 when the row lacks a credible audience (excluded from top-rated lists).
+ * Score for top-rated browse/rails/sort — same source priority as card display.
  * @param {{ anime?: boolean }} [opts]
  */
 export function mongoTopRatedVoteExpr(opts = {}) {
-  if (opts.anime === true) {
-    return mongoCatalogDisplayVoteExpr({ anime: true });
-  }
-
-  const imdbVotes = {
-    $convert: {
-      input: "$omdb.imdbVotes",
-      to: "double",
-      onError: 0,
-      onNull: 0,
-    },
-  };
-  const imdbRating = {
-    $convert: {
-      input: "$omdb.imdbRating",
-      to: "double",
-      onError: 0,
-      onNull: 0,
-    },
-  };
-  const tmdbVote = {
-    $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
-  };
-  const tmdbCount = {
-    $convert: { input: "$vote_count", to: "double", onError: 0, onNull: 0 },
-  };
-  const isKdrama = {
-    $or: [
-      { $eq: ["$is_kdrama", true] },
-      { $in: ["kdrama", { $ifNull: ["$catalog_categories", []] }] },
-    ],
-  };
-
-  return {
-    $cond: {
-      if: { $gte: [imdbVotes, CATALOG_TOP_RATED_MIN_IMDB_VOTES] },
-      then: imdbRating,
-      else: {
-        $cond: {
-          if: { $gte: [tmdbCount, CATALOG_TOP_RATED_MIN_TMDB_VOTE_COUNT] },
-          then: tmdbVote,
-          else: {
-            $cond: {
-              if: {
-                $and: [
-                  isKdrama,
-                  { $gte: [tmdbCount, CATALOG_TOP_RATED_MIN_VOTE_COUNT] },
-                ],
-              },
-              then: tmdbVote,
-              else: 0,
-            },
-          },
-        },
-      },
-    },
-  };
+  return mongoCatalogDisplayVoteExpr(opts);
 }
 
 /**
@@ -408,7 +470,29 @@ export function mongoTopRatedQualityMatch(opts = {}) {
   const minVoteAverage =
     opts.minVoteAverage ?? CATALOG_TOP_RATED_MIN_VOTE_AVERAGE;
 
-  return { _topRatedVote: { $gte: minVoteAverage } };
+  if (opts.anime === true) {
+    return { _topRatedVote: { $gte: minVoteAverage } };
+  }
+
+  return {
+    $and: [
+      { _topRatedVote: { $gte: minVoteAverage } },
+      {
+        $or: [
+          { _imdbVoteCount: { $gte: CATALOG_TOP_RATED_MIN_IMDB_VOTES } },
+          { _tmdbVoteCount: { $gte: CATALOG_TOP_RATED_MIN_TMDB_VOTE_COUNT } },
+          {
+            $and: [
+              {
+                $or: [{ is_kdrama: true }, { catalog_categories: "kdrama" }],
+              },
+              { _tmdbVoteCount: { $gte: CATALOG_TOP_RATED_MIN_VOTE_COUNT } },
+            ],
+          },
+        ],
+      },
+    ],
+  };
 }
 
 /** Mongo expression for tie-breaking top-rated sorts (IMDb votes preferred). */

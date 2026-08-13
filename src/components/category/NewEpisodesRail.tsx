@@ -3,11 +3,7 @@
 import React, { useMemo } from "react";
 import SmallCard from "@/components/ui/smallCard";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import SidebarBleedRail, {
-  SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SidebarBleedStartSpacer,
-  sidebarBleedViewportClass,
-} from "@/components/ui/sidebarBleedRail";
+import { SIDEBAR_BLEED_CAROUSEL_OPTS } from "@/components/ui/sidebarBleedRail";
 import {
   Carousel,
   CarouselContent,
@@ -15,6 +11,8 @@ import {
 } from "@/components/ui/carousel";
 import {
   EXPLORE_RAIL_MAX_ITEMS,
+  FLUSH_RAIL_CAROUSEL_ITEM_VERTICAL,
+  FLUSH_RAIL_TRACK,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_INNER_CLASS,
   RAIL_TRACK,
@@ -33,12 +31,15 @@ function episodeLabel(item: ContentItem): string {
 type NewEpisodesRailProps = {
   items: ContentItem[];
   maxItems?: number;
+  /** Edge-to-edge cards (category hub pages). */
+  flush?: boolean;
 };
 
 /** Portrait cards with title + episode only — ignores horizontal card preference. */
 export default function NewEpisodesRail({
   items,
   maxItems = EXPLORE_RAIL_MAX_ITEMS,
+  flush = false,
 }: NewEpisodesRailProps) {
   const visibleItems = useMemo(
     () => railContentItems(items, maxItems),
@@ -47,40 +48,39 @@ export default function NewEpisodesRail({
 
   if (visibleItems.length === 0) return null;
 
+  const itemClass = flush ? FLUSH_RAIL_CAROUSEL_ITEM_VERTICAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+
   return (
     <section className={RAIL_INNER_CLASS} aria-label="New episodes">
       <ExploreSectionTitle variant="explore">New episodes</ExploreSectionTitle>
-      <SidebarBleedRail>
-        <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
-          <CarouselContent
-            viewportClassName={sidebarBleedViewportClass()}
-            className={RAIL_TRACK}
-          >
-            <SidebarBleedStartSpacer />
-            {visibleItems.map((item) => {
-              const title = item.title || item.name || "Untitled";
-              return (
-                <CarouselItem
-                  key={`${item.type ?? "tv"}-${item.id}`}
-                  className={RAIL_CAROUSEL_ITEM_VERTICAL}
-                >
-                  <SmallCard
-                    id={item.id}
-                    title={title}
-                    year={episodeLabel(item)}
-                    type={item.type || "tv"}
-                    posterPath={item.poster_path || ""}
-                    overview={item.overview}
-                    releaseDate={item.first_air_date ?? item.release_date}
-                    seasonAmount={item.season_amount ?? 0}
-                    numberOfEpisodes={item.number_of_episodes ?? undefined}
-                  />
-                </CarouselItem>
-              );
-            })}
-          </CarouselContent>
-        </Carousel>
-      </SidebarBleedRail>
+      <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+        <CarouselContent
+          viewportClassName="w-full overflow-hidden"
+          className={flush ? FLUSH_RAIL_TRACK : RAIL_TRACK}
+        >
+          {visibleItems.map((item) => {
+            const title = item.title || item.name || "Untitled";
+            return (
+              <CarouselItem
+                key={`${item.type ?? "tv"}-${item.id}`}
+                className={itemClass}
+              >
+                <SmallCard
+                  id={item.id}
+                  title={title}
+                  year={episodeLabel(item)}
+                  type={item.type || "tv"}
+                  posterPath={item.poster_path || ""}
+                  overview={item.overview}
+                  releaseDate={item.first_air_date ?? item.release_date}
+                  seasonAmount={item.season_amount ?? 0}
+                  numberOfEpisodes={item.number_of_episodes ?? undefined}
+                />
+              </CarouselItem>
+            );
+          })}
+        </CarouselContent>
+      </Carousel>
     </section>
   );
 }

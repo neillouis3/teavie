@@ -34,6 +34,11 @@ import { getCatalogCategory } from "@/lib/catalogCategories";
 import { mergeWithPreferenceFilter } from "@/lib/preferenceMatch";
 import { hasUserPreferences } from "@/types/user";
 import { dedupeCatalogEntries } from "@/lib/catalogRailDedupe.js";
+import {
+  catalogDocForSchedule,
+  getCachedAnilistAiredEpisodes,
+  mongoMatchFromAiringSchedules,
+} from "@/lib/api/anilistAiringSchedule.js";
 
 const TILE_POSTERS = 5;
 const RAIL_LIMIT = 24;
@@ -253,7 +258,7 @@ function isoDaysAgo(days) {
   return d.toISOString().slice(0, 10);
 }
 
-async function fetchNewEpisodesRail(
+async function fetchNewEpisodesFromMongo(
   col,
   baseFilter,
   { anime = false, limit = RAIL_LIMIT, lookbackDays = 7 } = {}
@@ -267,6 +272,75 @@ async function fetchNewEpisodesRail(
     .toArray();
 
   return dedupeCatalogEntries(rows).map((doc) => mapTvRow(doc, { anime }));
+}
+
+/** Live AniList schedule → catalog rows with aired episode numbers. */
+async function fetchAnimeNewEpisodesFromAnilist(
+  col,
+  baseFilter,
+  { limit = RAIL_LIMIT, lookbackDays = 7 } = {}
+) {
+  const schedules = await getCachedAnilistAiredEpisodes(lookbackDays, 50);
+  if (schedules.length === 0) return [];
+
+  const matchOr = mongoMatchFromAiringSchedules(schedules);
+  if (!matchOr) return [];
+
+  const docs = await col.find({ $and: [baseFilter, matchOr] }).toArray();
+  if (docs.length === 0) return [];
+
+  /** @type {ReturnType<typeof mapTvRow>[]} */
+  const out = [];
+  const usedIds = new Set();
+
+  for (const schedule of schedules) {
+    if (out.length >= limit) break;
+    const doc = docs.find((row) => catalogDocForSchedule(row, schedule));
+    if (!doc) continue;
+
+    const idKey = String(doc.id ?? "");
+    if (!idKey || usedIds.has(idKey)) continue;
+    usedIds.add(idKey);
+
+    const row = mapTvRow(doc, { anime: true });
+    const ep = Number(schedule.episode);
+    if (Number.isFinite(ep) && ep > 0) {
+      row.number_of_episodes = ep;
+    }
+    row.last_air_date = new Date(schedule.airingAt * 1000).toISOString().slice(0, 10);
+    out.push(row);
+  }
+
+  return out;
+}
+
+async function fetchNewEpisodesRail(
+  col,
+  baseFilter,
+  { anime = false, limit = RAIL_LIMIT, lookbackDays = 7 } = {}
+) {
+  if (anime) {
+    try {
+      const live = await fetchAnimeNewEpisodesFromAnilist(col, baseFilter, {
+        limit,
+        lookbackDays,
+      });
+      if (live.length > 0) return live;
+    } catch (err) {
+      console.error("[categoryDiscover] AniList new episodes:", err);
+    }
+    return fetchNewEpisodesFromMongo(col, baseFilter, {
+      anime: true,
+      limit,
+      lookbackDays,
+    });
+  }
+
+  return fetchNewEpisodesFromMongo(col, baseFilter, {
+    anime: false,
+    limit,
+    lookbackDays,
+  });
 }
 
 function buildGenrePipeline(matchStage, labels, withPosters) {
@@ -432,7 +506,7 @@ export async function fetchCategoryDiscover(col, slug, preferences = null) {
     trending,
     popular: dedupeFeatured(popular, featured),
     topRated,
-    newEpisodes: dedupeFeatured(newEpisodes, featured),
+    newEpisodes: dedupeFeatured(newEpisodes, trending),
     genres: hasUserPreferences(preferences)
       ? orderGenreRowsByPreference(genres, preferences.genres)
       : genres,

@@ -1,6 +1,7 @@
 /**
- * Refresh TMDB popularity + vote_count on catalog rows without overwriting IMDb ratings.
- * Ratings (`vote_average`) come from OMDb via `scripts/update-content-from-omdb.js`.
+ * Refresh TMDB popularity + vote stats on catalog rows.
+ * TMDB scores live on `vote_average` / `vote_count` and `tmdb.*`.
+ * IMDb scores live only under `omdb.*` (see update-content-from-omdb.js).
  */
 import { MongoClient } from "mongodb";
 import { hasTmdbAuth, tmdbAuth, tmdbFetchJson } from "./tmdbAuth.js";
@@ -13,60 +14,72 @@ const SLEEP_MS = 35;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function tmdbStatsFromMovie(movie, existing) {
+function tmdbStatsFromMovie(movie) {
   /** @type {Record<string, unknown>} */
   const set = { updatedAt: new Date() };
   if (typeof movie.popularity === "number" && Number.isFinite(movie.popularity)) {
     set.popularity = movie.popularity;
   }
-  const hasImdbRating =
-    existing?.omdb?.imdbRating != null &&
-    Number(existing.omdb.imdbRating) > 0;
-  const imdbVotes = Number(existing?.omdb?.imdbVotes);
-  const hasImdbVotes = Number.isFinite(imdbVotes) && imdbVotes > 0;
   if (
-    !hasImdbVotes &&
-    typeof movie.vote_count === "number" &&
-    Number.isFinite(movie.vote_count)
-  ) {
-    set.vote_count = movie.vote_count;
-  }
-  if (
-    !hasImdbRating &&
     typeof movie.vote_average === "number" &&
     Number.isFinite(movie.vote_average) &&
     movie.vote_average > 0
   ) {
     set.vote_average = movie.vote_average;
   }
+  if (
+    typeof movie.vote_count === "number" &&
+    Number.isFinite(movie.vote_count)
+  ) {
+    set.vote_count = movie.vote_count;
+  }
+  if (
+    typeof movie.vote_average === "number" &&
+    Number.isFinite(movie.vote_average)
+  ) {
+    set.tmdb = {
+      vote_average: movie.vote_average,
+      vote_count:
+        typeof movie.vote_count === "number" && Number.isFinite(movie.vote_count)
+          ? movie.vote_count
+          : 0,
+      updatedAt: new Date(),
+    };
+  }
   return set;
 }
 
-function tmdbStatsFromTv(show, existing) {
+function tmdbStatsFromTv(show) {
   /** @type {Record<string, unknown>} */
   const set = { updatedAt: new Date() };
   if (typeof show.popularity === "number" && Number.isFinite(show.popularity)) {
     set.popularity = show.popularity;
   }
-  const hasImdbRating =
-    existing?.omdb?.imdbRating != null &&
-    Number(existing.omdb.imdbRating) > 0;
-  const imdbVotes = Number(existing?.omdb?.imdbVotes);
-  const hasImdbVotes = Number.isFinite(imdbVotes) && imdbVotes > 0;
   if (
-    !hasImdbVotes &&
+    typeof show.vote_average === "number" &&
+    Number.isFinite(show.vote_average) &&
+    show.vote_average > 0
+  ) {
+    set.vote_average = show.vote_average;
+  }
+  if (
     typeof show.vote_count === "number" &&
     Number.isFinite(show.vote_count)
   ) {
     set.vote_count = show.vote_count;
   }
   if (
-    !hasImdbRating &&
     typeof show.vote_average === "number" &&
-    Number.isFinite(show.vote_average) &&
-    show.vote_average > 0
+    Number.isFinite(show.vote_average)
   ) {
-    set.vote_average = show.vote_average;
+    set.tmdb = {
+      vote_average: show.vote_average,
+      vote_count:
+        typeof show.vote_count === "number" && Number.isFinite(show.vote_count)
+          ? show.vote_count
+          : 0,
+      updatedAt: new Date(),
+    };
   }
   if (typeof show.last_air_date === "string" && show.last_air_date.trim()) {
     set.last_air_date = show.last_air_date.trim().slice(0, 10);
@@ -88,14 +101,14 @@ function tmdbStatsFromTv(show, existing) {
   return set;
 }
 
-async function tmdbGet(pathWithQuery, authOverride) {
+async function tmdbGet(pathWithQuery, bearerOverride) {
   const url = pathWithQuery.startsWith("http")
     ? pathWithQuery
     : `${TMDB_BASE}${pathWithQuery}`;
-  const auth =
-    typeof authOverride === "string" && authOverride.trim()
-      ? authOverride.trim()
-      : tmdbAuth();
+  const auth = bearerOverride
+    ? { kind: "bearer", value: bearerOverride }
+    : tmdbAuth();
+  if (!auth) throw new Error("Missing TMDB auth");
   return tmdbFetchJson(url, auth, { timeoutMs: FETCH_TIMEOUT_MS });
 }
 
@@ -115,12 +128,21 @@ export async function runCatalogTmdbStatsRefresh(opts = {}) {
   const type = opts.type === "movie" || opts.type === "tv" ? opts.type : "all";
   const log = opts.onLog || ((m) => console.log(m));
 
-  const authOverride = (opts.token || process.env.TMDB_BEARER || process.env.TMDB_API_KEY || "").trim();
+  const bearerOverride = (
+    opts.token ||
+    process.env.TMDB_BEARER ||
+    process.env.NEXT_PUBLIC_TMDB_BEARER ||
+    ""
+  ).trim() || null;
   const uri = (opts.mongoUri || process.env.MONGODB_URI || "").trim();
-  if (!hasTmdbAuth() && !authOverride) {
+  if (!hasTmdbAuth() && !bearerOverride) {
     throw new Error("Missing TMDB_BEARER or TMDB_API_KEY");
   }
   if (!uri) throw new Error("Missing MONGODB_URI");
+
+  const authMode = bearerOverride
+    ? "bearer"
+    : tmdbAuth()?.kind ?? "none";
 
   const typeFilter =
     type === "all" ? { type: { $in: ["movie", "tv"] } } : { type };
@@ -140,7 +162,7 @@ export async function runCatalogTmdbStatsRefresh(opts = {}) {
     .toArray();
 
   log(
-    `tmdb stats refresh | type=${type} cap=${cap} queue=${rows.length} dryRun=${dryRun}`
+    `tmdb stats refresh | type=${type} cap=${cap} queue=${rows.length} dryRun=${dryRun} auth=${authMode}`
   );
 
   let ok = 0;
@@ -155,11 +177,11 @@ export async function runCatalogTmdbStatsRefresh(opts = {}) {
         row.type === "movie"
           ? `/movie/${id}?language=en-US`
           : `/tv/${id}?language=en-US`;
-      const json = await tmdbGet(path, authOverride || undefined);
+      const json = await tmdbGet(path, bearerOverride);
       const set =
         row.type === "movie"
-          ? tmdbStatsFromMovie(json, row)
-          : tmdbStatsFromTv(json, row);
+          ? tmdbStatsFromMovie(json)
+          : tmdbStatsFromTv(json);
 
       if (Object.keys(set).length <= 1) {
         err += 1;

@@ -9,7 +9,6 @@ import TrendingHero from "@/components/catalog/trendingHero";
 import {
   getCatalogCategory,
 } from "@/lib/catalogCategories";
-import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 import {
   RAIL_AFTER_SPOTLIGHT,
   RAIL_INNER_CLASS,
@@ -27,8 +26,6 @@ import { useUserData } from "@/contexts/userDataContext";
 import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 import { cn } from "@/lib/utils";
-
-const CATEGORY_HUB_INSET = `${MOBILE_CONTENT_INSET_LEFT} pr-4 lg:pr-24`;
 
 type CategoryPageTemplateProps = {
   slug: string;
@@ -121,17 +118,17 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           </section>
         ) : null}
         {useExploreSpotlight ? (
-          <div className={`${CATEGORY_HUB_INSET} pb-8`}>
+          <div className="w-full pb-8">
             <div className={`${RAIL_INNER_CLASS} mb-8`}>
               <div className="h-5 w-32 animate-pulse rounded bg-default-200 dark:bg-default-100/10" />
-              <CatalogRailSkeleton count={8} />
+              <CatalogRailSkeleton count={8} flush bleed={false} />
             </div>
-            <CatalogRailSkeleton count={8} />
+            <CatalogRailSkeleton count={8} flush bleed={false} />
           </div>
         ) : null}
-        <div className={`space-y-8 pb-8 ${CATEGORY_HUB_INSET}`}>
-          <CatalogRailSkeleton count={8} />
-          <CatalogRailSkeleton count={8} />
+        <div className="space-y-8 pb-8 w-full">
+          <CatalogRailSkeleton count={8} flush bleed={false} />
+          <CatalogRailSkeleton count={8} flush bleed={false} />
         </div>
       </div>
     );
@@ -178,35 +175,39 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
       )}
 
       {!hasTrending && useExploreSpotlight ? (
-        <div className={cn(CATEGORY_HUB_INSET, "mb-8 mt-2")}>
+        <div className="mb-8 mt-2 w-full px-4 lg:px-24">
           <CategoryBrowseBar category={category} />
         </div>
       ) : null}
 
       {hasNewEpisodes ? (
-        <div className={cn(CATEGORY_HUB_INSET, "mb-8", hasTrending && "mt-2")}>
-          <NewEpisodesRail items={data.newEpisodes} />
+        <div className={cn("mb-8 w-full", hasTrending && "mt-2")}>
+          <NewEpisodesRail items={data.newEpisodes} flush={useExploreSpotlight} />
         </div>
       ) : null}
 
-      <div className={`${RAIL_STACK_CLASS} pb-10 ${CATEGORY_HUB_INSET}`}>
+      <div
+        className={cn(
+          RAIL_STACK_CLASS,
+          "w-full",
+          categoryGenres.length > 0 ? "pb-0" : "pb-10"
+        )}
+      >
         {hasContent ? (
           <>
             <CatalogRail
               title="Popular"
               items={data.popular}
               titleVariant="explore"
+              flush={useExploreSpotlight}
             />
 
             <CatalogRail
               title="Top rated"
               items={data.topRated}
               titleVariant="explore"
+              flush={useExploreSpotlight}
             />
-
-            {categoryGenres.length > 0 ? (
-              <CategoryGenreRail category={category} genres={categoryGenres} />
-            ) : null}
           </>
         ) : (
           <p className="py-12 text-center text-sm text-default-500">
@@ -214,6 +215,12 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           </p>
         )}
       </div>
+
+      {categoryGenres.length > 0 ? (
+        <div className="pb-10 pt-8">
+          <CategoryGenreRail category={category} genres={categoryGenres} />
+        </div>
+      ) : null}
     </div>
   );
 }

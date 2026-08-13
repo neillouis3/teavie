@@ -11,6 +11,8 @@ import {
   CATALOG_BROWSE_HAS_ART,
   mongoTopRatedQualityMatch,
   mongoTopRatedVoteExpr,
+  mongoTmdbVoteCountExpr,
+  mongoImdbVoteCountExpr,
 } from "@/lib/catalogPopularity.js";
 
 /** Atlas caps in-memory sort at 32MB; free/shared tiers may ignore allowDiskUse. */
@@ -69,6 +71,8 @@ export async function fetchCatalogBrowsePage(
       {
         $addFields: {
           _topRatedVote: voteExpr,
+          _tmdbVoteCount: mongoTmdbVoteCountExpr(),
+          _imdbVoteCount: mongoImdbVoteCountExpr(),
           _voteWeight: mongoCatalogAudienceVoteCountExpr(),
         },
       },
@@ -87,7 +91,7 @@ export async function fetchCatalogBrowsePage(
             ...baseStages,
             { $skip: skip },
             { $limit: limit },
-            { $project: { _topRatedVote: 0, _voteWeight: 0 } },
+            { $project: { _topRatedVote: 0, _tmdbVoteCount: 0, _imdbVoteCount: 0, _voteWeight: 0 } },
           ],
           AGG_OPTS
         )
@@ -105,7 +109,7 @@ export async function fetchCatalogBrowsePage(
               results: [
                 { $skip: skip },
                 { $limit: limit },
-                { $project: { _topRatedVote: 0, _voteWeight: 0 } },
+                { $project: { _topRatedVote: 0, _tmdbVoteCount: 0, _imdbVoteCount: 0, _voteWeight: 0 } },
               ],
             },
           },

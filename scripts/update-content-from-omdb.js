@@ -180,8 +180,6 @@ function buildSetPayload(doc, omdb, imdbHelpers) {
   if (doc.type === "tv" && released) set.first_air_date = released;
 
   if (runtimeSeconds != null) set.runtimeSeconds = runtimeSeconds;
-  if (voteAverage != null) set.vote_average = voteAverage;
-  if (imdbVotes != null && imdbVotes > 0) set.vote_count = imdbVotes;
   if (doc.type === "tv" && seasonAmount != null) set.season_amount = seasonAmount;
 
   const overview = typeof omdb.Plot === "string" && omdb.Plot !== "N/A" ? omdb.Plot.trim() : "";

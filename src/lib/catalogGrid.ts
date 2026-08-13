@@ -41,5 +41,20 @@ export const RAIL_INNER_CLASS = 'flex w-full flex-col gap-3';
 /** Between stacked rails (32px). */
 export const RAIL_STACK_CLASS = 'flex w-full flex-col gap-8';
 
+/** Centered library grid — portrait cards in a narrow column. */
+export const LIBRARY_GRID_CLASS =
+  'mx-auto grid w-full max-w-4xl grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
+
+/** Full-bleed category hub rails (no content gutter). */
+export const FLUSH_RAIL_TRACK = 'ml-0 gap-3';
+
+export function flushRailItemClass(itemClass: string) {
+  return itemClass.replace(RAIL_ITEM_PAD, 'pl-0');
+}
+
+export const FLUSH_RAIL_CAROUSEL_ITEM_VERTICAL = flushRailItemClass(RAIL_CAROUSEL_ITEM_VERTICAL);
+export const FLUSH_RAIL_CAROUSEL_ITEM_HORIZONTAL = flushRailItemClass(RAIL_CAROUSEL_ITEM_HORIZONTAL);
+export const FLUSH_RAIL_CAROUSEL_ITEM_GENRE = flushRailItemClass(RAIL_CAROUSEL_ITEM_GENRE);
+
 /** Spotlight → first rail; matches `RAIL_STACK_CLASS` gap. */
 export const RAIL_AFTER_SPOTLIGHT = 'mb-8';

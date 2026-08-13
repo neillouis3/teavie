@@ -1,4 +1,5 @@
 import { shouldPreferAnimeHeroBackdrop } from "@/lib/animePoster.js";
+import { resolveCatalogDisplayVote } from "@/lib/catalogPopularity";
 
 export type CatalogDetailsSeed = {
   title: string;
@@ -19,7 +20,11 @@ export type CatalogSeedFallback = {
   backdrop_path?: string | null;
   vote_average?: number;
   imdb_genres?: string[];
-  omdb?: { genre?: string | null };
+  omdb?: {
+    genre?: string | null;
+    imdbRating?: number | null;
+    imdbVotes?: number | null;
+  };
 };
 
 export const CATALOG_SEED_ATTR = "data-catalog-seed";
@@ -139,6 +144,42 @@ export function preserveSeedBackdrop<
   return { ...doc, backdrop_path: seedPath };
 }
 
+function pickModalVoteAverage(
+  incoming: { vote_average?: number; vote_count?: number },
+  prev: { vote_average?: number; vote_count?: number } | null,
+  seed: CatalogDetailsSeed | null | undefined,
+  fallback?: CatalogSeedFallback | null
+): number {
+  const resolved = resolveCatalogDisplayVote({
+    vote_average: incoming.vote_average ?? prev?.vote_average,
+    vote_count: incoming.vote_count ?? prev?.vote_count,
+    tmdb:
+      typeof incoming.vote_average === "number" &&
+      Number.isFinite(incoming.vote_average) &&
+      incoming.vote_average > 0
+        ? {
+            vote_average: incoming.vote_average,
+            vote_count: incoming.vote_count,
+          }
+        : undefined,
+    omdb: fallback?.omdb ?? prev?.omdb,
+  });
+  if (resolved != null) return resolved;
+  const seedVote = seed?.voteAverage;
+  if (typeof seedVote === "number" && Number.isFinite(seedVote) && seedVote > 0) {
+    return seedVote;
+  }
+  const fallbackVote = fallback?.vote_average;
+  if (
+    typeof fallbackVote === "number" &&
+    Number.isFinite(fallbackVote) &&
+    fallbackVote > 0
+  ) {
+    return fallbackVote;
+  }
+  return prev?.vote_average ?? 0;
+}
+
 /** Merge modal fetch results without wiping card/catalog fields with empty TMDB values. */
 export function mergeModalMovie<
   T extends {
@@ -175,8 +216,7 @@ export function mergeModalMovie<
       ),
       poster_path:
         incoming.poster_path || prev?.poster_path || seed?.posterPath || null,
-      vote_average:
-        incoming.vote_average || prev?.vote_average || seed?.voteAverage || 0,
+      vote_average: pickModalVoteAverage(incoming, prev, seed, fallback),
       genres: incoming.genres?.length ? incoming.genres : (prev?.genres ?? []),
       credits: incoming.credits ?? prev?.credits,
       videos: incoming.videos ?? prev?.videos,
@@ -232,8 +272,7 @@ export function mergeModalShow<
       ),
       poster_path:
         incoming.poster_path || prev?.poster_path || seed?.posterPath || null,
-      vote_average:
-        incoming.vote_average || prev?.vote_average || seed?.voteAverage || 0,
+      vote_average: pickModalVoteAverage(incoming, prev, seed, fallback),
       genres: incoming.genres?.length ? incoming.genres : (prev?.genres ?? []),
       aggregate_credits: incoming.aggregate_credits ?? prev?.aggregate_credits,
       videos: incoming.videos ?? prev?.videos,

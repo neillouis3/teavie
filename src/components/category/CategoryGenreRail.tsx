@@ -1,11 +1,6 @@
 "use client";
 
 import React from "react";
-import SidebarBleedRail, {
-  SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SidebarBleedStartSpacer,
-  sidebarBleedViewportClass,
-} from "@/components/ui/sidebarBleedRail";
 import {
   Carousel,
   CarouselContent,
@@ -19,16 +14,17 @@ import {
 import { categoryGenreBrowseHref } from "@/lib/catalogCategories";
 import type { CatalogCategory } from "@/lib/catalogCategories";
 import {
-  RAIL_CAROUSEL_ITEM_GENRE,
-  RAIL_INNER_CLASS,
-  RAIL_TRACK,
+  FLUSH_RAIL_CAROUSEL_ITEM_GENRE,
+  FLUSH_RAIL_TRACK,
 } from "@/lib/catalogGrid";
+import { SIDEBAR_BLEED_CAROUSEL_OPTS } from "@/components/ui/sidebarBleedRail";
 
 type CategoryGenreRailProps = {
   category: CatalogCategory;
   genres: CatalogGenreRow[];
 };
 
+/** Full-width genre tiles with no content gutter. */
 export default function CategoryGenreRail({
   category,
   genres,
@@ -36,26 +32,20 @@ export default function CategoryGenreRail({
   if (genres.length === 0) return null;
 
   return (
-    <section className={RAIL_INNER_CLASS} aria-label="Browse by genre">
-      <SidebarBleedRail>
-        <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
-          <CarouselContent
-            viewportClassName={sidebarBleedViewportClass()}
-            className={RAIL_TRACK}
-          >
-            <SidebarBleedStartSpacer />
-            {genres.map((genre, i) => (
-              <CarouselItem key={genre.slug} className={RAIL_CAROUSEL_ITEM_GENRE}>
-                <GenreCatalogTile
-                  genre={genre}
-                  colorClass={genreTileColor(genre.name, i)}
-                  href={categoryGenreBrowseHref(category, genre.slug)}
-                />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-      </SidebarBleedRail>
+    <section className="w-full" aria-label="Browse by genre">
+      <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+        <CarouselContent viewportClassName="w-full overflow-hidden" className={FLUSH_RAIL_TRACK}>
+          {genres.map((genre, i) => (
+            <CarouselItem key={genre.slug} className={FLUSH_RAIL_CAROUSEL_ITEM_GENRE}>
+              <GenreCatalogTile
+                genre={genre}
+                colorClass={genreTileColor(genre.name, i)}
+                href={categoryGenreBrowseHref(category, genre.slug)}
+              />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
     </section>
   );
 }
