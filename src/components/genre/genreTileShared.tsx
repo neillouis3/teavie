@@ -215,9 +215,19 @@ export function GenreTilesSkeleton({ count = 12 }: { count?: number }) {
 export const GENRE_SQUARE_GRID =
   "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7";
 
-export function GenreSquareTilesSkeleton({ count = 27 }: { count?: number }) {
+/** Centered square grid for the /genres index page. */
+export const GENRE_SQUARE_CENTERED_GRID =
+  "mx-auto grid w-full max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+
+export function GenreSquareTilesSkeleton({
+  count = 27,
+  className = GENRE_SQUARE_GRID,
+}: {
+  count?: number;
+  className?: string;
+}) {
   return (
-    <div className={GENRE_SQUARE_GRID}>
+    <div className={className}>
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}

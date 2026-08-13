@@ -119,12 +119,14 @@ function GenreTypeFilter({
   type,
   onSelect,
   onPrefetch,
+  overlay = false,
 }: {
   type: GenrePageType;
   onSelect: (next: GenrePageType) => void;
   onPrefetch: (next: GenrePageType) => void;
+  overlay?: boolean;
 }) {
-  return (
+  const nav = (
     <nav
       aria-label="Content type"
       className="flex items-center gap-5"
@@ -140,9 +142,13 @@ function GenreTypeFilter({
             onFocus={() => onPrefetch(opt.key)}
             className={cn(
               'relative pb-2 text-sm transition-colors',
-              active
-                ? 'font-medium text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-foreground'
-                : 'text-default-500 hover:text-foreground'
+              overlay
+                ? active
+                  ? 'font-medium text-white after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white'
+                  : 'text-white/70 hover:text-white'
+                : active
+                  ? 'font-medium text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-foreground'
+                  : 'text-default-500 hover:text-foreground'
             )}
           >
             {opt.label}
@@ -151,6 +157,18 @@ function GenreTypeFilter({
       })}
     </nav>
   );
+
+  if (overlay) {
+    return (
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-start px-4 lg:bottom-6 lg:px-24"
+      >
+        <div className="pointer-events-auto">{nav}</div>
+      </div>
+    );
+  }
+
+  return nav;
 }
 
 type GenrePageTemplateProps = {
@@ -343,6 +361,15 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const showHeroSkeleton = !hasSpotlight && !shellReady;
   const hasAnyRail = rails.popular.length > 0 || rails.top_rated.length > 0;
   const pageSettled = shellReady && topRatedReady;
+  const showHeroChrome = hasSpotlight || showHeroSkeleton;
+  const typeFilter = (
+    <GenreTypeFilter
+      type={type}
+      onSelect={onTypeSelect}
+      onPrefetch={prefetchTab}
+      overlay={showHeroChrome}
+    />
+  );
 
   return (
     <div className="bg-background min-h-screen w-full">
@@ -366,6 +393,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
             rounded={false}
             flushLeft={false}
           />
+          {typeFilter}
         </section>
       ) : showHeroSkeleton ? (
         <section
@@ -381,6 +409,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
               SPOTLIGHT_SKELETON_H
             )}
           />
+          {typeFilter}
         </section>
       ) : null}
 
@@ -392,7 +421,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           (hasSpotlight || showHeroSkeleton) ? 'mt-0' : 'mt-2'
         )}
       >
-        <GenreTypeFilter type={type} onSelect={onTypeSelect} onPrefetch={prefetchTab} />
+        {!showHeroChrome ? typeFilter : null}
 
         {RAIL_SECTIONS.map(({ sort, title }) => {
           const items = rails[sort];
