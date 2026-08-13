@@ -18,7 +18,7 @@ export default function ThemeNavButton({ overHero = false }: ThemeNavButtonProps
     setMounted(true);
   }, []);
 
-  const isDark = mounted && resolvedTheme === "dark";
+  const isDark = !mounted || resolvedTheme === "dark";
 
   const toggleTheme = () => {
     setTheme(isDark ? "light" : "dark");

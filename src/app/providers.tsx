@@ -59,7 +59,7 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider attribute="class" defaultTheme="light">
+      <NextThemesProvider attribute="class" defaultTheme="dark">
         <AuthProvider>
           <UserDataProvider>
             <CatalogCardStyleProvider>

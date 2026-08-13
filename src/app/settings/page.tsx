@@ -99,7 +99,7 @@ export default function SettingsPage() {
     document.title = 'Settings - Teavie';
   }, []);
 
-  const activeTheme = (theme ?? resolvedTheme ?? 'light') as string;
+  const activeTheme = (theme ?? resolvedTheme ?? 'dark') as string;
   const cardLayoutOptions = ['vertical', 'horizontal'] as const satisfies readonly CatalogCardLayoutMode[];
 
   return (

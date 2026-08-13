@@ -53,7 +53,7 @@ export default function OnboardingProfileStep({
 }: OnboardingProfileStepProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { theme, resolvedTheme, setTheme } = useTheme();
-  const activeTheme = ((theme ?? resolvedTheme ?? "light") === "dark"
+  const activeTheme = ((theme ?? resolvedTheme ?? "dark") === "dark"
     ? "dark"
     : "light") as ThemeChoice;
 
