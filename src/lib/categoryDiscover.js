@@ -18,6 +18,7 @@ import {
   mongoMixedTvCatalogPopularityExpr,
   mongoTopRatedQualityMatch,
   mongoTopRatedVoteExpr,
+  mongoTopRatedSortExpr,
 } from "@/lib/catalogPopularity";
 import {
   catalogDocReleaseDateString,
@@ -230,15 +231,20 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
     const rows = await col
       .aggregate([
         { $match: filter },
-        { $addFields: { _topRatedVote: voteExpr } },
+        {
+          $addFields: {
+            _topRatedVote: voteExpr,
+            _topRatedSort: mongoTopRatedSortExpr(voteExpr),
+          },
+        },
         { $match: mongoTopRatedQualityMatch({ anime }) },
         {
           $sort: anime
             ? { _topRatedVote: -1, _id: -1 }
-            : { _topRatedVote: -1, vote_count: -1, _id: -1 },
+            : { _topRatedSort: -1, vote_count: -1, _id: -1 },
         },
         { $limit: limit },
-        { $project: { _topRatedVote: 0 } },
+        { $project: { _topRatedVote: 0, _topRatedSort: 0 } },
       ])
       .toArray();
     return dedupeCatalogEntries(rows).map((doc) => mapTvRow(doc, { anime }));

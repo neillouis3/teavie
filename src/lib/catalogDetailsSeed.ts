@@ -145,25 +145,28 @@ export function preserveSeedBackdrop<
 }
 
 function pickModalVoteAverage(
-  incoming: { vote_average?: number; vote_count?: number },
-  prev: { vote_average?: number; vote_count?: number } | null,
+  incoming: {
+    vote_average?: number;
+    vote_count?: number;
+    omdb?: CatalogSeedFallback["omdb"];
+    tmdb?: { vote_average?: number; vote_count?: number };
+  },
+  prev: {
+    vote_average?: number;
+    vote_count?: number;
+    omdb?: CatalogSeedFallback["omdb"];
+    tmdb?: { vote_average?: number; vote_count?: number };
+  } | null,
   seed: CatalogDetailsSeed | null | undefined,
   fallback?: CatalogSeedFallback | null
 ): number {
-  const resolved = resolveCatalogDisplayVote({
+  const merged = {
     vote_average: incoming.vote_average ?? prev?.vote_average,
     vote_count: incoming.vote_count ?? prev?.vote_count,
-    tmdb:
-      typeof incoming.vote_average === "number" &&
-      Number.isFinite(incoming.vote_average) &&
-      incoming.vote_average > 0
-        ? {
-            vote_average: incoming.vote_average,
-            vote_count: incoming.vote_count,
-          }
-        : undefined,
-    omdb: fallback?.omdb ?? prev?.omdb,
-  });
+    omdb: incoming.omdb ?? prev?.omdb ?? fallback?.omdb,
+    tmdb: incoming.tmdb ?? prev?.tmdb,
+  };
+  const resolved = resolveCatalogDisplayVote(merged);
   if (resolved != null) return resolved;
   const seedVote = seed?.voteAverage;
   if (typeof seedVote === "number" && Number.isFinite(seedVote) && seedVote > 0) {

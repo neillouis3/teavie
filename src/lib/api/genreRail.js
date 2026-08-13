@@ -14,10 +14,9 @@ import {
 import {
   catalogDisplayVoteAverage,
   catalogPopularityScore,
-  mongoImdbVoteCountExpr,
   mongoTopRatedQualityMatch,
   mongoTopRatedVoteExpr,
-  mongoTmdbVoteCountExpr,
+  mongoTopRatedSortExpr,
 } from "@/lib/catalogPopularity";
 import { imdbGenreLabelFromSlug, isValidImdbGenreSlug } from "@/lib/imdbGenres";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
@@ -150,7 +149,7 @@ function buildFilter(slug, type, searchParams, todayIso) {
 function sortStage(sortBy) {
   switch (sortBy) {
     case "vote_average":
-      return { _topRatedVote: -1, vote_count: -1, _sortDate: -1, _id: -1 };
+      return { _topRatedSort: -1, vote_count: -1, _sortDate: -1, _id: -1 };
     case "release_year":
       return { _sortDate: -1, _id: -1 };
     case "popularity":
@@ -215,15 +214,15 @@ export async function queryGenreRail(opts) {
     }
   }
 
+  const topRatedVoteExpr = mongoTopRatedVoteExpr();
   const pipeline = [
     { $match: listFilter },
     {
       $addFields: {
         _pop: popExpr,
         _sortDate: { $ifNull: ["$release_date", "$first_air_date"] },
-        _topRatedVote: mongoTopRatedVoteExpr(),
-        _tmdbVoteCount: mongoTmdbVoteCountExpr(),
-        _imdbVoteCount: mongoImdbVoteCountExpr(),
+        _topRatedVote: topRatedVoteExpr,
+        _topRatedSort: mongoTopRatedSortExpr(topRatedVoteExpr),
       },
     },
   ];
@@ -236,7 +235,7 @@ export async function queryGenreRail(opts) {
     { $sort: sortStage(sortBy) },
     { $skip: skip },
     { $limit: limit },
-    { $project: { _pop: 0, _sortDate: 0, _topRatedVote: 0 } }
+    { $project: { _pop: 0, _sortDate: 0, _topRatedVote: 0, _topRatedSort: 0 } }
   );
 
   const [total, docs] = await Promise.all([

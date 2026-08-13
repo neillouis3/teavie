@@ -21,7 +21,7 @@ export const CATALOG_TOP_RATED_MIN_VOTE_AVERAGE = 7;
 export const CATALOG_TOP_RATED_MIN_VOTE_COUNT = 50;
 
 /** Minimum IMDb vote count (from OMDb) for top-rated browse inclusion. */
-export const CATALOG_TOP_RATED_MIN_IMDB_VOTES = 250;
+export const CATALOG_TOP_RATED_MIN_IMDB_VOTES = 2500;
 
 /** TMDB vote_count fallback for top-rated when OMDb votes are missing. */
 export const CATALOG_TOP_RATED_MIN_TMDB_VOTE_COUNT = 2000;
@@ -246,7 +246,7 @@ export function catalogImdbVoteFromDoc(doc) {
 
 /**
  * Single 0–10 display score for cards, browse, and modals.
- * Movies/TV: TMDB when it has enough voters, else IMDb when credible, else best available.
+ * Movies/TV: prefer IMDb/OMDb when credible, else TMDB with enough voters, else best available.
  * Anime: AniList averageScore, else TMDB/Jikan vote_average.
  * @param {unknown} doc
  */
@@ -277,9 +277,9 @@ export function catalogDisplayVoteAverage(doc) {
   const tmdb = catalogTmdbVoteFromDoc(d);
   const imdb = catalogImdbVoteFromDoc(d);
 
+  if (imdb.vote && imdb.count >= CATALOG_IMDB_RATING_MIN_VOTES) return imdb.vote;
   if (tmdb.explicit && tmdb.vote) return tmdb.vote;
   if (tmdb.vote && tmdb.count >= CATALOG_POPULAR_MIN_VOTE_COUNT) return tmdb.vote;
-  if (imdb.vote && imdb.count >= CATALOG_IMDB_RATING_MIN_VOTES) return imdb.vote;
   return tmdb.vote ?? imdb.vote ?? null;
 }
 
@@ -410,26 +410,26 @@ export function mongoCatalogDisplayVoteExpr(opts = {}) {
   };
   const movieTvVote = {
     $cond: {
-      if: { $gt: [mongoConvertDouble("$tmdb.vote_average"), 0] },
-      then: mongoConvertDouble("$tmdb.vote_average"),
+      if: {
+        $and: [
+          { $gte: [imdbCount, CATALOG_IMDB_RATING_MIN_VOTES] },
+          { $gt: [imdbVote, 0] },
+        ],
+      },
+      then: imdbVote,
       else: {
         $cond: {
-          if: {
-            $and: [
-              { $gte: [tmdbCount, CATALOG_POPULAR_MIN_VOTE_COUNT] },
-              { $gt: [tmdbVote, 0] },
-            ],
-          },
-          then: tmdbVote,
+          if: { $gt: [mongoConvertDouble("$tmdb.vote_average"), 0] },
+          then: mongoConvertDouble("$tmdb.vote_average"),
           else: {
             $cond: {
               if: {
                 $and: [
-                  { $gte: [imdbCount, CATALOG_IMDB_RATING_MIN_VOTES] },
-                  { $gt: [imdbVote, 0] },
+                  { $gte: [tmdbCount, CATALOG_POPULAR_MIN_VOTE_COUNT] },
+                  { $gt: [tmdbVote, 0] },
                 ],
               },
-              then: imdbVote,
+              then: tmdbVote,
               else: { $max: [tmdbVote, imdbVote] },
             },
           },
@@ -455,11 +455,61 @@ export function mongoCatalogDisplayVoteExpr(opts = {}) {
 }
 
 /**
- * Score for top-rated browse/rails/sort — same source priority as card display.
+ * Score for top-rated browse/rails inclusion — strict vote gates, decoupled from card display.
+ * Returns 0 when the row lacks a credible audience (excluded from top-rated lists).
  * @param {{ anime?: boolean }} [opts]
  */
 export function mongoTopRatedVoteExpr(opts = {}) {
-  return mongoCatalogDisplayVoteExpr(opts);
+  if (opts.anime === true) {
+    return mongoCatalogDisplayVoteExpr({ anime: true });
+  }
+
+  const imdbVotes = mongoImdbVoteCountExpr();
+  const imdbRating = mongoConvertDouble("$omdb.imdbRating");
+  const tmdbVote = mongoTmdbVoteAverageExpr();
+  const tmdbCount = mongoTmdbVoteCountExpr();
+  const isKdrama = {
+    $or: [
+      { $eq: ["$is_kdrama", true] },
+      { $in: ["kdrama", { $ifNull: ["$catalog_categories", []] }] },
+    ],
+  };
+
+  return {
+    $cond: {
+      if: { $gte: [imdbVotes, CATALOG_TOP_RATED_MIN_IMDB_VOTES] },
+      then: imdbRating,
+      else: {
+        $cond: {
+          if: { $gte: [tmdbCount, CATALOG_TOP_RATED_MIN_TMDB_VOTE_COUNT] },
+          then: tmdbVote,
+          else: {
+            $cond: {
+              if: {
+                $and: [
+                  isKdrama,
+                  { $gte: [tmdbCount, CATALOG_TOP_RATED_MIN_VOTE_COUNT] },
+                ],
+              },
+              then: tmdbVote,
+              else: 0,
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+/**
+ * Top-rated sort key — score weighted by log10(votes) so widely-rated titles outrank niche 10s.
+ * @param {object} voteExpr Mongo expression from {@link mongoTopRatedVoteExpr}.
+ */
+export function mongoTopRatedSortExpr(voteExpr) {
+  const weight = mongoPreferAudienceVoteCountExpr();
+  return {
+    $multiply: [voteExpr, { $log10: { $add: [weight, 10] } }],
+  };
 }
 
 /**
@@ -470,29 +520,7 @@ export function mongoTopRatedQualityMatch(opts = {}) {
   const minVoteAverage =
     opts.minVoteAverage ?? CATALOG_TOP_RATED_MIN_VOTE_AVERAGE;
 
-  if (opts.anime === true) {
-    return { _topRatedVote: { $gte: minVoteAverage } };
-  }
-
-  return {
-    $and: [
-      { _topRatedVote: { $gte: minVoteAverage } },
-      {
-        $or: [
-          { _imdbVoteCount: { $gte: CATALOG_TOP_RATED_MIN_IMDB_VOTES } },
-          { _tmdbVoteCount: { $gte: CATALOG_TOP_RATED_MIN_TMDB_VOTE_COUNT } },
-          {
-            $and: [
-              {
-                $or: [{ is_kdrama: true }, { catalog_categories: "kdrama" }],
-              },
-              { _tmdbVoteCount: { $gte: CATALOG_TOP_RATED_MIN_VOTE_COUNT } },
-            ],
-          },
-        ],
-      },
-    ],
-  };
+  return { _topRatedVote: { $gte: minVoteAverage } };
 }
 
 /** Mongo expression for tie-breaking top-rated sorts (IMDb votes preferred). */
