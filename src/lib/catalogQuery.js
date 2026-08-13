@@ -17,6 +17,7 @@ import {
 } from "./animeContentPolicy.js";
 import {
   catalogExcludeKdramaJunkMongoClause,
+  catalogExcludeWesternAnimationKdramaMongoClause,
   catalogHasKdramaArtMongoClause,
 } from "./kdramaCatalogPolicy.js";
 
@@ -273,7 +274,11 @@ export function catalogKdramaKoreanOriginClause() {
   return {
     $or: [
       { origin_country: "KR" },
-      { "omdb.country": { $regex: "Korea", $options: "i" } },
+      {
+        "omdb.country": {
+          $regex: /South Korea|Korea, South|Republic of Korea/i,
+        },
+      },
     ],
   };
 }
@@ -299,6 +304,7 @@ export function catalogKdramaClause() {
       catalogNotAnimeCatalogIdMongoExpr(),
       catalogKdramaKoreanOriginClause(),
       catalogKdramaKoreanLanguageClause(),
+      catalogExcludeWesternAnimationKdramaMongoClause(),
     ],
   };
 }

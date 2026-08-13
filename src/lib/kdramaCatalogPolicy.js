@@ -2,6 +2,8 @@
  * Drop low-signal K-Drama catalog rows: TMDB stubs, variety specials, web shorts, missing art.
  */
 
+import { TMDB_ANIMATION_GENRE_ID } from "./tvJpAnimePrune.js";
+
 /** @param {unknown} value */
 function hasNonEmptyPath(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -37,10 +39,65 @@ export function isKdramaJunkDoc(doc) {
   return isMissingKdramaArt(doc);
 }
 
+/** @param {unknown} doc */
+export function isWesternAnimationKdramaLeak(doc) {
+  if (!doc || typeof doc !== "object") return false;
+  const d = /** @type {Record<string, unknown>} */ (doc);
+  if (d.type && d.type !== "tv") return false;
+
+  const western = westernOriginMongo.$or.some((clause) => {
+    if ("origin_country" in clause) {
+      const origins = d.origin_country;
+      const codes = Array.isArray(origins)
+        ? origins.map((c) => String(c).toUpperCase())
+        : [String(origins ?? "").toUpperCase()];
+      const allowed = /** @type {{ $in: string[] }} */ (clause.origin_country).$in;
+      return codes.some((code) => allowed.includes(code));
+    }
+    if ("omdb.country" in clause) {
+      const country = d.omdb && typeof d.omdb === "object"
+        ? String(/** @type {{ country?: unknown }} */ (d.omdb).country ?? "")
+        : "";
+      return /** @type {{ $regex: RegExp }} */ (clause["omdb.country"]).$regex.test(country);
+    }
+    return false;
+  });
+
+  if (!western) return false;
+
+  const genres = d.imdb_genres;
+  if (Array.isArray(genres) && genres.some((g) => String(g).trim().toLowerCase() === "animation")) {
+    return true;
+  }
+  const omdbGenre =
+    d.omdb && typeof d.omdb === "object"
+      ? String(/** @type {{ genre?: unknown }} */ (d.omdb).genre ?? "")
+      : "";
+  if (/(^|,\s*)animation(\s*,|$)/i.test(omdbGenre)) return true;
+
+  const tmdbGenres = d.genres;
+  if (
+    Array.isArray(tmdbGenres) &&
+    tmdbGenres.some(
+      (g) =>
+        g &&
+        typeof g === "object" &&
+        (/** @type {{ id?: number; name?: string }} */ (g).id === TMDB_ANIMATION_GENRE_ID ||
+          String(/** @type {{ name?: string }} */ (g).name ?? "").toLowerCase() === "animation")
+    )
+  ) {
+    return true;
+  }
+
+  const genreIds = d.genre_ids;
+  return Array.isArray(genreIds) && genreIds.includes(TMDB_ANIMATION_GENRE_ID);
+}
+
 /** @param {unknown} show TMDB list/detail row before upsert */
 export function shouldRejectKdramaFromCatalog(show) {
   if (!show || typeof show !== "object") return true;
   const s = /** @type {Record<string, unknown>} */ (show);
+  if (isWesternAnimationKdramaLeak(s)) return true;
   if (isKdramaJunkTitle(s.name ?? s.title)) return true;
   if (isMissingKdramaArt(s)) return true;
   return false;
@@ -105,4 +162,46 @@ export function catalogKdramaJunkMongoMatch() {
 /** Exclude junk rows from browse / discover queries. */
 export function catalogExcludeKdramaJunkMongoClause() {
   return { $nor: [catalogKdramaJunkMongoMatch()] };
+}
+
+/** Rows explicitly categorized as K-Drama in the catalog. */
+export function catalogKdramaTaggedMongoClause() {
+  return {
+    $or: [{ is_kdrama: true }, { catalog_categories: "kdrama" }],
+  };
+}
+
+const westernOriginMongo = {
+  $or: [
+    {
+      origin_country: {
+        $in: ["US", "GB", "CA", "FR", "AU", "DE", "IT", "ES", "NL", "BE", "CH", "SE", "NO", "DK", "FI", "IE", "NZ"],
+      },
+    },
+    {
+      "omdb.country": {
+        $regex:
+          /United States|U\.S\.|USA|France|United Kingdom|Canada|Australia|Germany|Italy|Spain/i,
+      },
+    },
+  ],
+};
+
+const animationGenreMongo = {
+  $or: [
+    { genre_ids: TMDB_ANIMATION_GENRE_ID },
+    { genres: { $elemMatch: { id: TMDB_ANIMATION_GENRE_ID } } },
+    { genres: { $elemMatch: { name: { $regex: /^animation$/i } } } },
+    { imdb_genres: "Animation" },
+    { imdb_genres: { $regex: /(^|,\s*)Animation(\s*,|$)/i } },
+    { "omdb.genre": { $regex: /(^|,\s*)Animation(\s*,|$)/i } },
+  ],
+};
+
+/**
+ * Western cartoons (US/FR/UK + Animation) are not K-Drama even when mis-tagged or
+ * given Korean dub metadata.
+ */
+export function catalogExcludeWesternAnimationKdramaMongoClause() {
+  return { $nor: [{ $and: [westernOriginMongo, animationGenreMongo] }] };
 }

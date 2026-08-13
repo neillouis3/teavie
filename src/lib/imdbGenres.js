@@ -4,6 +4,8 @@
  * TMDB `genre_ids` / `genres` are never stored or used as a genre source.
  */
 
+import { isWesternAnimationKdramaLeak } from "./kdramaCatalogPolicy.js";
+
 /** @typedef {{ slug: string; label: string }} ImdbGenre */
 
 /** @type {ImdbGenre[]} */
@@ -458,6 +460,7 @@ export function imdbGenreMatchConditions(label) {
 export function isKdramaDoc(doc) {
   if (!doc || typeof doc !== "object") return false;
   if (doc.type !== "tv") return false;
+  if (isWesternAnimationKdramaLeak(doc)) return false;
 
   const idStr = String(doc.id ?? "");
   if (idStr.startsWith("anime_") || doc.is_anime === true) return false;
@@ -473,7 +476,10 @@ export function isKdramaDoc(doc) {
       ? /** @type {{ country?: string; language?: string }} */ (doc.omdb)
       : null;
   const koreanCountry =
-    hasKr || (omdb?.country ? /korea/i.test(String(omdb.country)) : false);
+    hasKr ||
+    (omdb?.country
+      ? /South Korea|Korea, South|Republic of Korea/i.test(String(omdb.country))
+      : false);
 
   const lang = String(doc.original_language ?? "").toLowerCase();
   const koreanLang =
