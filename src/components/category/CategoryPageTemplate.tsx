@@ -126,29 +126,42 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
       setGenresReady(false);
     }
 
-    void fetchCategoryDiscoverHero(category.slug, preferences).then((hero) => {
-      if (cancelled) return;
-      setData((prev) => ({ ...prev, ...hero }));
-      setHeroReady(true);
-    });
+    const needsHero = !hasCategoryHeroData(cached);
+    const needsNewEpisodes = !(cached?.newEpisodes.length ?? 0);
+    const needsTopRated = !(cached?.topRated.length ?? 0);
+    const needsGenres = !cached?.genres.some((genre) => (genre.count ?? 0) > 0);
 
-    void fetchCategoryDiscoverNewEpisodes(category.slug, preferences).then((part) => {
-      if (cancelled) return;
-      setData((prev) => ({ ...prev, ...part }));
-      setNewEpisodesReady(true);
-    });
+    if (needsHero) {
+      void fetchCategoryDiscoverHero(category.slug, preferences).then((hero) => {
+        if (cancelled) return;
+        setData((prev) => ({ ...prev, ...hero }));
+        setHeroReady(true);
+      });
+    }
 
-    void fetchCategoryDiscoverTopRated(category.slug, preferences).then((part) => {
-      if (cancelled) return;
-      setData((prev) => ({ ...prev, ...part }));
-      setTopRatedReady(true);
-    });
+    if (needsNewEpisodes) {
+      void fetchCategoryDiscoverNewEpisodes(category.slug, preferences).then((part) => {
+        if (cancelled) return;
+        setData((prev) => ({ ...prev, ...part }));
+        setNewEpisodesReady(true);
+      });
+    }
 
-    void fetchCategoryDiscoverGenres(category.slug, preferences).then((part) => {
-      if (cancelled) return;
-      setData((prev) => ({ ...prev, ...part }));
-      setGenresReady(true);
-    });
+    if (needsTopRated) {
+      void fetchCategoryDiscoverTopRated(category.slug, preferences).then((part) => {
+        if (cancelled) return;
+        setData((prev) => ({ ...prev, ...part }));
+        setTopRatedReady(true);
+      });
+    }
+
+    if (needsGenres) {
+      void fetchCategoryDiscoverGenres(category.slug, preferences).then((part) => {
+        if (cancelled) return;
+        setData((prev) => ({ ...prev, ...part }));
+        setGenresReady(true);
+      });
+    }
 
     return () => {
       cancelled = true;

@@ -5,7 +5,6 @@ import {
 import { imdbGenresFromAnimeSources } from "@/lib/imdbGenres";
 import { tmdbImageUrl, catalogHeroImageUrl } from "@/lib/tmdbImage";
 import {
-  animeBackdropFromDoc,
   animeHeroBannerFromDoc,
   animePosterFromDoc,
   isAnimePortraitCoverUrl,
@@ -120,10 +119,8 @@ export function pickAnimeShowHeroBackdrop(
   const tmdbBackdrop = isTmdbImagePath(show.backdrop_path)
     ? show.backdrop_path
     : null;
-  const fromFallback = fallback
-    ? animeHeroBannerFromDoc(fallback) ?? animeBackdropFromDoc(fallback)
-    : null;
-  const fromShow = animeHeroBannerFromDoc(show) ?? animeBackdropFromDoc(show);
+  const fromFallback = fallback ? animeHeroBannerFromDoc(fallback) : null;
+  const fromShow = animeHeroBannerFromDoc(show);
   return tmdbBackdrop || fromFallback || fromShow || null;
 }
 
@@ -152,12 +149,7 @@ export function resolveAnimeHeroBannerUrl(
   const candidates = [
     show.anilist?.bannerImage,
     animeHeroBannerFromDoc(doc),
-    animeBackdropFromDoc(doc),
-    show.backdrop_path,
-    show.anilist?.coverImage?.extraLarge,
-    show.anilist?.coverImage?.large,
-    show.poster_path,
-    posterUrl,
+    isTmdbImagePath(show.backdrop_path) ? show.backdrop_path : null,
   ];
 
   for (const value of candidates) {

@@ -28,7 +28,8 @@ import {
   catalogOverviewFromDoc,
   usCertificationFromDoc,
 } from "@/lib/mapContentDocToItem";
-import { animeBackdropFromDoc, animePosterFromDoc } from "@/lib/animePoster";
+import { animeHeroBannerFromDoc, animePosterFromDoc } from "@/lib/animePoster";
+import { enrichAnimeDocsWithTmdbBackdrops } from "@/lib/animeTmdbArt";
 import { IMDB_GENRES, orderGenreRowsByPreference, genreNamesFromDoc } from "@/lib/imdbGenres";
 import { getCatalogCategory } from "@/lib/catalogCategories";
 import { mergeWithPreferenceFilter } from "@/lib/preferenceMatch";
@@ -72,7 +73,7 @@ function mapTvRow(doc, { anime = false } = {}) {
       ? animePosterFromDoc(doc)
       : doc.poster_path ?? null,
     backdrop_path: useAnimeArt
-      ? animeBackdropFromDoc(doc)
+      ? animeHeroBannerFromDoc(doc)
       : doc.backdrop_path ?? null,
     type: "tv",
     is_anime: useAnimeArt || undefined,
@@ -250,23 +251,19 @@ async function fetchNewEpisodesRail(
   { anime = false, limit = RAIL_LIMIT, lookbackDays = 7 } = {}
 ) {
   if (anime) {
-    const mongoFallback = fetchNewEpisodesFromMongo(col, baseFilter, {
-      anime: true,
-      limit,
-      lookbackDays,
-    });
-    const anilistLive = fetchAnimeNewEpisodesFromAnilist(col, baseFilter, {
-      limit,
-      lookbackDays,
-    }).then((rows) =>
-      rows.length > 0 ? rows : new Promise(() => {})
-    );
-
-    try {
-      return await Promise.race([mongoFallback, anilistLive]);
-    } catch {
-      return mongoFallback;
-    }
+    const [mongoRows, anilistRows] = await Promise.all([
+      fetchNewEpisodesFromMongo(col, baseFilter, {
+        anime: true,
+        limit,
+        lookbackDays,
+      }),
+      fetchAnimeNewEpisodesFromAnilist(col, baseFilter, {
+        limit,
+        lookbackDays,
+      }).catch(() => []),
+    ]);
+    if (anilistRows.length > 0) return anilistRows;
+    return mongoRows;
   }
 
   return fetchNewEpisodesFromMongo(col, baseFilter, {
@@ -411,6 +408,7 @@ export async function fetchCategoryHero(col, slug, preferences = null) {
 
   const { anime, baseFilter } = resolved;
   const popularDocs = await fetchPopularDocs(col, baseFilter, { anime, limit: RAIL_LIMIT });
+  if (anime) await enrichAnimeDocsWithTmdbBackdrops(popularDocs);
   const featuredDocs = popularDocs.slice(0, FEATURED_SIZE);
   const featured = featuredDocs.map((doc) => mapTvRow(doc, { anime }));
   const popular = dedupeCatalogEntries(popularDocs).map((doc) => mapTvRow(doc, { anime }));

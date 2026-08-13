@@ -10,7 +10,8 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import LargeCard from "@/components/ui/largeCard";
-import { tmdbImageUrl } from "@/lib/tmdbImage";
+import { tmdbImageUrl, catalogHeroImageUrl } from "@/lib/tmdbImage";
+import { isAnimePortraitCoverUrl } from "@/lib/animePoster";
 import { cn } from "@/lib/utils";
 import type { ContentItem } from "@/types/content";
 
@@ -287,8 +288,11 @@ export default function TrendingHero({
             {items.map((item, index) => {
               const title = item.title ?? item.name ?? "Untitled";
               const image =
+                catalogHeroImageUrl(item.backdrop_path) ||
                 tmdbImageUrl(item.backdrop_path) ||
-                tmdbImageUrl(item.poster_path);
+                (!isAnimePortraitCoverUrl(item.poster_path)
+                  ? tmdbImageUrl(item.poster_path)
+                  : "");
               return (
                 <button
                   key={`spotlight-selector-${item.type ?? "movie"}-${item.id}`}

@@ -6,8 +6,8 @@ import { Button } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InformationCircleIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { formatHeroDate, formatHeroRuntime, formatReleasePhrase } from "@/lib/formatRelease";
-import { preferHighResAnimeImageUrl } from "@/lib/animePoster";
-import { tmdbBackdropUrl, tmdbImageUrl, tmdbImageUrlOr, tmdbPosterUrl } from "@/lib/tmdbImage";
+import { preferHighResAnimeImageUrl, isAnimePortraitCoverUrl } from "@/lib/animePoster";
+import { catalogHeroImageUrl, tmdbBackdropUrl, tmdbImageUrl, tmdbImageUrlOr, tmdbPosterUrl } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import {
   buildCatalogDetailsSeed,
@@ -368,10 +368,14 @@ export default function LargeCard({
   const primaryPath = preferPoster
     ? tmdbImageUrlOr(posterPath, tmdbImageUrlOr(backdropPath, ""))
     : tmdbImageUrlOr(backdropPath, tmdbImageUrlOr(posterPath, ""));
+  const heroBackdropUrl =
+    catalogHeroImageUrl(backdropPath) || tmdbBackdropUrl(backdropPath);
+  const heroPosterUrl = tmdbPosterUrl(posterPath) || catalogHeroImageUrl(posterPath);
   const sizedHeroPath = hero
     ? preferPoster
-      ? tmdbPosterUrl(posterPath) || tmdbBackdropUrl(backdropPath)
-      : tmdbBackdropUrl(backdropPath) || tmdbPosterUrl(posterPath)
+      ? heroPosterUrl || heroBackdropUrl
+      : heroBackdropUrl ||
+        (isAnimePortraitCoverUrl(posterPath) ? "" : heroPosterUrl)
     : primaryPath;
   const imageUrl =
     preferHighResAnimeImageUrl(sizedHeroPath) ||

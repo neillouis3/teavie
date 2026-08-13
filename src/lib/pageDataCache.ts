@@ -496,6 +496,36 @@ export function categoryDiscoverCacheKey(
   return `${PREFIX}.category-discover.v20:${slug}:${preferencesCacheKey(preferences)}`;
 }
 
+export function peekCategoryDiscoverSplitCache(
+  slug: string,
+  preferences: UserPreferences | null = null
+): CategoryDiscoverPayload {
+  const hero = readClientDayCache<CategoryDiscoverHeroPayload>(
+    categoryDiscoverHeroCacheKey(slug, preferences)
+  );
+  const topRated = readClientDayCache<Pick<CategoryDiscoverPayload, "topRated">>(
+    categoryDiscoverTopRatedCacheKey(slug, preferences)
+  );
+  const newEpisodes = readClientDayCache<
+    Pick<CategoryDiscoverPayload, "newEpisodes">
+  >(categoryDiscoverNewEpisodesCacheKey(slug, preferences));
+  const genres = readClientDayCache<Pick<CategoryDiscoverPayload, "genres">>(
+    categoryDiscoverGenresCacheKey(slug, preferences)
+  );
+
+  return {
+    ...EMPTY_CATEGORY,
+    ...(hero && isCategoryHeroCacheable(hero) ? hero : {}),
+    ...(topRated && hasCatalogItems(topRated.topRated) ? topRated : {}),
+    ...(newEpisodes && hasCatalogItems(newEpisodes.newEpisodes) ? newEpisodes : {}),
+    ...(genres &&
+    Array.isArray(genres.genres) &&
+    genres.genres.some((g) => (g.count ?? 0) > 0)
+      ? genres
+      : {}),
+  };
+}
+
 export function peekCategoryDiscoverCache(
   slug: string,
   preferences: UserPreferences | null = null
@@ -504,6 +534,9 @@ export function peekCategoryDiscoverCache(
     categoryDiscoverCacheKey(slug, preferences)
   );
   if (cached && isCategoryDiscoverCacheable(cached)) return cached;
+
+  const split = peekCategoryDiscoverSplitCache(slug, preferences);
+  if (isCategoryDiscoverCacheable(split)) return split;
   return null;
 }
 

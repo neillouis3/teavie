@@ -50,12 +50,33 @@ async function fetchTmdbTvArt(tmdbId) {
       typeof data?.backdrop_path === "string" && data.backdrop_path.trim()
         ? data.backdrop_path.trim()
         : null;
+    let resolvedBackdrop = backdrop;
+    if (!resolvedBackdrop) {
+      try {
+        const images = await tmdbFetchJson(
+          `https://api.themoviedb.org/3/tv/${tmdbId}/images`,
+          auth,
+          { timeoutMs: 8000 }
+        );
+        const backdrops = Array.isArray(images?.backdrops) ? images.backdrops : [];
+        const best = backdrops
+          .filter((row) => typeof row?.file_path === "string" && row.file_path.trim())
+          .sort(
+            (a, b) =>
+              (Number(b.vote_average) || 0) - (Number(a.vote_average) || 0) ||
+              (Number(b.width) || 0) - (Number(a.width) || 0)
+          )[0];
+        if (best?.file_path) resolvedBackdrop = best.file_path.trim();
+      } catch {
+        /* keep null */
+      }
+    }
     const poster =
       typeof data?.poster_path === "string" && data.poster_path.trim()
         ? data.poster_path.trim()
         : null;
-    TMDB_ART_CACHE.set(tmdbId, { backdrop, poster, at: Date.now() });
-    return { backdrop, poster };
+    TMDB_ART_CACHE.set(tmdbId, { backdrop: resolvedBackdrop, poster, at: Date.now() });
+    return { backdrop: resolvedBackdrop, poster };
   } catch {
     return null;
   }
