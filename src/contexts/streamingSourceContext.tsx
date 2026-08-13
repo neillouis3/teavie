@@ -15,11 +15,12 @@ export type StreamServerId = keyof typeof MOVIE_SERVERS;
 const STORAGE_KEY = 'teavie-streaming-server';
 const DEFAULT_SERVER: StreamServerId = 'movies111';
 
-const ORDER: StreamServerId[] = ['movies111', 'peachify', 'vidcore', 'videasy', 'stremio'];
+const ORDER: StreamServerId[] = ['movies111', 'peachify', 'vidcore', 'stremio'];
 
 /** Legacy / mistyped values saved in localStorage. */
 const SERVER_ALIASES: Record<string, StreamServerId> = {
   '111movies': 'movies111',
+  videasy: 'movies111',
 };
 
 export function streamServerLabel(id: StreamServerId): string {
@@ -30,8 +31,6 @@ export function streamServerLabel(id: StreamServerId): string {
       return '111movies';
     case 'peachify':
       return 'Peachify';
-    case 'videasy':
-      return 'Videasy';
     case 'vidcore':
       return 'VidCore';
     default:

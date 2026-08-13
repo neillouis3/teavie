@@ -140,18 +140,12 @@ function refreshLocalHistoryState(
 
 export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, loading: authLoading } = useAuth();
-  const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>(() => {
-    if (typeof window === "undefined") return [];
-    return listWatchHistory();
-  });
-  const [watchHistoryLogEntries, setWatchHistoryLogEntries] = useState<WatchHistoryEntry[]>(() => {
-    if (typeof window === "undefined") return [];
-    return listWatchHistoryLog();
-  });
+  const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>([]);
+  const [watchHistoryLogEntries, setWatchHistoryLogEntries] = useState<WatchHistoryEntry[]>([]);
   const [watchLaterEntries, setWatchLaterEntries] = useState<WatchLaterEntry[]>([]);
   const [favoriteEntries, setFavoriteEntries] = useState<FavoriteEntry[]>([]);
-  const [guestPreferences, setGuestPreferences] = useState<UserPreferences>(() =>
-    typeof window === "undefined" ? EMPTY_USER_PREFERENCES : loadGuestPreferences()
+  const [guestPreferences, setGuestPreferences] = useState<UserPreferences>(
+    EMPTY_USER_PREFERENCES
   );
 
   const preferences = useMemo(() => {
@@ -240,7 +234,10 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
 
   useLayoutEffect(() => {
     refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
-  }, []);
+    if (!user) {
+      setGuestPreferences(loadGuestPreferences());
+    }
+  }, [user]);
 
   useEffect(() => {
     if (authLoading) return;

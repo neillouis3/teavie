@@ -1,6 +1,7 @@
 /** Client-only index of recently watched titles (newest first). */
 
-import { formatWatchEpKey, loadWatchProgress, saveWatchProgress, clearWatchProgress } from "@/lib/watchProgress";
+import { formatWatchEpKey, loadWatchProgress, saveWatchProgress, clearWatchProgress, setTvPlaybackHistoryDelegate } from "@/lib/watchProgress";
+import { setMoviePlaybackHistoryDelegate } from "@/lib/movieWatchProgress";
 import { formatHeroRuntime } from "@/lib/formatRelease";
 
 export const WATCH_HISTORY_VERSION = 1 as const;
@@ -250,6 +251,37 @@ export function touchWatchHistory(
   writeIndex([next, ...prev].slice(0, WATCH_HISTORY_MAX));
   upsertLogEntry(next);
 }
+
+/** Record continue watching once playback crosses the minimum threshold. */
+export function maybeTouchWatchHistoryFromPlayback(
+  catalogId: string,
+  seconds: number,
+  payload: {
+    mediaType: WatchHistoryMediaType;
+    lastSeason: number;
+    lastEpisode: number;
+  }
+): void {
+  const sec = Math.max(0, Math.floor(Number(seconds)) || 0);
+  if (sec < WATCH_HISTORY_MIN_PLAY_SECONDS) return;
+  touchWatchHistory(catalogId, payload);
+}
+
+setTvPlaybackHistoryDelegate((catalogId, seconds, coords) => {
+  maybeTouchWatchHistoryFromPlayback(catalogId, seconds, {
+    mediaType: "tv",
+    lastSeason: coords.season,
+    lastEpisode: coords.episode,
+  });
+});
+
+setMoviePlaybackHistoryDelegate((catalogId, seconds) => {
+  maybeTouchWatchHistoryFromPlayback(catalogId, seconds, {
+    mediaType: "movie",
+    lastSeason: 1,
+    lastEpisode: 1,
+  });
+});
 
 /** Mark a movie as recently watched (continue-watching rail). */
 export function recordMovieInWatchHistory(catalogId: string): void {

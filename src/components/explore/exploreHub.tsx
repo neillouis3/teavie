@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import TrendingHero, { SPOTLIGHT_SKELETON_H } from "@/components/catalog/trendingHero";
 import { cn } from "@/lib/utils";
@@ -40,9 +40,7 @@ const SECTION_MAX_ITEMS = EXPLORE_RAIL_MAX_ITEMS;
 
 export default function ExploreHub() {
   const { preferences, watchHistoryEntries, watchedMovieIds } = useUserData();
-  const [core, setCore] = useState<ExploreCorePayload | null>(() =>
-    peekExploreInitialCore(preferences, watchedMovieIds)
-  );
+  const [core, setCore] = useState<ExploreCorePayload | null>(null);
 
   const {
     rows: historyRows,
@@ -86,6 +84,13 @@ export default function ExploreHub() {
   const loadShell = useCallback(() => {
     void loadExploreCoreShell().then(setCore);
   }, []);
+
+  useLayoutEffect(() => {
+    const peeked = peekExploreInitialCore(preferences, watchedMovieIds);
+    if (peeked) {
+      setCore((prev) => prev ?? peeked);
+    }
+  }, [preferencesSig, watchedMoviesSig, preferences, watchedMovieIds]);
 
   const bustCoreInflight = useCallback(() => {
     bustExploreCoreInflight(preferences, watchedMovieIds);

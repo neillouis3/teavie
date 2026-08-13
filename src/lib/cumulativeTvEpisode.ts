@@ -1,4 +1,4 @@
-/** TMDB-style seasons: cumulative 1-based index for flat anime embeds (e.g. Videasy /anime/{id}/{ep}). */
+/** TMDB-style seasons: cumulative 1-based index for flat anime embeds. */
 export function cumulativeTvEpisode(
   seasons: { season_number: number; episode_count?: number }[] | undefined,
   seasonNum: number,

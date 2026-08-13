@@ -2,7 +2,7 @@ import { resolveAnimeTmdbEpisodeTarget } from "@/lib/animeTmdbEpisodes";
 
 /**
  * GET /api/anime/player-target?malId=40028&episode=17
- * TMDB Videasy/VidCore coords for an anime catalog row (Kometa + split-cour mapping).
+ * TMDB/VidCore coords for an anime catalog row (Kometa + split-cour mapping).
  */
 export async function GET(req) {
   try {

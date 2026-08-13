@@ -12,7 +12,7 @@ import { useWatchParty } from '@/hooks/useWatchParty';
 import type { GuestSyncPayload } from '@/lib/teaPartySync';
 import { PARTY_HOST_BROADCAST_MS } from '@/lib/teaPartySync';
 import { useRegisterWatchPartyNav } from '@/hooks/useRegisterWatchPartyNav';
-import type { VideasyProgressMessage } from '@/lib/videasyProgress';
+
 import {
   loadMoviePlaybackPosition,
   saveMoviePlaybackPosition,
@@ -252,19 +252,6 @@ export default function MovieTemplate({
     if (viewMode !== 'watch' || !movieReleased) return;
     recordMovieInWatchHistory(String(id));
   }, [viewMode, id, movieReleased]);
-
-  const handleVideasyProgress = useCallback(
-    (msg: VideasyProgressMessage) => {
-      saveMoviePlaybackPosition(String(id), msg.timestamp);
-      watchParty.noteHostPlayback(msg.timestamp);
-      if (!watchParty.isHost || !watchParty.room || server !== 'videasy') return;
-      const now = Date.now();
-      if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
-      partyPlaybackBroadcastRef.current = now;
-      void watchParty.broadcastPlayback(msg.timestamp);
-    },
-    [id, server, watchParty]
-  );
 
   const handleStremioProgress = useCallback(
     (seconds: number) => {
@@ -817,10 +804,7 @@ export default function MovieTemplate({
             backdropUrl={resolveMovieDetailsBannerUrl(movie)}
             server={server}
             immersive
-            startSeconds={server === 'videasy' || server === 'stremio' ? playerStartSeconds : 0}
-            onVideasyProgress={
-              server === 'videasy' ? handleVideasyProgress : undefined
-            }
+            startSeconds={server === 'stremio' ? playerStartSeconds : 0}
             onStremioProgress={
               server === 'stremio' ? handleStremioProgress : undefined
             }

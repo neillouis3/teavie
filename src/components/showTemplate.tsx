@@ -24,9 +24,8 @@ import {
   saveEpisodePlaybackPosition,
   loadEpisodePlaybackPosition,
 } from "@/lib/watchProgress";
-import type { VideasyProgressMessage } from "@/lib/videasyProgress";
 import type { MegaPlayMessage } from "@/lib/megaPlayProgress";
-import { recordMovieInWatchHistory, touchWatchHistory, WATCH_HISTORY_MIN_PLAY_SECONDS } from "@/lib/watchHistory";
+import { recordMovieInWatchHistory, touchWatchHistory } from "@/lib/watchHistory";
 import {
   saveMoviePlaybackPosition,
 } from "@/lib/movieWatchProgress";
@@ -870,39 +869,6 @@ export default function ShowTemplate({
     selectedEpisode,
   ]);
 
-  const handleVideasyProgress = useCallback(
-    (msg: VideasyProgressMessage) => {
-      const s = msg.season ?? selectedSeason;
-      const e = msg.episode ?? selectedEpisode;
-      markEpisodeWatchedFromPlayback(s, e, msg.timestamp);
-      saveEpisodePlaybackPosition(String(id), s, e, msg.timestamp);
-      watchParty.noteHostPlayback(msg.timestamp);
-      if (msg.timestamp >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-        touchWatchHistory(String(id), {
-          mediaType: "tv",
-          lastSeason: s,
-          lastEpisode: e,
-        });
-      }
-
-      if (!watchParty.isHost || !watchParty.room || server !== "videasy") return;
-      const now = Date.now();
-      if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
-      partyPlaybackBroadcastRef.current = now;
-      void watchParty.broadcastPlayback(msg.timestamp);
-    },
-    [
-      id,
-      selectedSeason,
-      selectedEpisode,
-      server,
-      watchParty.isHost,
-      watchParty.room,
-      watchParty.broadcastPlayback,
-      markEpisodeWatchedFromPlayback,
-    ]
-  );
-
   const handleStremioProgress = useCallback(
     (seconds: number) => {
       const s = selectedSeason;
@@ -911,13 +877,6 @@ export default function ShowTemplate({
       markEpisodeWatchedFromPlayback(s, e, sec);
       saveEpisodePlaybackPosition(String(id), s, e, sec);
       watchParty.noteHostPlayback(sec);
-      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-        touchWatchHistory(String(id), {
-          mediaType: "tv",
-          lastSeason: s,
-          lastEpisode: e,
-        });
-      }
       if (!watchParty.isHost || !watchParty.room || server !== "stremio") return;
       const now = Date.now();
       if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
@@ -979,13 +938,6 @@ export default function ShowTemplate({
       markEpisodeWatchedFromPlayback(selectedSeason, selectedEpisode, sec);
       saveEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode, sec);
       watchParty.noteHostPlayback(sec);
-      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-        touchWatchHistory(String(id), {
-          mediaType: "tv",
-          lastSeason: selectedSeason,
-          lastEpisode: selectedEpisode,
-        });
-      }
       if (!watchParty.isHost || !watchParty.room) return;
       const now = Date.now();
       if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
@@ -1383,16 +1335,6 @@ export default function ShowTemplate({
             posterUrl={imageUrl}
             backdropUrl={resolveShowDetailsBannerUrl(show, id, imageUrl, fetchedBannerUrl)}
             server={server}
-            onVideasyProgress={
-              server === "videasy"
-                ? (msg) => {
-                    saveMoviePlaybackPosition(
-                      String(id),
-                      Math.floor(Number(msg.timestamp) || 0)
-                    );
-                  }
-                : undefined
-            }
           />
           )
         ) : (
@@ -1445,8 +1387,7 @@ export default function ShowTemplate({
           backdropUrl={resolveShowDetailsBannerUrl(show, id, imageUrl, fetchedBannerUrl)}
           season={playerCoords.season}
           episode={playerCoords.episode}
-          startSeconds={server === "videasy" || server === "stremio" ? playerStartSeconds : 0}
-          onVideasyProgress={server === "videasy" ? handleVideasyProgress : undefined}
+          startSeconds={server === "stremio" ? playerStartSeconds : 0}
           onStremioProgress={server === "stremio" ? handleStremioProgress : undefined}
           onEmbedLoad={
             server === "vidcore"

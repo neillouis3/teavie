@@ -47,10 +47,30 @@ let tvProgressSyncDelegate:
   | ((catalogId: string, payload: Omit<WatchProgressPayload, "v">) => void)
   | null = null;
 
+let tvPlaybackHistoryDelegate:
+  | ((
+      catalogId: string,
+      seconds: number,
+      coords: { season: number; episode: number }
+    ) => void)
+  | null = null;
+
 export function setTvProgressSyncDelegate(
   fn: ((catalogId: string, payload: Omit<WatchProgressPayload, "v">) => void) | null
 ): void {
   tvProgressSyncDelegate = fn;
+}
+
+export function setTvPlaybackHistoryDelegate(
+  fn:
+    | ((
+        catalogId: string,
+        seconds: number,
+        coords: { season: number; episode: number }
+      ) => void)
+    | null
+): void {
+  tvPlaybackHistoryDelegate = fn;
 }
 
 export function loadWatchProgress(catalogId: string): WatchProgressPayload | null {
@@ -140,6 +160,7 @@ export function saveEpisodePlaybackPosition(
     watched: existing?.watched ?? [],
     positions,
   });
+  tvPlaybackHistoryDelegate?.(catalogId, sec, { season, episode });
 }
 
 export function loadEpisodePlaybackPosition(

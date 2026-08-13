@@ -1,4 +1,4 @@
-/** Client-only resume position for movies (Videasy progress param). */
+/** Client-only resume position for movies. */
 
 const KEY_PREFIX = "teavie.movie.progress:";
 
@@ -6,10 +6,20 @@ let movieProgressSyncDelegate:
   | ((catalogId: string, seconds: number) => void)
   | null = null;
 
+let moviePlaybackHistoryDelegate:
+  | ((catalogId: string, seconds: number) => void)
+  | null = null;
+
 export function setMovieProgressSyncDelegate(
   fn: ((catalogId: string, seconds: number) => void) | null
 ): void {
   movieProgressSyncDelegate = fn;
+}
+
+export function setMoviePlaybackHistoryDelegate(
+  fn: ((catalogId: string, seconds: number) => void) | null
+): void {
+  moviePlaybackHistoryDelegate = fn;
 }
 
 export function movieProgressStorageKey(catalogId: string): string {
@@ -37,6 +47,7 @@ export function saveMoviePlaybackPosition(catalogId: string, seconds: number): v
     }
     localStorage.setItem(movieProgressStorageKey(catalogId), String(sec));
     movieProgressSyncDelegate?.(catalogId, sec);
+    moviePlaybackHistoryDelegate?.(catalogId, sec);
   } catch {
     /* quota / private mode */
   }

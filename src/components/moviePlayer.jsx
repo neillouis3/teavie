@@ -1,15 +1,10 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import StreamQualityBadge from '@/components/ui/streamQualityBadge';
 import WatchPlayerBackButton from '@/components/ui/watchPlayerBackButton';
 import StremioPlayer from '@/components/stremioPlayer';
-import {
-  VIDEASY_MOVIE_QUERY,
-  VIDEASY_PLAYER_BASE,
-  withVideasyProgress,
-} from '@/lib/videasyPlayer';
 import {
   MOVIES111_EMBED_BASE,
   PEACHIFY_EMBED_BASE,
@@ -23,31 +18,21 @@ export const MOVIE_SERVERS = {
     base: '',
     path: () => '',
     suffix: () => '',
-    supportsProgress: true,
   },
   movies111: {
     base: MOVIES111_EMBED_BASE,
     path: (id) => `/embed/movie/${id}`,
     suffix: () => '',
-    supportsProgress: false,
   },
   peachify: {
     base: PEACHIFY_EMBED_BASE,
     path: (id) => `/embed/movie/${id}`,
     suffix: () => '',
-    supportsProgress: false,
-  },
-  videasy: {
-    base: VIDEASY_PLAYER_BASE,
-    path: (id) => `/movie/${id}`,
-    suffix: () => VIDEASY_MOVIE_QUERY,
-    supportsProgress: true,
   },
   vidcore: {
     base: VIDCORE_EMBED_BASE,
     path: (id) => `/movie/${id}`,
     suffix: () => VIDCORE_THEME_QUERY,
-    supportsProgress: false,
   },
 };
 
@@ -60,9 +45,8 @@ export const MOVIE_SERVERS = {
  * @param {string | null} [props.backdropUrl]
  * @param {string} [props.server]
  * @param {'cam' | 'hd'} [props.streamQuality]
- * @param {number} [props.startSeconds] Videasy resume position
+ * @param {number} [props.startSeconds] Stremio resume position
  * @param {boolean} [props.immersive] Full-viewport watch page (no rounded shell)
- * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
  * @param {(seconds: number) => void} [props.onStremioProgress]
  */
 const MoviePlayer = ({
@@ -75,24 +59,9 @@ const MoviePlayer = ({
   streamQuality: streamQualityProp,
   startSeconds = 0,
   immersive = false,
-  onVideasyProgress,
   onStremioProgress,
 }) => {
   const [streamQuality, setStreamQuality] = useState(streamQualityProp ?? null);
-
-  const progressHandler = useCallback(
-    (msg) => {
-      onVideasyProgress?.(msg);
-    },
-    [onVideasyProgress]
-  );
-
-  const stremioProgressHandler = useCallback(
-    (seconds) => {
-      onStremioProgress?.(seconds);
-    },
-    [onStremioProgress]
-  );
 
   const { playerUrl, playerError } = useMemo(() => {
     if (server === 'stremio') return { playerUrl: '', playerError: null };
@@ -102,12 +71,9 @@ const MoviePlayer = ({
       return { playerUrl: '', playerError: 'Missing TMDB movie id' };
     }
     const path = config.path(id);
-    let suffix = typeof config.suffix === 'function' ? config.suffix() : '';
-    if (config.supportsProgress && startSeconds > 0) {
-      suffix = withVideasyProgress(suffix, { progress: startSeconds });
-    }
+    const suffix = typeof config.suffix === 'function' ? config.suffix() : '';
     return { playerUrl: `${config.base}${path}${suffix}`, playerError: null };
-  }, [videoId, server, startSeconds]);
+  }, [videoId, server]);
 
   useEffect(() => {
     if (streamQualityProp) {
@@ -170,7 +136,7 @@ const MoviePlayer = ({
           title={title}
           posterUrl={posterUrl}
           backdropUrl={backdropUrl}
-          onPlaybackProgress={onStremioProgress ? stremioProgressHandler : undefined}
+          onPlaybackProgress={onStremioProgress}
         />
       </div>
     ) : (
@@ -188,7 +154,6 @@ const MoviePlayer = ({
           title="Movie player"
           src={playerUrl}
           className="absolute inset-0 h-full w-full border-0"
-          onVideasyProgress={server === 'videasy' ? progressHandler : undefined}
         />
       ) : (
         <PlayerEmbedSkeleton />
