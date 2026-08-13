@@ -51,6 +51,10 @@ type LargeCardProps = {
   logoPath?: string | null;
   /** Large play/details actions used by the Explore spotlight. */
   showHeroActions?: boolean;
+  /** Netflix-style bottom copy (Explore / category spotlight). */
+  spotlightStyle?: boolean;
+  /** Extra bottom padding so text clears the thumbnail strip. */
+  reserveSpotlightRail?: boolean;
 };
 
 function MetaDot() {
@@ -124,6 +128,8 @@ function HeroCardOverlay({
   releaseDateStyle = "short",
   logoPath,
   showActions = false,
+  spotlightStyle = false,
+  reserveSpotlightRail = false,
   watchHref,
   detailsHref,
   detailsSeedProps,
@@ -143,6 +149,8 @@ function HeroCardOverlay({
   releaseDateStyle?: "short" | "phrase";
   logoPath?: string | null;
   showActions?: boolean;
+  spotlightStyle?: boolean;
+  reserveSpotlightRail?: boolean;
   watchHref?: string;
   detailsHref?: string;
   detailsSeedProps?: ReturnType<typeof catalogSeedLinkProps>;
@@ -175,20 +183,50 @@ function HeroCardOverlay({
   const overviewText = overview?.trim() ?? "";
   const logoUrl = tmdbImageUrl(logoPath);
 
-  if (simple) {
+  if (simple || spotlightStyle) {
     return (
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-5 pb-5 pt-20 sm:px-6 sm:pb-6">
-        <div className="flex max-w-2xl flex-col gap-2.5">
-          <h2 className="line-clamp-2 text-2xl font-semibold leading-[1.15] tracking-tight text-white sm:text-[1.75rem]">
-            {title}
-          </h2>
+      <div
+        className={cn(
+          "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-20",
+          spotlightStyle
+            ? "px-4 pb-6 sm:px-6 lg:px-24"
+            : "px-5 pb-5 sm:px-6 sm:pb-6",
+          reserveSpotlightRail && "pb-28 sm:pb-32"
+        )}
+      >
+        <div className="flex max-w-2xl flex-col gap-2.5 lg:max-w-3xl">
+          {spotlightStyle && logoUrl ? (
+            <div className="relative w-full max-w-[14rem] sm:max-w-[18rem] md:max-w-[22rem] lg:max-w-[26rem]">
+              <img
+                src={logoUrl}
+                alt={title}
+                className="h-auto w-full object-contain object-left drop-shadow-[0_8px_24px_rgba(0,0,0,0.55)]"
+              />
+            </div>
+          ) : (
+            <h2
+              className={cn(
+                "line-clamp-2 font-semibold leading-[1.12] tracking-tight text-white",
+                spotlightStyle
+                  ? "text-3xl sm:text-4xl lg:text-[2.75rem]"
+                  : "text-2xl sm:text-[1.75rem]"
+              )}
+            >
+              {title}
+            </h2>
+          )}
           {overviewText ? (
             <p className="line-clamp-2 text-sm leading-relaxed text-white/72 sm:line-clamp-3">
               {overviewText}
             </p>
           ) : null}
           {dateLabel ? (
-            <p className="pt-0.5 text-xs font-medium text-white/50 sm:text-sm">
+            <p
+              className={cn(
+                "pt-0.5 font-medium text-white/55",
+                spotlightStyle ? "text-sm" : "text-xs sm:text-sm"
+              )}
+            >
               {dateLabel}
             </p>
           ) : null}
@@ -346,6 +384,8 @@ export default function LargeCard({
   preferPoster = false,
   logoPath = null,
   showHeroActions = false,
+  spotlightStyle = false,
+  reserveSpotlightRail = false,
 }: LargeCardProps) {
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
@@ -439,6 +479,8 @@ export default function LargeCard({
             overview={overview}
             compact={!hero || heroCompact}
             simple={simpleOverlay}
+            spotlightStyle={spotlightStyle}
+            reserveSpotlightRail={reserveSpotlightRail}
             releaseDateStyle={releaseDateStyle}
             logoPath={logoPath}
             showActions={showHeroActions}

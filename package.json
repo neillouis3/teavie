@@ -26,7 +26,8 @@
     "catalog:delete": "node scripts/delete-catalog-content.mjs",
     "seed:movies-omdb": "node scripts/seed-movies-omdb-filtered.mjs",
     "supabase:migrate": "node scripts/apply-supabase-migration.mjs",
-    "auth-collage": "node scripts/generate-auth-collage.mjs"
+    "auth-collage": "node scripts/generate-auth-collage.mjs",
+    "page-backdrops": "node scripts/generate-page-backdrops.mjs"
   },
   "dependencies": {
     "@heroui/react": "^2.8.4",

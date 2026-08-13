@@ -136,29 +136,32 @@ export default function ExploreHub() {
     const wantsPersonalized = hasUserPreferences(preferences);
 
     void (async () => {
-      const [shell, bundle, personalized] = await Promise.all([
-        loadExploreCoreShell(),
-        fetchExploreBundle(),
-        wantsPersonalized
-          ? fetchPersonalizedExploreBundle(preferences, watchedMovieIds, false)
-          : Promise.resolve(null),
-      ]);
+      try {
+        const [shell, bundle, personalized] = await Promise.all([
+          loadExploreCoreShell(),
+          fetchExploreBundle(),
+          wantsPersonalized
+            ? fetchPersonalizedExploreBundle(preferences, watchedMovieIds, false)
+            : Promise.resolve(null),
+        ]);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      const nextCore =
-        wantsPersonalized && personalized
-          ? applyPersonalizedToCore(
-              shell,
-              bundle,
-              personalized,
-              preferences,
-              watchedMovieIds
-            )
-          : shell;
+        const nextCore =
+          wantsPersonalized && personalized
+            ? applyPersonalizedToCore(
+                shell,
+                bundle,
+                personalized,
+                preferences,
+                watchedMovieIds
+              )
+            : shell;
 
-      setCore(nextCore);
-      setAwaitingPersonalized(false);
+        setCore(nextCore);
+      } finally {
+        if (!cancelled) setAwaitingPersonalized(false);
+      }
     })();
 
     return () => {
@@ -294,15 +297,22 @@ export default function ExploreHub() {
         ) : null}
         {showRecommendedSlot ? (
           awaitingPersonalized && !hasRecommended ? (
-            <CatalogRailSkeleton count={6} />
-          ) : (
+            <section
+              className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
+              aria-label="Recommended for you"
+              aria-busy="true"
+            >
+              <ExploreSectionTitle variant="explore">Recommended for you</ExploreSectionTitle>
+              <CatalogRailSkeleton count={6} />
+            </section>
+          ) : hasRecommended ? (
             <CatalogRail
               title="Recommended for you"
               items={recommendedRows}
               maxItems={SECTION_MAX_ITEMS}
               titleVariant="explore"
             />
-          )
+          ) : null
         ) : null}
         <GenreRail genres={genres} preferredGenreSlugs={preferences.genres} />
         {hasPopular ? (

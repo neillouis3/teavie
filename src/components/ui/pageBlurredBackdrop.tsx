@@ -14,7 +14,10 @@ type PageBlurredBackdropProps = {
   variant?: "shell" | PageBrowseBackdrop | PageShellBackdrop;
 };
 
-/** Full-viewport backdrop — static public assets skip CSS blur for faster paint. */
+const BACKDROP_IMAGE_CLASS =
+  "absolute inset-0 h-full w-full scale-110 object-cover object-[center_25%] blur-2xl brightness-[0.72] saturate-150";
+
+/** Full-viewport frosted backdrop — matches show/episodes pages. */
 export default function PageBlurredBackdrop({
   imageUrl,
   variant = "shell",
@@ -30,21 +33,13 @@ export default function PageBlurredBackdrop({
         ? pageBrowseBackdropUrl(variant)
         : pageShellBackdropUrl(variant);
   const src = imageUrl ?? staticSrc;
-  const isStaticShell = imageUrl == null;
 
   return (
     <div
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       aria-hidden
     >
-      <div
-        className={
-          isStaticShell
-            ? "absolute inset-0 scale-105 bg-cover bg-[center_25%] brightness-[0.72] saturate-150"
-            : "absolute inset-0 scale-105 bg-cover bg-[center_25%] blur-2xl brightness-[0.72] saturate-150"
-        }
-        style={{ backgroundImage: `url("${src}")` }}
-      />
+      <img src={src} alt="" className={BACKDROP_IMAGE_CLASS} decoding="async" />
       <div className="absolute inset-0 bg-black/35" />
       <div className="absolute left-[18%] top-0 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[120px]" />
       <div className="absolute right-[18%] top-0 h-[28rem] w-[28rem] translate-x-1/2 rounded-full bg-rose-700/10 blur-[120px]" />

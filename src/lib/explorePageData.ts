@@ -454,10 +454,13 @@ export function buildSpotlightItems(
     ...tv.map((item) => ({ ...item, type: item.type ?? "tv" })),
   ];
 
-  return sortContentItemsByPreferenceRank(
+  const filtered = sortContentItemsByPreferenceRank(
     merged.filter((item) => contentItemMatchesPreferences(item, preferences)),
     preferences
   ).slice(0, maxItems);
+
+  if (filtered.length > 0) return filtered;
+  return interleaveTrending(movies, tv, maxItems);
 }
 
 function buildDiscoverFromPersonalized(
