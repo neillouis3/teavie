@@ -1,37 +1,18 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Button } from "@heroui/react";
 import NewEpisodesRail from "@/components/category/NewEpisodesRail";
+import CategoryBrowseBar from "@/components/category/CategoryBrowseBar";
+import CategoryGenreRail from "@/components/category/CategoryGenreRail";
 import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
-import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
-import SidebarBleedRail, {
-  SIDEBAR_BLEED_CAROUSEL_OPTS,
-  SidebarBleedStartSpacer,
-  sidebarBleedViewportClass,
-} from "@/components/ui/sidebarBleedRail";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
-import {
-  GenreCatalogTile,
-  genreTileColor,
-} from "@/components/genre/genreTileShared";
-import {
-  categoryGenreBrowseHref,
   getCatalogCategory,
 } from "@/lib/catalogCategories";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 import {
   RAIL_AFTER_SPOTLIGHT,
-  RAIL_CAROUSEL_ITEM_GENRE,
-  RAIL_INNER_CLASS,
   RAIL_STACK_CLASS,
-  RAIL_TRACK,
 } from "@/lib/catalogGrid";
 import {
   bustInflightDayCache,
@@ -133,16 +114,16 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             aria-hidden
           >
             <div className="min-h-[52vh] animate-pulse bg-default-200 sm:min-h-[62vh] lg:min-h-[80vh] dark:bg-default-100/10" />
+            <div className="absolute inset-x-0 bottom-4 h-24 animate-pulse rounded-xl bg-default-100/20 px-4 lg:bottom-6 lg:px-24" />
           </section>
         ) : null}
         {useExploreSpotlight ? (
           <div className={`${MOBILE_CONTENT_INSET_LEFT} pb-8`}>
+            <div className="mb-8 h-[7.5rem] animate-pulse rounded-2xl bg-default-200 dark:bg-default-100/10" />
             <CatalogRailSkeleton count={8} />
           </div>
         ) : null}
         <div className={`space-y-8 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
-          <div className="h-14 animate-pulse rounded-xl bg-default-200 dark:bg-default-100/10" />
-          <CatalogRailSkeleton count={8} />
           <CatalogRailSkeleton count={8} />
           <CatalogRailSkeleton count={8} />
         </div>
@@ -176,6 +157,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             variant="spotlight"
             bleedUnderNav={useExploreSpotlight}
             showDots={false}
+            showSpotlightSelector={!useExploreSpotlight}
             trendingMovies={[]}
             trendingTv={data.trending}
             spotlightItems={data.trending}
@@ -183,88 +165,52 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             rounded={false}
             flushLeft={false}
           />
+          {useExploreSpotlight && categoryGenres.length > 0 ? (
+            <CategoryGenreRail
+              category={category}
+              genres={categoryGenres}
+              overlay
+            />
+          ) : null}
         </section>
       )}
 
+      {!hasTrending && useExploreSpotlight && categoryGenres.length > 0 ? (
+        <div className={cn(MOBILE_CONTENT_INSET_LEFT, "mb-8 mt-2")}>
+          <CategoryGenreRail category={category} genres={categoryGenres} />
+        </div>
+      ) : null}
+
+      <div
+        className={cn(
+          MOBILE_CONTENT_INSET_LEFT,
+          hasTrending ? "-mt-2" : "mt-2",
+          hasNewEpisodes ? "mb-8" : RAIL_AFTER_SPOTLIGHT
+        )}
+      >
+        <CategoryBrowseBar category={category} />
+      </div>
+
       {hasNewEpisodes ? (
-        <div
-          className={cn(
-            MOBILE_CONTENT_INSET_LEFT,
-            "mb-8",
-            hasTrending ? "mt-0" : "mt-2"
-          )}
-        >
+        <div className={cn(MOBILE_CONTENT_INSET_LEFT, "mb-8")}>
           <NewEpisodesRail items={data.newEpisodes} />
         </div>
       ) : null}
 
       <div className={`${RAIL_STACK_CLASS} pb-10 ${MOBILE_CONTENT_INSET_LEFT}`}>
-        <section
-          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-          aria-label={`Browse all ${category.label}`}
-        >
-          <div className="min-w-0">
-            <ExploreSectionTitle variant="explore">{category.label}</ExploreSectionTitle>
-            <p className="mt-1 max-w-2xl text-sm text-default-500 dark:text-default-400">
-              {category.browseAllCardText}
-            </p>
-          </div>
-          <Button
-            as={Link}
-            href={category.browseAllHref}
-            color="success"
-            variant="flat"
-            size="sm"
-            radius="full"
-            className="shrink-0 font-medium"
-          >
-            {category.browseAllLabel}
-          </Button>
-        </section>
-
         {hasContent ? (
           <>
             <CatalogRail
               title="Popular"
               items={data.popular}
               titleVariant="explore"
-              moreHref={category.browseAllHref}
             />
 
             <CatalogRail
               title="Top rated"
               items={data.topRated}
               titleVariant="explore"
-              moreHref={category.browseAllHref}
             />
-
-            {categoryGenres.length > 0 ? (
-              <section className={RAIL_INNER_CLASS} aria-label="Browse by genre">
-                <ExploreSectionTitle variant="explore">Browse by genre</ExploreSectionTitle>
-                <SidebarBleedRail>
-                  <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
-                    <CarouselContent
-                      viewportClassName={sidebarBleedViewportClass()}
-                      className={RAIL_TRACK}
-                    >
-                      <SidebarBleedStartSpacer />
-                      {categoryGenres.map((genre, i) => (
-                        <CarouselItem
-                          key={genre.slug}
-                          className={RAIL_CAROUSEL_ITEM_GENRE}
-                        >
-                          <GenreCatalogTile
-                            genre={genre}
-                            colorClass={genreTileColor(genre.name, i)}
-                            href={categoryGenreBrowseHref(category, genre.slug)}
-                          />
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                  </Carousel>
-                </SidebarBleedRail>
-              </section>
-            ) : null}
           </>
         ) : (
           <p className="py-12 text-center text-sm text-default-500">

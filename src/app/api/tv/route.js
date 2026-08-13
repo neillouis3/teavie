@@ -17,6 +17,7 @@ import {
   fetchCatalogBrowsePage,
   CATALOG_BROWSE_CACHE_HEADERS,
 } from "@/lib/api/catalogBrowsePage";
+import { BROWSE_DEFAULT_SORT } from "@/lib/catalogSortOptions";
 
 function mapTvRow(doc) {
   return mapCatalogListDoc({
@@ -40,7 +41,7 @@ export async function GET(req) {
     );
     const skip = (page - 1) * limit;
 
-    const sortBy = searchParams.get("sort_by") || "title";
+    const sortBy = searchParams.get("sort_by") || BROWSE_DEFAULT_SORT;
     const sort = catalogSort(sortBy, {
       titleAsc: { name: 1, _id: -1 },
       titleDesc: { name: -1, _id: -1 },

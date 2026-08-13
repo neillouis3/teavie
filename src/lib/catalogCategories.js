@@ -16,9 +16,9 @@ export const CATALOG_CATEGORIES = {
     slug: "anime",
     label: "Anime",
     href: "/anime",
-    browseAllHref: "/anime/all?sort_by=popularity",
-    browseAllLabel: "Browse all Anime",
-    browseAllCardText: "Check out all anime here:",
+    browseAllHref: "/anime/all",
+    browseAllLabel: "Full catalog",
+    browseAllCardText: "Browse the complete anime catalog by title, popularity, or rating.",
     aboutImage: null,
     tileColor: "from-violet-400 to-purple-600",
   },
@@ -27,8 +27,8 @@ export const CATALOG_CATEGORIES = {
     label: "Korean Drama",
     href: "/kdrama",
     browseAllHref: "/kdrama/all",
-    browseAllLabel: "Browse all K-Drama",
-    browseAllCardText: "Check out all K-Drama here:",
+    browseAllLabel: "Full catalog",
+    browseAllCardText: "Browse the complete K-Drama catalog by title, popularity, or rating.",
     aboutImage: null,
     tileColor: "from-rose-400 to-pink-600",
   },
@@ -50,12 +50,18 @@ export function isValidCatalogCategorySlug(slug) {
   return getCatalogCategory(slug) != null;
 }
 
+/** Base catalog browse path without query string. */
+export function categoryBrowseBasePath(category) {
+  return String(category.browseAllHref ?? "").split("?")[0] || category.browseAllHref;
+}
+
 /** @param {CatalogCategory} category */
 export function categoryBrowseSortHref(category, sortBy) {
   const qs = new URLSearchParams();
   if (sortBy && sortBy !== "title") qs.set("sort_by", sortBy);
   const q = qs.toString();
-  return q ? `${category.browseAllHref}?${q}` : category.browseAllHref;
+  const base = categoryBrowseBasePath(category);
+  return q ? `${base}?${q}` : base;
 }
 
 /** @param {CatalogCategory} category @param {string} genreSlug */
@@ -63,5 +69,5 @@ export function categoryGenreBrowseHref(category, genreSlug) {
   const qs = new URLSearchParams();
   if (genreSlug) qs.set("genre", genreSlug);
   qs.set("sort_by", "popularity");
-  return `${category.browseAllHref}?${qs.toString()}`;
+  return `${categoryBrowseBasePath(category)}?${qs.toString()}`;
 }

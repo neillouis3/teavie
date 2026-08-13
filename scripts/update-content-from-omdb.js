@@ -168,6 +168,7 @@ function buildSetPayload(doc, omdb, imdbHelpers) {
   const released = parseOmdbReleased(omdb.Released);
   const runtimeSeconds = parseRuntimeSeconds(omdb.Runtime);
   const voteAverage = parseNumber(omdb.imdbRating);
+  const imdbVotes = parseNumber(omdb.imdbVotes);
   const seasonAmount = parseNumber(omdb.totalSeasons);
 
   if (title) {
@@ -180,6 +181,7 @@ function buildSetPayload(doc, omdb, imdbHelpers) {
 
   if (runtimeSeconds != null) set.runtimeSeconds = runtimeSeconds;
   if (voteAverage != null) set.vote_average = voteAverage;
+  if (imdbVotes != null && imdbVotes > 0) set.vote_count = imdbVotes;
   if (doc.type === "tv" && seasonAmount != null) set.season_amount = seasonAmount;
 
   const overview = typeof omdb.Plot === "string" && omdb.Plot !== "N/A" ? omdb.Plot.trim() : "";
@@ -203,8 +205,9 @@ function buildSetPayload(doc, omdb, imdbHelpers) {
     awards: omdb.Awards && omdb.Awards !== "N/A" ? omdb.Awards : null,
     metascore: parseNumber(omdb.Metascore),
     imdbRating: voteAverage,
-    imdbVotes: parseNumber(omdb.imdbVotes),
+    imdbVotes,
     totalSeasons: seasonAmount,
+    ratingsUpdatedAt: new Date().toISOString(),
   };
 
   set.omdb = details;
@@ -286,17 +289,44 @@ async function run() {
   const delayMs = Math.max(0, parseInt(argValue("--delay", "250"), 10) || 250);
   const dryRun = hasFlag("--dry-run");
   const includeAnime = hasFlag("--include-anime");
+  const priorityRatings = !hasFlag("--no-priority-ratings");
 
   const typeFilter = typeArg === "all" ? ["movie", "tv"] : [typeArg];
   const query = {
     type: { $in: typeFilter },
   };
   if (!includeAnime) {
-    query.$or = [
-      { is_anime: { $exists: false } },
-      { is_anime: { $ne: true } },
-      { source: { $ne: "jikan" } },
+    query.$and = [
+      {
+        $or: [
+          { is_anime: { $exists: false } },
+          { is_anime: { $ne: true } },
+          { source: { $ne: "jikan" } },
+        ],
+      },
     ];
+  }
+
+  if (priorityRatings) {
+    const staleDays = Math.max(
+      1,
+      parseInt(argValue("--stale-days", "30"), 10) || 30
+    );
+    const staleCutoff = new Date();
+    staleCutoff.setUTCDate(staleCutoff.getUTCDate() - staleDays);
+    const staleIso = staleCutoff.toISOString();
+
+    const needsRating = {
+      $or: [
+        { "omdb.imdbRating": { $exists: false } },
+        { "omdb.imdbRating": null },
+        { "omdb.imdbVotes": { $exists: false } },
+        { "omdb.imdbVotes": null },
+        { "omdb.ratingsUpdatedAt": { $exists: false } },
+        { "omdb.ratingsUpdatedAt": { $lt: staleIso } },
+      ],
+    };
+    query.$and = [...(query.$and ?? []), needsRating];
   }
 
   const client = new MongoClient(mongoUri);
@@ -325,7 +355,7 @@ async function run() {
           omdb: 1,
         },
       })
-      .sort({ _id: 1 })
+      .sort({ "omdb.ratingsUpdatedAt": 1, _id: 1 })
       .skip(skip);
 
     if (limit > 0) cursor.limit(limit);
@@ -339,7 +369,7 @@ async function run() {
     const ops = [];
 
     console.log(
-      `start: total_matching=${totalMatching}, skip=${skip}, limit=${limit || "all"}, dry_run=${dryRun}, include_anime=${includeAnime}, delay_ms=${delayMs}`
+      `start: total_matching=${totalMatching}, skip=${skip}, limit=${limit || "all"}, dry_run=${dryRun}, include_anime=${includeAnime}, priority_ratings=${priorityRatings}, delay_ms=${delayMs}`
     );
 
     for await (const doc of cursor) {

@@ -10,6 +10,7 @@ import {
   imdbGenreSlugFromBrowseParam,
 } from "@/lib/imdbGenres.js";
 import {
+  BROWSE_DEFAULT_SORT,
   BROWSE_SORT_OPTIONS,
   SEARCH_SORT_OPTIONS,
   catalogYearChoices,
@@ -38,7 +39,7 @@ export default function CatalogFilterBar({
 }: CatalogFilterBarProps) {
   const isBrowse = variant === "browse";
   const sortOptions = isBrowse ? BROWSE_SORT_OPTIONS : SEARCH_SORT_OPTIONS;
-  const fallbackSort = defaultSort ?? (isBrowse ? "title" : "relevance");
+  const fallbackSort = defaultSort ?? (isBrowse ? BROWSE_DEFAULT_SORT : "relevance");
 
   const searchParams = useSearchParams();
   const router = useRouter();

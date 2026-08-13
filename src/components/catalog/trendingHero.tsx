@@ -62,6 +62,8 @@ interface TrendingHeroProps {
    * Prefer poster art and fit with object-contain.
    */
   preserveImageAspect?: boolean;
+  /** Thumbnail strip under spotlight slides. @default true */
+  showSpotlightSelector?: boolean;
 }
 
 export default function TrendingHero({
@@ -75,6 +77,7 @@ export default function TrendingHero({
   bleedUnderNav = false,
   flushLeft = false,
   preserveImageAspect = false,
+  showSpotlightSelector = true,
 }: TrendingHeroProps) {
   const items = React.useMemo(() => {
     if (variant === "spotlight" && spotlightItems && spotlightItems.length > 0) {
@@ -246,6 +249,7 @@ export default function TrendingHero({
             className={cn(TRENDING_ARROW_CLASS, "right-4")}
           />
         </Carousel>
+        {showSpotlightSelector ? (
         <div
           ref={spotlightRailRef}
           className="absolute inset-x-0 bottom-4 z-20 cursor-grab touch-none overflow-x-scroll overscroll-x-contain px-4 [scrollbar-width:none] active:cursor-grabbing [&::-webkit-scrollbar]:hidden lg:px-24"
@@ -314,6 +318,7 @@ export default function TrendingHero({
             })}
           </div>
         </div>
+        ) : null}
         {paginationDots}
       </div>
     );

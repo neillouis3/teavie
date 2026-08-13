@@ -15,6 +15,10 @@ import {
   catalogExcludeAdultAnimeMongoClause,
   catalogExcludeBlockedTmdbTvMongoClause,
 } from "./animeContentPolicy.js";
+import {
+  catalogExcludeKdramaJunkMongoClause,
+  catalogHasKdramaArtMongoClause,
+} from "./kdramaCatalogPolicy.js";
 
 export {
   catalogExcludeJpAnimationNumericTvMongoClause,
@@ -360,7 +364,11 @@ export function buildCatalogFilter(
  */
 export function buildKdramaCatalogFilter(searchParams) {
   /** @type {Record<string, unknown>[]} */
-  const clauses = [catalogKdramaClause()];
+  const clauses = [
+    catalogKdramaClause(),
+    catalogHasKdramaArtMongoClause,
+    catalogExcludeKdramaJunkMongoClause(),
+  ];
 
   const genre = searchParams.get("genre")?.trim();
   if (genre) {

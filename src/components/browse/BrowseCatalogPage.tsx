@@ -43,7 +43,7 @@ function BrowseCatalogPageContent({
   filterMode,
   viewer,
   backLink,
-  defaultSort = "title",
+  defaultSort = "rating",
 }: BrowseCatalogPageProps) {
   const searchParams = useSearchParams();
   const sortParam = searchParams.get("sort_by") || defaultSort;
@@ -274,6 +274,7 @@ function BrowseCatalogPageContent({
           <BrowseCatalogSidebar
             label={viewer === "movie" ? "Movies" : "Shows"}
             genreSlugs={genreSlugs}
+            defaultSort={defaultSort}
           />
           <main className="min-w-0 flex-1">
             <div className="mb-5 flex items-end justify-between gap-4">

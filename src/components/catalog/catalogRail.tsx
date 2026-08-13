@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import SmallCard from "@/components/ui/smallCard";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 import SmallCardLoading from "@/components/ui/smallCardLoading";
@@ -35,8 +34,6 @@ type CatalogRailProps = {
   items: ContentItem[];
   /** @default 50 */
   maxItems?: number;
-  moreHref?: string;
-  moreLabel?: string;
   /** Show “Released …” / “Releases …” under title on vertical cards */
   showReleaseNote?: boolean;
   loading?: boolean;
@@ -84,8 +81,6 @@ export default function CatalogRail({
   title,
   items,
   maxItems = EXPLORE_RAIL_MAX_ITEMS,
-  moreHref,
-  moreLabel = "More",
   showReleaseNote = false,
   getReleaseNote,
   getMetaChips,
@@ -101,17 +96,7 @@ export default function CatalogRail({
 
   return (
     <div className={RAIL_INNER_CLASS}>
-      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <ExploreSectionTitle variant={titleVariant}>{title}</ExploreSectionTitle>
-        {moreHref ? (
-          <Link
-            href={moreHref}
-            className="text-xs text-success underline underline-offset-2 hover:opacity-80"
-          >
-            {moreLabel}
-          </Link>
-        ) : null}
-      </div>
+      <ExploreSectionTitle variant={titleVariant}>{title}</ExploreSectionTitle>
       {loading ? (
         <CatalogRailShell>
           <CatalogRailSkeleton horizontal={horizontal} />

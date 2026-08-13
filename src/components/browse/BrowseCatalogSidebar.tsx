@@ -26,12 +26,13 @@ import { IMDB_GENRES } from "@/lib/imdbGenres.js";
 type SidebarProps = {
   label: string;
   genreSlugs?: string[];
+  defaultSort?: string;
 };
 
 const primaryItems = [
+  { label: "Top Rated", sort: "rating", icon: StarIcon },
   { label: "All", sort: "title", icon: DashboardSquare01Icon },
   { label: "Popular", sort: "popularity", icon: FireIcon },
-  { label: "Top Rated", sort: "rating", icon: StarIcon },
 ];
 
 const MAINSTREAM_GENRES = new Set([
@@ -68,12 +69,16 @@ const genreIcons = {
   thriller: AdventureIcon,
 } as const;
 
-export default function BrowseCatalogSidebar({ label, genreSlugs }: SidebarProps) {
+export default function BrowseCatalogSidebar({
+  label,
+  genreSlugs,
+  defaultSort = "rating",
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedGenre = searchParams.get("genre") ?? "";
-  const selectedSort = searchParams.get("sort_by") ?? "title";
+  const selectedSort = searchParams.get("sort_by") ?? defaultSort;
   const allowed = genreSlugs?.length ? new Set(genreSlugs) : null;
   const genres = IMDB_GENRES.filter(
     (genre) => MAINSTREAM_GENRES.has(genre.slug) && (!allowed || allowed.has(genre.slug))

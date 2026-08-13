@@ -19,6 +19,7 @@ import {
   kdramaTagFields,
   omitTmdbGenreFields,
 } from "../src/lib/imdbGenres.js";
+import { shouldRejectKdramaFromCatalog } from "../src/lib/kdramaCatalogPolicy.js";
 
 const require = createRequire(import.meta.url);
 const { loadMongoEnv, mongoHostHint } = require(path.join(
@@ -57,6 +58,7 @@ function mapTmdbTvToKdramaDoc(show, { omdbGenreRaw = null } = {}) {
   const id = show.id;
   if (typeof id !== "number" || !Number.isFinite(id)) return null;
   if (shouldRejectTmdbTvFromCatalog(show)) return null;
+  if (shouldRejectKdramaFromCatalog(show)) return null;
 
   const origins = show.origin_country;
   const lang = String(show.original_language ?? "").toLowerCase();

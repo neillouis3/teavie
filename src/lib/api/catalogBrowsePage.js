@@ -10,6 +10,7 @@ import {
   mongoPopularBrowseQualityMatch,
   CATALOG_BROWSE_HAS_ART,
   mongoTopRatedQualityMatch,
+  mongoTopRatedVoteExpr,
 } from "@/lib/catalogPopularity.js";
 
 /** Atlas caps in-memory sort at 32MB; free/shared tiers may ignore allowDiskUse. */
@@ -62,20 +63,20 @@ export async function fetchCatalogBrowsePage(
   { includeTotal = true, anime = false, indexedPopularity = false, qualityPopular = false } = {}
 ) {
   if (sortBy === "rating") {
-    const voteExpr = mongoCatalogDisplayVoteExpr({ anime });
+    const voteExpr = mongoTopRatedVoteExpr({ anime });
     const baseStages = [
       { $match: filter },
       {
         $addFields: {
-          _catalogVote: voteExpr,
+          _topRatedVote: voteExpr,
           _voteWeight: mongoCatalogAudienceVoteCountExpr(),
         },
       },
       { $match: mongoTopRatedQualityMatch({ anime }) },
       {
         $sort: anime
-          ? { _catalogVote: -1, _id: -1 }
-          : { _catalogVote: -1, _voteWeight: -1, _id: -1 },
+          ? { _topRatedVote: -1, _id: -1 }
+          : { _topRatedVote: -1, _voteWeight: -1, _id: -1 },
       },
     ];
 
@@ -86,7 +87,7 @@ export async function fetchCatalogBrowsePage(
             ...baseStages,
             { $skip: skip },
             { $limit: limit },
-            { $project: { _catalogVote: 0, _voteWeight: 0 } },
+            { $project: { _topRatedVote: 0, _voteWeight: 0 } },
           ],
           AGG_OPTS
         )
@@ -104,7 +105,7 @@ export async function fetchCatalogBrowsePage(
               results: [
                 { $skip: skip },
                 { $limit: limit },
-                { $project: { _catalogVote: 0, _voteWeight: 0 } },
+                { $project: { _topRatedVote: 0, _voteWeight: 0 } },
               ],
             },
           },

@@ -1,4 +1,7 @@
+export const BROWSE_DEFAULT_SORT = "rating";
+
 export const BROWSE_SORT_OPTIONS = [
+  { key: "rating", label: "Top rated" },
   { key: "title", label: "Title A-Z" },
   { key: "title_desc", label: "Title Z-A" },
   { key: "release_year", label: "Newest first" },
