@@ -1,19 +1,22 @@
 import type { ContentItem } from "@/types/content";
+import { dedupeCatalogEntries } from "@/lib/catalogRailDedupe";
 
-/** Keep first occurrence per catalog id + media type (rails, discover feeds). */
+/** Keep one row per catalog id, then one per title + year (richest poster/metadata wins). */
 export function dedupeContentItems(
   items: Iterable<ContentItem | null | undefined>
 ): ContentItem[] {
-  const seen = new Set<string>();
-  const out: ContentItem[] = [];
+  const seenIds = new Set<string>();
+  const idPass: ContentItem[] = [];
+
   for (const item of items) {
     if (item == null || item.id == null || item.id === "") continue;
-    const key = `${item.type ?? "x"}:${item.id}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(item);
+    const idKey = `${item.type ?? "x"}:${item.id}`;
+    if (seenIds.has(idKey)) continue;
+    seenIds.add(idKey);
+    idPass.push(item);
   }
-  return out;
+
+  return dedupeCatalogEntries(idPass);
 }
 
 export function railContentItems(

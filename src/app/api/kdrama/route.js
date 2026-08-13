@@ -68,7 +68,7 @@ export async function GET(req) {
       null,
       {
         includeTotal,
-        indexedPopularity: sortBy === "popularity",
+        qualityPopular: sortBy === "popularity",
       }
     );
 

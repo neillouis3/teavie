@@ -61,8 +61,8 @@ export default function CollectionPageClient({ collectionId }: CollectionPagePro
 
   const collection = payload?.collection;
   const items = payload?.items ?? [];
-  const backdrop = tmdbImageUrl(collection?.backdrop_path, "w1280");
-  const poster = tmdbImageUrl(collection?.poster_path, "w342");
+  const backdrop = tmdbImageUrl(collection?.backdrop_path);
+  const poster = tmdbImageUrl(collection?.poster_path);
 
   return (
     <div className="bg-background min-h-screen w-full">

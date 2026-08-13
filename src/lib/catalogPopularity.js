@@ -352,6 +352,55 @@ export function mongoCatalogAudienceVoteCountExpr() {
 }
 
 /**
+ * Browse "Popular" quality — real audience + minimum score (aligned with explore rails).
+ * @param {{ anime?: boolean; minVoteAverage?: number; minVoteCount?: number }} [opts]
+ */
+export function mongoPopularBrowseQualityMatch(opts = {}) {
+  const minVoteAverage =
+    opts.minVoteAverage ?? CATALOG_POPULAR_MIN_VOTE_AVERAGE;
+  const minVoteCount = opts.minVoteCount ?? CATALOG_POPULAR_MIN_VOTE_COUNT;
+
+  if (opts.anime === true) {
+    return { _catalogVote: { $gte: minVoteAverage } };
+  }
+
+  const isKdrama = {
+    $or: [{ is_kdrama: true }, { catalog_categories: "kdrama" }],
+  };
+
+  return {
+    $or: [
+      {
+        $and: [
+          { _catalogVote: { $gte: minVoteAverage } },
+          {
+            $or: [
+              { "omdb.imdbVotes": { $gte: minVoteCount } },
+              { vote_count: { $gte: minVoteCount } },
+            ],
+          },
+        ],
+      },
+      {
+        $and: [
+          isKdrama,
+          { _catalogVote: { $gte: minVoteAverage } },
+          { vote_count: { $gte: minVoteCount } },
+        ],
+      },
+    ],
+  };
+}
+
+/** Rows with at least one TMDB image path (excludes empty catalog placeholders). */
+export const CATALOG_BROWSE_HAS_ART = {
+  $or: [
+    { poster_path: { $type: "string", $regex: /\S/ } },
+    { backdrop_path: { $type: "string", $regex: /\S/ } },
+  ],
+};
+
+/**
  * Mongo `$addFields` / `$sort` expression (anime-only collections / filters).
  * Mirrors {@link catalogPopularityScore} for documents where `is_anime` / `tags` / `id` imply anime.
  */

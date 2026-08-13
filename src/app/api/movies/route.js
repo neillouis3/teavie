@@ -52,7 +52,7 @@ export async function GET(req) {
       skip,
       limit,
       null,
-      { includeTotal, indexedPopularity: sortBy === "popularity" }
+      { includeTotal, qualityPopular: sortBy === "popularity" }
     );
 
     return Response.json(

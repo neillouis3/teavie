@@ -10,10 +10,11 @@ import ThemeNavButton from "@/components/ui/themeNavButton";
 import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 import { APP_NAV_ITEMS } from "@/components/ui/navItems";
 import { TEAVIE_LOGO } from "@/lib/brandAssets";
+import { NAV_CHROME_PILL_CLASS } from "@/components/ui/navGlass";
 import { EXPLORE_HOME, LIBRARY_HOME } from "@/lib/routes";
 
 function SearchFallback() {
-  return <div className="h-9 w-44 animate-pulse rounded-full bg-white/10" aria-hidden />;
+  return <div className="h-9 w-44 animate-pulse rounded-full bg-black/5 dark:bg-white/10" aria-hidden />;
 }
 
 function activeNavKey(pathname: string) {
@@ -41,7 +42,9 @@ export default function DesktopTopNav() {
 
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-50 hidden px-4 pt-3 lg:flex lg:justify-center">
-      <div className="pointer-events-auto flex h-14 w-full max-w-[80rem] items-center gap-1 rounded-[1.15rem] border border-white/10 bg-background/58 px-2 text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.2)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/44 dark:bg-black/45">
+      <div
+        className={`pointer-events-auto flex h-14 w-full max-w-[80rem] items-center gap-1 px-2 text-foreground ${NAV_CHROME_PILL_CLASS}`}
+      >
         <Link
           href={EXPLORE_HOME}
           aria-label="Teavie home"
@@ -68,8 +71,8 @@ export default function DesktopTopNav() {
                 href={item.href}
                 className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors ${
                   active
-                    ? "bg-foreground/10 text-foreground shadow-sm dark:bg-white/12"
-                    : "text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
+                    ? "bg-black/[0.07] text-foreground shadow-sm dark:bg-white/15"
+                    : "text-foreground/70 hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/10"
                 }`}
               >
                 <AssetMaskIcon

@@ -86,7 +86,7 @@ export async function GET(req) {
       skip,
       limit,
       mongoAnimeCatalogPopularityExpr(),
-      { includeTotal, anime: true }
+      { includeTotal, anime: true, qualityPopular: sortBy === "popularity" }
     );
 
     return Response.json(

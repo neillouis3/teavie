@@ -63,7 +63,7 @@ export default function NavSearchBar({
         classNames={{
           input: `text-sm ${overHero ? "text-white placeholder:text-white/55" : ""}`,
           inputWrapper: glassSearch
-            ? "h-10 bg-default-100/50 shadow-none backdrop-blur-sm hover:bg-default-100/65 data-[focus=true]:bg-default-100/55 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
+            ? "h-10 bg-black/[0.04] shadow-none backdrop-blur-sm hover:bg-black/[0.07] data-[focus=true]:bg-black/[0.06] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] dark:data-[focus=true]:bg-white/[0.10]"
             : "h-10 border border-white/15 bg-black/30 shadow-none backdrop-blur-sm hover:bg-black/40 data-[focus=true]:bg-black/40",
         }}
       />

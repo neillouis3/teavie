@@ -7,6 +7,8 @@
 import {
   mongoCatalogDisplayVoteExpr,
   mongoCatalogAudienceVoteCountExpr,
+  mongoPopularBrowseQualityMatch,
+  CATALOG_BROWSE_HAS_ART,
   mongoTopRatedQualityMatch,
 } from "@/lib/catalogPopularity.js";
 
@@ -47,7 +49,7 @@ async function fetchIndexedBrowsePage(
  * @param {number} skip
  * @param {number} limit
  * @param {object | null} popExpr Mongo expression for computed popularity sort
- * @param {{ includeTotal?: boolean; anime?: boolean; indexedPopularity?: boolean }} [options]
+ * @param {{ includeTotal?: boolean; anime?: boolean; indexedPopularity?: boolean; qualityPopular?: boolean }} [options]
  */
 export async function fetchCatalogBrowsePage(
   collection,
@@ -57,7 +59,7 @@ export async function fetchCatalogBrowsePage(
   skip,
   limit,
   popExpr = null,
-  { includeTotal = true, anime = false, indexedPopularity = false } = {}
+  { includeTotal = true, anime = false, indexedPopularity = false, qualityPopular = false } = {}
 ) {
   if (sortBy === "rating") {
     const voteExpr = mongoCatalogDisplayVoteExpr({ anime });
@@ -117,7 +119,7 @@ export async function fetchCatalogBrowsePage(
     };
   }
 
-  if (sortBy === "popularity" && indexedPopularity) {
+  if (sortBy === "popularity" && indexedPopularity && !qualityPopular) {
     return fetchIndexedBrowsePage(
       collection,
       filter,
@@ -132,11 +134,25 @@ export async function fetchCatalogBrowsePage(
     const pop = popExpr ?? {
       $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
     };
+    const voteExpr = mongoCatalogDisplayVoteExpr({ anime });
+    const matchFilter = qualityPopular
+      ? { $and: [filter, CATALOG_BROWSE_HAS_ART] }
+      : filter;
     const baseStages = [
-      { $match: filter },
-      { $addFields: { _catalogPop: pop } },
-      { $sort: { _catalogPop: -1, _id: -1 } },
+      { $match: matchFilter },
+      {
+        $addFields: {
+          _catalogPop: pop,
+          _catalogVote: voteExpr,
+        },
+      },
     ];
+
+    if (qualityPopular) {
+      baseStages.push({ $match: mongoPopularBrowseQualityMatch({ anime }) });
+    }
+
+    baseStages.push({ $sort: { _catalogPop: -1, _id: -1 } });
 
     if (!includeTotal) {
       const results = await collection
@@ -145,7 +161,7 @@ export async function fetchCatalogBrowsePage(
             ...baseStages,
             { $skip: skip },
             { $limit: limit },
-            { $project: { _catalogPop: 0 } },
+            { $project: { _catalogPop: 0, _catalogVote: 0 } },
           ],
           AGG_OPTS
         )
@@ -163,7 +179,7 @@ export async function fetchCatalogBrowsePage(
               results: [
                 { $skip: skip },
                 { $limit: limit },
-                { $project: { _catalogPop: 0 } },
+                { $project: { _catalogPop: 0, _catalogVote: 0 } },
               ],
             },
           },

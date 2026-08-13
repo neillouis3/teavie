@@ -7,6 +7,10 @@ import {
   releasedAnimeFirstAirClause,
 } from "@/lib/catalogQuery";
 import {
+  catalogExcludeKdramaJunkMongoClause,
+  catalogHasKdramaArtMongoClause,
+} from "@/lib/kdramaCatalogPolicy.js";
+import {
   catalogDisplayVoteAverage,
   catalogPopularityScore,
   mongoAnimeCatalogPopularityExpr,
@@ -28,6 +32,7 @@ import { IMDB_GENRES, orderGenreRowsByPreference, genreNamesFromDoc } from "@/li
 import { getCatalogCategory } from "@/lib/catalogCategories";
 import { mergeWithPreferenceFilter } from "@/lib/preferenceMatch";
 import { hasUserPreferences } from "@/types/user";
+import { dedupeCatalogEntries } from "@/lib/catalogRailDedupe.js";
 
 const TILE_POSTERS = 5;
 const RAIL_LIMIT = 24;
@@ -102,6 +107,8 @@ function categoryReleasedFilter(kind) {
     $and: [
       catalogKdramaClause(),
       catalogTvBrowseReleasedClause("first_air_date", todayIso),
+      catalogHasKdramaArtMongoClause,
+      catalogExcludeKdramaJunkMongoClause(),
     ],
   };
 }
@@ -209,7 +216,7 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
         { $project: { _catalogPop: 0 } },
       ])
       .toArray();
-    return rows.map((doc) => mapTvRow(doc, { anime }));
+    return dedupeCatalogEntries(rows).map((doc) => mapTvRow(doc, { anime }));
   }
 
   if (sort === "top_rated") {
@@ -228,7 +235,7 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
         { $project: { _catalogVote: 0 } },
       ])
       .toArray();
-    return rows.map((doc) => mapTvRow(doc, { anime }));
+    return dedupeCatalogEntries(rows).map((doc) => mapTvRow(doc, { anime }));
   }
 
   const rows = await col
@@ -236,7 +243,7 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
     .sort({ first_air_date: -1, _id: -1 })
     .limit(limit)
     .toArray();
-  return rows.map((doc) => mapTvRow(doc, { anime }));
+  return dedupeCatalogEntries(rows).map((doc) => mapTvRow(doc, { anime }));
 }
 
 function isoDaysAgo(days) {
@@ -258,7 +265,7 @@ async function fetchNewEpisodesRail(
     .limit(limit)
     .toArray();
 
-  return rows.map((doc) => mapTvRow(doc, { anime }));
+  return dedupeCatalogEntries(rows).map((doc) => mapTvRow(doc, { anime }));
 }
 
 function buildGenrePipeline(matchStage, labels, withPosters) {
@@ -414,8 +421,8 @@ export async function fetchCategoryDiscover(col, slug, preferences = null) {
   }
 
   const featured = featuredDocs.map((doc) => mapTvRow(doc, { anime }));
-  const popular = popularDocs.map((doc) => mapTvRow(doc, { anime }));
-  const trending = popularDocs
+  const popular = dedupeCatalogEntries(popularDocs).map((doc) => mapTvRow(doc, { anime }));
+  const trending = dedupeCatalogEntries(popularDocs)
     .slice(0, TRENDING_LIMIT)
     .map((doc) => mapTvRow(doc, { anime }));
 
