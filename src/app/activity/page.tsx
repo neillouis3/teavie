@@ -7,7 +7,6 @@ import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import WatchHistoryRail from "@/components/explore/watchHistoryRail";
 import WatchHistoryLogRail from "@/components/explore/watchHistoryLogRail";
 import UserPageShell from "@/components/ui/userPageShell";
-import SmallCardLoading from "@/components/ui/smallCardLoading";
 import {
   watchHistoryLogLabel,
   watchHistoryProgressLabel,
@@ -17,17 +16,16 @@ import {
 import {
   fetchUserRailRows,
   fetchExploreHistoryRows,
+  peekExploreHistoryRows,
+  exploreHistoryRowsMatch,
   type ExploreHistoryRow,
 } from "@/lib/explorePageData";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
-import { LIBRARY_GRID_CLASS, RAIL_INNER_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
+import { RAIL_STACK_CLASS } from "@/lib/catalogGrid";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 
 const ACTIVITY_CACHE_PREFIX = "teavie.cache.activity.v3:";
-
-/** Reserve one grid row while cards load — reduces CLS when data arrives. */
-const ACTIVITY_GRID_MIN_H = "min-h-[420px] sm:min-h-[460px]";
 
 type ActivityPayload = {
   historyRows: ExploreHistoryRow[];
@@ -36,41 +34,6 @@ type ActivityPayload = {
 
 function listSignature(entries: { catalogId: string; mediaType: string }[]) {
   return entries.map((e) => `${e.mediaType}:${e.catalogId}`).sort().join("|");
-}
-
-function ActivityGridSkeleton({ count = 4 }: { count?: number }) {
-  return (
-    <div className={LIBRARY_GRID_CLASS} aria-hidden>
-      {Array.from({ length: count }).map((_, i) => (
-        <SmallCardLoading key={i} />
-      ))}
-    </div>
-  );
-}
-
-function ActivitySection({
-  title,
-  busy,
-  children,
-}: {
-  title: string;
-  busy?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={`${RAIL_INNER_CLASS} ${ACTIVITY_GRID_MIN_H} w-full items-center`}
-      aria-busy={busy || undefined}
-    >
-      <ExploreSectionTitle
-        className="justify-center text-lg text-white"
-        variant="explore"
-      >
-        {title}
-      </ExploreSectionTitle>
-      {children}
-    </section>
-  );
 }
 
 export default function ActivityPage() {
@@ -98,8 +61,6 @@ export default function ActivityPage() {
     const cached = readClientDayCache<ActivityPayload>(cacheKey);
     return !(cached && (cached.historyRows.length > 0 || cached.historyLogRows.length > 0));
   });
-  const [loadFailed, setLoadFailed] = useState(false);
-
   const loadUserRails = useCallback(async () => {
     const continueIds = new Set(watchHistoryEntries.map((e) => e.catalogId));
     const logEntries = watchHistoryLogEntries.filter(
@@ -108,6 +69,26 @@ export default function ActivityPage() {
     const hasPending =
       watchHistoryEntries.length > 0 || logEntries.length > 0;
     const cached = readClientDayCache<ActivityPayload>(cacheKey);
+    const peekedHistory = peekExploreHistoryRows(
+      watchHistoryEntries,
+      watchHistoryProgressLabel
+    );
+    const peekedLog = peekExploreHistoryRows(logEntries, watchHistoryLogLabel);
+    const cacheComplete =
+      hasPending &&
+      peekedHistory.length === watchHistoryEntries.length &&
+      peekedLog.length === logEntries.length;
+
+    if (cacheComplete) {
+      setHistoryRows((prev) =>
+        exploreHistoryRowsMatch(prev, peekedHistory) ? prev : peekedHistory
+      );
+      setHistoryLogRows((prev) =>
+        exploreHistoryRowsMatch(prev, peekedLog) ? prev : peekedLog
+      );
+      setLoading(false);
+      return;
+    }
 
     if (
       hasPending &&
@@ -115,8 +96,6 @@ export default function ActivityPage() {
     ) {
       setLoading(true);
     }
-    setLoadFailed(false);
-
     try {
       const [rails, logRows] = await Promise.all([
         fetchUserRailRows({
@@ -127,10 +106,13 @@ export default function ActivityPage() {
         }),
         fetchExploreHistoryRows(logEntries, watchHistoryLogLabel),
       ]);
-      setHistoryRows(rails.historyRows);
-      setHistoryLogRows(logRows);
+      setHistoryRows((prev) =>
+        exploreHistoryRowsMatch(prev, rails.historyRows) ? prev : rails.historyRows
+      );
+      setHistoryLogRows((prev) =>
+        exploreHistoryRowsMatch(prev, logRows) ? prev : logRows
+      );
       const loaded = rails.historyRows.length > 0 || logRows.length > 0;
-      setLoadFailed(hasPending && !loaded);
       if (loaded) {
         writeClientDayCache(cacheKey, {
           historyRows: rails.historyRows,
@@ -138,7 +120,17 @@ export default function ActivityPage() {
         });
       }
     } catch {
-      setLoadFailed(hasPending);
+      if (peekedHistory.length > 0 || peekedLog.length > 0) {
+        setHistoryRows((prev) =>
+          exploreHistoryRowsMatch(prev, peekedHistory) ? prev : peekedHistory
+        );
+        setHistoryLogRows((prev) =>
+          exploreHistoryRowsMatch(prev, peekedLog) ? prev : peekedLog
+        );
+      } else {
+        setHistoryRows([]);
+        setHistoryLogRows([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -149,14 +141,6 @@ export default function ActivityPage() {
   }, []);
 
   useEffect(() => {
-    const cached = readClientDayCache<ActivityPayload>(cacheKey);
-    if (cached) {
-      setHistoryRows(cached.historyRows);
-      setHistoryLogRows(cached.historyLogRows);
-      if (cached.historyRows.length > 0 || cached.historyLogRows.length > 0) {
-        setLoading(false);
-      }
-    }
     void loadUserRails();
   }, [cacheKey, loadUserRails]);
 
@@ -170,19 +154,8 @@ export default function ActivityPage() {
     };
   }, [loadUserRails]);
 
-  const continueIds = useMemo(
-    () => new Set(watchHistoryEntries.map((e) => e.catalogId)),
-    [watchHistoryEntries]
-  );
-  const pendingLogCount = watchHistoryLogEntries.filter(
-    (e) => !continueIds.has(e.catalogId)
-  ).length;
-  const hasContinue =
-    watchHistoryEntries.length > 0 || historyRows.length > 0;
-  const hasHistoryLog = pendingLogCount > 0 || historyLogRows.length > 0;
-  const isEmpty = !loading && !hasContinue && !hasHistoryLog;
-  const showContinueSection = hasContinue || (loading && watchHistoryEntries.length > 0);
-  const showHistorySection = hasHistoryLog || (loading && pendingLogCount > 0);
+  const isEmpty =
+    !loading && historyRows.length === 0 && historyLogRows.length === 0;
 
   return (
     <UserPageShell
@@ -236,60 +209,21 @@ export default function ActivityPage() {
         </div>
       ) : (
         <div className={`${RAIL_STACK_CLASS} w-full items-center`}>
-          {showContinueSection ? (
-            historyRows.length > 0 ? (
-              <WatchHistoryRail
-                items={historyRows}
-                layout="profile"
-                bleed={false}
-                display="grid"
-              />
-            ) : loadFailed ? (
-              <ActivitySection title="Continue watching">
-                <p className="text-center text-sm text-default-500">
-                  Couldn&apos;t load titles.{" "}
-                  <button
-                    type="button"
-                    className="text-success hover:underline"
-                    onClick={() => void loadUserRails()}
-                  >
-                    Try again
-                  </button>
-                </p>
-              </ActivitySection>
-            ) : (
-              <ActivitySection title="Continue watching" busy={loading}>
-                <ActivityGridSkeleton count={4} />
-              </ActivitySection>
-            )
+          {historyRows.length > 0 ? (
+            <WatchHistoryRail
+              items={historyRows}
+              layout="profile"
+              bleed={false}
+              display="grid"
+            />
           ) : null}
-
-          {showHistorySection ? (
-            historyLogRows.length > 0 ? (
-              <WatchHistoryLogRail
-                items={historyLogRows}
-                layout="profile"
-                bleed={false}
-                display="grid"
-              />
-            ) : loadFailed ? (
-              <ActivitySection title="Watch history">
-                <p className="text-center text-sm text-default-500">
-                  Couldn&apos;t load titles.{" "}
-                  <button
-                    type="button"
-                    className="text-success hover:underline"
-                    onClick={() => void loadUserRails()}
-                  >
-                    Try again
-                  </button>
-                </p>
-              </ActivitySection>
-            ) : (
-              <ActivitySection title="Watch history" busy={loading}>
-                <ActivityGridSkeleton count={4} />
-              </ActivitySection>
-            )
+          {historyLogRows.length > 0 ? (
+            <WatchHistoryLogRail
+              items={historyLogRows}
+              layout="profile"
+              bleed={false}
+              display="grid"
+            />
           ) : null}
         </div>
       )}

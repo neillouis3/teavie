@@ -18,6 +18,8 @@ import {
   fetchPersonalizedExploreBundle,
   applyPersonalizedToCore,
   projectExploreHistoryRows,
+  peekExploreUserRails,
+  exploreHistoryRowsMatch,
   buildSpotlightItems,
   type ExploreCorePayload,
   type ExplorePagePayload,
@@ -61,16 +63,10 @@ export default function ExploreHub() {
   const [core, setCore] = useState<ExploreCorePayload | null>(() =>
     peekExploreInitialCore(preferences, watchedMovieIds)
   );
-  const [userRails, setUserRails] = useState<UserRailRows>(EMPTY_RAILS);
-  const [userRailsLoading, setUserRailsLoading] = useState(
-    () => watchHistoryEntries.length > 0
-  );
-  const [userRailsFailed, setUserRailsFailed] = useState(false);
-  const [awaitingPersonalized, setAwaitingPersonalized] = useState(
-    () =>
-      hasUserPreferences(preferences) &&
-      (peekExploreInitialCore(preferences, watchedMovieIds)?.recommendedRows.length ?? 0) === 0
-  );
+  const [userRails, setUserRails] = useState<UserRailRows>(() => {
+    if (typeof window === "undefined") return EMPTY_RAILS;
+    return peekExploreUserRails(watchHistoryEntries, watchHistoryProgressLabel);
+  });
 
   const preferencesSig = useMemo(() => JSON.stringify(preferences), [preferences]);
   const watchedMoviesSig = useMemo(
@@ -85,12 +81,20 @@ export default function ExploreHub() {
   const loadUserRails = useCallback(async () => {
     if (watchHistoryEntries.length === 0) {
       setUserRails(EMPTY_RAILS);
-      setUserRailsLoading(false);
-      setUserRailsFailed(false);
       return;
     }
-    setUserRailsLoading(true);
-    setUserRailsFailed(false);
+
+    const cached = peekExploreUserRails(
+      watchHistoryEntries,
+      watchHistoryProgressLabel
+    );
+    if (cached.historyRows.length === watchHistoryEntries.length) {
+      setUserRails((prev) =>
+        exploreHistoryRowsMatch(prev.historyRows, cached.historyRows) ? prev : cached
+      );
+      return;
+    }
+
     try {
       const rails = await fetchUserRailRows({
         historyEntries: watchHistoryEntries,
@@ -98,12 +102,13 @@ export default function ExploreHub() {
         favoriteEntries: [],
         progressLabel: watchHistoryProgressLabel,
       });
-      setUserRails(rails);
-      setUserRailsFailed(rails.historyRows.length === 0);
+      setUserRails((prev) =>
+        exploreHistoryRowsMatch(prev.historyRows, rails.historyRows) ? prev : rails
+      );
     } catch {
-      setUserRailsFailed(true);
-    } finally {
-      setUserRailsLoading(false);
+      setUserRails((prev) =>
+        cached.historyRows.length > 0 ? cached : prev.historyRows.length > 0 ? prev : EMPTY_RAILS
+      );
     }
   }, [watchHistoryEntries]);
 
@@ -165,8 +170,8 @@ export default function ExploreHub() {
             : shell;
 
         setCore(nextCore);
-      } finally {
-        if (!cancelled) setAwaitingPersonalized(false);
+      } catch {
+        // Core rails still render from shell/bundle on failure.
       }
     })();
 
@@ -182,18 +187,10 @@ export default function ExploreHub() {
   }, [historySig, loadUserRails]);
 
   useEffect(() => {
-    const onHistoryChange = () => void loadUserRails();
-    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);
-    return () => {
-      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);
-    };
-  }, [loadUserRails]);
-
-  useEffect(() => {
-    const refreshHistory = () => {
+    const onHistoryChange = () => {
       setUserRails((prev) => {
         if (watchHistoryEntries.length === 0) {
-          return { ...prev, historyRows: [] };
+          return EMPTY_RAILS;
         }
         const projected = projectExploreHistoryRows(
           prev.historyRows,
@@ -201,16 +198,18 @@ export default function ExploreHub() {
           watchHistoryProgressLabel
         );
         if (projected) {
-          return { ...prev, historyRows: projected };
+          return exploreHistoryRowsMatch(prev.historyRows, projected)
+            ? prev
+            : { ...prev, historyRows: projected };
         }
         void loadUserRails();
         return prev;
       });
     };
 
-    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, refreshHistory);
+    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);
     return () => {
-      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, refreshHistory);
+      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistoryChange);
     };
   }, [watchHistoryEntries, loadUserRails]);
 
@@ -254,8 +253,6 @@ export default function ExploreHub() {
   const hasUpcoming = upcomingContent.length > 0;
   const hasNew = newContent.length > 0;
   const hasRecommended = recommendedRows.length > 0;
-  const showRecommendedSlot =
-    hasUserPreferences(preferences) && (awaitingPersonalized || hasRecommended);
 
   return (
     <div className="flex w-full flex-col bg-background">
@@ -287,52 +284,16 @@ export default function ExploreHub() {
           hasTrending ? "mt-0" : "mt-2"
         )}
       >
-        {watchHistoryEntries.length > 0 ? (
-          userRailsLoading && historyRows.length === 0 ? (
-            <section
-              className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
-              aria-label="Continue watching"
-              aria-busy="true"
-            >
-              <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-              <CatalogRailSkeleton count={6} />
-            </section>
-          ) : historyRows.length > 0 ? (
-            <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
-          ) : userRailsFailed ? (
-            <section className={RAIL_INNER_CLASS} aria-label="Continue watching">
-              <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-              <p className="text-sm text-default-500">
-                Couldn&apos;t load your titles.{" "}
-                <button
-                  type="button"
-                  className="text-success hover:underline"
-                  onClick={() => void loadUserRails()}
-                >
-                  Try again
-                </button>
-              </p>
-            </section>
-          ) : null
+        {historyRows.length > 0 ? (
+          <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
         ) : null}
-        {showRecommendedSlot ? (
-          awaitingPersonalized && !hasRecommended ? (
-            <section
-              className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
-              aria-label="Recommended for you"
-              aria-busy="true"
-            >
-              <ExploreSectionTitle variant="explore">Recommended for you</ExploreSectionTitle>
-              <CatalogRailSkeleton count={6} />
-            </section>
-          ) : hasRecommended ? (
-            <CatalogRail
-              title="Recommended for you"
-              items={recommendedRows}
-              maxItems={SECTION_MAX_ITEMS}
-              titleVariant="explore"
-            />
-          ) : null
+        {hasRecommended ? (
+          <CatalogRail
+            title="Recommended for you"
+            items={recommendedRows}
+            maxItems={SECTION_MAX_ITEMS}
+            titleVariant="explore"
+          />
         ) : null}
         <GenreRail genres={genres} preferredGenreSlugs={preferences.genres} />
         {hasPopular ? (

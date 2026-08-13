@@ -81,19 +81,52 @@ function mergeHistoryRows(
     .filter((row): row is ExploreHistoryRow => row != null);
 }
 
-export async function fetchExploreHistoryRows(
+/** Synchronous cache read for instant continue-watching rails on revisit. */
+export function peekExploreHistoryRows(
   entries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
-): Promise<ExploreHistoryRow[]> {
+): ExploreHistoryRow[] {
   if (entries.length === 0) return [];
+  const cached = readClientDayCache<ExploreHistoryRow[]>(historyCacheKey(entries));
+  if (!cached?.length) return [];
+  return mergeHistoryRows(cached, entries, progressLabel);
+}
 
-  const cacheKey = historyCacheKey(entries);
-  const cached = readClientDayCache<ExploreHistoryRow[]>(cacheKey);
-  if (cached && cached.length > 0) {
-    const merged = mergeHistoryRows(cached, entries, progressLabel);
-    if (merged.length === entries.length) return merged;
+export function exploreHistoryRowsMatch(
+  a: ExploreHistoryRow[],
+  b: ExploreHistoryRow[]
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i];
+    const right = b[i];
+    if (String(left.id) !== String(right.id)) return false;
+    if (left.progressLabel !== right.progressLabel) return false;
+    if (left.lastSeason !== right.lastSeason) return false;
+    if (left.lastEpisode !== right.lastEpisode) return false;
   }
+  return true;
+}
 
+export function peekExploreUserRails(
+  historyEntries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string
+): UserRailRows {
+  return {
+    historyRows: peekExploreHistoryRows(historyEntries, progressLabel),
+    watchLaterRows: [],
+    favoriteRows: [],
+  };
+}
+
+const historyRowsInflight = new Map<string, Promise<ExploreHistoryRow[]>>();
+
+async function fetchExploreHistoryRowsImpl(
+  entries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string,
+  cacheKey: string,
+  cached: ExploreHistoryRow[] | null
+): Promise<ExploreHistoryRow[]> {
   try {
     const res = await fetch("/api/catalog/history", {
       method: "POST",
@@ -129,6 +162,34 @@ export async function fetchExploreHistoryRows(
   } catch {
     return cached?.length ? mergeHistoryRows(cached, entries, progressLabel) : [];
   }
+}
+
+export async function fetchExploreHistoryRows(
+  entries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string
+): Promise<ExploreHistoryRow[]> {
+  if (entries.length === 0) return [];
+
+  const cacheKey = historyCacheKey(entries);
+  const cached = readClientDayCache<ExploreHistoryRow[]>(cacheKey);
+  if (cached && cached.length > 0) {
+    const merged = mergeHistoryRows(cached, entries, progressLabel);
+    if (merged.length === entries.length) return merged;
+  }
+
+  const inflight = historyRowsInflight.get(cacheKey);
+  if (inflight) return inflight;
+
+  const promise = fetchExploreHistoryRowsImpl(
+    entries,
+    progressLabel,
+    cacheKey,
+    cached
+  ).finally(() => {
+    historyRowsInflight.delete(cacheKey);
+  });
+  historyRowsInflight.set(cacheKey, promise);
+  return promise;
 }
 
 /** Rebuild history rows from existing rail data (no network). Returns null if a new title needs fetch. */
