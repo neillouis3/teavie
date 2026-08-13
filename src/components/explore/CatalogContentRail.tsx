@@ -11,7 +11,7 @@ import {
   catalogItemTitle,
   catalogItemYear,
 } from "@/lib/catalogRailCard";
-import { LIBRARY_GRID_CLASS, RAIL_INNER_CLASS } from "@/lib/catalogGrid";
+import { EXPLORE_RAIL_MAX_ITEMS, LIBRARY_GRID_CLASS, RAIL_INNER_CLASS } from "@/lib/catalogGrid";
 import { railContentItems } from "@/lib/dedupeContentItems";
 import type { ContentItem } from "@/types/content";
 
@@ -107,7 +107,7 @@ export default function CatalogContentRail({
   const cardOpts = { showVoteAverage, onDismiss, topNoteForItem, metaChipsForItem };
 
   if (display === "grid") {
-    const slice = railContentItems(items ?? [], maxItems);
+    const slice = railContentItems(items ?? [], maxItems ?? EXPLORE_RAIL_MAX_ITEMS);
     if (slice.length === 0) return null;
 
     return (
