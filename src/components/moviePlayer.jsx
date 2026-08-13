@@ -10,6 +10,7 @@ import {
   PEACHIFY_EMBED_BASE,
   VIDCORE_EMBED_BASE,
   VIDCORE_THEME_QUERY,
+  VIDROCK_EMBED_BASE,
 } from '@/lib/embedHosts';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +18,11 @@ export const MOVIE_SERVERS = {
   stremio: {
     base: '',
     path: () => '',
+    suffix: () => '',
+  },
+  vidrock: {
+    base: VIDROCK_EMBED_BASE,
+    path: (id) => `/movie/${id}`,
     suffix: () => '',
   },
   movies111: {
@@ -55,7 +61,7 @@ const MoviePlayer = ({
   title,
   posterUrl,
   backdropUrl,
-  server = 'movies111',
+  server = 'vidrock',
   streamQuality: streamQualityProp,
   startSeconds = 0,
   immersive = false,
@@ -65,7 +71,7 @@ const MoviePlayer = ({
 
   const { playerUrl, playerError } = useMemo(() => {
     if (server === 'stremio') return { playerUrl: '', playerError: null };
-    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.peachify;
+    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.vidrock;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { playerUrl: '', playerError: 'Missing TMDB movie id' };

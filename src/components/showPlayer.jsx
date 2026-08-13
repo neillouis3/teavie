@@ -11,9 +11,15 @@ import {
   PEACHIFY_EMBED_BASE,
   VIDCORE_EMBED_BASE,
   VIDCORE_THEME_QUERY,
+  VIDROCK_EMBED_BASE,
 } from '@/lib/embedHosts';
 
 export const SHOW_SERVERS = {
+  vidrock: {
+    base: VIDROCK_EMBED_BASE,
+    path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
+    suffix: () => '',
+  },
   movies111: {
     base: MOVIES111_EMBED_BASE,
     path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
@@ -38,7 +44,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.peachify;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.vidrock;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -75,7 +81,7 @@ export default function ShowPlayer({
   backdropUrl,
   season,
   episode,
-  server = 'movies111',
+  server = 'vidrock',
   startSeconds = 0,
   onStremioProgress,
   onEmbedLoad,
