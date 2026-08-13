@@ -159,6 +159,16 @@ export function normalizedCatalogVoteAverage(raw) {
   return quantizeVoteAverage(n);
 }
 
+/** Parse OMDb/TMDB vote counts (handles `"218,530"` strings from legacy docs). */
+export function parseCatalogVoteCount(raw) {
+  if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) return raw;
+  if (typeof raw === "string") {
+    const n = Number(raw.replace(/,/g, "").trim());
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 0;
+}
+
 /**
  * IMDb vote count from OMDb enrichment, else TMDB vote_count.
  * @param {Record<string, unknown>} doc
@@ -166,13 +176,12 @@ export function normalizedCatalogVoteAverage(raw) {
 export function catalogAudienceVoteCount(doc) {
   const omdb = doc.omdb;
   if (omdb && typeof omdb === "object") {
-    const imdbVotes = Number(
+    const imdbVotes = parseCatalogVoteCount(
       /** @type {Record<string, unknown>} */ (omdb).imdbVotes
     );
-    if (Number.isFinite(imdbVotes) && imdbVotes > 0) return imdbVotes;
+    if (imdbVotes > 0) return imdbVotes;
   }
-  const tmdb = Number(doc.vote_count);
-  return Number.isFinite(tmdb) && tmdb > 0 ? tmdb : 0;
+  return parseCatalogVoteCount(doc.vote_count);
 }
 
 /** Row has OMDb IMDb rating (vote_average was sourced from imdbRating on enrich). */
@@ -180,10 +189,11 @@ export function hasOmdbImdbRating(doc) {
   if (!doc || typeof doc !== "object") return false;
   const omdb = /** @type {Record<string, unknown>} */ (doc).omdb;
   if (!omdb || typeof omdb !== "object") return false;
-  const imdbVotes = Number(
-    /** @type {Record<string, unknown>} */ (omdb).imdbVotes
+  return (
+    parseCatalogVoteCount(
+      /** @type {Record<string, unknown>} */ (omdb).imdbVotes
+    ) >= CATALOG_IMDB_RATING_MIN_VOTES
   );
-  return Number.isFinite(imdbVotes) && imdbVotes >= CATALOG_IMDB_RATING_MIN_VOTES;
 }
 
 /** @param {unknown} doc */
@@ -207,23 +217,23 @@ export function catalogTmdbVoteFromDoc(doc) {
       : null;
 
   const subVote = normalizedCatalogVoteAverage(tmdb?.vote_average);
-  const subCount = Number(tmdb?.vote_count);
+  const subCount = parseCatalogVoteCount(tmdb?.vote_count);
   if (subVote) {
     return {
       vote: subVote,
-      count: Number.isFinite(subCount) && subCount > 0 ? subCount : 0,
+      count: subCount,
       explicit: true,
     };
   }
 
   const omdbRating = normalizedCatalogVoteAverage(catalogOmdbRecord(d)?.imdbRating);
   const storedVote = normalizedCatalogVoteAverage(d.vote_average);
-  const storedCount = Number(d.vote_count);
+  const storedCount = parseCatalogVoteCount(d.vote_count);
 
   if (storedVote && !(omdbRating != null && storedVote === omdbRating)) {
     return {
       vote: storedVote,
-      count: Number.isFinite(storedCount) && storedCount > 0 ? storedCount : 0,
+      count: storedCount,
       explicit: false,
     };
   }
@@ -237,10 +247,10 @@ export function catalogImdbVoteFromDoc(doc) {
   const omdb = catalogOmdbRecord(doc);
   if (!omdb) return { vote: null, count: 0 };
   const vote = normalizedCatalogVoteAverage(omdb.imdbRating);
-  const count = Number(omdb.imdbVotes);
+  const count = parseCatalogVoteCount(omdb.imdbVotes);
   return {
     vote,
-    count: Number.isFinite(count) && count > 0 ? count : 0,
+    count,
   };
 }
 

@@ -36,6 +36,8 @@ type LargeCardProps = {
   heroCompact?: boolean;
   /** Rich Explore-style overlay on standard aspect-video cards (Discover upcoming). */
   richOverlay?: boolean;
+  /** Minimal overlay: title, synopsis, release — for New and Upcoming carousel. */
+  simpleOverlay?: boolean;
   /** `phrase` = “Releases …”; `short` = “Jun 4, 2026”. */
   releaseDateStyle?: "short" | "phrase";
   /**
@@ -118,6 +120,7 @@ function HeroCardOverlay({
   certification,
   overview,
   compact = false,
+  simple = false,
   releaseDateStyle = "short",
   logoPath,
   showActions = false,
@@ -136,6 +139,7 @@ function HeroCardOverlay({
   certification?: string | null;
   overview?: string | null;
   compact?: boolean;
+  simple?: boolean;
   releaseDateStyle?: "short" | "phrase";
   logoPath?: string | null;
   showActions?: boolean;
@@ -170,6 +174,28 @@ function HeroCardOverlay({
       : null;
   const overviewText = overview?.trim() ?? "";
   const logoUrl = tmdbImageUrl(logoPath);
+
+  if (simple) {
+    return (
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-5 pb-5 pt-20 sm:px-6 sm:pb-6">
+        <div className="flex max-w-2xl flex-col gap-2.5">
+          <h2 className="line-clamp-2 text-2xl font-semibold leading-[1.15] tracking-tight text-white sm:text-[1.75rem]">
+            {title}
+          </h2>
+          {overviewText ? (
+            <p className="line-clamp-2 text-sm leading-relaxed text-white/72 sm:line-clamp-3">
+              {overviewText}
+            </p>
+          ) : null}
+          {dateLabel ? (
+            <p className="pt-0.5 text-xs font-medium text-white/50 sm:text-sm">
+              {dateLabel}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -314,6 +340,7 @@ export default function LargeCard({
   hero = false,
   heroCompact = false,
   richOverlay = false,
+  simpleOverlay = false,
   releaseDateStyle = "short",
   imageFit = "cover",
   preferPoster = false,
@@ -322,7 +349,7 @@ export default function LargeCard({
 }: LargeCardProps) {
   const typeLower = (type ?? "").toLowerCase();
   const runtimeMin = runtimeSeconds != null ? Math.round(runtimeSeconds / 60) : null;
-  const showRichOverlay = hero || richOverlay;
+  const showRichOverlay = hero || richOverlay || simpleOverlay;
   const contain = imageFit === "contain";
 
   const primaryPath = preferPoster
@@ -411,6 +438,7 @@ export default function LargeCard({
             certification={certification}
             overview={overview}
             compact={!hero || heroCompact}
+            simple={simpleOverlay}
             releaseDateStyle={releaseDateStyle}
             logoPath={logoPath}
             showActions={showHeroActions}

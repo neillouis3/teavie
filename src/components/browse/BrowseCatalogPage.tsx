@@ -4,6 +4,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/ui/header";
+import PageBlurredBackdrop from "@/components/ui/pageBlurredBackdrop";
 import CatalogGrid from "@/components/browse/catalogGrid";
 import CatalogGridLoading from "@/components/browse/skeleton/catalogGridLoading";
 import CatalogFilterBar from "@/components/browse/CatalogFilterBar";
@@ -19,7 +20,18 @@ import {
   prefetchBrowseCatalogPage,
 } from "@/lib/pageDataCache";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { tmdbBackdropUrl, tmdbPosterUrl } from "@/lib/tmdbImage";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
+
+function browseBackdropUrl(items: ContentItem[]): string | null {
+  for (const row of items.slice(0, 8)) {
+    const fromBackdrop = tmdbBackdropUrl(row.backdrop_path);
+    if (fromBackdrop) return fromBackdrop;
+    const fromPoster = tmdbPosterUrl(row.poster_path);
+    if (fromPoster) return fromPoster;
+  }
+  return null;
+}
 
 type BrowseCatalogPageProps = {
   pageName: string;
@@ -267,9 +279,12 @@ function BrowseCatalogPageContent({
     return () => observer.disconnect();
   }, [items.length, loadMore, loading, totalPages]);
 
+  const backdropUrl = useMemo(() => browseBackdropUrl(items), [items]);
+
   return (
-    <div className="bg-main min-h-screen w-full">
-      <div className={`pb-10 ${CONTENT_INSET_X}`}>
+    <div className="relative min-h-screen w-full overflow-x-hidden pb-10">
+      <PageBlurredBackdrop imageUrl={backdropUrl} />
+      <div className={`relative z-10 ${CONTENT_INSET_X}`}>
         <div className="flex items-start gap-8">
           <BrowseCatalogSidebar
             label={viewer === "movie" ? "Movies" : "Shows"}
@@ -356,9 +371,10 @@ function BrowseCatalogPageContent({
 
 function BrowseCatalogPageFallback({ pageName }: { pageName: string }) {
   return (
-    <div className="bg-main min-h-screen w-full">
-      <Header pageName={pageName} />
-      <div className={`pb-8 pt-2 ${CONTENT_INSET_X}`}>
+    <div className="relative min-h-screen w-full overflow-x-hidden">
+      <PageBlurredBackdrop />
+      <div className={`relative z-10 pb-8 pt-2 ${CONTENT_INSET_X}`}>
+        <Header pageName={pageName} />
         <CatalogGridLoading />
       </div>
     </div>

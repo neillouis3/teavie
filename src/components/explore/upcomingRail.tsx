@@ -64,21 +64,16 @@ export default function UpcomingRail({ items }: UpcomingRailProps) {
                 className={`basis-[88%] sm:basis-[71.428571%] ${RAIL_ITEM_PAD}`}
               >
                 <LargeCard
-                  richOverlay
+                  simpleOverlay
                   releaseDateStyle="phrase"
                   id={item.id}
                   title={title}
                   year={year}
                   releaseDate={releaseIso}
-                  runtimeSeconds={item.runtimeSeconds}
-                  seasonAmount={item.season_amount ?? 0}
-                  numberOfEpisodes={item.number_of_episodes ?? undefined}
                   type={type}
                   posterPath={item.poster_path}
                   backdropPath={item.backdrop_path}
-                  genres={item.genres}
-                  voteAverage={item.vote_average}
-                  certification={item.certification}
+                  overview={item.overview}
                 />
               </CarouselItem>
             );

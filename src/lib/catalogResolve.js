@@ -1,7 +1,7 @@
 import { imdbGenresForDoc } from "@/lib/imdbGenres";
 import { fetchOmdbGenreRaw } from "@/lib/omdbGenre";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
-import { catalogDisplayVoteAverage } from "@/lib/catalogPopularity";
+import { catalogDisplayVoteAverage, parseCatalogVoteCount } from "@/lib/catalogPopularity";
 
 function normalizeDate(dateValue) {
   if (dateValue == null) return null;
@@ -93,8 +93,12 @@ export function normalizeCatalogResolveFallback(doc, mediaType) {
             genre: /** @type {{ genre?: string }} */ (doc.omdb).genre ?? null,
             imdbRating:
               /** @type {{ imdbRating?: number }} */ (doc.omdb).imdbRating ?? null,
-            imdbVotes:
-              /** @type {{ imdbVotes?: number }} */ (doc.omdb).imdbVotes ?? null,
+            imdbVotes: (() => {
+              const parsed = parseCatalogVoteCount(
+                /** @type {{ imdbVotes?: unknown }} */ (doc.omdb).imdbVotes
+              );
+              return parsed > 0 ? parsed : null;
+            })(),
           }
         : null,
     origin_country: Array.isArray(doc.origin_country) ? doc.origin_country : [],
