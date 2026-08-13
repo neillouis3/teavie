@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import MovieTemplate from "@/components/movieTemplate";
-import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
+import { ImmersiveWatchPageSkeleton } from "@/components/ui/watchPageSkeleton";
 
 type MovieWatchPageProps = {
   params: Promise<{ id: string }>;
@@ -14,7 +14,7 @@ export default async function MovieWatchPage({ params }: MovieWatchPageProps) {
   }
 
   return (
-    <Suspense fallback={<WatchPageSkeleton />}>
+    <Suspense fallback={<ImmersiveWatchPageSkeleton />}>
       <MovieTemplate id={id} viewMode="watch" />
     </Suspense>
   );

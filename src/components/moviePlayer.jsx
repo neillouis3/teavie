@@ -15,6 +15,7 @@ import {
   VIDCORE_EMBED_BASE,
   VIDCORE_THEME_QUERY,
 } from '@/lib/embedHosts';
+import { cn } from '@/lib/utils';
 
 export const MOVIE_SERVERS = {
   stremio: {
@@ -59,6 +60,7 @@ export const MOVIE_SERVERS = {
  * @param {string} [props.server]
  * @param {'cam' | 'hd'} [props.streamQuality]
  * @param {number} [props.startSeconds] Videasy resume position
+ * @param {boolean} [props.immersive] Full-viewport watch page (no rounded shell)
  * @param {(msg: import('@/lib/videasyProgress').VideasyProgressMessage) => void} [props.onVideasyProgress]
  * @param {(seconds: number) => void} [props.onStremioProgress]
  */
@@ -71,6 +73,7 @@ const MoviePlayer = ({
   server = 'peachify',
   streamQuality: streamQualityProp,
   startSeconds = 0,
+  immersive = false,
   onVideasyProgress,
   onStremioProgress,
 }) => {
@@ -138,26 +141,38 @@ const MoviePlayer = ({
 
   if (playerError) {
     return (
-      <div className="flex h-full min-h-0 w-full items-center justify-center rounded-lg bg-black p-4 ring-1 ring-white/10">
+      <div
+        className={cn(
+          'flex h-full min-h-0 w-full items-center justify-center bg-black p-4',
+          !immersive && 'rounded-lg ring-1 ring-white/10'
+        )}
+      >
         <p className="text-sm text-red-400">Error loading video: {playerError}</p>
       </div>
     );
   }
 
+  const shellClass = cn(
+    'relative h-full min-h-0 w-full touch-auto bg-black [touch-action:pan-x_pan-y_pinch-zoom]',
+    immersive ? 'overflow-hidden' : 'rounded-lg ring-1 ring-white/10 lg:overflow-hidden'
+  );
+
   return (
     server === 'stremio' ? (
-      <StremioPlayer
-        type="movie"
-        imdbId={imdbId}
-        catalogKey={videoId != null ? String(videoId) : null}
-        startSeconds={startSeconds}
-        title={title}
-        posterUrl={posterUrl}
-        backdropUrl={backdropUrl}
-        onPlaybackProgress={onStremioProgress ? stremioProgressHandler : undefined}
-      />
+      <div className={immersive ? 'h-full min-h-0 w-full' : undefined}>
+        <StremioPlayer
+          type="movie"
+          imdbId={imdbId}
+          catalogKey={videoId != null ? String(videoId) : null}
+          startSeconds={startSeconds}
+          title={title}
+          posterUrl={posterUrl}
+          backdropUrl={backdropUrl}
+          onPlaybackProgress={onStremioProgress ? stremioProgressHandler : undefined}
+        />
+      </div>
     ) : (
-    <div className="relative h-full min-h-0 w-full touch-auto rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
+    <div className={shellClass}>
       {streamQuality ? <StreamQualityBadge quality={streamQuality} /> : null}
       {playerUrl ? (
         <VideoEmbedFrame

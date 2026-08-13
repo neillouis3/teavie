@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import CatalogRail, { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
 import TrendingHero, { SPOTLIGHT_SKELETON_H } from '@/components/catalog/trendingHero';
 import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
 import {
   bustInflightDayCache,
-  fetchGenrePageNew,
   fetchGenrePageShell,
   fetchGenrePageTopRated,
   genrePageCacheKey,
-  genrePageNewCacheKey,
   genrePagePartNeeds,
   genrePageShellCacheKey,
   genrePageTopRatedCacheKey,
@@ -32,9 +30,10 @@ import { useUserData } from '@/contexts/userDataContext';
 import { PREFERENCES_CHANGED_EVENT } from '@/lib/userPreferences';
 import { useResumeFetchWhenVisible } from '@/hooks/useResumeFetchWhenVisible';
 import { cn } from '@/lib/utils';
+import type { UserPreferences } from '@/types/user';
 
 export type GenrePageType = 'all' | 'movie' | 'tv';
-export type GenrePageSort = 'popular' | 'top_rated' | 'new';
+export type GenrePageSort = 'popular' | 'top_rated';
 
 const TYPE_OPTIONS: { key: GenrePageType; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -45,27 +44,85 @@ const TYPE_OPTIONS: { key: GenrePageType; label: string }[] = [
 const RAIL_SECTIONS: { sort: GenrePageSort; title: string }[] = [
   { sort: 'popular', title: 'Popular' },
   { sort: 'top_rated', title: 'Top rated' },
-  { sort: 'new', title: 'New' },
 ];
 
 const RAIL_LIMIT = 24;
 const SPOTLIGHT_MAX_ITEMS = 16;
+const GENRE_TAB_TYPES: GenrePageType[] = ["all", "movie", "tv"];
+
+type GenreTabState = {
+  payload: GenrePagePayload;
+  shellReady: boolean;
+  topRatedReady: boolean;
+};
+
+function genreTabCacheKey(
+  slug: string,
+  tabType: GenrePageType,
+  preferencesSig: string
+): string {
+  return `${slug}:${tabType}:${preferencesSig}`;
+}
+
+function spotlightItemsFromPayload(payload: GenrePagePayload) {
+  return payload.featured.length > 0
+    ? payload.featured
+    : payload.rails.popular.slice(0, SPOTLIGHT_MAX_ITEMS);
+}
+
+function readGenreTabState(
+  slug: string,
+  tabType: GenrePageType,
+  preferences: UserPreferences | null
+): GenreTabState {
+  const payload = peekGenrePageInitial(slug, tabType, preferences);
+  return { payload, ...syncGenreReadyFlags(payload) };
+}
+
+function mergeGenreShell(
+  prev: GenrePagePayload,
+  shell: Pick<GenrePagePayload, "featured" | "total" | "rails">
+): GenrePagePayload {
+  return {
+    ...prev,
+    featured: shell.featured,
+    total: shell.total,
+    rails: {
+      ...prev.rails,
+      popular: shell.rails.popular,
+    },
+  };
+}
+
+function mergeGenreTopRated(
+  prev: GenrePagePayload,
+  part: Pick<GenrePagePayload, "rails">
+): GenrePagePayload {
+  return {
+    ...prev,
+    rails: {
+      ...prev.rails,
+      top_rated: part.rails.top_rated,
+    },
+  };
+}
 
 function syncGenreReadyFlags(data: GenrePagePayload) {
   const needs = genrePagePartNeeds(data);
   return {
     shellReady: !needs.shell,
     topRatedReady: !needs.topRated,
-    newReady: !needs.newRail,
   };
 }
 
 function GenreTypeFilter({
   type,
   onSelect,
+  onPrefetch,
 }: {
   type: GenrePageType;
   onSelect: (next: GenrePageType) => void;
+  onPrefetch: (next: GenrePageType) => void;
 }) {
   return (
     <nav
@@ -79,6 +136,8 @@ function GenreTypeFilter({
             key={opt.key}
             type="button"
             onClick={() => onSelect(opt.key)}
+            onMouseEnter={() => onPrefetch(opt.key)}
+            onFocus={() => onPrefetch(opt.key)}
             className={cn(
               'relative pb-2 text-sm transition-colors',
               active
@@ -104,167 +163,143 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { preferences } = useUserData();
+  const typeCacheRef = useRef<Map<string, GenreTabState>>(new Map());
+  const activeTypeRef = useRef<GenrePageType>("all");
 
   const rawType = searchParams.get('type') || 'all';
   const type: GenrePageType =
     rawType === 'movie' || rawType === 'tv' ? rawType : 'all';
+  activeTypeRef.current = type;
 
-  const [payload, setPayload] = useState<GenrePagePayload>(() =>
-    peekGenrePageInitial(slug, type, preferences)
+  const initialTab = readGenreTabState(slug, type, preferences);
+  const [payload, setPayload] = useState<GenrePagePayload>(() => initialTab.payload);
+  const [shellReady, setShellReady] = useState(initialTab.shellReady);
+  const [topRatedReady, setTopRatedReady] = useState(initialTab.topRatedReady);
+  const [heroSpotlightItems, setHeroSpotlightItems] = useState(() =>
+    spotlightItemsFromPayload(initialTab.payload)
   );
-  const initialFlags = syncGenreReadyFlags(payload);
-  const [shellReady, setShellReady] = useState(initialFlags.shellReady);
-  const [topRatedReady, setTopRatedReady] = useState(initialFlags.topRatedReady);
-  const [newReady, setNewReady] = useState(initialFlags.newReady);
   const preferencesSig = useMemo(
     () => preferencesCacheKey(preferences),
     [preferences]
   );
 
+  const readCachedTab = useCallback(
+    (tabType: GenrePageType): GenreTabState => {
+      const key = genreTabCacheKey(slug, tabType, preferencesSig);
+      return typeCacheRef.current.get(key) ?? readGenreTabState(slug, tabType, preferences);
+    },
+    [slug, preferences, preferencesSig]
+  );
+
+  const writeCachedTab = useCallback(
+    (tabType: GenrePageType, state: GenreTabState) => {
+      typeCacheRef.current.set(
+        genreTabCacheKey(slug, tabType, preferencesSig),
+        state
+      );
+    },
+    [slug, preferencesSig]
+  );
+
+  const applyTabState = useCallback((tabType: GenrePageType, state: GenreTabState) => {
+    writeCachedTab(tabType, state);
+    if (activeTypeRef.current !== tabType) return;
+    setPayload(state.payload);
+    setShellReady(state.shellReady);
+    setTopRatedReady(state.topRatedReady);
+    const spotlight = spotlightItemsFromPayload(state.payload);
+    if (spotlight.length > 0) {
+      setHeroSpotlightItems(spotlight);
+    }
+  }, [writeCachedTab]);
+
+  const ensureTabLoaded = useCallback(
+    (tabType: GenrePageType) => {
+      const cached = readCachedTab(tabType);
+      const needs = genrePagePartNeeds(cached.payload);
+
+      if (!needs.shell && !needs.topRated) {
+        applyTabState(tabType, cached);
+        return;
+      }
+
+      if (needs.shell) {
+        void fetchGenrePageShell(slug, tabType, preferences).then((shell) => {
+          const base = readCachedTab(tabType);
+          const next: GenreTabState = {
+            payload: mergeGenreShell(base.payload, shell),
+            shellReady: true,
+            topRatedReady: base.topRatedReady,
+          };
+          applyTabState(tabType, next);
+        });
+      }
+
+      if (needs.topRated) {
+        void fetchGenrePageTopRated(slug, tabType, preferences).then((part) => {
+          const base = readCachedTab(tabType);
+          const next: GenreTabState = {
+            payload: mergeGenreTopRated(base.payload, part),
+            shellReady: base.shellReady,
+            topRatedReady: true,
+          };
+          applyTabState(tabType, next);
+        });
+      }
+    },
+    [applyTabState, preferences, readCachedTab, slug]
+  );
+
   const loadGenrePage = useCallback(() => {
-    const cached = peekGenrePageInitial(slug, type, preferences);
-    const needs = genrePagePartNeeds(cached);
-
-    if (!needs.shell && !needs.topRated && !needs.newRail) {
-      setPayload(cached);
-      const flags = syncGenreReadyFlags(cached);
-      setShellReady(flags.shellReady);
-      setTopRatedReady(flags.topRatedReady);
-      setNewReady(flags.newReady);
-      return;
-    }
-
-    if (needs.shell) {
-      void fetchGenrePageShell(slug, type, preferences).then((shell) => {
-        setPayload((prev) => ({
-          ...prev,
-          featured: shell.featured,
-          total: shell.total,
-          rails: {
-            ...prev.rails,
-            popular: shell.rails.popular,
-          },
-        }));
-        setShellReady(true);
-      });
-    }
-
-    if (needs.topRated) {
-      void fetchGenrePageTopRated(slug, type, preferences).then((part) => {
-        setPayload((prev) => ({
-          ...prev,
-          rails: {
-            ...prev.rails,
-            top_rated: part.rails.top_rated,
-          },
-        }));
-        setTopRatedReady(true);
-      });
-    }
-
-    if (needs.newRail) {
-      void fetchGenrePageNew(slug, type, preferences).then((part) => {
-        setPayload((prev) => ({
-          ...prev,
-          rails: {
-            ...prev.rails,
-            new: part.rails.new,
-          },
-        }));
-        setNewReady(true);
-      });
-    }
-  }, [slug, type, preferences]);
+    ensureTabLoaded(type);
+  }, [ensureTabLoaded, type]);
 
   const bustGenreInflight = useCallback(() => {
     bustInflightDayCache(genrePageCacheKey(slug, type, preferences));
     bustInflightDayCache(genrePageShellCacheKey(slug, type, preferences));
     bustInflightDayCache(genrePageTopRatedCacheKey(slug, type, preferences));
-    bustInflightDayCache(genrePageNewCacheKey(slug, type, preferences));
   }, [slug, type, preferences]);
+
+  const prefetchTab = useCallback(
+    (tabType: GenrePageType) => {
+      const cached = readCachedTab(tabType);
+      if (!genrePagePartNeeds(cached.payload).shell) return;
+
+      void fetchGenrePageShell(slug, tabType, preferences).then((shell) => {
+        const base = readCachedTab(tabType);
+        applyTabState(tabType, {
+          payload: mergeGenreShell(base.payload, shell),
+          shellReady: true,
+          topRatedReady: base.topRatedReady,
+        });
+      });
+    },
+    [applyTabState, preferences, readCachedTab, slug]
+  );
 
   useEffect(() => {
     document.title = `${genreLabel} - Teavie`;
   }, [genreLabel]);
 
   useLayoutEffect(() => {
-    const cached = peekGenrePageInitial(slug, type, preferences);
-    setPayload(cached);
-    const flags = syncGenreReadyFlags(cached);
-    setShellReady(flags.shellReady);
-    setTopRatedReady(flags.topRatedReady);
-    setNewReady(flags.newReady);
-  }, [slug, type, preferencesSig, preferences]);
+    typeCacheRef.current.clear();
+  }, [slug, preferencesSig]);
+
+  useLayoutEffect(() => {
+    applyTabState(type, readCachedTab(type));
+  }, [type, slug, preferencesSig, applyTabState, readCachedTab]);
 
   useEffect(() => {
-    let cancelled = false;
-    const cached = peekGenrePageInitial(slug, type, preferences);
-    const needs = genrePagePartNeeds(cached);
+    ensureTabLoaded(type);
+  }, [slug, type, preferencesSig, ensureTabLoaded]);
 
-    if (!needs.shell && !needs.topRated && !needs.newRail) {
-      return;
+  useEffect(() => {
+    for (const tabType of GENRE_TAB_TYPES) {
+      prefetchTab(tabType);
     }
+  }, [slug, preferencesSig, prefetchTab]);
 
-    const fetches: Promise<void>[] = [];
-
-    if (needs.shell) {
-      fetches.push(
-        fetchGenrePageShell(slug, type, preferences).then((shell) => {
-          if (cancelled) return;
-          setPayload((prev) => ({
-            ...prev,
-            featured: shell.featured,
-            total: shell.total,
-            rails: {
-              ...prev.rails,
-              popular: shell.rails.popular,
-            },
-          }));
-          setShellReady(true);
-        })
-      );
-    }
-
-    if (needs.topRated) {
-      fetches.push(
-        fetchGenrePageTopRated(slug, type, preferences).then((part) => {
-          if (cancelled) return;
-          setPayload((prev) => ({
-            ...prev,
-            rails: {
-              ...prev.rails,
-              top_rated: part.rails.top_rated,
-            },
-          }));
-          setTopRatedReady(true);
-        })
-      );
-    }
-
-    if (needs.newRail) {
-      fetches.push(
-        fetchGenrePageNew(slug, type, preferences).then((part) => {
-          if (cancelled) return;
-          setPayload((prev) => ({
-            ...prev,
-            rails: {
-              ...prev.rails,
-              new: part.rails.new,
-            },
-          }));
-          setNewReady(true);
-        })
-      );
-    }
-
-    void Promise.all(fetches);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [slug, type, preferencesSig, preferences]);
-
-  const discoverPending = !shellReady || !topRatedReady || !newReady;
+  const discoverPending = !shellReady || !topRatedReady;
   useResumeFetchWhenVisible(discoverPending, loadGenrePage, bustGenreInflight);
 
   useEffect(() => {
@@ -294,18 +329,20 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
 
   const onTypeSelect = useCallback(
     (next: GenrePageType) => {
+      if (next === type) return;
+      activeTypeRef.current = next;
+      applyTabState(next, readCachedTab(next));
+      prefetchTab(next);
       mergeParams({ type: next });
     },
-    [mergeParams]
+    [applyTabState, mergeParams, prefetchTab, readCachedTab, type]
   );
 
-  const { featured, rails } = payload;
-  const spotlightItems =
-    featured.length > 0 ? featured : rails.popular.slice(0, SPOTLIGHT_MAX_ITEMS);
-  const hasSpotlight = spotlightItems.length > 0;
-  const hasAnyRail =
-    rails.popular.length > 0 || rails.top_rated.length > 0 || rails.new.length > 0;
-  const pageSettled = shellReady && topRatedReady && newReady;
+  const { rails } = payload;
+  const hasSpotlight = heroSpotlightItems.length > 0;
+  const showHeroSkeleton = !hasSpotlight && !shellReady;
+  const hasAnyRail = rails.popular.length > 0 || rails.top_rated.length > 0;
+  const pageSettled = shellReady && topRatedReady;
 
   return (
     <div className="bg-background min-h-screen w-full">
@@ -324,13 +361,13 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
             showSpotlightSelector={false}
             trendingMovies={[]}
             trendingTv={[]}
-            spotlightItems={spotlightItems}
+            spotlightItems={heroSpotlightItems}
             maxItems={SPOTLIGHT_MAX_ITEMS}
             rounded={false}
             flushLeft={false}
           />
         </section>
-      ) : !shellReady ? (
+      ) : showHeroSkeleton ? (
         <section
           className={cn(
             'relative z-0 -mt-14 w-full overflow-hidden rounded-tl-2xl',
@@ -352,19 +389,14 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
           RAIL_STACK_CLASS,
           MOBILE_CONTENT_INSET_LEFT,
           'w-full pb-10',
-          (hasSpotlight || !shellReady) ? 'mt-0' : 'mt-2'
+          (hasSpotlight || showHeroSkeleton) ? 'mt-0' : 'mt-2'
         )}
       >
-        <GenreTypeFilter type={type} onSelect={onTypeSelect} />
+        <GenreTypeFilter type={type} onSelect={onTypeSelect} onPrefetch={prefetchTab} />
 
         {RAIL_SECTIONS.map(({ sort, title }) => {
           const items = rails[sort];
-          const ready =
-            sort === 'popular'
-              ? shellReady
-              : sort === 'top_rated'
-                ? topRatedReady
-                : newReady;
+          const ready = sort === 'popular' ? shellReady : topRatedReady;
 
           if (items.length > 0) {
             return (

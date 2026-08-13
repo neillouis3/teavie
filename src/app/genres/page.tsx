@@ -1,19 +1,19 @@
 "use client";
 
 import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import UserPageShell from "@/components/ui/userPageShell";
 import { IMDB_GENRES, orderGenreRowsByPreference } from "@/lib/imdbGenres";
 import {
-  GenreCatalogTile,
+  GenreSquareTile,
+  GENRE_SQUARE_GRID,
+  GenreSquareTilesSkeleton,
   genreTileColor,
   type CatalogGenreRow,
 } from "@/components/genre/genreTileShared";
 import { fetchGenresIndex, peekGenresIndexCache } from "@/lib/pageDataCache";
+import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 import { useUserData } from "@/contexts/userDataContext";
 import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
-
-const GENRES_LIBRARY_GRID =
-  "mx-auto grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
+import { cn } from "@/lib/utils";
 
 function mergeAllGenres(fromApi: CatalogGenreRow[]): CatalogGenreRow[] {
   const bySlug = new Map(fromApi.map((g) => [g.slug, g]));
@@ -85,36 +85,38 @@ export default function GenresIndexPage() {
   }, []);
 
   return (
-    <UserPageShell
-      title="Genres"
-      description="Browse movies and TV by genre."
-      contentMaxWidth="6xl"
-      contentClassName="flex flex-col items-center"
-    >
-      {!ready ? (
-        <div className={GENRES_LIBRARY_GRID} aria-busy="true">
-          {Array.from({ length: 9 }).map((_, index) => (
-            <div
-              key={index}
-              className="aspect-[40/21] w-full animate-pulse rounded-xl bg-default-200 dark:bg-white/10"
-            />
-          ))}
+    <div className="bg-background min-h-screen w-full">
+      <div
+        className={cn(
+          MOBILE_CONTENT_INSET_LEFT,
+          "w-full pb-12 pr-4 pt-2 lg:pr-24"
+        )}
+      >
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Genres</h1>
+          <p className="mt-1 text-sm text-default-500">
+            Browse movies and TV by genre.
+          </p>
         </div>
-      ) : error ? (
-        <p className="py-12 text-center text-sm text-white/50">
-          Could not load genres. Try again later.
-        </p>
-      ) : (
-        <div className={GENRES_LIBRARY_GRID}>
-          {allGenres.map((genre, i) => (
-            <GenreCatalogTile
-              key={genre.slug}
-              genre={genre}
-              colorClass={genreTileColor(genre.name, i)}
-            />
-          ))}
-        </div>
-      )}
-    </UserPageShell>
+
+        {!ready ? (
+          <GenreSquareTilesSkeleton />
+        ) : error ? (
+          <p className="py-12 text-sm text-default-500">
+            Could not load genres. Try again later.
+          </p>
+        ) : (
+          <div className={GENRE_SQUARE_GRID}>
+            {allGenres.map((genre, i) => (
+              <GenreSquareTile
+                key={genre.slug}
+                genre={genre}
+                colorClass={genreTileColor(genre.name, i)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

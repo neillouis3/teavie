@@ -27,3 +27,12 @@ export default function WatchPageSkeleton({
     </div>
   );
 }
+
+/** Full-viewport loading shell for immersive movie watch. */
+export function ImmersiveWatchPageSkeleton() {
+  return (
+    <div className="fixed inset-0 z-0 flex h-[100dvh] w-full bg-black">
+      <PlayerEmbedSkeleton rounded="rounded-none" className="h-full w-full" />
+    </div>
+  );
+}

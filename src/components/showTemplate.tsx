@@ -26,7 +26,7 @@ import {
 } from "@/lib/watchProgress";
 import type { VideasyProgressMessage } from "@/lib/videasyProgress";
 import type { MegaPlayMessage } from "@/lib/megaPlayProgress";
-import { recordMovieInWatchHistory, touchWatchHistory, WATCH_HISTORY_MIN_PLAY_SECONDS } from "@/lib/watchHistory";
+import { recordMovieInWatchHistory, touchWatchHistory } from "@/lib/watchHistory";
 import {
   saveMoviePlaybackPosition,
 } from "@/lib/movieWatchProgress";
@@ -833,19 +833,38 @@ export default function ShowTemplate({
     setPlayerEpoch((n) => n + 1);
   }, [id, selectedSeason, selectedEpisode, progressHydrated, watchParty.room]);
 
+  useEffect(() => {
+    if (viewMode !== "watch" || !show) return;
+    if (isAnimeMovie) {
+      recordMovieInWatchHistory(String(id));
+      return;
+    }
+    if (!canPlay && !canPlayAnime) return;
+    const coords = show.is_anime
+      ? resolveAnimePlayerCoords(show, selectedSeason, selectedEpisode)
+      : { season: selectedSeason, episode: selectedEpisode };
+    touchWatchHistory(String(id), {
+      mediaType: "tv",
+      lastSeason: coords.season,
+      lastEpisode: coords.episode,
+    });
+  }, [
+    viewMode,
+    id,
+    show,
+    isAnimeMovie,
+    canPlay,
+    canPlayAnime,
+    selectedSeason,
+    selectedEpisode,
+  ]);
+
   const handleVideasyProgress = useCallback(
     (msg: VideasyProgressMessage) => {
       const s = msg.season ?? selectedSeason;
       const e = msg.episode ?? selectedEpisode;
       markEpisodeWatchedFromPlayback(s, e, msg.timestamp);
       saveEpisodePlaybackPosition(String(id), s, e, msg.timestamp);
-      if (msg.timestamp >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-        touchWatchHistory(String(id), {
-          mediaType: "tv",
-          lastSeason: s,
-          lastEpisode: e,
-        });
-      }
       watchParty.noteHostPlayback(msg.timestamp);
 
       if (!watchParty.isHost || !watchParty.room || server !== "videasy") return;
@@ -873,13 +892,6 @@ export default function ShowTemplate({
       const sec = Math.floor(Number(seconds) || 0);
       markEpisodeWatchedFromPlayback(s, e, sec);
       saveEpisodePlaybackPosition(String(id), s, e, sec);
-      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-        touchWatchHistory(String(id), {
-          mediaType: "tv",
-          lastSeason: s,
-          lastEpisode: e,
-        });
-      }
       watchParty.noteHostPlayback(sec);
       if (!watchParty.isHost || !watchParty.room || server !== "stremio") return;
       const now = Date.now();
@@ -941,13 +953,6 @@ export default function ShowTemplate({
       const sec = Math.floor(msg.currentTime);
       markEpisodeWatchedFromPlayback(selectedSeason, selectedEpisode, sec);
       saveEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode, sec);
-      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-        touchWatchHistory(String(id), {
-          mediaType: "tv",
-          lastSeason: selectedSeason,
-          lastEpisode: selectedEpisode,
-        });
-      }
       watchParty.noteHostPlayback(sec);
       if (!watchParty.isHost || !watchParty.room) return;
       const now = Date.now();
@@ -1331,10 +1336,10 @@ export default function ShowTemplate({
             onVideasyProgress={
               server === "videasy"
                 ? (msg) => {
-                    const sec = Math.floor(Number(msg.timestamp) || 0);
-                    if (sec < WATCH_HISTORY_MIN_PLAY_SECONDS) return;
-                    saveMoviePlaybackPosition(String(id), sec);
-                    recordMovieInWatchHistory(String(id));
+                    saveMoviePlaybackPosition(
+                      String(id),
+                      Math.floor(Number(msg.timestamp) || 0)
+                    );
                   }
                 : undefined
             }

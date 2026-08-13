@@ -23,12 +23,11 @@ import {
   type CatalogDetailLink,
 } from './ui/catalogDetailColumns';
 import CatalogMediaPanel, { CatalogTitleBlock } from './ui/catalogMediaPanel';
-import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+import { ImmersiveWatchPageSkeleton } from '@/components/ui/watchPageSkeleton';
 import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
-import { PLAYER_SHELL_CLASS } from '@/components/ui/playerEmbedSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
-import { recordMovieInWatchHistory, WATCH_HISTORY_MIN_PLAY_SECONDS } from '@/lib/watchHistory';
+import { recordMovieInWatchHistory } from '@/lib/watchHistory';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
 import { inferMovieStreamQuality } from '@/lib/streamQuality';
@@ -238,6 +237,8 @@ export default function MovieTemplate({
     onGuestSync: applyGuestSync,
   });
 
+  const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
+
   useEffect(() => {
     if (watchParty.room) return;
     if (viewMode !== 'watch') return;
@@ -245,12 +246,14 @@ export default function MovieTemplate({
     setPlayerEpoch((n) => n + 1);
   }, [id, watchParty.room, viewMode]);
 
+  useEffect(() => {
+    if (viewMode !== 'watch' || !movieReleased) return;
+    recordMovieInWatchHistory(String(id));
+  }, [viewMode, id, movieReleased]);
+
   const handleVideasyProgress = useCallback(
     (msg: VideasyProgressMessage) => {
       saveMoviePlaybackPosition(String(id), msg.timestamp);
-      if (msg.timestamp >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-        recordMovieInWatchHistory(String(id));
-      }
       watchParty.noteHostPlayback(msg.timestamp);
       if (!watchParty.isHost || !watchParty.room || server !== 'videasy') return;
       const now = Date.now();
@@ -265,9 +268,6 @@ export default function MovieTemplate({
     (seconds: number) => {
       const sec = Math.floor(Number(seconds) || 0);
       saveMoviePlaybackPosition(String(id), sec);
-      if (sec >= WATCH_HISTORY_MIN_PLAY_SECONDS) {
-        recordMovieInWatchHistory(String(id));
-      }
       watchParty.noteHostPlayback(sec);
       if (!watchParty.isHost || !watchParty.room || server !== 'stremio') return;
       const now = Date.now();
@@ -315,8 +315,6 @@ export default function MovieTemplate({
     const q = params.toString();
     router.replace(q ? `${pathname}?${q}` : pathname);
   }, [watchParty, searchParams, pathname, router]);
-
-  const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
 
   const partyNavError =
     watchParty.room && watchParty.room.catalogId !== id
@@ -605,7 +603,7 @@ export default function MovieTemplate({
     return viewMode === 'details' ? (
       <CatalogDetailsSkeleton modal={detailsModal} bannerUrl={seedBanner} />
     ) : (
-      <WatchPageSkeleton />
+      <ImmersiveWatchPageSkeleton />
     );
   }
 
@@ -614,7 +612,7 @@ export default function MovieTemplate({
       detailsModal && detailsSeed
         ? tmdbImageUrl(seedBannerPath(detailsSeed) ?? "")
         : null;
-    return (
+    const unavailable = (
       <CatalogUnavailable
         reason={
           movieUnavailableReason === 'content_policy'
@@ -625,6 +623,14 @@ export default function MovieTemplate({
         backdropUrl={unavailableBanner}
       />
     );
+    if (viewMode === 'watch' && !detailsModal) {
+      return (
+        <div className="fixed inset-0 z-0 flex h-[100dvh] w-full items-center justify-center bg-black px-6">
+          {unavailable}
+        </div>
+      );
+    }
+    return unavailable;
   }
 
   const movieToolbar = (
@@ -693,41 +699,6 @@ export default function MovieTemplate({
 
 
 
-  const movieWatchSummary = (
-    <div className="w-full">
-      <CatalogMediaPanel
-        compact
-        posterUrl={imageUrl}
-        posterAlt={movie.title}
-        title={movie.title}
-        rating={movie.vote_average}
-        certification={usCertificationFromDoc(movie)}
-        overview={movie.overview}
-        tagline={movie.tagline}
-        mediaType="movie"
-        genres={[]}
-        infoLines={[]}
-        links={[]}
-        toolbar={
-          <div className="flex flex-wrap items-center gap-2">
-            <FavoriteButton catalogId={String(id)} mediaType="movie" iconOnly />
-            <WatchLaterButton catalogId={String(id)} mediaType="movie" iconOnly />
-            <Button
-              as={Link}
-              href={`/movies/${encodeURIComponent(id)}`}
-              variant="flat"
-              size="sm"
-              radius="md"
-              className="h-8 min-h-8 px-3 text-sm font-normal"
-            >
-              Details
-            </Button>
-          </div>
-        }
-      />
-    </div>
-  );
-
   if (viewMode === 'details') {
     const detailsBannerUrl = detailsModal
       ? resolveFrozenModalHeroBanner(modalHeroBannerRef, {
@@ -788,47 +759,47 @@ export default function MovieTemplate({
   }
 
   return (
-    <div className="flex min-h-full w-full flex-col bg-background/92 px-0 pt-0 pb-32 dark:bg-background/88">
-      <div className={`flex w-full flex-col gap-6 ${MOVIE_CONTENT_INSET_X}`}>
-        <div className={PLAYER_SHELL_CLASS}>
-          {!movieReleased ? (
-            trailerEmbedUrl ? (
-              <MovieTrailerEmbed
-                src={trailerEmbedUrl}
-                title={`${movie.title} trailer`}
-              />
-            ) : (
+    <div className="fixed inset-0 z-0 flex h-[100dvh] w-full flex-col bg-black">
+      <div className="relative min-h-0 flex-1 w-full">
+        {!movieReleased ? (
+          trailerEmbedUrl ? (
+            <MovieTrailerEmbed
+              src={trailerEmbedUrl}
+              title={`${movie.title} trailer`}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center px-6">
               <CatalogComingSoon
                 title={movie.title}
                 posterUrl={imageUrl}
                 releaseDate={movie.release_date}
                 links={movieDetailLinks(movie)}
               />
-            )
-          ) : (
-            <MoviePlayer
-              key={`movie-${resolvedTmdbId}-${playerEpoch}`}
-              videoId={resolvedTmdbId}
-              imdbId={movie.imdb_id}
-              title={movie.title}
-              posterUrl={imageUrl}
-              backdropUrl={resolveMovieDetailsBannerUrl(movie)}
-              server={server}
-              startSeconds={server === 'videasy' || server === 'stremio' ? playerStartSeconds : 0}
-              onVideasyProgress={
-                server === 'videasy' ? handleVideasyProgress : undefined
-              }
-              onStremioProgress={
-                server === 'stremio' ? handleStremioProgress : undefined
-              }
-              streamQuality={inferMovieStreamQuality(
-                movie.release_dates,
-                movie.release_date
-              )}
-            />
-          )}
-        </div>
-        {movieWatchSummary}
+            </div>
+          )
+        ) : (
+          <MoviePlayer
+            key={`movie-${resolvedTmdbId}-${playerEpoch}`}
+            videoId={resolvedTmdbId}
+            imdbId={movie.imdb_id}
+            title={movie.title}
+            posterUrl={imageUrl}
+            backdropUrl={resolveMovieDetailsBannerUrl(movie)}
+            server={server}
+            immersive
+            startSeconds={server === 'videasy' || server === 'stremio' ? playerStartSeconds : 0}
+            onVideasyProgress={
+              server === 'videasy' ? handleVideasyProgress : undefined
+            }
+            onStremioProgress={
+              server === 'stremio' ? handleStremioProgress : undefined
+            }
+            streamQuality={inferMovieStreamQuality(
+              movie.release_dates,
+              movie.release_date
+            )}
+          />
+        )}
       </div>
     </div>
   );
