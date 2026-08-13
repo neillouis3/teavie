@@ -12,6 +12,12 @@ const SHOW_EPISODES_HERO_RE = /^\/shows\/([^/]+)\/episodes\/?$/;
 const MOVIE_DETAIL_HERO_RE = /^\/movies\/([^/]+)\/?$/;
 const ANIME_DETAIL_HERO_RE = /^\/anime\/([^/]+)\/?$/;
 const KDRAMA_DETAIL_HERO_RE = /^\/kdrama\/([^/]+)\/?$/;
+const GENRE_SPOTLIGHT_HERO_RE = /^\/genre\/[^/]+\/?$/;
+
+/** Genre slug pages with a full-bleed spotlight hero (excludes `/genres` index). */
+export function pathUsesGenreSpotlightHeroBleed(pathname: string): boolean {
+  return GENRE_SPOTLIGHT_HERO_RE.test(pathname);
+}
 
 /** Show episodes pages with a full-bleed blurred backdrop (excludes watch, all, admin). */
 export function pathUsesShowEpisodesHeroBleed(pathname: string): boolean {
@@ -70,7 +76,8 @@ export function pathUsesHeroBleed(pathname: string): boolean {
     pathUsesShowDetailHeroBleed(pathname) ||
     pathUsesMovieDetailHeroBleed(pathname) ||
     pathUsesAnimeDetailHeroBleed(pathname) ||
-    pathUsesKdramaDetailHeroBleed(pathname)
+    pathUsesKdramaDetailHeroBleed(pathname) ||
+    pathUsesGenreSpotlightHeroBleed(pathname)
   );
 }
 

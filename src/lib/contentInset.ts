@@ -1,9 +1,6 @@
 /** Shared left gutter for full-width content and horizontal rails. */
 export const MOBILE_CONTENT_INSET_LEFT = "pl-4 lg:pl-24";
 
-/** Featured/hero blocks: match rail left gutter plus right inset. */
-export const MOBILE_CONTENT_INSET_X = "px-4 lg:px-24";
-
 /** Page shell horizontal inset — left gutter on mobile, right gutter always. */
 export const CONTENT_INSET_X = "px-4";
 

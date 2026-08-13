@@ -6,7 +6,6 @@ import { useParams } from 'next/navigation';
 import GenrePageTemplate from '@/components/genre/GenrePageTemplate';
 import { SPOTLIGHT_SKELETON_H } from '@/components/catalog/trendingHero';
 import { RAIL_AFTER_SPOTLIGHT } from '@/lib/catalogGrid';
-import { MOBILE_CONTENT_INSET_X } from '@/lib/contentInset';
 import { cn } from '@/lib/utils';
 import {
   imdbGenreLabelFromSlug,
@@ -37,8 +36,7 @@ function GenrePageFallback() {
     <div className="bg-background min-h-screen w-full">
       <section
         className={cn(
-          'relative z-0 w-full overflow-hidden rounded-tl-2xl',
-          MOBILE_CONTENT_INSET_X,
+          'relative z-0 -mt-14 w-full overflow-hidden rounded-tl-2xl',
           RAIL_AFTER_SPOTLIGHT
         )}
         aria-hidden

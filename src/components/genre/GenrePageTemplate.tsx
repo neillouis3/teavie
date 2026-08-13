@@ -27,7 +27,6 @@ import {
 import { CatalogRailShell } from '@/components/ui/sidebarBleedRail';
 import {
   MOBILE_CONTENT_INSET_LEFT,
-  MOBILE_CONTENT_INSET_X,
 } from '@/lib/contentInset';
 import { useUserData } from '@/contexts/userDataContext';
 import { PREFERENCES_CHANGED_EVENT } from '@/lib/userPreferences';
@@ -313,8 +312,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
       {hasSpotlight ? (
         <section
           className={cn(
-            'relative z-0 w-full overflow-hidden rounded-tl-2xl',
-            MOBILE_CONTENT_INSET_X,
+            'relative z-0 -mt-14 w-full overflow-hidden rounded-tl-2xl',
             RAIL_AFTER_SPOTLIGHT
           )}
           aria-label="Spotlight"
@@ -335,8 +333,7 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
       ) : !shellReady ? (
         <section
           className={cn(
-            'relative z-0 w-full overflow-hidden rounded-tl-2xl',
-            MOBILE_CONTENT_INSET_X,
+            'relative z-0 -mt-14 w-full overflow-hidden rounded-tl-2xl',
             RAIL_AFTER_SPOTLIGHT
           )}
           aria-hidden
