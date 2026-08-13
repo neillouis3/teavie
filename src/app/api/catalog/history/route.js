@@ -8,6 +8,10 @@ import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
 import { tmdbFetchJson } from "@/lib/tmdbAuth";
 
 function mapTmdbToItem(entry, data) {
+  const voteAverage =
+    typeof data.vote_average === "number" && Number.isFinite(data.vote_average)
+      ? data.vote_average
+      : null;
   if (entry.mediaType === "movie") {
     return {
       id: entry.catalogId,
@@ -16,6 +20,7 @@ function mapTmdbToItem(entry, data) {
       release_date: data.release_date ?? null,
       poster_path: data.poster_path ?? "",
       backdrop_path: data.backdrop_path ?? "",
+      vote_average: voteAverage,
     };
   }
   return {
@@ -28,6 +33,7 @@ function mapTmdbToItem(entry, data) {
     backdrop_path: data.backdrop_path ?? "",
     season_amount: data.number_of_seasons ?? 0,
     number_of_episodes: data.number_of_episodes ?? undefined,
+    vote_average: voteAverage,
   };
 }
 
@@ -131,6 +137,13 @@ export async function POST(req) {
             season_amount: 1,
             number_of_seasons: 1,
             number_of_episodes: 1,
+            vote_average: 1,
+            vote_count: 1,
+            omdb: 1,
+            tmdb: 1,
+            anilist: 1,
+            tags: 1,
+            is_anime: 1,
           },
         }
       )

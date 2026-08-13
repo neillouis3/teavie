@@ -2,7 +2,6 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import Header from "@/components/ui/header";
 import PageBlurredBackdrop from "@/components/ui/pageBlurredBackdrop";
 import CatalogGrid from "@/components/browse/catalogGrid";
@@ -41,7 +40,6 @@ type BrowseCatalogPageProps = {
   genreApiPath?: string;
   filterMode: "movie" | "tv" | "anime" | "kdrama";
   viewer: "movie" | "show";
-  backLink?: { href: string; label: string };
   /** When the URL has no `sort_by`, use this (e.g. anime → most popular). */
   defaultSort?: string;
 };
@@ -54,7 +52,6 @@ function BrowseCatalogPageContent({
   genreApiPath,
   filterMode,
   viewer,
-  backLink,
   defaultSort = "rating",
 }: BrowseCatalogPageProps) {
   const searchParams = useSearchParams();
@@ -319,14 +316,6 @@ function BrowseCatalogPageContent({
                 defaultSort={defaultSort}
               />
             </div>
-
-            {backLink ? (
-          <p className="text-sm text-default-500">
-            <Link href={backLink.href} className="text-success hover:underline">
-              {backLink.label}
-            </Link>
-          </p>
-        ) : null}
 
             {loading ? (
           <CatalogGridLoading />

@@ -12,7 +12,6 @@ export default function AllKdramaPage() {
       genreApiPath="/api/category/kdrama/genres"
       filterMode="kdrama"
       viewer="show"
-      backLink={{ href: '/kdrama', label: '← Back to Korean Drama' }}
     />
   );
 }

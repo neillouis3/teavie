@@ -3,7 +3,12 @@
 import React, { useMemo } from "react";
 import SmallCard from "@/components/ui/smallCard";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import { SIDEBAR_BLEED_CAROUSEL_OPTS } from "@/components/ui/sidebarBleedRail";
+import {
+  CatalogRailShell,
+  SIDEBAR_BLEED_CAROUSEL_OPTS,
+  SidebarBleedStartSpacer,
+  catalogRailViewportClass,
+} from "@/components/ui/sidebarBleedRail";
 import {
   Carousel,
   CarouselContent,
@@ -53,11 +58,15 @@ export default function NewEpisodesRail({
   return (
     <section className={RAIL_INNER_CLASS} aria-label="New episodes">
       <ExploreSectionTitle variant="explore">New episodes</ExploreSectionTitle>
-      <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
-        <CarouselContent
-          viewportClassName="w-full overflow-hidden"
-          className={flush ? FLUSH_RAIL_TRACK : RAIL_TRACK}
-        >
+      <CatalogRailShell bleed={!flush}>
+        <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+          <CarouselContent
+            viewportClassName={
+              flush ? "w-full overflow-hidden" : catalogRailViewportClass()
+            }
+            className={flush ? FLUSH_RAIL_TRACK : RAIL_TRACK}
+          >
+            {!flush ? <SidebarBleedStartSpacer /> : null}
           {visibleItems.map((item) => {
             const title = item.title || item.name || "Untitled";
             return (
@@ -79,8 +88,9 @@ export default function NewEpisodesRail({
               </CarouselItem>
             );
           })}
-        </CarouselContent>
-      </Carousel>
+          </CarouselContent>
+        </Carousel>
+      </CatalogRailShell>
     </section>
   );
 }

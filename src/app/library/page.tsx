@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 import type { ContentItem } from "@/types/content";
 
-const LIBRARY_CACHE_PREFIX = "teavie.cache.library.v1:";
+const LIBRARY_CACHE_PREFIX = "teavie.cache.library.v2:";
 
 type LibraryPayload = {
   watchLaterRows: ContentItem[];

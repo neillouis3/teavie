@@ -14,6 +14,7 @@ import {
   RAIL_INNER_CLASS,
   RAIL_STACK_CLASS,
 } from "@/lib/catalogGrid";
+import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
 import {
   bustInflightDayCache,
   categoryDiscoverCacheKey,
@@ -118,17 +119,17 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           </section>
         ) : null}
         {useExploreSpotlight ? (
-          <div className="w-full pb-8">
+          <div className={cn("w-full pb-8", MOBILE_CONTENT_INSET_LEFT)}>
             <div className={`${RAIL_INNER_CLASS} mb-8`}>
               <div className="h-5 w-32 animate-pulse rounded bg-default-200 dark:bg-default-100/10" />
-              <CatalogRailSkeleton count={8} flush bleed={false} />
+              <CatalogRailSkeleton count={8} />
             </div>
-            <CatalogRailSkeleton count={8} flush bleed={false} />
+            <CatalogRailSkeleton count={8} />
           </div>
         ) : null}
-        <div className="space-y-8 pb-8 w-full">
-          <CatalogRailSkeleton count={8} flush bleed={false} />
-          <CatalogRailSkeleton count={8} flush bleed={false} />
+        <div className={cn("space-y-8 pb-8 w-full", MOBILE_CONTENT_INSET_LEFT)}>
+          <CatalogRailSkeleton count={8} />
+          <CatalogRailSkeleton count={8} />
         </div>
       </div>
     );
@@ -181,14 +182,21 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
       ) : null}
 
       {hasNewEpisodes ? (
-        <div className={cn("mb-8 w-full", hasTrending && "mt-2")}>
-          <NewEpisodesRail items={data.newEpisodes} flush={useExploreSpotlight} />
+        <div
+          className={cn(
+            "mb-8 w-full",
+            MOBILE_CONTENT_INSET_LEFT,
+            hasTrending && "mt-2"
+          )}
+        >
+          <NewEpisodesRail items={data.newEpisodes} />
         </div>
       ) : null}
 
       <div
         className={cn(
           RAIL_STACK_CLASS,
+          MOBILE_CONTENT_INSET_LEFT,
           "w-full",
           categoryGenres.length > 0 ? "pb-0" : "pb-10"
         )}
@@ -199,14 +207,12 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
               title="Popular"
               items={data.popular}
               titleVariant="explore"
-              flush={useExploreSpotlight}
             />
 
             <CatalogRail
               title="Top rated"
               items={data.topRated}
               titleVariant="explore"
-              flush={useExploreSpotlight}
             />
           </>
         ) : (
@@ -217,7 +223,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
       </div>
 
       {categoryGenres.length > 0 ? (
-        <div className="pb-10 pt-8">
+        <div className={cn("pb-10 pt-8", MOBILE_CONTENT_INSET_LEFT)}>
           <CategoryGenreRail category={category} genres={categoryGenres} />
         </div>
       ) : null}

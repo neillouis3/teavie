@@ -20,6 +20,7 @@ export default function WatchLaterRail(props: WatchLaterRailProps) {
       {...props}
       title="Watch later"
       ariaLabel="Watch later"
+      showVoteAverage
     />
   );
 }
