@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import Header from "@/components/ui/header";
-import PageSplash from "@/components/ui/pageSplash";
+import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import UserPageShell from "@/components/ui/userPageShell";
 import { IMDB_GENRES, orderGenreRowsByPreference } from "@/lib/imdbGenres";
 import {
-  GenreSquareTile,
-  GENRE_SQUARE_GRID,
+  GenreCatalogTile,
   genreTileColor,
   type CatalogGenreRow,
 } from "@/components/genre/genreTileShared";
-import { fetchGenresIndex } from "@/lib/pageDataCache";
-import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { fetchGenresIndex, peekGenresIndexCache } from "@/lib/pageDataCache";
 import { useUserData } from "@/contexts/userDataContext";
 import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
+
+const GENRES_LIBRARY_GRID =
+  "mx-auto grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
 
 function mergeAllGenres(fromApi: CatalogGenreRow[]): CatalogGenreRow[] {
   const bySlug = new Map(fromApi.map((g) => [g.slug, g]));
@@ -25,8 +25,8 @@ function mergeAllGenres(fromApi: CatalogGenreRow[]): CatalogGenreRow[] {
 
 export default function GenresIndexPage() {
   const { preferences } = useUserData();
-  const [genres, setGenres] = useState<CatalogGenreRow[]>([]);
-  const [ready, setReady] = useState(false);
+  const [genres, setGenres] = useState<CatalogGenreRow[]>(() => peekGenresIndexCache());
+  const [ready, setReady] = useState(() => genres.length > 0);
   const [error, setError] = useState(false);
 
   const allGenres = useMemo(
@@ -38,7 +38,19 @@ export default function GenresIndexPage() {
     document.title = "Genres - Teavie";
   }, []);
 
+  useLayoutEffect(() => {
+    const cached = peekGenresIndexCache();
+    if (cached.length > 0) {
+      setGenres(cached);
+      setReady(true);
+    }
+  }, []);
+
   useEffect(() => {
+    if (peekGenresIndexCache().length > 0) {
+      return;
+    }
+
     let cancelled = false;
     void fetchGenresIndex()
       .then((rows) => {
@@ -72,30 +84,37 @@ export default function GenresIndexPage() {
     return () => window.removeEventListener(PREFERENCES_CHANGED_EVENT, refresh);
   }, []);
 
-  if (!ready) {
-    return <PageSplash ariaLabel="Loading Genres" />;
-  }
-
   return (
-    <div className="bg-main min-h-screen w-full">
-      <Header pageName="Genres" />
-      <div className={`w-full pb-12 pt-2 ${CONTENT_INSET_X}`}>
-        {error ? (
-          <p className="py-12 text-left text-sm text-default-500">
-            Could not load genres. Try again later.
-          </p>
-        ) : (
-          <div className={GENRE_SQUARE_GRID}>
-            {allGenres.map((genre, i) => (
-              <GenreSquareTile
-                key={genre.slug}
-                genre={genre}
-                colorClass={genreTileColor(genre.name, i)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <UserPageShell
+      title="Genres"
+      description="Browse movies and TV by genre."
+      contentMaxWidth="6xl"
+      contentClassName="flex flex-col items-center"
+    >
+      {!ready ? (
+        <div className={GENRES_LIBRARY_GRID} aria-busy="true">
+          {Array.from({ length: 9 }).map((_, index) => (
+            <div
+              key={index}
+              className="aspect-[40/21] w-full animate-pulse rounded-xl bg-default-200 dark:bg-white/10"
+            />
+          ))}
+        </div>
+      ) : error ? (
+        <p className="py-12 text-center text-sm text-white/50">
+          Could not load genres. Try again later.
+        </p>
+      ) : (
+        <div className={GENRES_LIBRARY_GRID}>
+          {allGenres.map((genre, i) => (
+            <GenreCatalogTile
+              key={genre.slug}
+              genre={genre}
+              colorClass={genreTileColor(genre.name, i)}
+            />
+          ))}
+        </div>
+      )}
+    </UserPageShell>
   );
 }

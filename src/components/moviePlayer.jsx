@@ -90,15 +90,19 @@ const MoviePlayer = ({
     [onStremioProgress]
   );
 
-  const playerUrl = useMemo(() => {
-    if (server === 'stremio') return '';
+  const { playerUrl, playerError } = useMemo(() => {
+    if (server === 'stremio') return { playerUrl: '', playerError: null };
     const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.peachify;
-    const path = config.path(videoId);
+    const id = String(videoId ?? '').trim();
+    if (!/^\d+$/.test(id)) {
+      return { playerUrl: '', playerError: 'Missing TMDB movie id' };
+    }
+    const path = config.path(id);
     let suffix = typeof config.suffix === 'function' ? config.suffix() : '';
     if (config.supportsProgress && startSeconds > 0) {
       suffix = withVideasyProgress(suffix, { progress: startSeconds });
     }
-    return `${config.base}${path}${suffix}`;
+    return { playerUrl: `${config.base}${path}${suffix}`, playerError: null };
   }, [videoId, server, startSeconds]);
 
   useEffect(() => {
@@ -131,6 +135,14 @@ const MoviePlayer = ({
       cancelled = true;
     };
   }, [videoId, streamQualityProp]);
+
+  if (playerError) {
+    return (
+      <div className="flex h-full min-h-0 w-full items-center justify-center rounded-lg bg-black p-4 ring-1 ring-white/10">
+        <p className="text-sm text-red-400">Error loading video: {playerError}</p>
+      </div>
+    );
+  }
 
   return (
     server === 'stremio' ? (

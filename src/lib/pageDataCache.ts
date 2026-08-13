@@ -209,6 +209,12 @@ const EMPTY_GENRE_RAILS: GenrePageRails = {
   new: [],
 };
 
+const EMPTY_GENRE_PAGE: GenrePagePayload = {
+  featured: [],
+  total: 0,
+  rails: EMPTY_GENRE_RAILS,
+};
+
 export async function fetchDiscoverFeed(): Promise<DiscoverFeedPayload> {
   return withDayCache(
     `${PREFIX}.discover-feed.v1`,
@@ -566,6 +572,182 @@ export async function fetchGenresIndex(): Promise<CatalogGenreRow[]> {
   });
 }
 
+/** Instant genres index paint from day cache or explore bundle. */
+export function peekGenresIndexCache(): CatalogGenreRow[] {
+  if (typeof window === "undefined") return [];
+  const cached = readClientDayCache<CatalogGenreRow[]>(`${PREFIX}.genres-index.v1:name`);
+  if (Array.isArray(cached) && cached.length > 0) return cached;
+  const bundle = peekExploreBundleCache();
+  if (bundle?.genres?.length) {
+    return [...bundle.genres].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return [];
+}
+
+function isGenrePageShellCacheable(
+  data: Pick<GenrePagePayload, "featured" | "total" | "rails">
+): boolean {
+  return (
+    hasCatalogItems(data.featured) ||
+    hasCatalogItems(data.rails?.popular) ||
+    (typeof data.total === "number" && data.total > 0)
+  );
+}
+
+function isGenrePageTopRatedCacheable(
+  data: Pick<GenrePagePayload, "rails">
+): boolean {
+  return hasCatalogItems(data.rails?.top_rated);
+}
+
+function isGenrePageNewCacheable(data: Pick<GenrePagePayload, "rails">): boolean {
+  return hasCatalogItems(data.rails?.new);
+}
+
+export function genrePageShellCacheKey(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.genre-page-shell.v1:${slug}:${type}:${preferencesCacheKey(preferences)}`;
+}
+
+export function genrePageTopRatedCacheKey(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.genre-page-top-rated.v1:${slug}:${type}:${preferencesCacheKey(preferences)}`;
+}
+
+export function genrePageNewCacheKey(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.genre-page-new.v1:${slug}:${type}:${preferencesCacheKey(preferences)}`;
+}
+
+async function loadGenrePagePart(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null,
+  part: "shell" | "top_rated" | "new"
+): Promise<Partial<GenrePagePayload>> {
+  try {
+    const query = new URLSearchParams({ slug, limit: "24", part });
+    if (type !== "all") query.set("type", type);
+
+    const res = hasUserPreferences(preferences)
+      ? await fetch("/api/genre/page", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ slug, type, limit: 24, part, preferences }),
+        })
+      : await fetch(`/api/genre/page?${query.toString()}`);
+
+    if (!res.ok) return {};
+    const data = await res.json();
+    if (part === "shell") {
+      return {
+        featured: data.featured ?? [],
+        total: typeof data.total === "number" ? data.total : 0,
+        rails: {
+          popular: data.rails?.popular ?? [],
+          top_rated: [],
+          new: [],
+        },
+      };
+    }
+    if (part === "top_rated") {
+      return {
+        rails: {
+          popular: [],
+          top_rated: data.rails?.top_rated ?? [],
+          new: [],
+        },
+      };
+    }
+    return {
+      rails: {
+        popular: [],
+        top_rated: [],
+        new: data.rails?.new ?? [],
+      },
+    };
+  } catch {
+    return {};
+  }
+}
+
+export function genrePagePartNeeds(
+  data: GenrePagePayload
+): { shell: boolean; topRated: boolean; newRail: boolean } {
+  return {
+    shell: !isGenrePageShellCacheable(data),
+    topRated: !isGenrePageTopRatedCacheable(data),
+    newRail: !isGenrePageNewCacheable(data),
+  };
+}
+
+export function peekGenrePageSplitCache(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): GenrePagePayload {
+  const shell = readClientDayCache<
+    Pick<GenrePagePayload, "featured" | "total" | "rails">
+  >(genrePageShellCacheKey(slug, type, preferences));
+  const topRated = readClientDayCache<Pick<GenrePagePayload, "rails">>(
+    genrePageTopRatedCacheKey(slug, type, preferences)
+  );
+  const newRail = readClientDayCache<Pick<GenrePagePayload, "rails">>(
+    genrePageNewCacheKey(slug, type, preferences)
+  );
+  const monolith = readClientDayCache<GenrePagePayload>(
+    genrePageCacheKey(slug, type, preferences)
+  );
+
+  if (monolith && isGenrePageCacheable(monolith)) {
+    return monolith;
+  }
+
+  const featured =
+    shell && isGenrePageShellCacheable(shell) ? shell.featured : [];
+  const total =
+    shell && isGenrePageShellCacheable(shell) && typeof shell.total === "number"
+      ? shell.total
+      : 0;
+  const popular =
+    shell && isGenrePageShellCacheable(shell) ? shell.rails?.popular ?? [] : [];
+  const topRatedItems =
+    topRated && isGenrePageTopRatedCacheable(topRated)
+      ? topRated.rails?.top_rated ?? []
+      : [];
+  const newItems =
+    newRail && isGenrePageNewCacheable(newRail) ? newRail.rails?.new ?? [] : [];
+
+  return {
+    featured,
+    total,
+    rails: {
+      popular,
+      top_rated: topRatedItems,
+      new: newItems,
+    },
+  };
+}
+
+/** Instant genre page paint from split day cache. */
+export function peekGenrePageInitial(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): GenrePagePayload {
+  if (typeof window === "undefined") return EMPTY_GENRE_PAGE;
+  return peekGenrePageSplitCache(slug, type, preferences);
+}
+
 export function genrePageCacheKey(
   slug: string,
   type: "all" | "movie" | "tv",
@@ -579,11 +761,74 @@ export function peekGenrePageCache(
   type: "all" | "movie" | "tv",
   preferences: UserPreferences | null = null
 ): GenrePagePayload | null {
-  const cached = readClientDayCache<GenrePagePayload>(
-    genrePageCacheKey(slug, type, preferences)
-  );
-  if (cached && isGenrePageCacheable(cached)) return cached;
+  const split = peekGenrePageSplitCache(slug, type, preferences);
+  if (isGenrePageCacheable(split)) return split;
   return null;
+}
+
+export async function fetchGenrePageShell(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): Promise<Pick<GenrePagePayload, "featured" | "total" | "rails">> {
+  return withDayCache(
+    genrePageShellCacheKey(slug, type, preferences),
+    async () => {
+      const part = await loadGenrePagePart(slug, type, preferences, "shell");
+      return {
+        featured: part.featured ?? [],
+        total: typeof part.total === "number" ? part.total : 0,
+        rails: {
+          popular: part.rails?.popular ?? [],
+          top_rated: [],
+          new: [],
+        },
+      };
+    },
+    { isCacheable: isGenrePageShellCacheable }
+  );
+}
+
+export async function fetchGenrePageTopRated(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): Promise<Pick<GenrePagePayload, "rails">> {
+  return withDayCache(
+    genrePageTopRatedCacheKey(slug, type, preferences),
+    async () => {
+      const part = await loadGenrePagePart(slug, type, preferences, "top_rated");
+      return {
+        rails: {
+          popular: [],
+          top_rated: part.rails?.top_rated ?? [],
+          new: [],
+        },
+      };
+    },
+    { isCacheable: isGenrePageTopRatedCacheable }
+  );
+}
+
+export async function fetchGenrePageNew(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): Promise<Pick<GenrePagePayload, "rails">> {
+  return withDayCache(
+    genrePageNewCacheKey(slug, type, preferences),
+    async () => {
+      const part = await loadGenrePagePart(slug, type, preferences, "new");
+      return {
+        rails: {
+          popular: [],
+          top_rated: [],
+          new: part.rails?.new ?? [],
+        },
+      };
+    },
+    { isCacheable: isGenrePageNewCacheable }
+  );
 }
 
 export async function fetchGenrePagePayload(

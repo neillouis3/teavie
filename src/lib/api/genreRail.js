@@ -265,33 +265,129 @@ function dedupeFeatured(rail, featured) {
   );
 }
 
-export async function loadGenrePage(slug, type = "all", limit = 24, preferences = null) {
-  const sorts = ["popular", "top_rated", "new"];
-  const rows = await Promise.all(
-    sorts.map((sort) =>
-      queryGenreRail({
-        slug,
-        type,
-        sort,
-        page: 1,
-        limit,
-        searchParams: new URLSearchParams(),
-        preferences,
-      })
-    )
+async function resolveGenrePageContext(slug, type, preferences = null) {
+  const typeNorm = type?.trim() || "all";
+
+  if (!isValidImdbGenreSlug(slug)) {
+    return { error: "Invalid genre", status: 400 };
+  }
+
+  const filterParams = new URLSearchParams();
+  filterParams.set("genre", slug);
+  const todayIso = catalogTodayIsoUtc();
+  const baseFilter = buildFilter(slug, typeNorm, filterParams, todayIso);
+  if (!baseFilter) {
+    return { error: "Invalid genre filter", status: 400 };
+  }
+
+  const usePreferences = hasUserPreferences(preferences);
+  const prefOpts = usePreferences
+    ? {
+        skipGenres: true,
+        type: typeNorm === "movie" || typeNorm === "tv" ? typeNorm : undefined,
+      }
+    : null;
+
+  const filter = usePreferences
+    ? mergeWithPreferenceFilter(baseFilter, preferences, prefOpts)
+    : baseFilter;
+
+  const client = await clientPromise;
+  const col = client.db("teavie").collection("content");
+
+  return { col, filter };
+}
+
+async function aggregateGenreRail(col, filter, sortBy, limit, skip = 0) {
+  const popExpr = popularityExpr();
+  const topRatedVoteExpr = mongoTopRatedVoteExpr();
+  const pipeline = [
+    { $match: filter },
+    {
+      $addFields: {
+        _pop: popExpr,
+        _sortDate: { $ifNull: ["$release_date", "$first_air_date"] },
+        _topRatedVote: topRatedVoteExpr,
+        _topRatedSort: mongoTopRatedSortExpr(topRatedVoteExpr),
+      },
+    },
+  ];
+
+  if (sortBy === "vote_average") {
+    pipeline.push({ $match: mongoTopRatedQualityMatch() });
+  }
+
+  pipeline.push(
+    { $sort: sortStage(sortBy) },
+    { $skip: skip },
+    { $limit: limit },
+    { $project: { _pop: 0, _sortDate: 0, _topRatedVote: 0, _topRatedSort: 0 } }
   );
 
-  const popular = rows[0];
-  if (popular.error) return popular;
+  return col.aggregate(pipeline).toArray();
+}
 
-  const featured = popular.featured ?? [];
+async function loadGenrePageShell(col, filter, limit) {
+  const [total, featuredDocs] = await Promise.all([
+    col.countDocuments(filter),
+    pickFeatured(col, filter),
+  ]);
+  const featured = featuredDocs.map(mapDocRow);
+  const featuredIds = featuredDocs.map((doc) => doc._id).filter(Boolean);
+  const listFilter =
+    featuredIds.length > 0
+      ? { $and: [filter, { _id: { $nin: featuredIds } }] }
+      : filter;
+  const popularDocs = await aggregateGenreRail(col, listFilter, "popularity", limit);
   return {
     featured,
-    total: popular.total ?? 0,
+    total,
     rails: {
-      popular: dedupeFeatured(popular.results ?? [], featured),
-      top_rated: rows[1]?.results ?? [],
-      new: rows[2]?.results ?? [],
+      popular: dedupeFeatured(popularDocs.map(mapDocRow), featured),
+    },
+  };
+}
+
+export async function loadGenrePage(
+  slug,
+  type = "all",
+  limit = 24,
+  preferences = null,
+  part = null
+) {
+  const ctx = await resolveGenrePageContext(slug, type, preferences);
+  if (ctx.error) return ctx;
+
+  const { col, filter } = ctx;
+  const boundedLimit = Math.min(48, Math.max(1, limit));
+
+  if (part === "shell") {
+    return loadGenrePageShell(col, filter, boundedLimit);
+  }
+
+  if (part === "top_rated") {
+    const docs = await aggregateGenreRail(col, filter, "vote_average", boundedLimit);
+    return { rails: { top_rated: docs.map(mapDocRow) } };
+  }
+
+  if (part === "new") {
+    const docs = await aggregateGenreRail(col, filter, "release_year", boundedLimit);
+    return { rails: { new: docs.map(mapDocRow) } };
+  }
+
+  const [shell, topRatedDocs, newDocs] = await Promise.all([
+    loadGenrePageShell(col, filter, boundedLimit),
+    aggregateGenreRail(col, filter, "vote_average", boundedLimit),
+    aggregateGenreRail(col, filter, "release_year", boundedLimit),
+  ]);
+
+  return {
+    featured: shell.featured,
+    total: shell.total,
+    rails: {
+      popular: shell.rails.popular,
+      top_rated: topRatedDocs.map(mapDocRow),
+      new: newDocs.map(mapDocRow),
     },
   };
 }

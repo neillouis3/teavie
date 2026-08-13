@@ -807,8 +807,8 @@ export default function MovieTemplate({
             )
           ) : (
             <MoviePlayer
-              key={`movie-${id}-${playerEpoch}`}
-              videoId={id}
+              key={`movie-${resolvedTmdbId}-${playerEpoch}`}
+              videoId={resolvedTmdbId}
               imdbId={movie.imdb_id}
               title={movie.title}
               posterUrl={imageUrl}

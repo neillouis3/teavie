@@ -29,20 +29,21 @@ export default function ExploreSectionTitle({
   variant = "default",
 }: ExploreSectionTitleProps) {
   const label = titleFromChildren(children);
-  const resolvedIcon = hideIcon
+  const isExplore = variant === "explore";
+  const shouldHideIcon = hideIcon || isExplore;
+  const resolvedIcon = shouldHideIcon
     ? undefined
     : icon
       ? { kind: "huge" as const, icon }
       : label
         ? exploreSectionIcon(label)
         : undefined;
-  const isExplore = variant === "explore";
 
   return (
     <h2
       className={`flex items-center gap-2.5 font-normal leading-none tracking-tight text-foreground normal-case ${isExplore ? "text-lg" : "text-xl"} ${className}`.trim()}
     >
-      {resolvedIcon && !isExplore ? (
+      {resolvedIcon ? (
         <span className="inline-flex shrink-0 items-center justify-center" aria-hidden>
           {resolvedIcon.kind === "asset" ? (
             <span

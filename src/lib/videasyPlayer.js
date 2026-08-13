@@ -3,13 +3,15 @@ export const VIDEASY_PLAYER_BASE = 'https://player.videasy.to';
 
 const VIDEASY_COLOR = 'color=22c55e';
 const VIDEASY_OVERLAY = 'overlay=true';
+const VIDEASY_AUTOPLAY = 'autoPlay=true';
 
 /** Brand accent + Netflix-style pause overlay */
-export const VIDEASY_MOVIE_QUERY = `?${VIDEASY_COLOR}&${VIDEASY_OVERLAY}`;
+export const VIDEASY_MOVIE_QUERY = `?${VIDEASY_COLOR}&${VIDEASY_OVERLAY}&${VIDEASY_AUTOPLAY}`;
 
 export const VIDEASY_TV_QUERY = [
   VIDEASY_COLOR,
   VIDEASY_OVERLAY,
+  VIDEASY_AUTOPLAY,
   'nextEpisode=true',
   'episodeSelector=true',
   'autoplayNextEpisode=true',

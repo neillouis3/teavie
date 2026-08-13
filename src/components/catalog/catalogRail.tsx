@@ -44,6 +44,8 @@ type CatalogRailProps = {
   /** When set, replaces year/rating row (e.g. new episode chips). */
   getMetaChips?: (item: ContentItem) => string[] | undefined;
   titleVariant?: "default" | "explore";
+  /** Hide the section icon (Explore hubs use plain text titles). */
+  hideTitleIcon?: boolean;
   /** Edge-to-edge cards (category hub pages). */
   flush?: boolean;
 };
@@ -96,6 +98,7 @@ export default function CatalogRail({
   getMetaChips,
   loading = false,
   titleVariant = "default",
+  hideTitleIcon,
   flush = false,
 }: CatalogRailProps) {
   const { mode } = useCatalogCardStyle();
@@ -108,7 +111,12 @@ export default function CatalogRail({
 
   return (
     <div className={RAIL_INNER_CLASS}>
-      <ExploreSectionTitle variant={titleVariant}>{title}</ExploreSectionTitle>
+      <ExploreSectionTitle
+        variant={titleVariant}
+        hideIcon={hideTitleIcon ?? titleVariant === "explore"}
+      >
+        {title}
+      </ExploreSectionTitle>
       {loading ? (
         <CatalogRailShell bleed={!flush}>
           <CatalogRailSkeleton horizontal={horizontal} flush={flush} bleed={!flush} />
