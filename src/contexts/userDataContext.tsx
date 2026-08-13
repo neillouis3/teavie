@@ -18,6 +18,7 @@ import {
   removeFromWatchHistory,
   removeFromWatchHistoryLog,
   touchWatchHistory,
+  isDismissedFromContinue,
   type WatchHistoryEntry,
   WATCH_HISTORY_CHANGED_EVENT,
   WATCH_HISTORY_LOG_CHANGED_EVENT,
@@ -447,6 +448,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       };
       for (const row of json.rows ?? []) {
         const catalogId = row.catalog_id;
+        if (isDismissedFromContinue(catalogId)) continue;
         const progress = row.progress;
         if (progress && typeof progress === "object" && Object.keys(progress).length > 0) {
           const p = progress as {

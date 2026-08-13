@@ -10,6 +10,7 @@
     "round-icon": "node scripts/round-app-icon.mjs",
     "process:brand": "node scripts/process-brand-assets.mjs",
     "sync:movies": "node scripts/sync-movies-tmdb-daily.mjs --max-discover-pages=80 --max-list-pages=12 --missing-poster-cap=800 --stale-cap=600",
+    "backfill:movie-collections": "node scripts/backfill-movie-collection-ids.mjs",
     "seed:popular": "node scripts/seed-popular-catalog.mjs --pages=25",
     "seed:kdrama": "node scripts/seed-kdrama-catalog.mjs --target=8000",
     "backfill:kdrama-posters": "node scripts/backfill-tv-posters.mjs --kdrama-only --cap=2000",

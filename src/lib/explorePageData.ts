@@ -337,7 +337,7 @@ export async function fetchPersonalizedExploreBundle(
 
 const personalizedInflight = new Map<string, Promise<PersonalizedExploreBundle | null>>();
 
-const PERSONALIZED_BUNDLE_CACHE_PREFIX = "teavie.cache.personalized-explore.v1:";
+const PERSONALIZED_BUNDLE_CACHE_PREFIX = "teavie.cache.personalized-explore.v2:";
 
 function personalizedBundleCacheKey(
   preferences: UserPreferences,

@@ -38,6 +38,7 @@ const LIST_PROJECTION = {
   number_of_seasons: 1,
   number_of_episodes: 1,
   vote_average: 1,
+  vote_count: 1,
   imdb_genres: 1,
   omdb: 1,
   original_language: 1,

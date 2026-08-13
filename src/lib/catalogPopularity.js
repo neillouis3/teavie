@@ -21,7 +21,7 @@ export const CATALOG_TOP_RATED_MIN_VOTE_AVERAGE = 7;
 export const CATALOG_TOP_RATED_MIN_VOTE_COUNT = 50;
 
 /** TMDB vote_count before we show a rating on cards without IMDb/OMDb enrichment. */
-export const CATALOG_DISPLAY_MIN_TMDB_VOTE_COUNT = 200;
+export const CATALOG_DISPLAY_MIN_TMDB_VOTE_COUNT = 50;
 
 /** Minimum IMDb vote count (from OMDb) for top-rated browse inclusion. */
 export const CATALOG_TOP_RATED_MIN_IMDB_VOTES = 250;

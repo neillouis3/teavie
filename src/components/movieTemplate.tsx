@@ -7,6 +7,7 @@ import { Button } from '@heroui/react';
 import AssetMaskIcon from '@/components/ui/assetMaskIcon';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
+import MovieCollectionRail from '@/components/movie/MovieCollectionRail';
 import { useWatchParty } from '@/hooks/useWatchParty';
 import type { GuestSyncPayload } from '@/lib/teaPartySync';
 import { PARTY_HOST_BROADCAST_MS } from '@/lib/teaPartySync';
@@ -764,6 +765,13 @@ export default function MovieTemplate({
               variant="details"
               src={trailerEmbedUrl}
               title={`${movie.title} trailer`}
+            />
+          ) : null}
+          {/^\d+$/.test(String(resolvedTmdbId)) ? (
+            <MovieCollectionRail
+              key={`collection-${resolvedTmdbId}`}
+              movieId={String(resolvedTmdbId)}
+              bleed={false}
             />
           ) : null}
           {/^\d+$/.test(String(resolvedTmdbId)) ? (

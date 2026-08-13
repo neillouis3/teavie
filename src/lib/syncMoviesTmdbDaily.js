@@ -13,6 +13,7 @@ import {
   tmdbListMovieLooksAdult,
 } from "./tmdbMovieContentPolicy.js";
 import { applyImdbGenresToCatalogDoc, omitTmdbGenreFields } from "./imdbGenres.js";
+import { tmdbCollectionFieldsFromMovie } from "./api/movieCollectionRails.js";
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";
@@ -46,6 +47,7 @@ export function mapTmdbMovieToDoc(movie) {
   return applyImdbGenresToCatalogDoc(
     omitTmdbGenreFields({
       ...movie,
+      ...tmdbCollectionFieldsFromMovie(movie),
       type: "movie",
       name: title,
       runtimeSeconds:

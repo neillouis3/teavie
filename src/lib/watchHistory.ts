@@ -6,6 +6,7 @@ import { formatHeroRuntime } from "@/lib/formatRelease";
 export const WATCH_HISTORY_VERSION = 1 as const;
 export const WATCH_HISTORY_INDEX_KEY = `teavie.watch-history.v${WATCH_HISTORY_VERSION}`;
 export const WATCH_HISTORY_LOG_KEY = `teavie.watch-history-log.v${WATCH_HISTORY_VERSION}`;
+export const WATCH_HISTORY_DISMISSED_KEY = `teavie.watch-history-dismissed.v${WATCH_HISTORY_VERSION}`;
 export const WATCH_HISTORY_MAX = 24;
 export const WATCH_HISTORY_LOG_MAX = 100;
 /** Remove continue-watching rows not opened in this window. */
@@ -101,6 +102,59 @@ function writeLog(entries: WatchHistoryEntry[]): void {
   }
 }
 
+function readDismissedIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(WATCH_HISTORY_DISMISSED_KEY);
+    if (!raw) return new Set();
+    const data = JSON.parse(raw) as Partial<{ v: number; ids: string[] }>;
+    if (data.v !== WATCH_HISTORY_VERSION || !Array.isArray(data.ids)) return new Set();
+    return new Set(data.ids.filter((id) => typeof id === "string" && id.length > 0));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeDismissedIds(ids: Set<string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      WATCH_HISTORY_DISMISSED_KEY,
+      JSON.stringify({ v: WATCH_HISTORY_VERSION, ids: [...ids] })
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+/** User removed a title from Continue watching — do not auto-restore from log/sync. */
+export function isDismissedFromContinue(catalogId: string): boolean {
+  const id = String(catalogId ?? "").trim();
+  if (!id) return false;
+  return readDismissedIds().has(id);
+}
+
+function dismissFromContinue(catalogId: string): void {
+  const id = String(catalogId ?? "").trim();
+  if (!id) return;
+  const next = readDismissedIds();
+  next.add(id);
+  writeDismissedIds(next);
+}
+
+function undismissFromContinue(catalogId: string): void {
+  const id = String(catalogId ?? "").trim();
+  if (!id) return;
+  const next = readDismissedIds();
+  if (!next.delete(id)) return;
+  writeDismissedIds(next);
+}
+
+function isEligibleForContinue(entry: WatchHistoryEntry, now = Date.now()): boolean {
+  if (isDismissedFromContinue(entry.catalogId)) return false;
+  return now - entry.lastWatchedAt < WATCH_HISTORY_TTL_MS;
+}
+
 function upsertLogEntry(entry: WatchHistoryEntry): void {
   const prev = readLogRaw().filter((e) => e.catalogId !== entry.catalogId);
   writeLog([entry, ...prev].slice(0, WATCH_HISTORY_LOG_MAX));
@@ -136,12 +190,11 @@ export function mergeWatchHistoryLog(entries: WatchHistoryEntry[]): WatchHistory
   writeLog(merged);
 
   const now = Date.now();
-  const freshContinue = merged.filter(
-    (entry) => now - entry.lastWatchedAt < WATCH_HISTORY_TTL_MS
-  );
+  const freshContinue = merged.filter((entry) => isEligibleForContinue(entry, now));
   if (freshContinue.length > 0) {
     const byId = new Map<string, WatchHistoryEntry>();
     for (const entry of [...readIndex(), ...freshContinue]) {
+      if (isDismissedFromContinue(entry.catalogId)) continue;
       const prev = byId.get(entry.catalogId);
       if (!prev || entry.lastWatchedAt >= prev.lastWatchedAt) {
         byId.set(entry.catalogId, entry);
@@ -176,6 +229,7 @@ export function touchWatchHistory(
   const id = String(catalogId ?? "").trim();
   if (!id) return;
 
+  undismissFromContinue(id);
   const now = Date.now();
   const next: WatchHistoryEntry = {
     catalogId: id,
@@ -211,10 +265,10 @@ export function listWatchHistory(): WatchHistoryEntry[] {
   const now = Date.now();
   let index = readIndex();
 
-  // Recover if the continue index was wiped (e.g. older evidence-filter prune).
+  // Recover if the continue index was wiped accidentally (not user-dismissed rows).
   if (index.length === 0) {
     const recovered = listWatchHistoryLog()
-      .filter((e) => now - e.lastWatchedAt < WATCH_HISTORY_TTL_MS)
+      .filter((e) => isEligibleForContinue(e, now))
       .slice(0, WATCH_HISTORY_MAX);
     if (recovered.length > 0) {
       writeIndex(recovered);
@@ -224,7 +278,7 @@ export function listWatchHistory(): WatchHistoryEntry[] {
 
   const kept: WatchHistoryEntry[] = [];
   for (const entry of index) {
-    if (now - entry.lastWatchedAt >= WATCH_HISTORY_TTL_MS) continue;
+    if (!isEligibleForContinue(entry, now)) continue;
     const progress = loadWatchProgress(entry.catalogId);
     kept.push({
       ...entry,
@@ -242,6 +296,7 @@ export function listWatchHistory(): WatchHistoryEntry[] {
 export function removeFromWatchHistory(catalogId: string): void {
   const id = String(catalogId ?? "").trim();
   if (!id) return;
+  dismissFromContinue(id);
   const next = readIndex().filter((e) => e.catalogId !== id);
   writeIndex(next);
   clearWatchProgress(id);
@@ -252,7 +307,9 @@ export function removeFromWatchHistoryLog(catalogId: string): void {
   const id = String(catalogId ?? "").trim();
   if (!id) return;
   writeLog(readLogRaw().filter((e) => e.catalogId !== id));
-  removeFromWatchHistory(id);
+  undismissFromContinue(id);
+  writeIndex(readIndex().filter((e) => e.catalogId !== id));
+  clearWatchProgress(id);
 }
 
 export function watchHistoryProgressLabel(entry: WatchHistoryEntry): string {
