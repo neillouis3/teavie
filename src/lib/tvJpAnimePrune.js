@@ -1,3 +1,5 @@
+import { isBlockedAdultAnimeDoc } from "./animeContentPolicy.js";
+
 /**
  * Detect legacy TMDB-shaped Japanese animation in the TV catalog (numeric TMDB ids).
  * Canonical anime uses `anime_{malId}` from the Jikan import pipeline.
@@ -130,6 +132,7 @@ export const SHOW_UNAVAILABLE_MESSAGES = {
 export function showUnavailableReasonForDoc(doc) {
   if (!doc || typeof doc !== "object") return "not_found";
   if (doc.adult === true) return "content_policy";
+  if (isBlockedAdultAnimeDoc(doc)) return "content_policy";
   if (shouldPruneTvAnimeWithoutAnilist(doc)) return "content_policy";
   return "not_found";
 }

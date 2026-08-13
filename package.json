@@ -21,6 +21,7 @@
     "fill:imdb-genres": "node scripts/fill-missing-imdb-genres.mjs",
     "purge:adult-movies": "node scripts/purge-adult-catalog-movies.mjs",
     "purge:hentai-genre": "node scripts/purge-hentai-genre-titles.mjs",
+    "scan:block-adult-tmdb-tv": "node scripts/scan-block-adult-tmdb-tv-ids.mjs",
     "catalog:delete": "node scripts/delete-catalog-content.mjs",
     "seed:movies-omdb": "node scripts/seed-movies-omdb-filtered.mjs",
     "supabase:migrate": "node scripts/apply-supabase-migration.mjs",

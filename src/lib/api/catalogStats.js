@@ -3,6 +3,7 @@ import {
   buildCatalogFilter,
   buildKdramaCatalogFilter,
   catalogAnimeIdMongoExpr,
+  catalogExcludeAdultAnimeMongoClause,
   catalogTodayIsoUtc,
   catalogTvBrowseNonAnimeClause,
   catalogTvBrowseReleasedClause,
@@ -55,6 +56,7 @@ export async function loadCatalogStats() {
       animeBase,
       catalogAnimeIdMongoExpr(),
       catalogAnimeSplitCourHiddenClause(),
+      catalogExcludeAdultAnimeMongoClause(),
       releasedAnimeFirstAirClause(todayIso),
     ],
   };

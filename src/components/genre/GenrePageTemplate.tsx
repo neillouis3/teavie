@@ -11,13 +11,17 @@ import CatalogRail from '@/components/catalog/catalogRail';
 import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
 import type { ContentItem } from '@/types/content';
 import {
+  bustInflightDayCache,
   fetchGenrePagePayload,
+  genrePageCacheKey,
+  peekGenrePageCache,
   type GenrePagePayload,
 } from '@/lib/pageDataCache';
 import { CONTENT_INSET_X } from '@/lib/contentInset';
 import { RAIL_STACK_CLASS } from '@/lib/catalogGrid';
 import { useUserData } from '@/contexts/userDataContext';
 import { PREFERENCES_CHANGED_EVENT } from '@/lib/userPreferences';
+import { useResumeFetchWhenVisible } from '@/hooks/useResumeFetchWhenVisible';
 
 export type GenrePageType = 'all' | 'movie' | 'tv';
 export type GenrePageSort = 'popular' | 'top_rated' | 'new';
@@ -69,16 +73,34 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   const type: GenrePageType =
     rawType === 'movie' || rawType === 'tv' ? rawType : 'all';
 
-  const [payload, setPayload] = useState<GenrePagePayload | null>(null);
-  const [ready, setReady] = useState(false);
+  const [payload, setPayload] = useState<GenrePagePayload | null>(() =>
+    peekGenrePageCache(slug, type, preferences)
+  );
+  const [ready, setReady] = useState(() => payload != null);
+
+  const loadGenrePage = useCallback(() => {
+    void fetchGenrePagePayload(slug, type, preferences).then((data) => {
+      setPayload(data);
+      setReady(true);
+    });
+  }, [slug, type, preferences]);
+
+  const bustGenreInflight = useCallback(() => {
+    bustInflightDayCache(genrePageCacheKey(slug, type, preferences));
+  }, [slug, type, preferences]);
 
   useEffect(() => {
     document.title = `${genreLabel} - Teavie`;
   }, [genreLabel]);
 
   useEffect(() => {
+    const cached = peekGenrePageCache(slug, type, preferences);
+    setPayload(cached);
+    setReady(cached != null);
+  }, [slug, type, preferences]);
+
+  useEffect(() => {
     let cancelled = false;
-    setReady(false);
     void fetchGenrePagePayload(slug, type, preferences).then((data) => {
       if (cancelled) return;
       setPayload(data);
@@ -88,6 +110,8 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
       cancelled = true;
     };
   }, [slug, type, preferences]);
+
+  useResumeFetchWhenVisible(!ready, loadGenrePage, bustGenreInflight);
 
   useEffect(() => {
     const refresh = () => {

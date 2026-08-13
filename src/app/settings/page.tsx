@@ -157,6 +157,7 @@ export default function SettingsPage() {
               value={streamServer}
               onChange={setStreamServer}
               label={streamServerLabel}
+              disabled={(id) => id === 'stremio'}
             />
           </PageCardRow>
 

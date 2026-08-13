@@ -84,6 +84,7 @@ export default function StremioPlayer({
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([]);
   const [selectedAudioIndex, setSelectedAudioIndex] = useState(0);
   const [audioOverrideUrl, setAudioOverrideUrl] = useState<string | null>(null);
+  const [playbackSrc, setPlaybackSrc] = useState<string | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
 
   useEffect(() => {
@@ -183,7 +184,15 @@ export default function StremioPlayer({
               `The addon returned ${body.unsupported} torrent or non-web stream${body.unsupported === 1 ? "" : "s"}. Configure it with a direct-link provider to use this browser player.`
             );
           } else {
-            setError("The addon returned no streams for this title.");
+            const detail =
+              providerErrors.length > 0
+                ? providerErrors.slice(0, 3).join(" · ")
+                : null;
+            setError(
+              detail
+                ? `No playable streams for this IMDb id. ${detail}`
+                : "No streams found for this IMDb id. Check the id, season, and episode, then try again."
+            );
           }
         }
       })
@@ -196,10 +205,44 @@ export default function StremioPlayer({
   }, [query, effectiveImdbId]);
 
   useEffect(() => {
+    const stream = streams[activeIndex];
+    if (!stream) {
+      setPlaybackSrc(null);
+      return;
+    }
+    const sourceUrl = audioOverrideUrl ?? stream.url;
+    if (sourceUrl.startsWith("/")) {
+      setPlaybackSrc(sourceUrl);
+      return;
+    }
+    let cancelled = false;
+    setPlaybackSrc(null);
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/streams/resolve?url=${encodeURIComponent(sourceUrl)}`
+        );
+        const body = (await response.json()) as { url?: string };
+        if (cancelled) return;
+        setPlaybackSrc(
+          typeof body.url === "string" && body.url.trim() ? body.url.trim() : sourceUrl
+        );
+      } catch {
+        if (!cancelled) setPlaybackSrc(sourceUrl);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [streams, activeIndex, audioOverrideUrl]);
+
+  useEffect(() => {
     const video = videoRef.current;
     const stream = streams[activeIndex];
-    if (!video || !stream) return;
-    const playbackUrl = audioOverrideUrl ?? stream.url;
+    if (!video || !stream || !playbackSrc) return;
+    const playbackUrl = playbackSrc;
     const isHls = /\.m3u8(?:$|\?)/i.test(playbackUrl);
     let hls: Hls | null = null;
 
@@ -226,7 +269,7 @@ export default function StremioPlayer({
       video.pause();
       video.removeAttribute("src");
     };
-  }, [streams, activeIndex, startSeconds, audioOverrideUrl]);
+  }, [streams, activeIndex, startSeconds, playbackSrc]);
 
   const activeStream = streams[activeIndex];
   const streamLabel = `${activeStream?.name ?? ""} ${activeStream?.title ?? ""}`;
@@ -341,6 +384,8 @@ export default function StremioPlayer({
         title={title}
         posterUrl={posterUrl}
         backdropUrl={backdropUrl}
+        catalogKey={catalogKey}
+        mediaType={type === "series" ? "tv" : "movie"}
         onBack={() => router.back()}
         onSubmit={applyManualImdbId}
       />
@@ -833,17 +878,51 @@ function ImdbEntryPanel({
   title,
   posterUrl,
   backdropUrl,
+  catalogKey,
+  mediaType,
   onBack,
   onSubmit,
 }: {
   title?: string;
   posterUrl?: string | null;
   backdropUrl?: string | null;
+  catalogKey?: string | null;
+  mediaType: "tv" | "movie";
   onBack: () => void;
   onSubmit: (raw: string) => boolean;
 }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [lookupNote, setLookupNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    const key = String(catalogKey ?? "").trim();
+    if (!/^\d+$/.test(key)) return;
+    let cancelled = false;
+    const endpoint =
+      mediaType === "movie" ? "/api/movie/resolve" : "/api/tv/resolve";
+    void fetch(`${endpoint}?id=${encodeURIComponent(key)}`)
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (cancelled || !body) return;
+        const imdb =
+          typeof body.imdbId === "string" && /^tt\d+$/i.test(body.imdbId)
+            ? body.imdbId
+            : null;
+        if (imdb) {
+          setValue(imdb);
+          setLookupNote("Filled from TMDB metadata.");
+        } else {
+          setLookupNote("No IMDb id on file — enter one manually.");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLookupNote(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [catalogKey, mediaType]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -883,6 +962,9 @@ function ImdbEntryPanel({
         <p className="mt-3 text-sm text-white/55">
           This title has no IMDb id in the catalog. Enter one so Teavie can resolve streams.
         </p>
+        {lookupNote ? (
+          <p className="mt-2 text-xs text-white/45">{lookupNote}</p>
+        ) : null}
         <form onSubmit={handleSubmit} className="mt-6 w-full space-y-3 text-left">
           <Input
             label="IMDb id"

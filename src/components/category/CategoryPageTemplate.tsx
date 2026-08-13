@@ -35,11 +35,15 @@ import {
   RAIL_TRACK,
 } from "@/lib/catalogGrid";
 import {
+  bustInflightDayCache,
+  categoryDiscoverCacheKey,
   fetchCategoryDiscover,
+  peekCategoryDiscoverCache,
   type CategoryDiscoverPayload,
 } from "@/lib/pageDataCache";
 import { useUserData } from "@/contexts/userDataContext";
 import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
+import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 import { cn } from "@/lib/utils";
 
 function newEpisodeReleaseNote(item: ContentItem, slug: string): string | undefined {
@@ -60,19 +64,41 @@ type CategoryPageTemplateProps = {
 export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps) {
   const category = getCatalogCategory(slug);
   const { preferences } = useUserData();
-  const [data, setData] = useState<CategoryDiscoverPayload | null>(null);
-  const [ready, setReady] = useState(false);
+  const [data, setData] = useState<CategoryDiscoverPayload | null>(() =>
+    category ? peekCategoryDiscoverCache(category.slug, preferences) : null
+  );
+  const [ready, setReady] = useState(() => data != null);
 
   const getReleaseNote = useCallback(
     (item: ContentItem) => newEpisodeReleaseNote(item, slug),
     [slug]
   );
 
+  const loadDiscover = useCallback(() => {
+    if (!category) return;
+    void fetchCategoryDiscover(category.slug, preferences).then((payload) => {
+      setData(payload);
+      setReady(true);
+    });
+  }, [category, preferences]);
+
+  const bustDiscoverInflight = useCallback(() => {
+    if (!category) return;
+    bustInflightDayCache(categoryDiscoverCacheKey(category.slug, preferences));
+  }, [category, preferences]);
+
   useEffect(() => {
     if (category) {
       document.title = `${category.label} - Teavie`;
     }
   }, [category]);
+
+  useEffect(() => {
+    if (!category) return;
+    const cached = peekCategoryDiscoverCache(category.slug, preferences);
+    setData(cached);
+    setReady(cached != null);
+  }, [category, preferences]);
 
   useEffect(() => {
     if (!category) return;
@@ -88,6 +114,8 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
       cancelled = true;
     };
   }, [category, preferences]);
+
+  useResumeFetchWhenVisible(!ready, loadDiscover, bustDiscoverInflight);
 
   useEffect(() => {
     if (!category) return;

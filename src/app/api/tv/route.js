@@ -5,6 +5,7 @@ import {
   catalogTodayIsoUtc,
   catalogTvBrowseNonAnimeClause,
   catalogTvBrowseReleasedClause,
+  catalogExcludeBlockedTmdbTvMongoClause,
 } from "@/lib/catalogQuery";
 import {
   catalogDisplayVoteAverage,
@@ -57,7 +58,7 @@ export async function GET(req) {
     const todayIso = catalogTodayIsoUtc();
 
     /** @type {Record<string, unknown>[]} */
-    const clauses = [core, catalogTvBrowseNonAnimeClause()];
+    const clauses = [core, catalogTvBrowseNonAnimeClause(), catalogExcludeBlockedTmdbTvMongoClause()];
     if (!includeUnreleased) {
       clauses.push(catalogTvBrowseReleasedClause("first_air_date", todayIso));
     }

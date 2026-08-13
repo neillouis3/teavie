@@ -2,6 +2,7 @@ import clientPromise from "@/lib/mongo";
 import {
   buildCatalogFilter,
   catalogAnimeIdMongoExpr,
+  catalogExcludeAdultAnimeMongoClause,
   catalogSort,
   catalogTodayIsoUtc,
   releasedAnimeFirstAirClause,
@@ -67,7 +68,13 @@ export async function GET(req) {
     const todayIso = catalogTodayIsoUtc();
     const released = includeUnreleased ? [] : [releasedAnimeFirstAirClause(todayIso)];
     const filter = {
-      $and: [base, catalogAnimeIdMongoExpr(), catalogAnimeSplitCourHiddenClause(), ...released],
+      $and: [
+        base,
+        catalogAnimeIdMongoExpr(),
+        catalogAnimeSplitCourHiddenClause(),
+        catalogExcludeAdultAnimeMongoClause(),
+        ...released,
+      ],
     };
 
     const includeTotal = page <= 1;

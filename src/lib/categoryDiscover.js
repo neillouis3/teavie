@@ -1,5 +1,6 @@
 import {
   catalogAnimeIdMongoExpr,
+  catalogExcludeAdultAnimeMongoClause,
   catalogKdramaClause,
   catalogTodayIsoUtc,
   catalogTvBrowseReleasedClause,
@@ -87,6 +88,7 @@ function categoryReleasedFilter(kind) {
     return {
       $and: [
         catalogAnimeIdMongoExpr(),
+        catalogExcludeAdultAnimeMongoClause(),
         releasedAnimeFirstAirClause(todayIso),
       ],
     };
@@ -432,6 +434,7 @@ export async function fetchCategoryDiscover(col, slug, preferences = null) {
     baseFilter = mergeWithPreferenceFilter(baseFilter, preferences, {
       skipGenres: true,
       skipCategories: true,
+      skipLanguages: true,
     });
   }
 

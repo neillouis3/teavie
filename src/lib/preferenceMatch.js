@@ -532,7 +532,7 @@ export function categoryClause(category) {
 
 /**
  * @param {import('@/types/user').UserPreferences | null | undefined} preferences
- * @param {{ type?: 'movie' | 'tv'; skipGenres?: boolean; skipCategories?: boolean }} [opts]
+ * @param {{ type?: 'movie' | 'tv'; skipGenres?: boolean; skipCategories?: boolean; skipLanguages?: boolean }} [opts]
  */
 export function buildPreferenceMatch(preferences, opts = {}) {
   const categories = categoriesForLanguagePrefs(
@@ -566,7 +566,7 @@ export function buildPreferenceMatch(preferences, opts = {}) {
     }
   }
 
-  if (languages.length > 0) {
+  if (!opts.skipLanguages && languages.length > 0) {
     clauses.push({
       $or: languages.map((code) => catalogLanguageMatchConditions(code)),
     });

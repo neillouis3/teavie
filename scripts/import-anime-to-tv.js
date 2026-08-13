@@ -254,10 +254,20 @@ async function fetchAniListBySearch(anime, cache) {
   return null;
 }
 
-function hasHentaiGenre(anime, anilist) {
-  const mal = toGenres(anime).some((g) => /^hentai$/i.test(String(g?.name ?? "")));
-  const ani = pickArrayStrings(anilist?.genres).some((g) => /^hentai$/i.test(g));
-  return mal || ani;
+function shouldSkipAdultAnime(anime, anilist) {
+  const malGenres = toGenres(anime);
+  if (malGenres.some((g) => /^hentai$/i.test(String(g?.name ?? "")))) return true;
+
+  const rating = String(anime?.rating ?? "");
+  if (/Rx/i.test(rating)) return true;
+
+  const aniGenres = pickArrayStrings(anilist?.genres);
+  const hasAniHentai = aniGenres.some((g) => /^hentai$/i.test(g));
+  const allAges = /^(G|PG)(\s|-)/i.test(rating.trim());
+
+  if (hasAniHentai && !allAges) return true;
+  if (anilist?.isAdult === true && !allAges) return true;
+  return false;
 }
 
 function mapAnimeToTvDoc(anime, anilist) {
@@ -514,7 +524,7 @@ async function run() {
       }
       if (anilist?.id != null) withAniList++;
       else if (includeAniList) withoutAniList++;
-      if (hasHentaiGenre(anime, anilist)) {
+      if (shouldSkipAdultAnime(anime, anilist)) {
         skippedHentai++;
         continue;
       }

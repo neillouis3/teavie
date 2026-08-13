@@ -4,7 +4,7 @@
  * that indicate hardcore / legacy X-rated theatrical (when `release_dates` is present).
  */
 
-import { shouldPruneTvAnimeWithoutAnilist } from "./tvJpAnimePrune.js";
+import { isBlockedAdultTmdbTvShow } from "./animeContentPolicy.js";
 
 /** Production companies excluded from the movie catalog (exact name match, case-insensitive). */
 export const BLOCKED_MOVIE_PRODUCTION_COMPANIES = [
@@ -94,7 +94,5 @@ export function shouldRejectTmdbMovieFromCatalog(movie) {
 /** @param {unknown} show TMDB /tv/{id} or list row */
 export function shouldRejectTmdbTvFromCatalog(show) {
   if (!show || typeof show !== "object") return true;
-  const s = /** @type {Record<string, unknown>} */ (show);
-  if (s.adult === true) return true;
-  return shouldPruneTvAnimeWithoutAnilist({ ...s, type: "tv" });
+  return isBlockedAdultTmdbTvShow(show);
 }

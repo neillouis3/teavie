@@ -50,9 +50,9 @@ import CatalogUnavailable from "@/components/ui/catalogUnavailable";
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
 import {
-  shouldPruneTvAnimeWithoutAnilist,
-  showUnavailableReasonForDoc,
-} from "@/lib/tvJpAnimePrune";
+  isBlockedAdultAnimeDoc,
+  isBlockedAdultTmdbTvShow,
+} from "@/lib/animeContentPolicy";
 import type { GuestSyncPayload } from "@/lib/teaPartySync";
 import { PARTY_HOST_BROADCAST_MS } from "@/lib/teaPartySync";
 import { useWatchParty } from "@/hooks/useWatchParty";
@@ -440,8 +440,12 @@ export default function ShowTemplate({
           is_anime: fallbackShow?.is_anime,
           mal_id: fallbackShow?.mal_id,
         };
-        if (shouldPruneTvAnimeWithoutAnilist(blockedDoc) && !bypassPolicy) {
-          setShowUnavailableReason(showUnavailableReasonForDoc(blockedDoc));
+        if (
+          !bypassPolicy &&
+          (isBlockedAdultAnimeDoc(blockedDoc) ||
+            isBlockedAdultTmdbTvShow(data as unknown as Record<string, unknown>))
+        ) {
+          setShowUnavailableReason("content_policy");
           return;
         }
         if (fallbackShow?.is_anime) data.is_anime = true;
@@ -519,7 +523,13 @@ export default function ShowTemplate({
             const full = await fetchTvDetailsCached(targetTmdbId);
             if (!full) return;
             const fullData = full as Show;
-            if (shouldPruneTvAnimeWithoutAnilist(blockedDoc) && !bypassPolicy) return;
+            if (
+              !bypassPolicy &&
+              (isBlockedAdultAnimeDoc(blockedDoc) ||
+                isBlockedAdultTmdbTvShow(fullData as unknown as Record<string, unknown>))
+            ) {
+              return;
+            }
             if (fallbackShow?.is_anime) fullData.is_anime = true;
             if (!fullData.is_anime && Array.isArray(fullData.seasons) && fullData.seasons.length) {
               const rel = filterReleasedSeasons(fullData.seasons as Season[], todayYmd);

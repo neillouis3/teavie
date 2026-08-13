@@ -1,4 +1,7 @@
+import clientPromise from "@/lib/mongo";
 import { tmdbFetchJson } from "@/lib/tmdbAuth";
+import { assertTvTmdbIdAllowed } from "@/lib/animeContentPolicy";
+import { SHOW_UNAVAILABLE_MESSAGES } from "@/lib/tvJpAnimePrune";
 
 export async function GET(req) {
   try {
@@ -8,10 +11,24 @@ export async function GET(req) {
       return Response.json({ error: "Provide a valid TMDB TV id" }, { status: 400 });
     }
 
+    const numeric = Number(id);
+    const client = await clientPromise;
+    const collection = client.db("teavie").collection("content");
+    const gate = await assertTvTmdbIdAllowed(numeric, { collection });
+    if (!gate.allowed) {
+      return Response.json(
+        {
+          error: "content_policy",
+          message: SHOW_UNAVAILABLE_MESSAGES.content_policy,
+        },
+        { status: 404 }
+      );
+    }
+
     const lite = searchParams.get("lite") === "1";
     const append = lite
-      ? "content_ratings"
-      : "content_ratings,aggregate_credits,videos";
+      ? "content_ratings,keywords"
+      : "content_ratings,aggregate_credits,videos,keywords";
 
     const data = await tmdbFetchJson(
       `https://api.themoviedb.org/3/tv/${id}?language=en-US&append_to_response=${append}`

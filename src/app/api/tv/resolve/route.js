@@ -14,7 +14,15 @@ import {
 } from "@/lib/animeTmdbEpisodes";
 import { tmdbBearerToken } from "@/lib/tmdbAuth";
 import { isValidAdminKey } from "@/lib/adminAccess";
-import { shouldPruneTvAnimeWithoutAnilist, showUnavailableReasonForDoc, SHOW_UNAVAILABLE_MESSAGES } from "@/lib/tvJpAnimePrune";
+import {
+  assertTvTmdbIdAllowed,
+  catalogDocTmdbIds,
+  docReferencesBlockedTvTmdbId,
+  isBlockedAdultAnimeDoc,
+  isBlockedAdultTmdbTvShow,
+  isBlockedTvTmdbId,
+} from "@/lib/animeContentPolicy";
+import { showUnavailableReasonForDoc, SHOW_UNAVAILABLE_MESSAGES } from "@/lib/tvJpAnimePrune";
 
 function pickNumericAnilistId(doc) {
   const raw = doc?.anilist_id ?? doc?.anilist?.id;
@@ -70,41 +78,13 @@ function animeFallbackSeasons(doc) {
   return [{ season_number: 1, episode_count: eps }];
 }
 
-/** TMDB summary for numeric ids missing from catalog (block JP animation direct URLs). */
-async function tmdbTvDocForPruneCheck(tmdbId, token) {
-  if (!token || !Number.isFinite(tmdbId) || tmdbId <= 0) return null;
-  try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/tv/${tmdbId}?language=en-US`,
-      {
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        next: { revalidate: 86400 },
-      }
-    );
-    if (!res.ok) return null;
-    const show = await res.json();
-    if (!show || typeof show !== "object") return null;
-    return {
-      type: "tv",
-      id: tmdbId,
-      adult: show.adult === true,
-      origin_country: show.origin_country,
-      original_language: show.original_language,
-      genre_ids: Array.isArray(show.genres)
-        ? show.genres.map((g) => g?.id).filter((n) => typeof n === "number")
-        : [],
-      genres: show.genres,
-    };
-  } catch {
-    return null;
-  }
-}
-
 function blockedShowResponse(doc) {
-  const reason = showUnavailableReasonForDoc(doc);
+  const reason =
+    isBlockedAdultTmdbTvShow(doc) ||
+    isBlockedAdultAnimeDoc(doc) ||
+    docReferencesBlockedTvTmdbId(doc)
+      ? "content_policy"
+      : showUnavailableReasonForDoc(doc);
   return Response.json(
     {
       error: reason,
@@ -164,14 +144,27 @@ export async function GET(req) {
       return Response.json({ error: "Missing id" }, { status: 400 });
     }
 
+    const numeric = Number(id);
+    const isNumericId = Number.isFinite(numeric) && numeric > 0;
+
     const client = await clientPromise;
     const db = client.db("teavie");
     const collection = db.collection("content");
 
-    let doc = await findCatalogDocByResolveId(collection, "tv", id);
+    if (isNumericId && !adminBypass) {
+      if (isBlockedTvTmdbId(numeric)) {
+        return blockedShowResponse({ type: "tv", id: numeric, tmdb_id: numeric });
+      }
+      const gate = await assertTvTmdbIdAllowed(numeric, {
+        adminBypass,
+        collection,
+      });
+      if (!gate.allowed) {
+        return blockedShowResponse(gate.probe ?? { type: "tv", id: numeric, tmdb_id: numeric });
+      }
+    }
 
-    const numeric = Number(id);
-    const isNumericId = Number.isFinite(numeric) && numeric > 0;
+    let doc = await findCatalogDocByResolveId(collection, "tv", id);
 
     if (!doc && isNumericId) {
       if (adminBypass) {
@@ -192,20 +185,14 @@ export async function GET(req) {
         });
       }
 
-      const token = tmdbBearerToken();
-      const tmdbProbe = token ? await tmdbTvDocForPruneCheck(numeric, token) : null;
-      if (tmdbProbe && shouldPruneTvAnimeWithoutAnilist(tmdbProbe)) {
-        return blockedShowResponse(tmdbProbe);
-      }
-
       const imdb_genres = await imdbGenresFromOmdbForTmdbId(numeric, "tv");
       const probeWithImdb = {
         type: "tv",
         id: numeric,
-        ...(tmdbProbe ?? {}),
+        tmdb_id: numeric,
         imdb_genres,
       };
-      if (shouldPruneTvAnimeWithoutAnilist(probeWithImdb)) {
+      if (isBlockedAdultTmdbTvShow(probeWithImdb) || isBlockedAdultAnimeDoc(probeWithImdb)) {
         return blockedShowResponse(probeWithImdb);
       }
 
@@ -220,6 +207,16 @@ export async function GET(req) {
 
     if (!doc) {
       return Response.json({ error: "Show not found" }, { status: 404 });
+    }
+
+    if (!adminBypass) {
+      if (docReferencesBlockedTvTmdbId(doc)) {
+        return blockedShowResponse(doc);
+      }
+      const policyReason = showUnavailableReasonForDoc(doc);
+      if (policyReason === "content_policy") {
+        return blockedShowResponse(doc);
+      }
     }
 
     let merged = await enrichCatalogDocGenres(doc, "tv", {

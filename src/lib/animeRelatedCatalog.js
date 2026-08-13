@@ -14,6 +14,7 @@ import {
   tvSeasonCountFromDoc,
 } from "./mapContentDocToItem.js";
 import { isAnimeCatalogDocReleased } from "./animeRelease.js";
+import { isBlockedAdultAnimeDoc } from "./animeContentPolicy.js";
 
 export const ANIME_RELATED_CATALOG_PROJECTION = {
   id: 1,
@@ -177,6 +178,7 @@ export async function buildAnimeRelatedCatalogItems(candidates) {
   for (const step of normalized) {
     const doc = docByMal.get(step.malId);
     if (!doc) continue;
+    if (isBlockedAdultAnimeDoc(doc)) continue;
     if (!isAnimeCatalogDocReleased(doc)) continue;
     try {
       items.push(mapAnimeRelatedCatalogItem(step, doc));

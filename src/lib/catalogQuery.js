@@ -11,8 +11,16 @@ import {
   imdbGenreMatchConditions,
 } from "./imdbGenres.js";
 import { catalogExcludeJpAnimationNumericTvMongoClause } from "./tvJpAnimePrune.js";
+import {
+  catalogExcludeAdultAnimeMongoClause,
+  catalogExcludeBlockedTmdbTvMongoClause,
+} from "./animeContentPolicy.js";
 
-export { catalogExcludeJpAnimationNumericTvMongoClause };
+export {
+  catalogExcludeJpAnimationNumericTvMongoClause,
+  catalogExcludeAdultAnimeMongoClause,
+  catalogExcludeBlockedTmdbTvMongoClause,
+};
 
 /** UTC calendar day YYYY-MM-DD for catalog filters. */
 export function catalogTodayIsoUtc() {

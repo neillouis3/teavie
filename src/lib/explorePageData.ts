@@ -447,11 +447,35 @@ export type ExploreCorePayload = Omit<
   "historyRows" | "watchLaterRows" | "favoriteRows"
 >;
 
+const exploreCoreInflight = new Map<string, Promise<ExploreCorePayload>>();
+
+function exploreCoreCacheKey(
+  preferences: UserPreferences | null,
+  excludeMovieIds: string[]
+): string {
+  return JSON.stringify({
+    p: preferences,
+    e: [...excludeMovieIds].sort(),
+  });
+}
+
+export function bustExploreCoreInflight(
+  preferences: UserPreferences | null,
+  excludeMovieIds: string[] = []
+): void {
+  exploreCoreInflight.delete(exploreCoreCacheKey(preferences, excludeMovieIds));
+}
+
 export async function loadExploreCorePayload(
   preferences: UserPreferences | null,
   options?: { excludeMovieIds?: string[] }
 ): Promise<ExploreCorePayload> {
   const excludeMovieIds = options?.excludeMovieIds ?? [];
+  const inflightKey = exploreCoreCacheKey(preferences, excludeMovieIds);
+  const existing = exploreCoreInflight.get(inflightKey);
+  if (existing) return existing;
+
+  const promise = (async () => {
   const [bundle, feed, personalized] = await Promise.all([
     fetchExploreBundle(),
     fetchDiscoverFeed(),
@@ -495,6 +519,12 @@ export async function loadExploreCorePayload(
         : feed.upcomingContent,
     personalized,
   };
+  })().finally(() => {
+    exploreCoreInflight.delete(inflightKey);
+  });
+
+  exploreCoreInflight.set(inflightKey, promise);
+  return promise;
 }
 
 export async function loadExplorePagePayload(

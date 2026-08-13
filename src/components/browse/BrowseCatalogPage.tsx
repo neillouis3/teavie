@@ -11,11 +11,14 @@ import BrowseCatalogSidebar from "@/components/browse/BrowseCatalogSidebar";
 import { Spinner } from "@heroui/react";
 import type { ContentItem } from "@/types/content";
 import {
+  bustInflightDayCache,
+  browseCatalogCacheKey,
   fetchBrowseCatalogPayload,
   fetchBrowseCatalogPageResults,
   prefetchBrowseCatalogPage,
 } from "@/lib/pageDataCache";
 import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 
 type BrowseCatalogPageProps = {
   pageName: string;
@@ -69,6 +72,35 @@ function BrowseCatalogPageContent({
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const loadingMoreInFlightRef = useRef(false);
 
+  const loadFirstPage = useCallback(() => {
+    const query = new URLSearchParams(filterQueryString);
+    query.set("page", "1");
+    return fetchBrowseCatalogPayload(namespace, apiPath, query.toString(), genreApiPath)
+      .then((data) => {
+        setItems(data.results);
+        setTotalPages(data.totalPages);
+        setTotal(data.total);
+        if (data.genreSlugs) setGenreSlugs(data.genreSlugs);
+        if (data.totalPages > 1) {
+          prefetchBrowseCatalogPage(namespace, apiPath, filterQueryString, 2);
+        }
+      })
+      .catch(() => {
+        setItems([]);
+        setTotalPages(1);
+        setTotal(0);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [namespace, apiPath, filterQueryString, genreApiPath]);
+
+  const bustBrowseInflight = useCallback(() => {
+    const query = new URLSearchParams(filterQueryString);
+    query.set("page", "1");
+    bustInflightDayCache(browseCatalogCacheKey(namespace, query.toString()));
+  }, [namespace, filterQueryString]);
+
   useEffect(() => {
     document.title = documentTitle;
   }, [documentTitle]);
@@ -106,6 +138,14 @@ function BrowseCatalogPageContent({
       cancelled = true;
     };
   }, [namespace, apiPath, filterQueryString, genreApiPath]);
+
+  useResumeFetchWhenVisible(
+    loading,
+    () => {
+      void loadFirstPage();
+    },
+    bustBrowseInflight
+  );
 
   const loadMore = useCallback(async () => {
     if (

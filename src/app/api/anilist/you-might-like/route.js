@@ -10,6 +10,7 @@ import {
   tvSeasonCountFromDoc,
 } from "@/lib/mapContentDocToItem";
 import { isAnimeCatalogDocReleased } from "@/lib/animeRelease.js";
+import { isBlockedAdultAnimeDoc } from "@/lib/animeContentPolicy.js";
 
 function docAnilistKey(d) {
   const a = d?.anilist_id;
@@ -115,6 +116,7 @@ export async function GET(req) {
     for (const d of docs) {
       const cid = String(d.id);
       if (!cid.startsWith("anime_")) continue;
+      if (isBlockedAdultAnimeDoc(d)) continue;
       if (!isAnimeCatalogDocReleased(d)) continue;
       const m = typeof d.mal_id === "number" ? d.mal_id : null;
       if (m == null || !malIds.includes(m)) continue;

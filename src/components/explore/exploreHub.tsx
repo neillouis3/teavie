@@ -14,6 +14,7 @@ import UpcomingRail from "@/components/explore/upcomingRail";
 import NewContentRail from "@/components/explore/newContentRail";
 import {
   loadExploreCorePayload,
+  bustExploreCoreInflight,
   fetchUserRailRows,
   projectExploreHistoryRows,
   buildSpotlightItems,
@@ -22,6 +23,7 @@ import {
   type TmdbDiscoverPayload,
   type UserRailRows,
 } from "@/lib/explorePageData";
+import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 import { watchHistoryProgressLabel, WATCH_HISTORY_CHANGED_EVENT } from "@/lib/watchHistory";
 import { WATCH_LATER_CHANGED_EVENT } from "@/lib/watchLater";
 import { FAVORITES_CHANGED_EVENT } from "@/lib/favorites";
@@ -118,6 +120,24 @@ export default function ExploreHub() {
     [core, preferencesSig, preferences]
   );
 
+  const loadCore = useCallback(() => {
+    if (authLoading) return;
+    if (user && profileLoading) return;
+    void loadExploreCorePayload(preferences, {
+      excludeMovieIds: watchedMovieIds,
+    }).then(setCore);
+  }, [
+    authLoading,
+    profileLoading,
+    user,
+    preferences,
+    watchedMovieIds,
+  ]);
+
+  const bustCoreInflight = useCallback(() => {
+    bustExploreCoreInflight(preferences, watchedMovieIds);
+  }, [preferences, watchedMovieIds]);
+
   useEffect(() => {
     document.title = "Explore - Teavie";
   }, []);
@@ -143,6 +163,8 @@ export default function ExploreHub() {
     preferences,
     watchedMovieIds,
   ]);
+
+  useResumeFetchWhenVisible(!core, loadCore, bustCoreInflight);
 
   useEffect(() => {
     if (authLoading) return;

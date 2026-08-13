@@ -26,6 +26,7 @@ import {
   yearFromCatalogDoc,
 } from "@/lib/animeRelatedCatalog.js";
 import { isAnimeCatalogDocReleased } from "@/lib/animeRelease.js";
+import { isBlockedAdultAnimeDoc } from "@/lib/animeContentPolicy.js";
 
 async function buildRelatedItems(rootMal, relationsJson, opts = {}) {
   const includeChain = opts.includeChain !== false;
@@ -125,6 +126,7 @@ async function buildYouMightLikeItems(rootMal, recsJson, limit) {
   for (const d of docs) {
     const cid = String(d.id);
     if (!cid.startsWith("anime_")) continue;
+    if (isBlockedAdultAnimeDoc(d)) continue;
     if (!isAnimeCatalogDocReleased(d)) continue;
     const m = malIdFromCatalogDoc(d);
     if (m == null || !malIds.includes(m)) continue;

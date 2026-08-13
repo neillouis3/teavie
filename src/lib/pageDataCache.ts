@@ -24,6 +24,14 @@ type DayCacheOptions<T> = {
   isCacheable?: (data: T) => boolean;
 };
 
+/** In-flight fetches keyed by cache key — remounts share the same promise. */
+const inflightDayCache = new Map<string, Promise<unknown>>();
+
+/** Drop a stuck in-flight fetch (e.g. after returning from a background tab). */
+export function bustInflightDayCache(key: string): void {
+  inflightDayCache.delete(key);
+}
+
 async function withDayCache<T>(
   key: string,
   fetcher: () => Promise<T>,
@@ -44,11 +52,23 @@ async function withDayCache<T>(
     }
   }
 
-  const data = await fetcher();
-  if (!options?.isCacheable || options.isCacheable(data)) {
-    writeClientDayCache(key, data);
+  const inflight = inflightDayCache.get(key);
+  if (inflight) {
+    return inflight as Promise<T>;
   }
-  return data;
+
+  const promise = (async () => {
+    const data = await fetcher();
+    if (!options?.isCacheable || options.isCacheable(data)) {
+      writeClientDayCache(key, data);
+    }
+    return data;
+  })().finally(() => {
+    inflightDayCache.delete(key);
+  });
+
+  inflightDayCache.set(key, promise);
+  return promise;
 }
 
 function hasCatalogItems(items: ContentItem[] | undefined | null): boolean {
@@ -254,9 +274,8 @@ export async function fetchCategoryDiscover(
   slug: string,
   preferences: UserPreferences | null = null
 ): Promise<CategoryDiscoverPayload> {
-  const prefKey = preferencesCacheKey(preferences);
   return withDayCache(
-    `${PREFIX}.category-discover.v6:${slug}:${prefKey}`,
+    categoryDiscoverCacheKey(slug, preferences),
     async () => {
       const first = await loadCategoryDiscover(slug, preferences);
       if (isCategoryDiscoverCacheable(first)) return first;
@@ -268,6 +287,24 @@ export async function fetchCategoryDiscover(
   );
 }
 
+export function categoryDiscoverCacheKey(
+  slug: string,
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.category-discover.v7:${slug}:${preferencesCacheKey(preferences)}`;
+}
+
+export function peekCategoryDiscoverCache(
+  slug: string,
+  preferences: UserPreferences | null = null
+): CategoryDiscoverPayload | null {
+  const cached = readClientDayCache<CategoryDiscoverPayload>(
+    categoryDiscoverCacheKey(slug, preferences)
+  );
+  if (cached && isCategoryDiscoverCacheable(cached)) return cached;
+  return null;
+}
+
 export async function fetchGenresIndex(): Promise<CatalogGenreRow[]> {
   return withDayCache(`${PREFIX}.genres-index.v1:name`, async () => {
     const bundle = await fetchExploreBundle();
@@ -275,14 +312,33 @@ export async function fetchGenresIndex(): Promise<CatalogGenreRow[]> {
   });
 }
 
+export function genrePageCacheKey(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): string {
+  return `${PREFIX}.genre-page.v2:${slug}:${type}:${preferencesCacheKey(preferences)}`;
+}
+
+export function peekGenrePageCache(
+  slug: string,
+  type: "all" | "movie" | "tv",
+  preferences: UserPreferences | null = null
+): GenrePagePayload | null {
+  const cached = readClientDayCache<GenrePagePayload>(
+    genrePageCacheKey(slug, type, preferences)
+  );
+  if (cached && isGenrePageCacheable(cached)) return cached;
+  return null;
+}
+
 export async function fetchGenrePagePayload(
   slug: string,
   type: "all" | "movie" | "tv",
   preferences: UserPreferences | null = null
 ): Promise<GenrePagePayload> {
-  const prefKey = preferencesCacheKey(preferences);
   return withDayCache(
-    `${PREFIX}.genre-page.v2:${slug}:${type}:${prefKey}`,
+    genrePageCacheKey(slug, type, preferences),
     async () => {
       try {
         const res = hasUserPreferences(preferences)
@@ -379,13 +435,20 @@ export function prefetchBrowseCatalogPage(
   void fetchBrowseCatalogPageResults(namespace, apiPath, query.toString());
 }
 
+export function browseCatalogCacheKey(
+  namespace: string,
+  queryString: string
+): string {
+  return `${PREFIX}.browse.v4:${namespace}:${queryString}`;
+}
+
 export async function fetchBrowseCatalogPayload(
   namespace: string,
   apiPath: string,
   queryString: string,
   genreApiPath?: string
 ): Promise<BrowseCatalogPayload> {
-  const cacheKey = `${PREFIX}.browse.v4:${namespace}:${queryString}`;
+  const cacheKey = browseCatalogCacheKey(namespace, queryString);
   const page = new URLSearchParams(queryString).get("page") || "1";
   const isFirstPage = page === "1";
 
