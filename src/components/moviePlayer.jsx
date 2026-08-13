@@ -137,6 +137,7 @@ const MoviePlayer = ({
       <StremioPlayer
         type="movie"
         imdbId={imdbId}
+        catalogKey={videoId != null ? String(videoId) : null}
         startSeconds={startSeconds}
         title={title}
         posterUrl={posterUrl}

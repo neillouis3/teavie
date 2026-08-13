@@ -4,7 +4,7 @@ import Hls from "hls.js";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, ButtonGroup, Card, CardBody, Modal, ModalContent, Select, SelectItem, Slider, Switch } from "@heroui/react";
+import { Button, ButtonGroup, Card, CardBody, Input, Modal, ModalContent, Select, SelectItem, Slider, Switch } from "@heroui/react";
 import {
   ArrowRight01Icon,
   Cancel01Icon,
@@ -29,6 +29,8 @@ import { useWatchPartyNav } from "@/contexts/watchPartyNavContext";
 type Props = {
   type: "movie" | "series";
   imdbId?: string | null;
+  /** Persist a manual IMDb override for this title (e.g. TMDB / catalog id). */
+  catalogKey?: string | null;
   season?: number;
   episode?: number;
   startSeconds?: number;
@@ -43,6 +45,7 @@ type AudioTrack = { audioIndex: number; language: string; title: string | null; 
 export default function StremioPlayer({
   type,
   imdbId,
+  catalogKey,
   season,
   episode,
   startSeconds = 0,
@@ -53,6 +56,12 @@ export default function StremioPlayer({
 }: Props) {
   const router = useRouter();
   const { openTeaParty } = useWatchPartyNav();
+  const overrideStorageKey = useMemo(
+    () => imdbOverrideStorageKey(type, catalogKey, title, season, episode),
+    [type, catalogKey, title, season, episode]
+  );
+  const [manualImdbId, setManualImdbId] = useState<string | null>(null);
+  const effectiveImdbId = imdbId ?? manualImdbId;
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackRequestedRef = useRef(false);
@@ -77,16 +86,45 @@ export default function StremioPlayer({
   const [audioOverrideUrl, setAudioOverrideUrl] = useState<string | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
 
+  useEffect(() => {
+    if (imdbId || !overrideStorageKey) return;
+    try {
+      const saved = sessionStorage.getItem(overrideStorageKey);
+      const normalized = saved ? normalizeImdbId(saved) : null;
+      if (normalized) setManualImdbId(normalized);
+    } catch {
+      /* ignore */
+    }
+  }, [imdbId, overrideStorageKey]);
+
+  const applyManualImdbId = useCallback(
+    (raw: string) => {
+      const normalized = normalizeImdbId(raw);
+      if (!normalized) return false;
+      setManualImdbId(normalized);
+      if (overrideStorageKey) {
+        try {
+          sessionStorage.setItem(overrideStorageKey, normalized);
+        } catch {
+          /* ignore */
+        }
+      }
+      return true;
+    },
+    [overrideStorageKey]
+  );
+
   const query = useMemo(() => {
-    const q = new URLSearchParams({ type, id: imdbId ?? "" });
+    const q = new URLSearchParams({ type, id: effectiveImdbId ?? "" });
     if (type === "series") {
       q.set("season", String(season ?? ""));
       q.set("episode", String(episode ?? ""));
     }
     return q.toString();
-  }, [type, imdbId, season, episode]);
+  }, [type, effectiveImdbId, season, episode]);
 
   useEffect(() => {
+    if (!effectiveImdbId) return;
     const controller = new AbortController();
     setLoading(true);
     setError(null);
@@ -121,9 +159,25 @@ export default function StremioPlayer({
         const next = Array.isArray(body.streams) ? body.streams : [];
         setStreams(next);
         if (!next.length) {
-          const providerError = Array.isArray(body.errors) ? body.errors[0]?.message : null;
+          const providerErrors = Array.isArray(body.errors)
+            ? body.errors
+                .map((entry) =>
+                  entry && typeof entry === "object" && "message" in entry
+                    ? String((entry as { message?: unknown }).message ?? "")
+                    : ""
+                )
+                .filter(Boolean)
+            : [];
+          const providerError = providerErrors[0] ?? null;
           if (providerError) {
-            setError(`The configured addon could not return streams: ${providerError}`);
+            const allTimedOut = providerErrors.every((message) =>
+              /took too long|timeout/i.test(message)
+            );
+            setError(
+              allTimedOut
+                ? "Stream addons timed out. They may be slow or overloaded — try again in a moment."
+                : `The configured addon could not return streams: ${providerError}`
+            );
           } else if (Number(body.unsupported) > 0) {
             setError(
               `The addon returned ${body.unsupported} torrent or non-web stream${body.unsupported === 1 ? "" : "s"}. Configure it with a direct-link provider to use this browser player.`
@@ -139,7 +193,7 @@ export default function StremioPlayer({
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [query]);
+  }, [query, effectiveImdbId]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -281,8 +335,16 @@ export default function StremioPlayer({
     onPlaybackProgress(currentTime);
   }, [currentTime, onPlaybackProgress]);
 
-  if (!imdbId) {
-    return <PlayerMessage text="This title has no IMDb id, so Stremio addons cannot resolve it." />;
+  if (!effectiveImdbId) {
+    return (
+      <ImdbEntryPanel
+        title={title}
+        posterUrl={posterUrl}
+        backdropUrl={backdropUrl}
+        onBack={() => router.back()}
+        onSubmit={applyManualImdbId}
+      />
+    );
   }
   if (error) return <PlayerMessage text={error} />;
 
@@ -765,4 +827,111 @@ function PlayerMessage({ text }: { text: string }) {
       {text}
     </div>
   );
+}
+
+function ImdbEntryPanel({
+  title,
+  posterUrl,
+  backdropUrl,
+  onBack,
+  onSubmit,
+}: {
+  title?: string;
+  posterUrl?: string | null;
+  backdropUrl?: string | null;
+  onBack: () => void;
+  onSubmit: (raw: string) => boolean;
+}) {
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const ok = onSubmit(value);
+    if (!ok) {
+      setError("Enter a valid IMDb id (e.g. tt1234567) or paste an IMDb URL.");
+    }
+  };
+
+  return (
+    <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+      {backdropUrl ? (
+        <div
+          className="absolute -inset-8 scale-110 bg-cover bg-center opacity-35 blur-2xl"
+          style={{ backgroundImage: `url(${JSON.stringify(backdropUrl).slice(1, -1)})` }}
+          aria-hidden
+        />
+      ) : null}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/60 to-black/95" aria-hidden />
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Go back"
+        className="absolute left-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-2xl text-white backdrop-blur-md transition hover:bg-white/20"
+      >
+        <span aria-hidden>‹</span>
+      </button>
+      <div className="relative z-10 flex w-full max-w-md flex-col items-center px-6 py-8 text-center">
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt=""
+            className="mb-5 h-48 w-32 rounded-xl object-cover shadow-2xl ring-1 ring-white/15 sm:h-56 sm:w-[9.35rem]"
+          />
+        ) : null}
+        {title ? <h2 className="text-xl font-semibold text-white sm:text-2xl">{title}</h2> : null}
+        <p className="mt-3 text-sm text-white/55">
+          This title has no IMDb id in the catalog. Enter one so Teavie can resolve streams.
+        </p>
+        <form onSubmit={handleSubmit} className="mt-6 w-full space-y-3 text-left">
+          <Input
+            label="IMDb id"
+            placeholder="tt1234567"
+            value={value}
+            onValueChange={(next) => {
+              setValue(next);
+              if (error) setError(null);
+            }}
+            autoComplete="off"
+            spellCheck={false}
+            isInvalid={Boolean(error)}
+            errorMessage={error ?? undefined}
+            classNames={{
+              label: "text-white/70",
+              input: "text-white",
+              inputWrapper: "bg-white/10 border-white/15 data-[hover=true]:bg-white/12",
+            }}
+          />
+          <Button type="submit" color="success" className="w-full font-medium">
+            Load streams
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function imdbOverrideStorageKey(
+  type: "movie" | "series",
+  catalogKey: string | null | undefined,
+  title: string,
+  season?: number,
+  episode?: number
+) {
+  const key = String(catalogKey ?? "").trim() || String(title ?? "").trim();
+  if (!key) return null;
+  if (type === "series") {
+    return `teavie.stremio-imdb:${type}:${key}:s${season ?? 0}:e${episode ?? 0}`;
+  }
+  return `teavie.stremio-imdb:${type}:${key}`;
+}
+
+function normalizeImdbId(raw: string): string | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return null;
+  const fromUrl = trimmed.match(/imdb\.com\/title\/(tt\d+)/i)?.[1];
+  if (fromUrl) return fromUrl.toLowerCase();
+  if (/^tt\d+$/i.test(trimmed)) return trimmed.toLowerCase();
+  if (/^\d{5,}$/.test(trimmed)) return `tt${trimmed}`;
+  return null;
 }

@@ -2,6 +2,11 @@
  * Single-pass Mongo browse page: count + page rows in one aggregation.
  */
 
+import {
+  mongoCatalogDisplayVoteExpr,
+  mongoTopRatedQualityMatch,
+} from "@/lib/catalogPopularity.js";
+
 /**
  * @param {import("mongodb").Collection} collection
  * @param {object} filter
@@ -10,7 +15,7 @@
  * @param {number} skip
  * @param {number} limit
  * @param {object | null} popExpr Mongo expression for popularity sort
- * @param {{ includeTotal?: boolean }} [options]
+ * @param {{ includeTotal?: boolean; anime?: boolean }} [options]
  */
 export async function fetchCatalogBrowsePage(
   collection,
@@ -20,8 +25,55 @@ export async function fetchCatalogBrowsePage(
   skip,
   limit,
   popExpr = null,
-  { includeTotal = true } = {}
+  { includeTotal = true, anime = false } = {}
 ) {
+  if (sortBy === "rating") {
+    const voteExpr = mongoCatalogDisplayVoteExpr({ anime });
+    const baseStages = [
+      { $match: filter },
+      { $addFields: { _catalogVote: voteExpr } },
+      { $match: mongoTopRatedQualityMatch({ anime }) },
+      {
+        $sort: anime
+          ? { _catalogVote: -1, _id: -1 }
+          : { _catalogVote: -1, vote_count: -1, _id: -1 },
+      },
+    ];
+
+    if (!includeTotal) {
+      const results = await collection
+        .aggregate([
+          ...baseStages,
+          { $skip: skip },
+          { $limit: limit },
+          { $project: { _catalogVote: 0 } },
+        ])
+        .toArray();
+      return { total: undefined, results };
+    }
+
+    const [facet] = await collection
+      .aggregate([
+        ...baseStages,
+        {
+          $facet: {
+            metadata: [{ $count: "total" }],
+            results: [
+              { $skip: skip },
+              { $limit: limit },
+              { $project: { _catalogVote: 0 } },
+            ],
+          },
+        },
+      ])
+      .toArray();
+
+    return {
+      total: facet?.metadata?.[0]?.total ?? 0,
+      results: facet?.results ?? [],
+    };
+  }
+
   if (sortBy === "popularity" && popExpr) {
     const baseStages = [
       { $match: filter },

@@ -7,7 +7,7 @@
  * Used by `scripts/sync-movies-tmdb-daily.mjs` and `src/app/api/cron/sync-movies`.
  */
 import { MongoClient } from "mongodb";
-import { tmdbBearerToken } from "./tmdbAuth.js";
+import { hasTmdbAuth, tmdbAuth, tmdbBearerToken, tmdbFetchJson } from "./tmdbAuth.js";
 import {
   shouldRejectTmdbMovieFromCatalog,
   tmdbListMovieLooksAdult,
@@ -59,31 +59,18 @@ export function mapTmdbMovieToDoc(movie) {
   );
 }
 
-async function tmdbGet(pathWithQuery, token) {
+async function tmdbGet(pathWithQuery, authOverride) {
   const url = pathWithQuery.startsWith("http")
     ? pathWithQuery
     : `${TMDB_BASE}${pathWithQuery}`;
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`TMDB ${res.status}: ${txt.slice(0, 200)}`);
-    }
-    return res.json();
-  } finally {
-    clearTimeout(t);
-  }
+  const auth =
+    typeof authOverride === "string" && authOverride.trim()
+      ? authOverride.trim()
+      : tmdbAuth();
+  return tmdbFetchJson(url, auth, { timeoutMs: FETCH_TIMEOUT_MS });
 }
 
-async function discoverMovieIdsInWindow(token, gteIso, lteIso, maxPages, log) {
+async function discoverMovieIdsInWindow(gteIso, lteIso, maxPages, log, authOverride) {
   const ids = new Set();
   for (let page = 1; page <= maxPages; page += 1) {
     const q = new URLSearchParams({
@@ -94,7 +81,7 @@ async function discoverMovieIdsInWindow(token, gteIso, lteIso, maxPages, log) {
       "primary_release_date.lte": lteIso,
       page: String(page),
     });
-    const json = await tmdbGet(`/discover/movie?${q}`, token);
+    const json = await tmdbGet(`/discover/movie?${q}`, authOverride);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
       if (
@@ -112,7 +99,7 @@ async function discoverMovieIdsInWindow(token, gteIso, lteIso, maxPages, log) {
   return [...ids];
 }
 
-async function listEndpointMovieIds(endpoint, token, maxPages, log) {
+async function listEndpointMovieIds(endpoint, maxPages, log, authOverride) {
   const ids = new Set();
   for (let page = 1; page <= maxPages; page += 1) {
     const q = new URLSearchParams({
@@ -120,7 +107,7 @@ async function listEndpointMovieIds(endpoint, token, maxPages, log) {
       include_adult: "false",
       page: String(page),
     });
-    const json = await tmdbGet(`${endpoint}?${q}`, token);
+    const json = await tmdbGet(`${endpoint}?${q}`, authOverride);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
       if (
@@ -138,13 +125,13 @@ async function listEndpointMovieIds(endpoint, token, maxPages, log) {
   return [...ids];
 }
 
-async function fetchMovieDetail(id, token) {
+async function fetchMovieDetail(id, authOverride) {
   const q = new URLSearchParams({
     language: "en-US",
     include_adult: "false",
     append_to_response: "release_dates",
   });
-  return tmdbGet(`/movie/${id}?${q}`, token);
+  return tmdbGet(`/movie/${id}?${q}`, authOverride);
 }
 
 async function bulkUpsertMovies(col, docs, batchSize, dryRun, log) {
@@ -194,10 +181,10 @@ export async function runDailyMovieSync(opts = {}) {
   const bulkBatch = Math.max(20, Number(opts.bulkBatch) || 100);
   const log = opts.onLog || ((m) => console.log(m));
 
-  const token = (opts.token || tmdbTokenFromEnv()).trim();
+  const authOverride = (opts.token || tmdbTokenFromEnv()).trim() || undefined;
   const uri = (opts.mongoUri || process.env.MONGODB_URI || "").trim();
-  if (!token) {
-    throw new Error("Missing TMDB_BEARER (or NEXT_PUBLIC_TMDB_BEARER)");
+  if (!hasTmdbAuth() && !authOverride) {
+    throw new Error("Missing TMDB_BEARER or TMDB_API_KEY");
   }
   if (!uri) {
     throw new Error("Missing MONGODB_URI");
@@ -215,27 +202,27 @@ export async function runDailyMovieSync(opts = {}) {
   const idSet = new Set();
 
   const discoverIds = await discoverMovieIdsInWindow(
-    token,
     windowStart,
     windowEnd,
     maxDiscoverPages,
-    log
+    log,
+    authOverride
   );
   discoverIds.forEach((id) => idSet.add(id));
 
   const nowPlaying = await listEndpointMovieIds(
     "/movie/now_playing",
-    token,
     maxListPages,
-    log
+    log,
+    authOverride
   );
   nowPlaying.forEach((id) => idSet.add(id));
 
   const upcoming = await listEndpointMovieIds(
     "/movie/upcoming",
-    token,
     maxListPages,
-    log
+    log,
+    authOverride
   );
   upcoming.forEach((id) => idSet.add(id));
 
@@ -294,7 +281,7 @@ export async function runDailyMovieSync(opts = {}) {
   for (let i = 0; i < allIds.length; i += 1) {
     const id = allIds[i];
     try {
-      const movie = await fetchMovieDetail(id, token);
+      const movie = await fetchMovieDetail(id, authOverride);
       const doc = mapTmdbMovieToDoc(movie);
       if (doc) docs.push(doc);
     } catch (e) {

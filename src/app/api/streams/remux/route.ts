@@ -5,6 +5,7 @@ import { resolveStremioStreams } from "@/lib/stremio/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;

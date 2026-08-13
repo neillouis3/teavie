@@ -14,6 +14,8 @@ import {
 import {
   catalogDisplayVoteAverage,
   catalogPopularityScore,
+  mongoCatalogDisplayVoteExpr,
+  mongoTopRatedQualityMatch,
 } from "@/lib/catalogPopularity";
 import { imdbGenreLabelFromSlug, isValidImdbGenreSlug } from "@/lib/imdbGenres";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
@@ -146,7 +148,7 @@ function buildFilter(slug, type, searchParams, todayIso) {
 function sortStage(sortBy) {
   switch (sortBy) {
     case "vote_average":
-      return { vote_average: -1, _sortDate: -1, _id: -1 };
+      return { _catalogVote: -1, vote_count: -1, _sortDate: -1, _id: -1 };
     case "release_year":
       return { _sortDate: -1, _id: -1 };
     case "popularity":
@@ -217,21 +219,21 @@ export async function queryGenreRail(opts) {
       $addFields: {
         _pop: popExpr,
         _sortDate: { $ifNull: ["$release_date", "$first_air_date"] },
-        vote_average: {
-          $convert: {
-            input: "$vote_average",
-            to: "double",
-            onError: 0,
-            onNull: 0,
-          },
-        },
+        _catalogVote: mongoCatalogDisplayVoteExpr(),
       },
     },
+  ];
+
+  if (sortBy === "vote_average") {
+    pipeline.push({ $match: mongoTopRatedQualityMatch() });
+  }
+
+  pipeline.push(
     { $sort: sortStage(sortBy) },
     { $skip: skip },
     { $limit: limit },
-    { $project: { _pop: 0, _sortDate: 0 } },
-  ];
+    { $project: { _pop: 0, _sortDate: 0, _catalogVote: 0 } }
+  );
 
   const [total, docs] = await Promise.all([
     col.countDocuments(filter),

@@ -129,6 +129,7 @@ export default function ShowPlayer({
       <StremioPlayer
         type="series"
         imdbId={imdbId}
+        catalogKey={videoId != null ? String(videoId) : null}
         season={season}
         episode={episode}
         startSeconds={startSeconds}

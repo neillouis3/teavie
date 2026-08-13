@@ -11,7 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { MongoClient } from "mongodb";
-import { tmdbBearerToken } from "../src/lib/tmdbAuth.js";
+import { hasTmdbAuth, tmdbAuth, tmdbFetchJson } from "../src/lib/tmdbAuth.js";
 import { fetchOmdbGenreRaw } from "../src/lib/omdbGenre.js";
 import { shouldRejectTmdbTvFromCatalog } from "../src/lib/tmdbMovieContentPolicy.js";
 import {
@@ -102,28 +102,23 @@ function mapTmdbTvToKdramaDoc(show, { omdbGenreRaw = null } = {}) {
   return withGenres;
 }
 
-async function tmdbGet(pathWithQuery, token) {
+async function tmdbGet(pathWithQuery) {
   const url = pathWithQuery.startsWith("http")
     ? pathWithQuery
     : `${TMDB_BASE}${pathWithQuery}`;
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`TMDB ${res.status}: ${txt.slice(0, 200)}`);
-    }
-    return res.json();
-  } finally {
-    clearTimeout(t);
-  }
+  return tmdbFetchJson(url, tmdbAuth(), { timeoutMs: FETCH_TIMEOUT_MS });
+}
+
+function pickImagePath(images, kind) {
+  const rows = Array.isArray(images?.[kind]) ? images[kind] : [];
+  if (rows.length === 0) return null;
+  const preferred =
+    rows.find((row) => String(row?.iso_639_1 ?? "").toLowerCase() === "ko") ??
+    rows.find((row) => String(row?.iso_639_1 ?? "").toLowerCase() === "en") ??
+    rows.find((row) => !row?.iso_639_1) ??
+    rows[0];
+  const file = String(preferred?.file_path ?? "").trim();
+  return file || null;
 }
 
 async function animeClaimedTmdbIds(col) {
@@ -169,7 +164,7 @@ async function loadExistingTvIds(col) {
  * @param {Set<number>} into
  * @param {Set<number>} blocked
  */
-async function discoverInto(token, baseParams, maxPages, into, blocked) {
+async function discoverInto(baseParams, maxPages, into, blocked) {
   let totalPages = 1;
   for (let page = 1; page <= maxPages && page <= totalPages; page += 1) {
     const q = new URLSearchParams({
@@ -178,7 +173,7 @@ async function discoverInto(token, baseParams, maxPages, into, blocked) {
       ...baseParams,
       page: String(page),
     });
-    const json = await tmdbGet(`/discover/tv?${q}`, token);
+    const json = await tmdbGet(`/discover/tv?${q}`);
     totalPages = Math.min(maxPages, json.total_pages || 1);
     const results = Array.isArray(json.results) ? json.results : [];
     for (const r of results) {
@@ -243,13 +238,32 @@ function discoverPlans(maxPages) {
   return plans;
 }
 
-async function fetchAndMapShow(id, token, { fetchOmdb = true } = {}) {
-  const q = new URLSearchParams({
-    language: "en-US",
-    include_adult: "false",
-    append_to_response: "external_ids",
-  });
-  const show = await tmdbGet(`/tv/${id}?${q}`, token);
+async function fetchAndMapShow(id, { fetchOmdb = true } = {}) {
+  let show = null;
+  for (const language of ["en-US", "ko-KR"]) {
+    const q = new URLSearchParams({
+      language,
+      include_adult: "false",
+      append_to_response: "external_ids",
+    });
+    const next = await tmdbGet(`/tv/${id}?${q}`);
+    show = next;
+    if (String(next?.poster_path ?? "").trim()) break;
+  }
+
+  if (show && !String(show?.poster_path ?? "").trim()) {
+    try {
+      const images = await tmdbGet(`/tv/${id}/images`);
+      const poster = pickImagePath(images, "posters");
+      const backdrop = pickImagePath(images, "backdrops");
+      if (poster) show = { ...show, poster_path: poster };
+      if (backdrop && !String(show?.backdrop_path ?? "").trim()) {
+        show = { ...show, backdrop_path: backdrop };
+      }
+    } catch {
+      /* optional */
+    }
+  }
 
   let omdbGenreRaw = null;
   const imdbId =
@@ -266,7 +280,7 @@ async function fetchAndMapShow(id, token, { fetchOmdb = true } = {}) {
   return mapTmdbTvToKdramaDoc(show, { omdbGenreRaw });
 }
 
-async function mapPoolConcurrent(ids, token, concurrency) {
+async function mapPoolConcurrent(ids, concurrency) {
   /** @type {Record<string, unknown>[]} */
   const docs = [];
   let err = 0;
@@ -278,7 +292,7 @@ async function mapPoolConcurrent(ids, token, concurrency) {
       idx += 1;
       const id = ids[i];
       try {
-        const doc = await fetchAndMapShow(id, token);
+        const doc = await fetchAndMapShow(id);
         if (doc) docs.push(doc);
       } catch (e) {
         err += 1;
@@ -306,13 +320,12 @@ async function main() {
   const concurrency = Math.min(12, Math.max(1, parseIntFlag("--concurrency", 8)));
 
   const uri = String(process.env.MONGODB_URI ?? "").trim();
-  const token = tmdbBearerToken().trim();
   if (!uri) {
     console.error("Missing MONGODB_URI");
     process.exit(1);
   }
-  if (!token) {
-    console.error("Missing TMDB_BEARER (or NEXT_PUBLIC_TMDB_BEARER)");
+  if (!hasTmdbAuth()) {
+    console.error("Missing TMDB_BEARER or TMDB_API_KEY");
     process.exit(1);
   }
 
@@ -350,7 +363,7 @@ async function main() {
   console.log(`running ${plans.length} discover passes…`);
 
   for (const plan of plans) {
-    await discoverInto(token, plan.params, plan.maxPages, pool, animeBlocked);
+    await discoverInto(plan.params, plan.maxPages, pool, animeBlocked);
     const newCount = [...pool].filter((id) => !existingTv.has(id)).length;
     console.log(`  pool=${pool.size} new-vs-catalog=${newCount}`);
     if (newCount >= need) break;
@@ -362,7 +375,7 @@ async function main() {
   const toFetch = newIds.slice(0, need + Math.ceil(need * 0.05));
   console.log(`fetching details for ${toFetch.length} shows…`);
 
-  const { docs, err } = await mapPoolConcurrent(toFetch, token, concurrency);
+  const { docs, err } = await mapPoolConcurrent(toFetch, concurrency);
   console.log(`detail docs=${docs.length} fetchErrors=${err}`);
 
   const ops = docs.map((doc) => ({

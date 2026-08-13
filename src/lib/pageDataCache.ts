@@ -61,7 +61,7 @@ function isCategoryDiscoverCacheable(data: CategoryDiscoverPayload): boolean {
     hasCatalogItems(data.trending) ||
     hasCatalogItems(data.popular) ||
     hasCatalogItems(data.topRated) ||
-    hasCatalogItems(data.new) ||
+    hasCatalogItems(data.newEpisodes) ||
     (Array.isArray(data.genres) && data.genres.some((g) => (g.count ?? 0) > 0))
   );
 }
@@ -110,7 +110,7 @@ export type CategoryDiscoverPayload = {
   trending: ContentItem[];
   popular: ContentItem[];
   topRated: ContentItem[];
-  new: ContentItem[];
+  newEpisodes: ContentItem[];
   genres: CatalogGenreRow[];
 };
 
@@ -144,7 +144,7 @@ const EMPTY_CATEGORY: CategoryDiscoverPayload = {
   trending: [],
   popular: [],
   topRated: [],
-  new: [],
+  newEpisodes: [],
   genres: [],
 };
 
@@ -242,7 +242,7 @@ async function loadCategoryDiscover(
       trending: json.trending ?? [],
       popular: json.popular ?? [],
       topRated: json.topRated ?? [],
-      new: json.new ?? [],
+      newEpisodes: json.newEpisodes ?? [],
       genres: json.genres ?? [],
     };
   } catch {
@@ -256,7 +256,7 @@ export async function fetchCategoryDiscover(
 ): Promise<CategoryDiscoverPayload> {
   const prefKey = preferencesCacheKey(preferences);
   return withDayCache(
-    `${PREFIX}.category-discover.v4:${slug}:${prefKey}`,
+    `${PREFIX}.category-discover.v6:${slug}:${prefKey}`,
     async () => {
       const first = await loadCategoryDiscover(slug, preferences);
       if (isCategoryDiscoverCacheable(first)) return first;

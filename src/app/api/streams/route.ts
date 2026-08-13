@@ -2,6 +2,8 @@ import { hasStremioAddons, resolveStremioStreams } from "@/lib/stremio/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** Allow slow debrid/scraper addons to finish before the route is cut off. */
+export const maxDuration = 60;
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;

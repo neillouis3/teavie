@@ -14,6 +14,12 @@ export const CATALOG_POPULAR_MIN_VOTE_AVERAGE = 6.5;
 /** Ignore TMDB rows with very few votes (avoids noisy high scores). */
 export const CATALOG_POPULAR_MIN_VOTE_COUNT = 50;
 
+/** Minimum score for “top rated” browse / rails (0–10). */
+export const CATALOG_TOP_RATED_MIN_VOTE_AVERAGE = 7;
+
+/** Minimum TMDB vote_count for top-rated TV / movie browse (blocks lone 10.0 scores). */
+export const CATALOG_TOP_RATED_MIN_VOTE_COUNT = 50;
+
 /**
  * @param {unknown} row TMDB list row or catalog item with vote_average / vote_count.
  * @param {{ minVoteAverage?: number; minVoteCount?: number }} [opts]
@@ -136,6 +142,18 @@ export function quantizeVoteAverage(value) {
 }
 
 /**
+ * Normalize a stored vote to 0–10 (handles numeric strings and 0–100 mis-scales).
+ * @param {unknown} raw
+ */
+export function normalizedCatalogVoteAverage(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n > 10 && n <= 100) return quantizeVoteAverage(n / 10);
+  if (n > 100) return null;
+  return quantizeVoteAverage(n);
+}
+
+/**
  * Single 0–10 display score for catalog cards/API: prefer TMDB/Jikan `vote_average`,
  * else AniList `averageScore` (0–100) scaled to 0–10 for `anime_*` rows.
  * @param {unknown} doc
@@ -154,24 +172,58 @@ export function catalogDisplayVoteAverage(doc) {
     return quantizeVoteAverage(aniAvg / 10);
   }
 
-  const raw = d.vote_average;
-  if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
-    return quantizeVoteAverage(raw);
-  }
+  return normalizedCatalogVoteAverage(d.vote_average);
+}
 
-  const rating = d.rating;
-  if (typeof rating === "number" && Number.isFinite(rating) && rating > 0) {
-    return quantizeVoteAverage(rating);
-  }
+/**
+ * Mongo sort/display key for catalog vote (0–10), aligned with {@link catalogDisplayVoteAverage}.
+ * @param {{ anime?: boolean }} [opts] Pass `anime: true` when every row is anime.
+ */
+export function mongoCatalogDisplayVoteExpr(opts = {}) {
+  const tmdbVote = {
+    $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
+  };
+  const anilistVote = {
+    $cond: {
+      if: { $gt: [{ $ifNull: ["$anilist.averageScore", 0] }, 0] },
+      then: { $divide: ["$anilist.averageScore", 10] },
+      else: 0,
+    },
+  };
+  const animeVote = { $max: [tmdbVote, anilistVote] };
 
-  if (id.startsWith("anime_") && Number.isFinite(aniAvg) && aniAvg > 0) {
-    return quantizeVoteAverage(aniAvg / 10);
-  }
+  if (opts.anime === true) return animeVote;
 
-  if (typeof raw === "number" && Number.isFinite(raw)) {
-    return quantizeVoteAverage(raw);
+  return {
+    $cond: {
+      if: {
+        $regexMatch: {
+          input: { $toString: "$id" },
+          regex: "^anime_",
+        },
+      },
+      then: animeVote,
+      else: tmdbVote,
+    },
+  };
+}
+
+/**
+ * `$match` clause excluding noisy TMDB 10.0 rows for top-rated browse.
+ * @param {{ anime?: boolean; minVoteAverage?: number; minVoteCount?: number }} [opts]
+ */
+export function mongoTopRatedQualityMatch(opts = {}) {
+  const minVoteAverage =
+    opts.minVoteAverage ?? CATALOG_TOP_RATED_MIN_VOTE_AVERAGE;
+  const match = {
+    _catalogVote: { $gte: minVoteAverage },
+  };
+  if (opts.anime !== true) {
+    match.vote_count = {
+      $gte: opts.minVoteCount ?? CATALOG_TOP_RATED_MIN_VOTE_COUNT,
+    };
   }
-  return null;
+  return match;
 }
 
 /**

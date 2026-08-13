@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@heroui/react";
-import Header from "@/components/ui/header";
-import LargeCard from "@/components/ui/largeCard";
 import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
 import TrendingHero from "@/components/catalog/trendingHero";
@@ -28,6 +26,7 @@ import {
   getCatalogCategory,
 } from "@/lib/catalogCategories";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
+import { formatHeroDate } from "@/lib/formatRelease";
 import {
   RAIL_AFTER_SPOTLIGHT,
   RAIL_CAROUSEL_ITEM_GENRE,
@@ -43,24 +42,15 @@ import { useUserData } from "@/contexts/userDataContext";
 import { PREFERENCES_CHANGED_EVENT } from "@/lib/userPreferences";
 import { cn } from "@/lib/utils";
 
-/** Match Explore trending hero overlay; tuned for two-up featured row. */
-const FEATURED_CARD_HEIGHT =
-  "h-[min(38.5vh,364px)] sm:h-[min(43.4vh,406px)]";
-
-const TRENDING_SECTION_MIN_H = "min-h-[52vh] sm:min-h-[62vh] lg:min-h-[80vh]";
-
-function itemYear(item: ContentItem) {
-  const raw = item.release_date || item.first_air_date || "";
-  return raw.length >= 4 ? raw.slice(0, 4) : "—";
-}
-
-function featuredReleaseIso(item: ContentItem) {
-  const raw = item.release_date ?? item.first_air_date ?? "";
-  return raw.length >= 10 ? raw.slice(0, 10) : null;
-}
-
-function itemKey(item: ContentItem) {
-  return `${item.type ?? "tv"}-${item.id}`;
+function newEpisodeReleaseNote(item: ContentItem, slug: string): string | undefined {
+  if (slug === "kdrama") {
+    const latest = formatHeroDate(item.last_air_date);
+    return latest ? `Latest ep · ${latest}` : "Returning series";
+  }
+  if (slug === "anime") {
+    return "Airing now";
+  }
+  return undefined;
 }
 
 type CategoryPageTemplateProps = {
@@ -72,6 +62,11 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
   const { preferences } = useUserData();
   const [data, setData] = useState<CategoryDiscoverPayload | null>(null);
   const [ready, setReady] = useState(false);
+
+  const getReleaseNote = useCallback(
+    (item: ContentItem) => newEpisodeReleaseNote(item, slug),
+    [slug]
+  );
 
   useEffect(() => {
     if (category) {
@@ -106,8 +101,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
   if (!category) {
     return (
       <div className="bg-main min-h-screen w-full">
-        <Header pageName="Category" />
-        <p className="pr-4 py-12 text-sm text-default-500">Category not found.</p>
+        <p className="py-12 pr-4 text-sm text-default-500">Category not found.</p>
       </div>
     );
   }
@@ -125,11 +119,9 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           >
             <div className="min-h-[52vh] animate-pulse bg-default-200 sm:min-h-[62vh] lg:min-h-[80vh] dark:bg-default-100/10" />
           </section>
-        ) : (
-          <Header pageName={category.label} />
-        )}
+        ) : null}
         <div className={`space-y-8 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
-          <div className="h-24 animate-pulse rounded-xl bg-default-200 dark:bg-default-100/10" />
+          <div className="h-14 animate-pulse rounded-xl bg-default-200 dark:bg-default-100/10" />
           <CatalogRailSkeleton count={8} />
           <CatalogRailSkeleton count={8} />
           <CatalogRailSkeleton count={8} />
@@ -141,52 +133,50 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
   const categoryGenres = data.genres.filter((genre) => genre.count > 0);
 
   const hasContent =
-    data.featured.length > 0 ||
     data.trending.length > 0 ||
     data.popular.length > 0 ||
     data.topRated.length > 0 ||
-    data.new.length > 0 ||
-    data.genres.some((g) => g.count > 0);
+    data.newEpisodes.length > 0 ||
+    categoryGenres.length > 0;
 
   const hasTrending = data.trending.length > 0;
-  const hasFeatured = data.featured.length > 0;
+  const hasNewEpisodes = data.newEpisodes.length > 0;
 
   return (
     <div className="bg-background min-h-screen w-full">
-      {!useExploreSpotlight ? <Header pageName={category.label} /> : null}
-
       {hasTrending && (
         <section
           className={cn(
-            useExploreSpotlight
-              ? "relative z-0 w-full overflow-hidden rounded-tl-2xl"
-              : `mb-4 mt-2 flex w-full flex-col ${TRENDING_SECTION_MIN_H}`,
+            "relative z-0 w-full overflow-hidden rounded-tl-2xl",
             useExploreSpotlight && RAIL_AFTER_SPOTLIGHT
           )}
-          aria-label={useExploreSpotlight ? "Spotlight" : "Trending"}
+          aria-label="Spotlight"
         >
           <TrendingHero
-            variant={useExploreSpotlight ? "spotlight" : "carousel"}
+            variant="spotlight"
             bleedUnderNav={useExploreSpotlight}
-            showDots={!useExploreSpotlight}
+            showDots={false}
             trendingMovies={[]}
             trendingTv={data.trending}
-            spotlightItems={useExploreSpotlight ? data.trending : undefined}
+            spotlightItems={data.trending}
             maxItems={16}
-            rounded={!useExploreSpotlight}
-            flushLeft={!useExploreSpotlight}
+            rounded={false}
+            flushLeft={false}
           />
         </section>
       )}
 
-      <div className={`space-y-8 pb-8 ${MOBILE_CONTENT_INSET_LEFT}`}>
+      <div className={`${RAIL_STACK_CLASS} pb-10 ${MOBILE_CONTENT_INSET_LEFT}`}>
         <section
-          className="flex flex-col gap-4 rounded-xl border border-default-200/70 bg-default-50/60 p-4 dark:border-white/10 dark:bg-default-50/10 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           aria-label={`Browse all ${category.label}`}
         >
-          <p className="text-sm text-default-600 dark:text-default-400">
-            {category.browseAllCardText}
-          </p>
+          <div className="min-w-0">
+            <ExploreSectionTitle variant="explore">{category.label}</ExploreSectionTitle>
+            <p className="mt-1 max-w-2xl text-sm text-default-500 dark:text-default-400">
+              {category.browseAllCardText}
+            </p>
+          </div>
           <Button
             as={Link}
             href={category.browseAllHref}
@@ -200,74 +190,59 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           </Button>
         </section>
 
-        {hasFeatured && (
-          <section className="space-y-3" aria-label="Featured">
-            <ExploreSectionTitle variant="explore">Featured</ExploreSectionTitle>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {data.featured.map((item) => {
-                const title = item.title || item.name || "Untitled";
-                return (
-                  <div
-                    key={itemKey(item)}
-                    className={`${FEATURED_CARD_HEIGHT} overflow-hidden rounded-2xl`}
-                  >
-                    <LargeCard
-                      hero
-                      heroCompact
-                      id={item.id}
-                      title={title}
-                      year={itemYear(item)}
-                      releaseDate={featuredReleaseIso(item)}
-                      runtimeSeconds={item.runtimeSeconds ?? undefined}
-                      seasonAmount={item.season_amount ?? 0}
-                      numberOfEpisodes={item.number_of_episodes ?? undefined}
-                      type="tv"
-                      posterPath={item.poster_path ?? ""}
-                      backdropPath={item.backdrop_path ?? ""}
-                      genres={item.genres ?? item.imdb_genres ?? []}
-                      voteAverage={item.vote_average ?? null}
-                      certification={item.certification ?? null}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {categoryGenres.length > 0 && (
-          <section className={RAIL_INNER_CLASS} aria-label="Browse by Genre">
-            <SidebarBleedRail>
-            <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
-              <CarouselContent
-                viewportClassName={sidebarBleedViewportClass()}
-                className={RAIL_TRACK}
-              >
-                <SidebarBleedStartSpacer />
-                {categoryGenres.map((genre, i) => (
-                  <CarouselItem
-                    key={genre.slug}
-                    className={RAIL_CAROUSEL_ITEM_GENRE}
-                  >
-                    <GenreCatalogTile
-                      genre={genre}
-                      colorClass={genreTileColor(genre.name, i)}
-                      href={categoryGenreBrowseHref(category, genre.slug)}
-                    />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
-            </SidebarBleedRail>
-          </section>
-        )}
-
         {hasContent ? (
-          <div className={RAIL_STACK_CLASS}>
-            <CatalogRail title="Popular" items={data.popular} titleVariant="explore" />
-            <CatalogRail title="Top rated" items={data.topRated} titleVariant="explore" />
-            <CatalogRail title="New" items={data.new} titleVariant="explore" />
-          </div>
+          <>
+            {hasNewEpisodes ? (
+              <CatalogRail
+                title="New episodes"
+                items={data.newEpisodes}
+                titleVariant="explore"
+                getReleaseNote={getReleaseNote}
+              />
+            ) : null}
+
+            <CatalogRail
+              title="Popular"
+              items={data.popular}
+              titleVariant="explore"
+              moreHref={category.browseAllHref}
+            />
+
+            <CatalogRail
+              title="Top rated"
+              items={data.topRated}
+              titleVariant="explore"
+              moreHref={category.browseAllHref}
+            />
+
+            {categoryGenres.length > 0 ? (
+              <section className={RAIL_INNER_CLASS} aria-label="Browse by genre">
+                <ExploreSectionTitle variant="explore">Browse by genre</ExploreSectionTitle>
+                <SidebarBleedRail>
+                  <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+                    <CarouselContent
+                      viewportClassName={sidebarBleedViewportClass()}
+                      className={RAIL_TRACK}
+                    >
+                      <SidebarBleedStartSpacer />
+                      {categoryGenres.map((genre, i) => (
+                        <CarouselItem
+                          key={genre.slug}
+                          className={RAIL_CAROUSEL_ITEM_GENRE}
+                        >
+                          <GenreCatalogTile
+                            genre={genre}
+                            colorClass={genreTileColor(genre.name, i)}
+                            href={categoryGenreBrowseHref(category, genre.slug)}
+                          />
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                </SidebarBleedRail>
+              </section>
+            ) : null}
+          </>
         ) : (
           <p className="py-12 text-center text-sm text-default-500">
             No {category.label.toLowerCase()} titles in the catalog yet. Check back soon.

@@ -40,6 +40,8 @@ type CatalogRailProps = {
   /** Show “Released …” / “Releases …” under title on vertical cards */
   showReleaseNote?: boolean;
   loading?: boolean;
+  /** Override default release note under card title. */
+  getReleaseNote?: (item: ContentItem) => string | undefined;
   titleVariant?: "default" | "explore";
 };
 
@@ -83,6 +85,7 @@ export default function CatalogRail({
   moreHref,
   moreLabel = "More",
   showReleaseNote = false,
+  getReleaseNote,
   loading = false,
   titleVariant = "default",
 }: CatalogRailProps) {
@@ -143,7 +146,8 @@ export default function CatalogRail({
                         year={year}
                         voteAverage={item.vote_average}
                         releaseNote={
-                          showReleaseNote ? releaseNoteForItem(item) : undefined
+                          getReleaseNote?.(item) ??
+                          (showReleaseNote ? releaseNoteForItem(item) : undefined)
                         }
                         type={item.type || "movie"}
                         runtimeSeconds={item.runtimeSeconds ?? undefined}

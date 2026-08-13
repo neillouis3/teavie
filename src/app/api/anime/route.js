@@ -79,7 +79,7 @@ export async function GET(req) {
       skip,
       limit,
       mongoAnimeCatalogPopularityExpr(),
-      { includeTotal }
+      { includeTotal, anime: true }
     );
 
     return Response.json(

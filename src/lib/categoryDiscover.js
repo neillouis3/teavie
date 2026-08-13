@@ -9,7 +9,9 @@ import {
   catalogDisplayVoteAverage,
   catalogPopularityScore,
   mongoAnimeCatalogPopularityExpr,
+  mongoCatalogDisplayVoteExpr,
   mongoMixedTvCatalogPopularityExpr,
+  mongoTopRatedQualityMatch,
 } from "@/lib/catalogPopularity";
 import {
   catalogDocReleaseDateString,
@@ -59,6 +61,9 @@ function mapTvRow(doc, { anime = false } = {}) {
     id: doc.id.toString(),
     title: doc.title ?? doc.name,
     release_date,
+    first_air_date: doc.first_air_date ?? release_date ?? undefined,
+    last_air_date:
+      typeof doc.last_air_date === "string" ? doc.last_air_date.slice(0, 10) : undefined,
     runtimeSeconds: runtimeSecondsFromDoc(doc),
     season_amount: tvSeasonCountFromDoc(doc),
     number_of_episodes: tvEpisodeCountFromDoc(doc),
@@ -126,29 +131,7 @@ async function pickFeatured(col, filter, { anime = false } = {}) {
   const popExpr = anime
     ? mongoAnimeCatalogPopularityExpr()
     : popularityExpr(false);
-  const voteExpr = anime
-    ? {
-        $max: [
-          {
-            $convert: {
-              input: "$vote_average",
-              to: "double",
-              onError: 0,
-              onNull: 0,
-            },
-          },
-          {
-            $cond: {
-              if: { $gt: [{ $ifNull: ["$anilist.averageScore", 0] }, 0] },
-              then: { $divide: ["$anilist.averageScore", 10] },
-              else: 0,
-            },
-          },
-        ],
-      }
-    : {
-        $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
-      };
+  const voteExpr = mongoCatalogDisplayVoteExpr({ anime });
 
   const baseStages = [
     { $match: filter },
@@ -223,20 +206,19 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
   }
 
   if (sort === "top_rated") {
+    const voteExpr = mongoCatalogDisplayVoteExpr({ anime });
     const rows = await col
       .aggregate([
         { $match: filter },
+        { $addFields: { _catalogVote: voteExpr } },
+        { $match: mongoTopRatedQualityMatch({ anime }) },
         {
-          $addFields: {
-            _vote: {
-              $convert: { input: "$vote_average", to: "double", onError: 0, onNull: 0 },
-            },
-          },
+          $sort: anime
+            ? { _catalogVote: -1, _id: -1 }
+            : { _catalogVote: -1, vote_count: -1, _id: -1 },
         },
-        { $match: { _vote: { $gte: 1 } } },
-        { $sort: { _vote: -1, _id: -1 } },
         { $limit: limit },
-        { $project: { _vote: 0 } },
+        { $project: { _catalogVote: 0 } },
       ])
       .toArray();
     return rows.map((doc) => mapTvRow(doc, { anime }));
@@ -247,6 +229,74 @@ async function fetchRail(col, baseFilter, { anime = false, sort = "popular", lim
     .sort({ first_air_date: -1, _id: -1 })
     .limit(limit)
     .toArray();
+  return rows.map((doc) => mapTvRow(doc, { anime }));
+}
+
+function isoDaysAgo(days) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+async function fetchNewEpisodesRail(
+  col,
+  baseFilter,
+  { anime = false, limit = RAIL_LIMIT } = {}
+) {
+  const popExpr = anime
+    ? mongoAnimeCatalogPopularityExpr()
+    : mongoMixedTvCatalogPopularityExpr();
+
+  const airingFilter = anime
+    ? {
+        $or: [{ status: "Currently Airing" }, { "anilist.status": "RELEASING" }],
+      }
+    : {
+        status: { $in: ["Returning Series", "In Production"] },
+        last_air_date: {
+          $type: "string",
+          $regex: /^\d{4}-\d{2}-\d{2}/,
+          $gte: isoDaysAgo(28),
+        },
+      };
+
+  async function loadRows(matchExtra, sort) {
+    return col
+      .aggregate([
+        { $match: { $and: [baseFilter, matchExtra] } },
+        { $addFields: { _catalogPop: popExpr } },
+        { $sort: sort },
+        { $limit: limit },
+        { $project: { _catalogPop: 0 } },
+      ])
+      .toArray();
+  }
+
+  let rows = await loadRows(
+    airingFilter,
+    anime
+      ? { _catalogPop: -1, _id: -1 }
+      : { last_air_date: -1, _catalogPop: -1, _id: -1 }
+  );
+
+  if (!anime && rows.length < Math.min(8, limit)) {
+    const fallback = await loadRows(
+      {
+        status: "Returning Series",
+        last_air_date: { $type: "string", $regex: /^\d{4}-\d{2}-\d{2}/ },
+      },
+      { last_air_date: -1, _catalogPop: -1, _id: -1 }
+    );
+    const seen = new Set(rows.map((doc) => String(doc.id)));
+    for (const doc of fallback) {
+      const key = String(doc.id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(doc);
+      if (rows.length >= limit) break;
+    }
+  }
+
   return rows.map((doc) => mapTvRow(doc, { anime }));
 }
 
@@ -385,11 +435,11 @@ export async function fetchCategoryDiscover(col, slug, preferences = null) {
     });
   }
 
-  const [featuredDocs, popularDocs, topRated, newest, genres] = await Promise.all([
+  const [featuredDocs, popularDocs, topRated, newEpisodes, genres] = await Promise.all([
     pickFeatured(col, baseFilter, { anime }),
     fetchPopularDocs(col, baseFilter, { anime, limit: RAIL_LIMIT }),
     fetchRail(col, baseFilter, { anime, sort: "top_rated" }),
-    fetchRail(col, baseFilter, { anime, sort: "new" }),
+    fetchNewEpisodesRail(col, baseFilter, { anime }),
     rankCategoryGenres(col, baseFilter),
   ]);
 
@@ -412,7 +462,7 @@ export async function fetchCategoryDiscover(col, slug, preferences = null) {
     trending,
     popular: dedupeFeatured(popular, featured),
     topRated,
-    new: newest,
+    newEpisodes: dedupeFeatured(newEpisodes, featured),
     genres: hasUserPreferences(preferences)
       ? orderGenreRowsByPreference(genres, preferences.genres)
       : genres,

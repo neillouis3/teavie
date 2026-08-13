@@ -23,5 +23,8 @@ export interface ContentItem {
   production_countries?: { iso_3166_1?: string; name?: string }[];
   omdb?: { genre?: string | null; language?: string | null; country?: string | null };
   certification?: string | null;
+  last_air_date?: string;
+  /** TV / anime lifecycle label from catalog (e.g. Returning Series). */
+  status?: string;
 }
   

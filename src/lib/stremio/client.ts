@@ -1,6 +1,9 @@
 import type { PlayableStream, StremioStream } from "./types";
 
-const FETCH_TIMEOUT_MS = 8_000;
+const MANIFEST_TIMEOUT_MS = 12_000;
+/** Stream catalogs often scrape/debrid; 8s was too aggressive. */
+const STREAM_TIMEOUT_MS = 45_000;
+const STREAM_FETCH_RETRIES = 1;
 
 type AddonConfig = { manifestUrl: URL; streamBaseUrl: URL };
 
@@ -35,15 +38,96 @@ function configuredAddons(): AddonConfig[] {
     });
 }
 
-async function getJson(url: URL): Promise<unknown> {
-  const response = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    headers: { accept: "application/json" },
-  });
-  if (!response.ok) throw new Error(`Addon returned HTTP ${response.status}`);
-  return response.json();
+async function getJson(url: URL, timeoutMs: number, retries = 0): Promise<unknown> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: { accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`Addon returned HTTP ${response.status}`);
+      return response.json();
+    } catch (error) {
+      lastError = error;
+      if (!isTimeoutError(error) || attempt >= retries) throw error;
+    }
+  }
+  throw lastError;
 }
+
+function isTimeoutError(error: unknown): boolean {
+  if (error instanceof DOMException) {
+    return error.name === "TimeoutError" || error.name === "AbortError";
+  }
+  if (error instanceof Error) {
+    return /timeout|aborted due to timeout/i.test(error.message);
+  }
+  return false;
+}
+
+function addonErrorMessage(error: unknown): string {
+  if (isTimeoutError(error)) {
+    return "The addon took too long to respond.";
+  }
+  return String(error instanceof Error ? error.message : error);
+}
+
+function stremioStreamPath(type: "movie" | "series", id: string): string {
+  const safeType = encodeURIComponent(type);
+  const safeId = id.includes(":") ? id : encodeURIComponent(id);
+  return `stream/${safeType}/${safeId}.json`;
+}
+
+async function resolveStreamPlaybackUrl(url: string): Promise<string> {
+  const trimmed = String(url ?? "").trim();
+  if (!trimmed) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    if (!["http:", "https:"].includes(parsed.protocol)) return trimmed;
+  } catch {
+    return trimmed;
+  }
+
+  try {
+    const response = await fetch(trimmed, {
+      method: "HEAD",
+      redirect: "follow",
+      signal: AbortSignal.timeout(25_000),
+      headers: {
+        accept: "*/*",
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
+    });
+    if (response.url && response.url !== trimmed) return response.url;
+    if (response.ok) return response.url || trimmed;
+  } catch {
+    /* try GET range fallback below */
+  }
+
+  try {
+    const response = await fetch(trimmed, {
+      method: "GET",
+      redirect: "follow",
+      signal: AbortSignal.timeout(25_000),
+      headers: {
+        accept: "*/*",
+        range: "bytes=0-1",
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
+    });
+    if (response.url) return response.url;
+  } catch {
+    /* keep original */
+  }
+
+  return trimmed;
+}
+
+export { resolveStreamPlaybackUrl };
 
 function playable(stream: StremioStream): stream is StremioStream & { url: string } {
   if (typeof stream.url !== "string") return false;
@@ -73,62 +157,98 @@ export async function resolveStremioStreams(
   preferSafari = false
 ) {
   const addons = configuredAddons().slice(startAt);
+  const results = await Promise.all(
+    addons.map((addon) => fetchAddonStreams(addon, type, id, preferSafari))
+  );
+
   const errors: { addon: string; message: string }[] = [];
   let unsupported = 0;
+  const merged: PlayableStream[] = [];
+  const seenUrls = new Set<string>();
 
-  for (const { manifestUrl, streamBaseUrl } of addons) {
-    try {
-      const manifest = (await getJson(manifestUrl)) as { name?: unknown; resources?: unknown };
-      const addonName = typeof manifest.name === "string" ? manifest.name : manifestUrl.hostname;
-      const streamUrl = new URL(
-        `stream/${encodeURIComponent(type)}/${encodeURIComponent(id)}.json`,
-        streamBaseUrl
-      );
-      const payload = (await getJson(streamUrl)) as { streams?: unknown };
-      const streams = Array.isArray(payload.streams) ? (payload.streams as StremioStream[]) : [];
-      const playableStreams = streams
-        .filter(playable)
-        .map<PlayableStream>((stream, index) => ({
-            url: stream.url,
-            name: stream.name?.trim() || `${addonName} ${index + 1}`,
-            title: stream.title?.trim() || stream.description?.trim() || null,
-            addon: addonName,
-            bingeGroup: stream.behaviorHints?.bingeGroup ?? null,
-          }));
-      const nonRipStreams = playableStreams.filter((stream) => !isRip(stream));
-      const safariStreams = preferSafari
-        ? nonRipStreams.filter(isSafariDirectStream)
-        : [];
-      const rankedStreams = (safariStreams.length > 0 ? safariStreams : nonRipStreams)
-        .sort(
-          (a, b) => {
-            const resolutionOrder = resolutionRank(a) - resolutionRank(b);
-            if (resolutionOrder !== 0) return resolutionOrder;
-            const audioOrder = browserAudioRank(a) - browserAudioRank(b);
-            if (audioOrder !== 0) return audioOrder;
-            const seederOrder = seederCount(b) - seederCount(a);
-            if (seederOrder !== 0) return seederOrder;
-            const releaseOrder = releaseSourceRank(a) - releaseSourceRank(b);
-            if (releaseOrder !== 0) return releaseOrder;
-            return (
-              browserCompatibilityScore(b, preferSafari) -
-              browserCompatibilityScore(a, preferSafari)
-            );
-          }
-        );
-      unsupported += streams.length - playableStreams.length;
-      if (rankedStreams.length > 0) {
-        return { streams: rankedStreams, unsupported, errors };
-      }
-    } catch (error) {
-      errors.push({
-        addon: manifestUrl.hostname,
-        message: String(error instanceof Error ? error.message : error),
-      });
+  for (const result of results) {
+    if (result.error) errors.push(result.error);
+    unsupported += result.unsupported;
+    for (const stream of result.streams) {
+      if (seenUrls.has(stream.url)) continue;
+      seenUrls.add(stream.url);
+      merged.push(stream);
     }
   }
 
+  if (merged.length > 0) {
+    return {
+      streams: rankPlayableStreams(merged, preferSafari),
+      unsupported,
+      errors,
+    };
+  }
+
   return { streams: [], unsupported, errors };
+}
+
+async function fetchAddonStreams(
+  { manifestUrl, streamBaseUrl }: AddonConfig,
+  type: "movie" | "series",
+  id: string,
+  preferSafari: boolean
+): Promise<{
+  streams: PlayableStream[];
+  unsupported: number;
+  error: { addon: string; message: string } | null;
+}> {
+  try {
+    const manifest = (await getJson(manifestUrl, MANIFEST_TIMEOUT_MS)) as {
+      name?: unknown;
+      resources?: unknown;
+    };
+    const addonName = typeof manifest.name === "string" ? manifest.name : manifestUrl.hostname;
+    const streamUrl = new URL(stremioStreamPath(type, id), streamBaseUrl);
+    const payload = (await getJson(streamUrl, STREAM_TIMEOUT_MS, STREAM_FETCH_RETRIES)) as {
+      streams?: unknown;
+    };
+    const streams = Array.isArray(payload.streams) ? (payload.streams as StremioStream[]) : [];
+    const playableStreams = streams
+      .filter(playable)
+      .map<PlayableStream>((stream, index) => ({
+        url: stream.url,
+        name: stream.name?.trim() || `${addonName} ${index + 1}`,
+        title: stream.title?.trim() || stream.description?.trim() || null,
+        addon: addonName,
+        bingeGroup: stream.behaviorHints?.bingeGroup ?? null,
+      }));
+    const rankedStreams = rankPlayableStreams(playableStreams, preferSafari);
+    return {
+      streams: rankedStreams,
+      unsupported: streams.length - playableStreams.length,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      streams: [],
+      unsupported: 0,
+      error: {
+        addon: manifestUrl.hostname,
+        message: addonErrorMessage(error),
+      },
+    };
+  }
+}
+
+function rankPlayableStreams(streams: PlayableStream[], preferSafari: boolean): PlayableStream[] {
+  const nonRipStreams = streams.filter((stream) => !isRip(stream));
+  const safariStreams = preferSafari ? nonRipStreams.filter(isSafariDirectStream) : [];
+  return (safariStreams.length > 0 ? safariStreams : nonRipStreams).sort((a, b) => {
+    const resolutionOrder = resolutionRank(a) - resolutionRank(b);
+    if (resolutionOrder !== 0) return resolutionOrder;
+    const audioOrder = browserAudioRank(a) - browserAudioRank(b);
+    if (audioOrder !== 0) return audioOrder;
+    const seederOrder = seederCount(b) - seederCount(a);
+    if (seederOrder !== 0) return seederOrder;
+    const releaseOrder = releaseSourceRank(a) - releaseSourceRank(b);
+    if (releaseOrder !== 0) return releaseOrder;
+    return browserCompatibilityScore(b, preferSafari) - browserCompatibilityScore(a, preferSafari);
+  });
 }
 
 function browserAudioRank(stream: PlayableStream): number {
