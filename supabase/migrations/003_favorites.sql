@@ -14,6 +14,7 @@ create index if not exists favorites_user_added_idx
 
 alter table public.favorites enable row level security;
 
+drop policy if exists "favorites_all_own" on public.favorites;
 create policy "favorites_all_own"
   on public.favorites for all
   using (auth.uid() = user_id)
