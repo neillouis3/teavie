@@ -5,6 +5,7 @@ import { useAnimeSource } from "@/contexts/animeSourceContext";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
 import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
 import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
+import WatchEmbedUnavailable from "@/components/ui/watchEmbedUnavailable";
 import {
   sanitizeAnimeEmbedUrl,
   withMegaPlayStartTime,
@@ -18,6 +19,7 @@ import { isMegaPlayEmbedUrl } from "@/lib/megaPlayProgress";
  * @param {"sub" | "dub"} props.audio
  * @param {number} [props.startSeconds] MegaPlay resume offset
  * @param {boolean} [props.immersive] Full-viewport watch page (no rounded shell)
+ * @param {string | null} [props.backdropUrl] Blurred backdrop for embed-unavailable state
  * @param {(msg: import('@/lib/megaPlayProgress').MegaPlayMessage) => void} [props.onMegaPlayMessage]
  */
 export default function AnimePlayer({
@@ -26,6 +28,7 @@ export default function AnimePlayer({
   audio = "sub",
   startSeconds = 0,
   immersive = false,
+  backdropUrl = null,
   onMegaPlayMessage,
 }) {
   const { source: animeSource } = useAnimeSource();
@@ -33,6 +36,9 @@ export default function AnimePlayer({
   const [error, setError] = useState("");
   const [primaryUrl, setPrimaryUrl] = useState("");
   const [fallbackUrl, setFallbackUrl] = useState("");
+  const [alternateAudioUrl, setAlternateAudioUrl] = useState("");
+  const [urlIndex, setUrlIndex] = useState(0);
+  const [embedUnavailable, setEmbedUnavailable] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +46,9 @@ export default function AnimePlayer({
     setError("");
     setPrimaryUrl("");
     setFallbackUrl("");
+    setAlternateAudioUrl("");
+    setUrlIndex(0);
+    setEmbedUnavailable(false);
 
     const mal = Math.floor(Number(malId));
     const ep = Math.max(1, Math.floor(Number(episode)) || 1);
@@ -68,12 +77,15 @@ export default function AnimePlayer({
         if (cancelled) return;
         const primary = typeof data?.primaryUrl === "string" ? data.primaryUrl : "";
         const fallback = typeof data?.fallbackUrl === "string" ? data.fallbackUrl : "";
+        const alternateAudio =
+          typeof data?.alternateAudioUrl === "string" ? data.alternateAudioUrl : "";
         if (!primary && !fallback) {
           setError("No playback source available");
           return;
         }
         setPrimaryUrl(primary);
         setFallbackUrl(fallback);
+        setAlternateAudioUrl(alternateAudio);
       })
       .catch((e) => {
         if (!cancelled) setError(e?.message || "Failed to load player");
@@ -91,7 +103,15 @@ export default function AnimePlayer({
   const alternateRaw = animeSource === "anikoto" ? primaryUrl : fallbackUrl;
   const preferredUrl = sanitizeAnimeEmbedUrl(preferredRaw);
   const alternateUrl = sanitizeAnimeEmbedUrl(alternateRaw);
-  const activeRaw = preferredUrl || alternateUrl || primaryUrl;
+
+  const urlsToTry = useMemo(() => {
+    const list = [];
+    if (preferredUrl) list.push(preferredUrl);
+    if (alternateUrl && alternateUrl !== preferredUrl) list.push(alternateUrl);
+    return list;
+  }, [preferredUrl, alternateUrl]);
+
+  const activeRaw = urlsToTry[urlIndex] ?? urlsToTry[0] ?? "";
   const isMegaPlay = isMegaPlayEmbedUrl(activeRaw);
 
   const activeUrl = useMemo(() => {
@@ -100,6 +120,14 @@ export default function AnimePlayer({
     return withMegaPlayStartTime(activeRaw, startSeconds) || activeRaw;
   }, [activeRaw, isMegaPlay, startSeconds]);
 
+  const handleEmbedFailure = useCallback(() => {
+    setUrlIndex((current) => {
+      if (current + 1 < urlsToTry.length) return current + 1;
+      setEmbedUnavailable(true);
+      return current;
+    });
+  }, [urlsToTry.length]);
+
   const progressHandler = useCallback(
     (msg) => {
       onMegaPlayMessage?.(msg);
@@ -107,7 +135,9 @@ export default function AnimePlayer({
     [onMegaPlayMessage]
   );
 
-  const playerKey = `${animeSource}-${malId}-${episode}-${activeUrl}`;
+  const playerKey = `${animeSource}-${malId}-${episode}-${audio}-${urlIndex}-${activeUrl}`;
+  const unavailableReason =
+    audio === "dub" && alternateAudioUrl ? "dub_unavailable" : "playback_unavailable";
 
   if (error) {
     return (
@@ -123,14 +153,23 @@ export default function AnimePlayer({
       <div className="relative min-h-0 flex-1">
         {loading ? (
           <PlayerEmbedSkeleton />
-        ) : activeUrl ? (
-          <VideoEmbedFrame
-            key={playerKey}
-            title="Anime player"
-            src={activeUrl}
-            className="absolute inset-0 h-full w-full border-0"
-            onMegaPlayMessage={isMegaPlay ? progressHandler : undefined}
+        ) : embedUnavailable ? (
+          <WatchEmbedUnavailable
+            reason={unavailableReason}
+            backdropUrl={backdropUrl}
+            showSwitchToSub={audio === "dub"}
           />
+        ) : activeUrl ? (
+          <>
+            <VideoEmbedFrame
+              key={playerKey}
+              title="Anime player"
+              src={activeUrl}
+              className="absolute inset-0 h-full w-full border-0"
+              onMegaPlayMessage={isMegaPlay ? progressHandler : undefined}
+              onEmbedFailure={isMegaPlay ? handleEmbedFailure : undefined}
+            />
+          </>
         ) : (
           <p className="absolute inset-0 flex items-center justify-center p-4 text-sm text-white/70">
             No playback source available

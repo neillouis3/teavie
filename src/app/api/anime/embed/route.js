@@ -45,6 +45,21 @@ export async function GET(req) {
         ? buildAnimePlayAniListUrl(anilistId, playback.malEpisode, audio)
         : "";
 
+    const oppositeAudio = audio === "dub" ? "sub" : "dub";
+    const alternateAudioMalUrl = buildAnimePlayMalUrl(
+      malEmbedId,
+      malEmbedEp,
+      oppositeAudio
+    );
+    const alternateAudioAniUrl =
+      anilistId != null && anilistId > 0
+        ? buildAnimePlayAniListUrl(anilistId, playback.malEpisode, oppositeAudio)
+        : "";
+    const alternateAudioUrl =
+      sanitizeAnimeEmbedUrl(alternateAudioMalUrl) ||
+      sanitizeAnimeEmbedUrl(alternateAudioAniUrl) ||
+      "";
+
     const primaryUrl =
       sanitizeAnimeEmbedUrl(malUrl) || sanitizeAnimeEmbedUrl(aniUrl) || "";
     const megaPlayAlt =
@@ -72,6 +87,7 @@ export async function GET(req) {
       primaryUrl,
       fallbackUrl: anikotoUrl || fallbackUrl,
       fallbackAvailable: Boolean(anikotoUrl || fallbackUrl),
+      alternateAudioUrl: alternateAudioUrl || null,
       malId: malEmbedId,
       malEpisode: malEmbedEp,
       anilistId: anilistId ?? null,

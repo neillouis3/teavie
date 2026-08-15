@@ -1275,6 +1275,7 @@ export default function ShowTemplate({
           episode={animeAbsoluteEpisode}
           audio={animeAudio}
           startSeconds={playerStartSeconds}
+          backdropUrl={resolveShowDetailsBannerUrl(show, id, imageUrl, fetchedBannerUrl)}
           onMegaPlayMessage={handleMegaPlayMessage}
           immersive={viewMode === "watch"}
         />

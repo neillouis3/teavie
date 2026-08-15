@@ -26,6 +26,8 @@ import { useWatchOverlay } from '@/contexts/watchOverlayContext';
  * @param {number} [props.vidrockEpisode]
  * @param {string} [props.vidukiImdbId]
  * @param {() => void} [props.onLoad]
+ * @param {() => void} [props.onEmbedFailure] Called when MegaPlay errors or never reports progress
+ * @param {number} [props.embedFailureTimeoutMs] No-progress timeout for MegaPlay embeds
  */
 export default function VideoEmbedFrame({
   src,
@@ -38,17 +40,31 @@ export default function VideoEmbedFrame({
   vidrockEpisode = 1,
   vidukiImdbId,
   onLoad,
+  onEmbedFailure,
+  embedFailureTimeoutMs = 8000,
 }) {
   const [activeSrc, setActiveSrc] = useState(src);
   const activeSrcRef = useRef(src);
   const watchOverlay = useWatchOverlay();
   const playbackStartedRef = useRef(false);
+  const embedProgressRef = useRef(false);
+  const embedFailedRef = useRef(false);
+  const onEmbedFailureRef = useRef(onEmbedFailure);
+  onEmbedFailureRef.current = onEmbedFailure;
 
   useEffect(() => {
     setActiveSrc(src);
     activeSrcRef.current = src;
     playbackStartedRef.current = false;
+    embedProgressRef.current = false;
+    embedFailedRef.current = false;
   }, [src]);
+
+  const reportEmbedFailure = () => {
+    if (embedFailedRef.current || embedProgressRef.current) return;
+    embedFailedRef.current = true;
+    onEmbedFailureRef.current?.();
+  };
 
   const maybeNotifyPlaybackStart = (seconds) => {
     if (playbackStartedRef.current || !watchOverlay) return;
@@ -70,6 +86,14 @@ export default function VideoEmbedFrame({
   }, [activeSrc, watchOverlay]);
 
   useEffect(() => {
+    if (!onEmbedFailure || !activeSrc) return undefined;
+    const timer = window.setTimeout(() => {
+      reportEmbedFailure();
+    }, embedFailureTimeoutMs);
+    return () => window.clearTimeout(timer);
+  }, [activeSrc, embedFailureTimeoutMs, onEmbedFailure]);
+
+  useEffect(() => {
     const handler = (event) => {
       if (isVidukiAllServersFailed(event)) {
         const next = nextVidukiEmbedUrl(activeSrcRef.current, vidukiImdbId);
@@ -78,19 +102,15 @@ export default function VideoEmbedFrame({
           setActiveSrc(next);
         }
       }
-      if (onMegaPlayMessage) {
-        const mega = parseMegaPlayMessage(event);
-        if (mega) {
-          if (mega.kind === 'progress') {
-            maybeNotifyPlaybackStart(mega.currentTime);
-          }
-          onMegaPlayMessage(mega);
-        }
-      } else {
-        const mega = parseMegaPlayMessage(event);
-        if (mega?.kind === 'progress') {
+      const mega = parseMegaPlayMessage(event);
+      if (mega) {
+        if (mega.kind === 'progress') {
+          embedProgressRef.current = true;
           maybeNotifyPlaybackStart(mega.currentTime);
+        } else if (mega.kind === 'error') {
+          reportEmbedFailure();
         }
+        onMegaPlayMessage?.(mega);
       }
       const vidrock = parseVidrockMessage(
         event,
