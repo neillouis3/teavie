@@ -18,6 +18,9 @@ import {
 import { isMegaPlayEmbedUrl } from "@/lib/megaPlayProgress";
 import { cn } from "@/lib/utils";
 
+/** Blurred backdrop first; message card fades in after playback doesn't start. */
+const UNAVAILABLE_CONTENT_DELAY_MS = 700;
+
 function resolveCoords(malId, episode) {
   const mal = Math.floor(Number(malId));
   const ep = Math.max(1, Math.floor(Number(episode)) || 1);
@@ -58,6 +61,7 @@ export default function AnimePlayer({
   const [urlIndex, setUrlIndex] = useState(0);
   const [embedUnavailable, setEmbedUnavailable] = useState(dubCachedUnavailable);
   const [embedReady, setEmbedReady] = useState(false);
+  const [showUnavailableContent, setShowUnavailableContent] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +82,7 @@ export default function AnimePlayer({
     setUrlIndex(0);
     setEmbedUnavailable(cachedUnavailable);
     setEmbedReady(false);
+    setShowUnavailableContent(false);
 
     if (cachedUnavailable) return;
 
@@ -124,6 +129,19 @@ export default function AnimePlayer({
       cancelled = true;
     };
   }, [mal, ep, audio]);
+
+  useEffect(() => {
+    if (!embedUnavailable) {
+      setShowUnavailableContent(false);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowUnavailableContent(true);
+    }, UNAVAILABLE_CONTENT_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [embedUnavailable, mal, ep, audio]);
 
   const preferredRaw = animeSource === "anikoto" ? fallbackUrl : primaryUrl;
   const alternateRaw = animeSource === "anikoto" ? primaryUrl : fallbackUrl;
@@ -180,12 +198,14 @@ export default function AnimePlayer({
   );
 
   const playerKey = `${animeSource}-${malId}-${episode}-${audio}-${urlIndex}-${activeUrl}`;
-  const dubResolving = audio === "dub" && loading && !embedUnavailable;
-  const showDubUnavailable = audio === "dub" && (embedUnavailable || dubResolving);
   const unavailableReason =
     audio === "dub" ? "dub_unavailable" : "playback_unavailable";
+  const dubResolving = audio === "dub" && loading && !embedUnavailable;
   const probingEmbed =
-    Boolean(activeUrl) && !embedReady && !embedUnavailable && !dubResolving;
+    Boolean(activeUrl) && !embedReady && !embedUnavailable && !loading;
+  const showWaitBackdrop =
+    dubResolving || probingEmbed || embedUnavailable;
+  const showSubLoading = loading && audio !== "dub";
 
   if (error) {
     return (
@@ -199,62 +219,36 @@ export default function AnimePlayer({
     <div className={`relative flex h-full min-h-0 w-full touch-auto flex-col bg-black [touch-action:pan-x_pan-y_pinch-zoom] ${immersive ? "overflow-hidden" : "rounded-lg ring-1 ring-white/10 lg:overflow-hidden"}`}>
       {immersive ? null : <WatchPlayerBackButton />}
       <div className="relative min-h-0 flex-1">
-        {showDubUnavailable ? (
-          <WatchEmbedUnavailable
-            reason="dub_unavailable"
-            backdropUrl={backdropUrl}
-            showSwitchToSub
-          />
-        ) : embedUnavailable ? (
+        {showSubLoading ? (
+          <PlayerEmbedSkeleton />
+        ) : showWaitBackdrop ? (
           <WatchEmbedUnavailable
             reason={unavailableReason}
             backdropUrl={backdropUrl}
+            showContent={embedUnavailable && showUnavailableContent}
             showSwitchToSub={audio === "dub"}
           />
-        ) : loading ? (
-          <PlayerEmbedSkeleton />
-        ) : activeUrl ? (
-          <>
-            {probingEmbed ? (
-              <div className="absolute inset-0 z-10 overflow-hidden">
-                {backdropUrl ? (
-                  <>
-                    <img
-                      src={backdropUrl}
-                      alt=""
-                      aria-hidden
-                      className="absolute inset-0 h-full w-full scale-110 object-cover blur-3xl"
-                    />
-                    <div
-                      className="absolute inset-0 bg-black/60 backdrop-blur-md"
-                      aria-hidden
-                    />
-                  </>
-                ) : (
-                  <PlayerEmbedSkeleton />
-                )}
-              </div>
-            ) : null}
-            <VideoEmbedFrame
-              key={playerKey}
-              title="Anime player"
-              src={activeUrl}
-              className={cn(
-                "absolute inset-0 h-full w-full border-0 transition-opacity duration-300",
-                probingEmbed ? "pointer-events-none opacity-0" : "opacity-100"
-              )}
-              onMegaPlayMessage={isMegaPlay ? progressHandler : undefined}
-              onEmbedFailure={isMegaPlay ? handleEmbedFailure : undefined}
-              onEmbedProgress={isMegaPlay ? handleEmbedProgress : undefined}
-              onLoad={!isMegaPlay ? handleEmbedProgress : undefined}
-              embedFailureTimeoutMs={1200}
-            />
-          </>
-        ) : (
+        ) : null}
+        {!embedUnavailable && activeUrl ? (
+          <VideoEmbedFrame
+            key={playerKey}
+            title="Anime player"
+            src={activeUrl}
+            className={cn(
+              "absolute inset-0 h-full w-full border-0 transition-opacity duration-300",
+              probingEmbed || dubResolving ? "pointer-events-none opacity-0" : "opacity-100"
+            )}
+            onMegaPlayMessage={isMegaPlay ? progressHandler : undefined}
+            onEmbedFailure={isMegaPlay ? handleEmbedFailure : undefined}
+            onEmbedProgress={isMegaPlay ? handleEmbedProgress : undefined}
+            onLoad={!isMegaPlay ? handleEmbedProgress : undefined}
+            embedFailureTimeoutMs={1200}
+          />
+        ) : !showWaitBackdrop && !showSubLoading && !loading ? (
           <p className="absolute inset-0 flex items-center justify-center p-4 text-sm text-white/70">
             No playback source available
           </p>
-        )}
+        ) : null}
       </div>
     </div>
   );

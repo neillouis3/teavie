@@ -30,6 +30,8 @@ export type WatchEmbedUnavailableProps = {
   reason?: WatchEmbedUnavailableReason;
   backdropUrl?: string | null;
   className?: string;
+  /** When false, only the blurred backdrop is shown (no card yet). */
+  showContent?: boolean;
   /** When false, hide the switch-to-sub action (e.g. already on sub). */
   showSwitchToSub?: boolean;
 };
@@ -38,6 +40,7 @@ export default function WatchEmbedUnavailable({
   reason = "playback_unavailable",
   backdropUrl = null,
   className,
+  showContent = true,
   showSwitchToSub = false,
 }: WatchEmbedUnavailableProps) {
   const { setAudio } = useAnimeAudio();
@@ -49,7 +52,8 @@ export default function WatchEmbedUnavailable({
         "absolute inset-0 z-20 flex items-center justify-center overflow-hidden",
         className
       )}
-      role="alert"
+      role={showContent ? "alert" : undefined}
+      aria-busy={!showContent}
     >
       {backdropUrl ? (
         <>
@@ -71,38 +75,40 @@ export default function WatchEmbedUnavailable({
         />
       )}
 
-      <div
-        className={cn(
-          "relative z-10 mx-4 w-full max-w-sm rounded-2xl px-8 py-10 text-center",
-          WATCH_CHROME_BLUR_CLASS
-        )}
-      >
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.06]">
-          <HugeiconsIcon
-            icon={Alert02Icon}
-            size={28}
-            className="text-white/80"
-            strokeWidth={1.5}
-          />
+      {showContent ? (
+        <div
+          className={cn(
+            "relative z-10 mx-4 w-full max-w-sm rounded-2xl px-8 py-10 text-center transition-opacity duration-300",
+            WATCH_CHROME_BLUR_CLASS
+          )}
+        >
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.06]">
+            <HugeiconsIcon
+              icon={Alert02Icon}
+              size={28}
+              className="text-white/80"
+              strokeWidth={1.5}
+            />
+          </div>
+
+          <h2 className="text-lg font-semibold text-white sm:text-xl">
+            {copy.heading}
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-white/65">
+            {copy.message}
+          </p>
+
+          {showSwitchToSub ? (
+            <Button
+              className="mt-6 bg-white/10 text-sm font-normal text-white hover:bg-white/15"
+              variant="flat"
+              onPress={() => setAudio("sub")}
+            >
+              Switch to Sub
+            </Button>
+          ) : null}
         </div>
-
-        <h2 className="text-lg font-semibold text-white sm:text-xl">
-          {copy.heading}
-        </h2>
-        <p className="mt-3 text-sm leading-relaxed text-white/65">
-          {copy.message}
-        </p>
-
-        {showSwitchToSub ? (
-          <Button
-            className="mt-6 bg-white/10 text-sm font-normal text-white hover:bg-white/15"
-            variant="flat"
-            onPress={() => setAudio("sub")}
-          >
-            Switch to Sub
-          </Button>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }
