@@ -8,6 +8,8 @@ import {
   pathShowsCatalogStreamingOutage,
 } from "@/lib/streamingOutage";
 import { pathUsesHeroBleed } from "@/lib/heroBleedPaths";
+import { CONTENT_INSET_X } from "@/lib/contentInset";
+import { NAV_HERO_CLEARANCE } from "@/lib/navLayout";
 import { cn } from "@/lib/utils";
 
 type CatalogStreamingOutageAlertProps = {
@@ -40,8 +42,9 @@ export function CatalogStreamingOutageBanner() {
   return (
     <div
       className={cn(
-        "relative z-30 ml-4 w-[calc(100%-1rem)]",
-        heroBleed ? "pt-14" : "pt-3"
+        "relative z-30",
+        CONTENT_INSET_X,
+        heroBleed ? NAV_HERO_CLEARANCE : "pt-3"
       )}
     >
       <CatalogStreamingOutageAlert className="rounded-none" />

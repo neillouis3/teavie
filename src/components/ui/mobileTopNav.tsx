@@ -23,6 +23,7 @@ import { APP_NAV_SECTIONS } from '@/components/ui/navItems';
 import AssetMaskIcon from '@/components/ui/assetMaskIcon';
 import { NAV_GLASS_CLASS, navChromeStyle, navOverHero } from '@/components/ui/navGlass';
 import { pathUsesHeroBleed } from '@/lib/heroBleedPaths';
+import { NAV_MOBILE_SHELL_CLASS } from '@/lib/navLayout';
 import { useScrollNavBlend } from '@/hooks/useScrollNavBlend';
 import { TEAVIE_LOGO, teavieLogoForTheme } from '@/lib/brandAssets';
 import VersionChip from '@/components/ui/versionChip';
@@ -73,7 +74,7 @@ export default function MobileTopNav() {
   return (
     <>
       <header
-        className={`fixed left-0 right-0 top-0 z-50 flex h-14 items-center gap-2 pl-4 pr-3 lg:hidden ${
+        className={`${NAV_MOBILE_SHELL_CLASS} ${
           heroBleed ? '' : NAV_GLASS_CLASS
         } ${overHero ? 'text-white' : 'text-foreground'}`}
         style={heroBleed ? navChromeStyle(blend) : undefined}
@@ -126,7 +127,7 @@ export default function MobileTopNav() {
               />
             </Link>
           </DrawerHeader>
-          <DrawerBody className="flex min-h-0 flex-1 flex-col gap-0 px-3 py-4">
+          <DrawerBody className="flex min-h-0 flex-1 flex-col gap-0 px-4 py-4">
             <nav className="flex flex-col gap-1">
               {APP_NAV_SECTIONS.map((section, sectionIndex) => (
                 <div key={section.id} className="flex flex-col gap-1">

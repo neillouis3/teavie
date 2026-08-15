@@ -18,6 +18,7 @@ import { AuthProvider } from "@/contexts/authContext";
 import { UserDataProvider } from "@/contexts/userDataContext";
 import { pathUsesAuthShell } from "@/lib/authShellPaths";
 import { pathUsesImmersiveWatch } from "@/lib/immersiveWatchPaths";
+import { NAV_MOBILE_FALLBACK_CLASS } from "@/lib/navLayout";
 
 const TeaPartyModal = dynamic(
   () => import("@/components/watchParty/TeaPartyModal"),
@@ -44,10 +45,7 @@ function MobileTopNavGate() {
   return (
     <Suspense
       fallback={
-        <div
-          className="fixed left-0 right-0 top-0 z-50 h-14 bg-background lg:hidden"
-          aria-hidden
-        />
+        <div className={NAV_MOBILE_FALLBACK_CLASS} aria-hidden />
       }
     >
       <MobileTopNav />

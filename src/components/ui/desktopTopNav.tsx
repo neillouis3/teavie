@@ -11,6 +11,7 @@ import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 import { APP_NAV_ITEMS } from "@/components/ui/navItems";
 import { TEAVIE_LOGO } from "@/lib/brandAssets";
 import { EXPLORE_HOME, LIBRARY_HOME } from "@/lib/routes";
+import { NAV_DESKTOP_INNER_CLASS, NAV_DESKTOP_SHELL_CLASS } from "@/lib/navLayout";
 
 function SearchFallback() {
   return <div className="h-9 w-44 animate-pulse rounded-full bg-white/10" aria-hidden />;
@@ -40,8 +41,8 @@ export default function DesktopTopNav() {
   const selectedKey = activeNavKey(pathname);
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 hidden px-4 pt-3 lg:flex lg:justify-center">
-      <div className="pointer-events-auto flex h-14 w-full max-w-[80rem] items-center gap-1 rounded-[1.15rem] border border-white/10 bg-background/58 px-2 text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.2)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/44 dark:bg-black/45">
+    <header className={NAV_DESKTOP_SHELL_CLASS}>
+      <div className={NAV_DESKTOP_INNER_CLASS}>
         <Link
           href={EXPLORE_HOME}
           aria-label="Teavie home"
@@ -59,7 +60,7 @@ export default function DesktopTopNav() {
 
         <div className="mx-0.5 h-6 w-px shrink-0 bg-foreground/10" />
 
-        <nav className="flex min-w-0 flex-1 items-center gap-0.5" aria-label="Primary navigation">
+        <nav className="flex min-w-0 flex-1 items-center gap-1" aria-label="Primary navigation">
           {APP_NAV_ITEMS.map((item) => {
             const active = selectedKey === item.key;
             return (

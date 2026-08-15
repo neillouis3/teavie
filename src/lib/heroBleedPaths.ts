@@ -1,4 +1,5 @@
 import { EXPLORE_HOME } from "./routes";
+import { NAV_BLEED_EXTEND_REM } from "./navLayout";
 
 /** Routes whose hero extends under the fixed top nav (exact match or nested subpaths). */
 export const HERO_BLEED_PATHS = [EXPLORE_HOME] as const;
@@ -82,4 +83,4 @@ export function pathUsesHeroBleed(pathname: string): boolean {
 }
 
 /** Fixed top nav height (`h-14`) — extend heroes by this much when bleeding under nav. */
-export const NAV_BLEED_EXTEND = "3.5rem";
+export const NAV_BLEED_EXTEND = NAV_BLEED_EXTEND_REM;

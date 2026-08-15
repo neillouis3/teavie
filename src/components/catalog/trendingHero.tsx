@@ -13,13 +13,14 @@ import LargeCard from "@/components/ui/largeCard";
 import { tmdbImageUrl, catalogHeroImageUrl } from "@/lib/tmdbImage";
 import { isAnimePortraitCoverUrl } from "@/lib/animePoster";
 import { cn } from "@/lib/utils";
+import { NAV_BLEED_EXTEND_REM } from "@/lib/navLayout";
 import type { ContentItem } from "@/types/content";
 
 const TRENDING_CAROUSEL_H =
   "h-[min(52vh,400px)] sm:h-[min(62vh,480px)] lg:h-[85vh]";
 
 const SPOTLIGHT_UNDER_NAV_H =
-  "h-[calc(min(52vh,400px)+3.5rem)] sm:h-[calc(min(62vh,480px)+3.5rem)] lg:h-[calc(85vh+3.5rem)]";
+  `h-[calc(min(52vh,400px)+${NAV_BLEED_EXTEND_REM})] sm:h-[calc(min(62vh,480px)+${NAV_BLEED_EXTEND_REM})] lg:h-[calc(85vh+${NAV_BLEED_EXTEND_REM})]`;
 
 /** Loading shell height — must match loaded spotlight hero. */
 export const SPOTLIGHT_SKELETON_H = SPOTLIGHT_UNDER_NAV_H;
