@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/carousel";
 import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import {
+  DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_TRACK,
@@ -75,7 +76,9 @@ export default function MovieCollectionRail({
   const horizontal = cardLayout === "horizontal";
   const itemClass = horizontal
     ? RAIL_CAROUSEL_ITEM_HORIZONTAL
-    : RAIL_CAROUSEL_ITEM_VERTICAL;
+    : bleed
+      ? RAIL_CAROUSEL_ITEM_VERTICAL
+      : DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL;
 
   useEffect(() => {
     let cancelled = false;
@@ -155,7 +158,7 @@ export default function MovieCollectionRail({
     <CatalogRailShell bleed={bleed}>
       <ExploreSectionTitle variant="explore">{titleNode}</ExploreSectionTitle>
       {loading && items.length === 0 ? (
-        <CatalogRailSkeleton count={6} horizontal={horizontal} />
+        <CatalogRailSkeleton count={6} horizontal={horizontal} bleed={bleed} detail={!bleed} />
       ) : (
         <>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">

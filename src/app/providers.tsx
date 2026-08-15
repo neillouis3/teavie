@@ -11,8 +11,6 @@ import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
 import { AnimeAudioProvider } from "@/contexts/animeAudioContext";
 import { AnimeSourceProvider } from "@/contexts/animeSourceContext";
 import { StreamingSourceProvider } from "@/contexts/streamingSourceContext";
-import { WatchPartyNavProvider } from "@/contexts/watchPartyNavContext";
-import TeaPartyHostSyncListener from "@/components/watchParty/TeaPartyHostSyncListener";
 import { Suspense } from "react";
 import { AuthProvider } from "@/contexts/authContext";
 import { UserDataProvider } from "@/contexts/userDataContext";
@@ -20,10 +18,6 @@ import { pathUsesAuthShell } from "@/lib/authShellPaths";
 import { pathUsesImmersiveWatch } from "@/lib/immersiveWatchPaths";
 import { NAV_MOBILE_FALLBACK_CLASS } from "@/lib/navLayout";
 
-const TeaPartyModal = dynamic(
-  () => import("@/components/watchParty/TeaPartyModal"),
-  { ssr: false }
-);
 const OnboardingModal = dynamic(
   () => import("@/components/onboarding/OnboardingModal"),
   { ssr: false }
@@ -65,15 +59,11 @@ export function Providers({ children }: ProvidersProps) {
               <StreamingSourceProvider>
                 <AnimeSourceProvider>
                   <AnimeAudioProvider>
-                    <WatchPartyNavProvider>
-                      <TeaPartyModal />
-                      <TeaPartyHostSyncListener />
                       <MaintenanceAnnouncementModal />
                       <OnboardingModal />
                       <MobileTopNavGate />
                       <AppShell>{children}</AppShell>
                       <CatalogDetailsModalController />
-                    </WatchPartyNavProvider>
                   </AnimeAudioProvider>
                 </AnimeSourceProvider>
               </StreamingSourceProvider>

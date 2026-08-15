@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/carousel";
 import {
   EXPLORE_RAIL_MAX_ITEMS,
+  DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_INNER_CLASS,
@@ -61,13 +62,19 @@ export function CatalogRailSkeleton({
   count = 8,
   bleed = true,
   flush = false,
+  detail = false,
 }: {
   horizontal?: boolean;
   count?: number;
   bleed?: boolean;
   flush?: boolean;
+  detail?: boolean;
 }) {
-  const baseClass = horizontal ? RAIL_CAROUSEL_ITEM_HORIZONTAL : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const baseClass = horizontal
+    ? RAIL_CAROUSEL_ITEM_HORIZONTAL
+    : detail
+      ? DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL
+      : RAIL_CAROUSEL_ITEM_VERTICAL;
   const itemClass = flush ? flushRailItemClass(baseClass) : baseClass;
   const useBleed = bleed && !flush;
   return (

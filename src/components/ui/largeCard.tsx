@@ -177,11 +177,11 @@ function HeroCardOverlay({
 
   if (simple) {
     return (
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent px-5 pb-5 pt-20 sm:px-6 sm:pb-6">
-        <div className="flex max-w-2xl flex-col gap-3 lg:max-w-3xl">
-          <div className="min-h-[2.5em] w-full">
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pb-3 pt-10 sm:px-6 sm:pb-6 sm:pt-20">
+        <div className="flex max-w-2xl flex-col gap-1.5 sm:gap-3 lg:max-w-3xl">
+          <div className="w-full sm:min-h-[2.5em]">
             {logoUrl ? (
-              <div className="relative w-full max-w-[16rem] sm:max-w-[19rem] md:max-w-[22rem]">
+              <div className="relative w-full max-w-[10rem] sm:max-w-[19rem] md:max-w-[22rem]">
                 <img
                   src={logoUrl}
                   alt={title}
@@ -189,18 +189,18 @@ function HeroCardOverlay({
                 />
               </div>
             ) : (
-              <h2 className="line-clamp-2 text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">
+              <h2 className="line-clamp-2 text-base font-bold leading-tight text-white sm:text-3xl md:text-4xl">
                 {title}
               </h2>
             )}
           </div>
           {overviewText ? (
-            <p className="line-clamp-2 text-base leading-snug text-white/75 sm:line-clamp-3">
+            <p className="line-clamp-2 text-xs leading-snug text-white/75 sm:line-clamp-3 sm:text-sm md:text-base">
               {overviewText}
             </p>
           ) : null}
           {dateLabel ? (
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white/90 sm:text-base">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-white/90 sm:text-base">
               <CalendarIcon />
               {dateLabel}
             </span>
@@ -217,7 +217,7 @@ function HeroCardOverlay({
           ? "absolute inset-0 flex items-end bg-[linear-gradient(0deg,var(--background)_0%,color-mix(in_srgb,var(--background)_94%,transparent)_8%,rgba(0,0,0,0.58)_24%,rgba(0,0,0,0.24)_46%,transparent_72%),linear-gradient(90deg,rgba(0,0,0,0.72)_0%,rgba(0,0,0,0.42)_28%,rgba(0,0,0,0.12)_55%,transparent_76%)]"
           : "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent",
         showActions
-          ? "pb-8 pl-4 pr-5 pt-24 sm:pr-8 sm:pt-32 lg:pl-24"
+          ? "pb-8 pl-4 pr-5 pt-16 sm:pr-8 sm:pt-24 lg:pl-24 lg:pt-32"
           : compact
             ? "px-4 pb-4 pt-16 sm:px-5 sm:pb-5 sm:pt-20"
             : "px-5 pb-8 pt-24 sm:px-8 sm:pt-32"
@@ -226,9 +226,8 @@ function HeroCardOverlay({
       <div
         className={cn(
           "flex flex-col",
-          showActions ? "max-w-xl gap-4" : "max-w-3xl gap-3"
+          showActions ? "max-w-xl gap-2.5 sm:gap-4 lg:-translate-y-[264px]" : "max-w-3xl gap-3"
         )}
-        style={showActions ? { transform: "translateY(-264px)" } : undefined}
       >
         <div className="min-h-[2.5em] w-full">
         {logoUrl ? (
@@ -236,7 +235,7 @@ function HeroCardOverlay({
             className={cn(
               "relative w-full max-w-[18rem] sm:max-w-[22rem] md:max-w-[26rem] lg:max-w-[30rem]",
               compact ? "max-w-[14rem] sm:max-w-[18rem]" : null,
-              showActions ? "max-w-[16rem] sm:max-w-[19rem] md:max-w-[22rem] lg:max-w-[22rem]" : null
+              showActions ? "max-w-[12rem] sm:max-w-[19rem] md:max-w-[22rem] lg:max-w-[22rem]" : null
             )}
           >
             <img
@@ -250,7 +249,9 @@ function HeroCardOverlay({
             className={`line-clamp-2 min-h-[2.5em] font-bold leading-tight text-white ${
               compact
                 ? "text-xl sm:text-2xl md:text-3xl"
-                : "text-2xl sm:text-3xl md:text-4xl"
+                : showActions
+                  ? "text-xl sm:text-3xl md:text-4xl"
+                  : "text-2xl sm:text-3xl md:text-4xl"
             }`}
           >
             {title}
@@ -270,7 +271,7 @@ function HeroCardOverlay({
               as={Link}
               href={watchHref}
               size="md"
-              className="bg-white text-black shadow-sm"
+              className="h-9 bg-white px-3 text-sm text-black shadow-sm sm:h-10 sm:px-4 sm:text-base"
               startContent={<HugeiconsIcon icon={PlayIcon} size={20} fill="currentColor" />}
             >
               Watch now
@@ -280,7 +281,7 @@ function HeroCardOverlay({
               href={detailsHref}
               size="md"
               variant="flat"
-              className="border-0 bg-white/15 text-white shadow-sm backdrop-blur-xl hover:bg-white/20"
+              className="h-9 border-0 bg-white/15 px-3 text-sm text-white shadow-sm backdrop-blur-xl hover:bg-white/20 sm:h-10 sm:px-4 sm:text-base"
               startContent={<HugeiconsIcon icon={InformationCircleIcon} size={21} />}
               {...detailsSeedProps}
             >

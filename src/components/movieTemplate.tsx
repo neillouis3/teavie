@@ -1,17 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '@heroui/react';
 import AssetMaskIcon from '@/components/ui/assetMaskIcon';
 import MoviePlayer from './moviePlayer';
 import YouMightLike from './youMightLike';
 import MovieCollectionRail from '@/components/movie/MovieCollectionRail';
-import { useWatchParty } from '@/hooks/useWatchParty';
-import type { GuestSyncPayload } from '@/lib/teaPartySync';
-import { PARTY_HOST_BROADCAST_MS } from '@/lib/teaPartySync';
-import { useRegisterWatchPartyNav } from '@/hooks/useRegisterWatchPartyNav';
 
 import {
   loadMoviePlaybackPosition,
@@ -115,15 +110,8 @@ function movieDetailLinks(movie: Movie): CatalogDetailLink[] {
   return links;
 }
 
-function buildMovieWatchHref(
-  catalogId: string,
-  opts?: { party?: string | null }
-): string {
-  const base = `/movies/${encodeURIComponent(catalogId)}/watch`;
-  const party = opts?.party?.trim();
-  if (!party) return base;
-  const params = new URLSearchParams({ party });
-  return `${base}?${params.toString()}`;
+function buildMovieWatchHref(catalogId: string): string {
+  return `/movies/${encodeURIComponent(catalogId)}/watch`;
 }
 
 function resolveMovieDetailsBannerUrl(movie: Movie): string | null {
@@ -202,9 +190,6 @@ export default function MovieTemplate({
   onDetailsNavigate?: () => void;
 }) {
   const { server, hydrated: streamHydrated } = useStreamingSource();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [movie, setMovie] = useState<Movie | null>(() =>
     detailsModal && detailsSeed ? movieFromSeed(id, detailsSeed) : null
   );
@@ -215,37 +200,21 @@ export default function MovieTemplate({
   >(null);
   const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
   const [playerEpoch, setPlayerEpoch] = useState(0);
-  const partyPlaybackBroadcastRef = useRef(0);
   const modalHeroBannerRef = useRef<string | null>(null);
   const titleLogoPath = useTmdbTitleLogo(
     "movie",
     detailsModal ? null : id
   );
 
-  const applyGuestSync = useCallback((plan: GuestSyncPayload) => {
-    setPlayerStartSeconds(plan.targetSeconds);
-    if (plan.remount) setPlayerEpoch((n) => n + 1);
-  }, []);
-
-  const partyRoomId = searchParams.get('party');
-  const watchHref = buildMovieWatchHref(id, { party: partyRoomId });
-
-  const watchParty = useWatchParty({
-    catalogId: id,
-    mediaType: 'movie',
-    title: movie?.title ?? '',
-    roomIdFromUrl: partyRoomId,
-    onGuestSync: applyGuestSync,
-  });
+  const watchHref = buildMovieWatchHref(id);
 
   const movieReleased = movie ? isReleasedByDate(movie.release_date) : false;
 
   useEffect(() => {
-    if (watchParty.room) return;
     if (viewMode !== 'watch') return;
     setPlayerStartSeconds(loadMoviePlaybackPosition(String(id)));
     setPlayerEpoch((n) => n + 1);
-  }, [id, watchParty.room, viewMode]);
+  }, [id, viewMode]);
 
   useEffect(() => {
     if (viewMode !== 'watch') return;
@@ -259,14 +228,8 @@ export default function MovieTemplate({
         recordMovieInWatchHistory(String(id));
         saveMoviePlaybackPosition(String(id), sec);
       }
-      watchParty.noteHostPlayback(sec);
-      if (!watchParty.isHost || !watchParty.room || server !== 'stremio') return;
-      const now = Date.now();
-      if (now - partyPlaybackBroadcastRef.current < PARTY_HOST_BROADCAST_MS) return;
-      partyPlaybackBroadcastRef.current = now;
-      void watchParty.broadcastPlayback(sec);
     },
-    [id, server, watchParty]
+    [id]
   );
 
   const handleVidrockProgress = useCallback(
@@ -281,104 +244,6 @@ export default function MovieTemplate({
   const handlePlayerReady = useCallback(() => {
     recordMovieInWatchHistory(String(id));
   }, [id]);
-
-  const handleCreateParty = useCallback(
-    async (nickname: string) => {
-      const roomId = await watchParty.createRoom(nickname);
-      if (!roomId) return null;
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('party', roomId);
-      const path =
-        viewMode === 'watch'
-          ? pathname
-          : `/movies/${encodeURIComponent(id)}/watch`;
-      router.replace(`${path}?${params.toString()}`);
-      return roomId;
-    },
-    [watchParty, searchParams, pathname, router, viewMode, id]
-  );
-
-  const handleJoinParty = useCallback(
-    (code: string, nickname: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('party', code.trim().toUpperCase());
-      const path =
-        viewMode === 'watch'
-          ? pathname
-          : `/movies/${encodeURIComponent(id)}/watch`;
-      router.replace(`${path}?${params.toString()}`);
-      void watchParty.joinRoom(code.trim().toUpperCase(), nickname);
-    },
-    [watchParty, searchParams, pathname, router, viewMode, id]
-  );
-
-  const handleLeaveParty = useCallback(() => {
-    watchParty.leaveRoom();
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('party');
-    const q = params.toString();
-    router.replace(q ? `${pathname}?${q}` : pathname);
-  }, [watchParty, searchParams, pathname, router]);
-
-  const partyNavError =
-    watchParty.room && watchParty.room.catalogId !== id
-      ? 'This party is for a different title — open the shared link from the host.'
-      : watchParty.error;
-
-  const watchPartyNavRegistration = useMemo(
-    () =>
-      movieReleased && viewMode === 'watch'
-        ? {
-            canPlay: true,
-            room: watchParty.room,
-            isHost: watchParty.isHost,
-            loading: watchParty.loading,
-            error: partyNavError,
-            nickname: watchParty.nickname,
-            mediaType: 'movie' as const,
-            title: movie?.title ?? '',
-            onCreate: handleCreateParty,
-            onJoin: handleJoinParty,
-            onLeave: handleLeaveParty,
-            onSendChat: watchParty.sendChat,
-            onUpdateSettings: watchParty.updateSettings,
-            onReleaseSync: watchParty.releaseSyncCheckpoint,
-            guestJoinSyncRole: watchParty.guestJoinSyncRole,
-          }
-        : null,
-    [
-      movieReleased,
-      viewMode,
-      watchParty.room,
-      watchParty.isHost,
-      watchParty.loading,
-      partyNavError,
-      watchParty.nickname,
-      watchParty.sendChat,
-      watchParty.updateSettings,
-      watchParty.releaseSyncCheckpoint,
-      watchParty.guestJoinSyncRole,
-      movie?.title,
-      handleCreateParty,
-      handleJoinParty,
-      handleLeaveParty,
-    ]
-  );
-
-  useRegisterWatchPartyNav(watchPartyNavRegistration);
-
-  useEffect(() => {
-    if (
-      viewMode !== 'details' ||
-      !partyRoomId ||
-      loading ||
-      !movie ||
-      !movieReleased
-    ) {
-      return;
-    }
-    router.replace(watchHref);
-  }, [viewMode, partyRoomId, loading, movie, movieReleased, watchHref, router]);
 
   useEffect(() => {
     modalHeroBannerRef.current = null;

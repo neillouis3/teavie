@@ -27,7 +27,6 @@ import { NAV_MOBILE_SHELL_CLASS } from '@/lib/navLayout';
 import { useScrollNavBlend } from '@/hooks/useScrollNavBlend';
 import { TEAVIE_LOGO, teavieLogoForTheme } from '@/lib/brandAssets';
 import VersionChip from '@/components/ui/versionChip';
-import WatchPartyNavButton from '@/components/watchParty/WatchPartyNavButton';
 
 export default function MobileTopNav() {
   const pathname = usePathname();
@@ -96,7 +95,6 @@ export default function MobileTopNav() {
         >
           <img src={logoSrc} alt="Teavie" className="h-9 w-auto max-w-[9rem]" />
         </Link>
-        <WatchPartyNavButton overHero={overHero} />
         <Link
           href="/search"
           aria-label="Search"

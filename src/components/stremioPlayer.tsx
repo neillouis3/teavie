@@ -24,7 +24,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import type { ClientMediaCapabilities, PlayableStream } from "@/lib/stremio/types";
 import { consumeStreamSource } from "@/lib/stremio/consumeStreamSource";
-import { useWatchPartyNav } from "@/contexts/watchPartyNavContext";
 import { useWatchOverlay } from "@/contexts/watchOverlayContext";
 
 type Props = {
@@ -56,7 +55,6 @@ export default function StremioPlayer({
   onPlaybackProgress,
 }: Props) {
   const router = useRouter();
-  const { openTeaParty } = useWatchPartyNav();
   const [resolvedImdbId, setResolvedImdbId] = useState<string | null>(() =>
     imdbId ? normalizeImdbId(imdbId) : null
   );
@@ -604,7 +602,6 @@ export default function StremioPlayer({
             selectAudioTrack={selectAudioTrack}
             video={videoRef.current}
             close={() => setSettingsOpen(false)}
-            openWatchParty={openTeaParty}
             subtitleLabel={activeSubtitle(videoRef.current)}
             audioLabel={streamAudio(streamLabel)}
             hasMoreAddons={hasMoreAddons}
@@ -848,7 +845,6 @@ function PlayerSettingsPanel({
   selectAudioTrack,
   video,
   close,
-  openWatchParty,
   subtitleLabel,
   audioLabel,
   hasMoreAddons,
@@ -865,7 +861,6 @@ function PlayerSettingsPanel({
   selectAudioTrack: (index: number) => void;
   video: HTMLVideoElement | null;
   close: () => void;
-  openWatchParty: () => void;
   subtitleLabel: string;
   audioLabel: string;
   hasMoreAddons: boolean;
@@ -1004,16 +999,6 @@ function PlayerSettingsPanel({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/45">
           <button type="button" className="transition hover:text-white/75">
             Cast
-          </button>
-          <button
-            type="button"
-            className="transition hover:text-white/75"
-            onClick={() => {
-              close();
-              openWatchParty();
-            }}
-          >
-            Watch Party
           </button>
           <button type="button" className="transition hover:text-white/75">
             Help

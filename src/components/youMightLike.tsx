@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/carousel';
 import { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
 import {
+  DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL,
   EXPLORE_RAIL_MAX_ITEMS,
   RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
@@ -28,8 +29,6 @@ import { readClientDayCache, writeClientDayCache } from '@/lib/clientDayCache';
 const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
 const YOU_MIGHT_LIKE_MAX_VERTICAL = EXPLORE_RAIL_MAX_ITEMS;
 const YOU_MIGHT_LIKE_DETAIL_MAX = 5;
-const YOU_MIGHT_LIKE_DETAIL_VERTICAL_ITEM =
-  'basis-[45%] pl-3 sm:basis-[32%] md:basis-1/4 lg:basis-1/5';
 
 const YML_CACHE_PREFIX = 'teavie.cache.yml.v1:';
 
@@ -198,7 +197,7 @@ export default function YouMightLike({
     ? RAIL_CAROUSEL_ITEM_HORIZONTAL
     : bleed
       ? RAIL_CAROUSEL_ITEM_VERTICAL
-      : YOU_MIGHT_LIKE_DETAIL_VERTICAL_ITEM;
+      : DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL;
 
   useEffect(() => {
     let cancelled = false;

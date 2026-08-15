@@ -21,6 +21,10 @@ export const RAIL_TRACK = '-ml-3';
 export const RAIL_CAROUSEL_ITEM_VERTICAL =
   `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[32%] md:basis-1/5 lg:basis-[calc((100%-6rem)/8.5)]`;
 
+/** Detail modal rails: ~5 cards across at `lg`. */
+export const DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL =
+  `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[32%] md:basis-1/4 lg:basis-1/5`;
+
 export const RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE =
   `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[30%] md:basis-1/4 lg:basis-[calc((100%-6rem)/8.5)]`;
 
