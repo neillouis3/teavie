@@ -16,6 +16,14 @@ export const AUTH_PANEL_GLASS_CLASS =
 export const MENU_GLASS_CLASS =
   "border border-white/10 bg-background/58 p-1 shadow-[0_14px_40px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/44 dark:bg-black/50 dark:supports-[backdrop-filter]:bg-black/42";
 
+/** Dropdown row hover — matches desktop nav link chrome. */
+export const NAV_MENU_ITEM_CLASS =
+  "rounded-lg text-sm font-medium text-foreground/70 data-[hover=true]:bg-foreground/[0.06] data-[hover=true]:text-foreground data-[focus-visible=true]:bg-foreground/[0.06] data-[focus-visible=true]:text-foreground";
+
+/** Destructive dropdown row — danger text with subtle hover fill. */
+export const NAV_MENU_ITEM_DANGER_CLASS =
+  "rounded-lg text-sm font-medium text-danger data-[hover=true]:bg-danger/10 data-[hover=true]:text-danger data-[focus-visible=true]:bg-danger/10 data-[focus-visible=true]:text-danger";
+
 /** Modal glass — same blur as sidebar, 75% background fill. */
 export const MODAL_GLASS_CLASS =
   "bg-background/75 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/75 dark:bg-background/75 dark:supports-[backdrop-filter]:bg-background/75";

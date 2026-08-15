@@ -1,17 +1,19 @@
 "use client";
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
+import CatalogRail from "@/components/catalog/catalogRail";
 import CategoryBrowseBar from "@/components/category/CategoryBrowseBar";
 import CategoryGenreRail from "@/components/category/CategoryGenreRail";
 import NewEpisodesRail from "@/components/category/NewEpisodesRail";
-import TrendingHero, { SPOTLIGHT_SKELETON_H } from "@/components/catalog/trendingHero";
+import CategoryGenreRailSkeleton from "@/components/category/skeleton/categoryGenreRailSkeleton";
+import CategoryRailSectionSkeleton from "@/components/category/skeleton/categoryRailSectionSkeleton";
+import CategorySpotlightSkeleton from "@/components/category/skeleton/categorySpotlightSkeleton";
+import TrendingHero from "@/components/catalog/trendingHero";
 import {
   getCatalogCategory,
 } from "@/lib/catalogCategories";
 import {
   RAIL_AFTER_SPOTLIGHT,
-  RAIL_INNER_CLASS,
   RAIL_STACK_CLASS,
 } from "@/lib/catalogGrid";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
@@ -254,6 +256,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
         <section
           className={cn(
             "relative z-0 w-full overflow-hidden rounded-tl-2xl",
+            useExploreSpotlight && "-mt-14",
             useExploreSpotlight && RAIL_AFTER_SPOTLIGHT
           )}
           aria-label="Spotlight"
@@ -275,20 +278,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           ) : null}
         </section>
       ) : !heroReady && useExploreSpotlight ? (
-        <section
-          className={cn(
-            "relative z-0 w-full overflow-hidden rounded-tl-2xl",
-            RAIL_AFTER_SPOTLIGHT
-          )}
-          aria-hidden
-        >
-          <div
-            className={cn(
-              "animate-pulse bg-default-200 dark:bg-default-100/10",
-              SPOTLIGHT_SKELETON_H
-            )}
-          />
-        </section>
+        <CategorySpotlightSkeleton />
       ) : null}
 
       {!hasTrending && heroReady && useExploreSpotlight ? (
@@ -305,10 +295,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
             (hasTrending || (!heroReady && useExploreSpotlight)) && "mt-2"
           )}
         >
-          <div className={`${RAIL_INNER_CLASS} mb-8`}>
-            <div className="h-5 w-40 animate-pulse rounded bg-default-200 dark:bg-default-100/10" />
-            <CatalogRailSkeleton count={8} />
-          </div>
+          <CategoryRailSectionSkeleton titleWidth="w-32" />
         </div>
       ) : hasNewEpisodes ? (
         <div
@@ -339,7 +326,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                 titleVariant="explore"
               />
             ) : !heroReady ? (
-              <CatalogRailSkeleton count={8} />
+              <CategoryRailSectionSkeleton titleWidth="w-24" />
             ) : null}
 
             {data.topRated.length > 0 ? (
@@ -349,7 +336,7 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
                 titleVariant="explore"
               />
             ) : !topRatedReady ? (
-              <CatalogRailSkeleton count={8} />
+              <CategoryRailSectionSkeleton titleWidth="w-28" />
             ) : null}
           </>
         ) : heroReady && !railsLoading ? (
@@ -358,23 +345,15 @@ export default function CategoryPageTemplate({ slug }: CategoryPageTemplateProps
           </p>
         ) : (
           <>
-            <CatalogRailSkeleton count={8} />
-            <CatalogRailSkeleton count={8} />
+            <CategoryRailSectionSkeleton titleWidth="w-24" />
+            <CategoryRailSectionSkeleton titleWidth="w-28" />
           </>
         )}
       </div>
 
       {!genresReady && categoryGenres.length === 0 ? (
         <div className={cn("pb-10 pt-8", MOBILE_CONTENT_INSET_LEFT)}>
-          <div className="h-5 w-28 animate-pulse rounded bg-default-200 dark:bg-default-100/10" />
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="aspect-[2/3] animate-pulse rounded-lg bg-default-200 dark:bg-default-100/10"
-              />
-            ))}
-          </div>
+          <CategoryGenreRailSkeleton />
         </div>
       ) : categoryGenres.length > 0 ? (
         <div className={cn("pb-10 pt-8", MOBILE_CONTENT_INSET_LEFT)}>

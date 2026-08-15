@@ -30,7 +30,7 @@ export default function ThemeNavButton({ overHero = false }: ThemeNavButtonProps
       variant="light"
       radius="md"
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-      className={`h-10 w-10 min-w-10 ${overHero ? "text-white" : "text-foreground"}`}
+      className={`h-9 w-9 min-w-9 ${overHero ? "text-white" : "text-foreground"}`}
       isDisabled={!mounted}
       onPress={toggleTheme}
     >

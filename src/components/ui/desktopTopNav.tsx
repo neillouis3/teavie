@@ -89,7 +89,7 @@ export default function DesktopTopNav() {
           <NavSearchBar className="w-44 xl:w-52" size="sm" />
         </Suspense>
 
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-2">
           <ThemeNavButton />
           <ProfileNavAvatar />
         </div>

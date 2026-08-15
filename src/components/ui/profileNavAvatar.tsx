@@ -21,7 +21,7 @@ import {
 import { avatarInitials } from "@/lib/partyNickname";
 import { useAuth } from "@/contexts/authContext";
 import AssetMaskIcon from "@/components/ui/assetMaskIcon";
-import { MENU_GLASS_CLASS } from "@/components/ui/navGlass";
+import { MENU_GLASS_CLASS, NAV_MENU_ITEM_CLASS, NAV_MENU_ITEM_DANGER_CLASS } from "@/components/ui/navGlass";
 
 export default function ProfileNavAvatar() {
   const pathname = usePathname();
@@ -40,7 +40,7 @@ export default function ProfileNavAvatar() {
   if (loading) {
     return (
       <div
-        className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-default-200"
+        className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-default-200"
         aria-hidden
       />
     );
@@ -67,7 +67,7 @@ export default function ProfileNavAvatar() {
       <DropdownTrigger>
         <button
           type="button"
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-success"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-success"
           aria-label="Profile menu"
         >
           <Avatar
@@ -76,7 +76,7 @@ export default function ProfileNavAvatar() {
             name={displayName}
             getInitials={() => avatarInitials(displayName)}
             classNames={{
-              base: "h-10 w-10 bg-success/20 text-success",
+              base: "h-9 w-9 bg-success/20 text-success",
               name: "text-sm font-semibold",
             }}
           />
@@ -86,11 +86,19 @@ export default function ProfileNavAvatar() {
         aria-label="Profile actions"
         classNames={{
           base: "bg-transparent p-0",
-          list: "bg-transparent",
+          list: "gap-0.5 bg-transparent",
+        }}
+        itemClasses={{
+          base: NAV_MENU_ITEM_CLASS,
         }}
       >
         <DropdownSection showDivider>
-          <DropdownItem key="identity" isReadOnly className="cursor-default opacity-100">
+          <DropdownItem
+            key="identity"
+            isReadOnly
+            className="cursor-default opacity-100"
+            classNames={{ base: "pointer-events-none data-[hover=true]:bg-transparent" }}
+          >
             <div className="flex flex-col gap-0.5 py-0.5">
               <span className="text-sm font-medium text-foreground">{displayName}</span>
               <span className="text-xs text-default-500">{user.email}</span>
@@ -139,7 +147,7 @@ export default function ProfileNavAvatar() {
         </DropdownItem>
         <DropdownItem
           key="signout"
-          color="danger"
+          classNames={{ base: NAV_MENU_ITEM_DANGER_CLASS }}
           startContent={
             <HugeiconsIcon icon={Logout01Icon} size={16} className="shrink-0" />
           }

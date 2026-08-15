@@ -24,7 +24,7 @@ export const NAV_DESKTOP_SHELL_CLASS =
 
 /** Desktop floating nav inner pill. */
 export const NAV_DESKTOP_INNER_CLASS =
-  "pointer-events-auto flex h-14 w-full max-w-[80rem] items-center gap-1.5 rounded-[1.15rem] border border-white/10 bg-background/58 px-3 text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.2)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/44 dark:bg-black/45";
+  "pointer-events-auto flex h-14 w-full max-w-[80rem] items-center gap-2 rounded-[1.15rem] border border-white/10 bg-background/58 pl-3 pr-2 text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.2)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/44 dark:bg-black/45";
 
 /** Main content top offset for non-hero pages. */
 export const NAV_MAIN_TOP_OFFSET =
