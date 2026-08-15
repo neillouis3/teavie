@@ -10,8 +10,19 @@ import {
   sanitizeAnimeEmbedUrl,
   withMegaPlayStartTime,
 } from "@/lib/animePlayEmbed";
+import {
+  cacheDubUnavailable,
+  clearDubUnavailableCache,
+  isDubUnavailableCached,
+} from "@/lib/animeDubAvailabilityCache";
 import { isMegaPlayEmbedUrl } from "@/lib/megaPlayProgress";
 import { cn } from "@/lib/utils";
+
+function resolveCoords(malId, episode) {
+  const mal = Math.floor(Number(malId));
+  const ep = Math.max(1, Math.floor(Number(episode)) || 1);
+  return { mal, ep };
+}
 
 /**
  * @param {object} props
@@ -32,37 +43,43 @@ export default function AnimePlayer({
   backdropUrl = null,
   onMegaPlayMessage,
 }) {
+  const { mal, ep } = resolveCoords(malId, episode);
+  const dubCachedUnavailable =
+    audio === "dub" &&
+    Number.isFinite(mal) &&
+    mal > 0 &&
+    isDubUnavailableCached(mal, ep);
+
   const { source: animeSource } = useAnimeSource();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !dubCachedUnavailable);
   const [error, setError] = useState("");
   const [primaryUrl, setPrimaryUrl] = useState("");
   const [fallbackUrl, setFallbackUrl] = useState("");
-  const [alternateAudioUrl, setAlternateAudioUrl] = useState("");
   const [urlIndex, setUrlIndex] = useState(0);
-  const [embedUnavailable, setEmbedUnavailable] = useState(false);
+  const [embedUnavailable, setEmbedUnavailable] = useState(dubCachedUnavailable);
   const [embedReady, setEmbedReady] = useState(false);
-  const [audioAvailable, setAudioAvailable] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError("");
-    setPrimaryUrl("");
-    setFallbackUrl("");
-    setAlternateAudioUrl("");
-    setUrlIndex(0);
-    setEmbedUnavailable(false);
-    setEmbedReady(false);
-    setAudioAvailable(true);
-
-    const mal = Math.floor(Number(malId));
-    const ep = Math.max(1, Math.floor(Number(episode)) || 1);
 
     if (!Number.isFinite(mal) || mal <= 0) {
       setError("Missing MAL id");
       setLoading(false);
       return;
     }
+
+    const cachedUnavailable =
+      audio === "dub" && isDubUnavailableCached(mal, ep);
+
+    setLoading(!cachedUnavailable);
+    setError("");
+    setPrimaryUrl("");
+    setFallbackUrl("");
+    setUrlIndex(0);
+    setEmbedUnavailable(cachedUnavailable);
+    setEmbedReady(false);
+
+    if (cachedUnavailable) return;
 
     const qs = new URLSearchParams({
       malId: String(mal),
@@ -80,21 +97,21 @@ export default function AnimePlayer({
       })
       .then((data) => {
         if (cancelled) return;
+
+        if (data?.audioAvailable === false) {
+          if (audio === "dub") cacheDubUnavailable(mal, ep);
+          setEmbedUnavailable(true);
+          return;
+        }
+
         const primary = typeof data?.primaryUrl === "string" ? data.primaryUrl : "";
         const fallback = typeof data?.fallbackUrl === "string" ? data.fallbackUrl : "";
-        const alternateAudio =
-          typeof data?.alternateAudioUrl === "string" ? data.alternateAudioUrl : "";
         if (!primary && !fallback) {
           setError("No playback source available");
           return;
         }
         setPrimaryUrl(primary);
         setFallbackUrl(fallback);
-        setAlternateAudioUrl(alternateAudio);
-        if (data?.audioAvailable === false) {
-          setAudioAvailable(false);
-          setEmbedUnavailable(true);
-        }
       })
       .catch((e) => {
         if (!cancelled) setError(e?.message || "Failed to load player");
@@ -106,7 +123,7 @@ export default function AnimePlayer({
     return () => {
       cancelled = true;
     };
-  }, [malId, episode, audio]);
+  }, [mal, ep, audio]);
 
   const preferredRaw = animeSource === "anikoto" ? fallbackUrl : primaryUrl;
   const alternateRaw = animeSource === "anikoto" ? primaryUrl : fallbackUrl;
@@ -129,7 +146,17 @@ export default function AnimePlayer({
     return withMegaPlayStartTime(activeRaw, startSeconds) || activeRaw;
   }, [activeRaw, isMegaPlay, startSeconds]);
 
+  const markDubUnavailable = useCallback(() => {
+    if (audio !== "dub") return;
+    cacheDubUnavailable(mal, ep);
+    setEmbedUnavailable(true);
+  }, [audio, mal, ep]);
+
   const handleEmbedFailure = useCallback(() => {
+    if (audio === "dub") {
+      markDubUnavailable();
+      return;
+    }
     setUrlIndex((current) => {
       if (current + 1 < urlsToTry.length) {
         setEmbedReady(false);
@@ -138,11 +165,12 @@ export default function AnimePlayer({
       setEmbedUnavailable(true);
       return current;
     });
-  }, [urlsToTry.length]);
+  }, [audio, markDubUnavailable, urlsToTry.length]);
 
   const handleEmbedProgress = useCallback(() => {
+    if (audio === "dub") clearDubUnavailableCache(mal, ep);
     setEmbedReady(true);
-  }, []);
+  }, [audio, mal, ep]);
 
   const progressHandler = useCallback(
     (msg) => {
@@ -152,11 +180,12 @@ export default function AnimePlayer({
   );
 
   const playerKey = `${animeSource}-${malId}-${episode}-${audio}-${urlIndex}-${activeUrl}`;
+  const dubResolving = audio === "dub" && loading && !embedUnavailable;
+  const showDubUnavailable = audio === "dub" && (embedUnavailable || dubResolving);
   const unavailableReason =
-    audio === "dub" && (!audioAvailable || alternateAudioUrl)
-      ? "dub_unavailable"
-      : "playback_unavailable";
-  const probingEmbed = Boolean(activeUrl) && !embedReady && !embedUnavailable;
+    audio === "dub" ? "dub_unavailable" : "playback_unavailable";
+  const probingEmbed =
+    Boolean(activeUrl) && !embedReady && !embedUnavailable && !dubResolving;
 
   if (error) {
     return (
@@ -170,14 +199,20 @@ export default function AnimePlayer({
     <div className={`relative flex h-full min-h-0 w-full touch-auto flex-col bg-black [touch-action:pan-x_pan-y_pinch-zoom] ${immersive ? "overflow-hidden" : "rounded-lg ring-1 ring-white/10 lg:overflow-hidden"}`}>
       {immersive ? null : <WatchPlayerBackButton />}
       <div className="relative min-h-0 flex-1">
-        {loading ? (
-          <PlayerEmbedSkeleton />
+        {showDubUnavailable ? (
+          <WatchEmbedUnavailable
+            reason="dub_unavailable"
+            backdropUrl={backdropUrl}
+            showSwitchToSub
+          />
         ) : embedUnavailable ? (
           <WatchEmbedUnavailable
             reason={unavailableReason}
             backdropUrl={backdropUrl}
             showSwitchToSub={audio === "dub"}
           />
+        ) : loading ? (
+          <PlayerEmbedSkeleton />
         ) : activeUrl ? (
           <>
             {probingEmbed ? (
@@ -212,7 +247,7 @@ export default function AnimePlayer({
               onEmbedFailure={isMegaPlay ? handleEmbedFailure : undefined}
               onEmbedProgress={isMegaPlay ? handleEmbedProgress : undefined}
               onLoad={!isMegaPlay ? handleEmbedProgress : undefined}
-              embedFailureTimeoutMs={2200}
+              embedFailureTimeoutMs={1200}
             />
           </>
         ) : (

@@ -130,6 +130,30 @@ async function fetchAnikotoEpisodeRow({ malId, anilistId, episode }) {
 }
 
 /**
+ * Resolve Anikoto episode row + embed URL + audio availability in one fetch.
+ * @param {{ malId?: number, anilistId?: number, episode: number, audio: "sub" | "dub" }} params
+ * @returns {Promise<{ embedUrl: string | null, audioAvailable: boolean, episodeFound: boolean }>}
+ */
+export async function resolveAnikotoEpisodePlayback({
+  malId,
+  anilistId,
+  episode,
+  audio,
+}) {
+  const row = await fetchAnikotoEpisodeRow({ malId, anilistId, episode });
+  if (!row) {
+    return { embedUrl: null, audioAvailable: audio !== "dub", episodeFound: false };
+  }
+
+  const audioAvailable = hasEmbedForAudio(row, audio);
+  const embedUrl = audioAvailable
+    ? sanitizeAnimeEmbedUrl(pickEmbedUrl(row, audio))
+    : null;
+
+  return { embedUrl, audioAvailable, episodeFound: true };
+}
+
+/**
  * Whether Anikoto lists an embed for the requested audio on this episode.
  * @param {{ malId?: number, anilistId?: number, episode: number, audio: "sub" | "dub" }} params
  * @returns {Promise<boolean | null>} null when episode/catalog cannot be resolved
@@ -140,9 +164,14 @@ export async function resolveAnikotoAudioAvailable({
   episode,
   audio,
 }) {
-  const row = await fetchAnikotoEpisodeRow({ malId, anilistId, episode });
-  if (!row) return null;
-  return hasEmbedForAudio(row, audio);
+  const result = await resolveAnikotoEpisodePlayback({
+    malId,
+    anilistId,
+    episode,
+    audio,
+  });
+  if (!result.episodeFound) return null;
+  return result.audioAvailable;
 }
 
 /**
@@ -156,8 +185,11 @@ export async function resolveAnikotoFallbackEmbedUrl({
   episode,
   audio,
 }) {
-  const row = await fetchAnikotoEpisodeRow({ malId, anilistId, episode });
-  if (!row) return null;
-
-  return sanitizeAnimeEmbedUrl(pickEmbedUrl(row, audio));
+  const result = await resolveAnikotoEpisodePlayback({
+    malId,
+    anilistId,
+    episode,
+    audio,
+  });
+  return result.embedUrl;
 }

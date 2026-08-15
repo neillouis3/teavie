@@ -21,6 +21,10 @@ import {
 } from "@/contexts/streamingSourceContext";
 import { useAnimeAudio } from "@/contexts/animeAudioContext";
 import {
+  cacheDubUnavailable,
+  isDubUnavailableCached,
+} from "@/lib/animeDubAvailabilityCache";
+import {
   saveEpisodePlaybackPosition,
   loadEpisodePlaybackPosition,
 } from "@/lib/watchProgress";
@@ -773,6 +777,33 @@ export default function ShowTemplate({
     !isAnimeMovie &&
     malIdForPlayer != null &&
     tmdbShowPremiered;
+
+  useEffect(() => {
+    if (!canPlayAnime || malIdForPlayer == null) return;
+    const mal = malIdForPlayer;
+    const ep = animeAbsoluteEpisode;
+    if (isDubUnavailableCached(mal, ep)) return;
+
+    const qs = new URLSearchParams({
+      malId: String(mal),
+      episode: String(ep),
+      audio: "dub",
+    });
+
+    let cancelled = false;
+    fetch(`/api/anime/embed?${qs.toString()}`)
+      .then(async (res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || data?.audioAvailable !== false) return;
+        cacheDubUnavailable(mal, ep);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canPlayAnime, malIdForPlayer, animeAbsoluteEpisode]);
+
   const canPlayTv = !show?.is_anime && playerUsesTmdb && tmdbShowPremiered;
   const canPlay = canPlayAnime || canPlayTv;
   const imageUrl =

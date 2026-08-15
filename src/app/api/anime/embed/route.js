@@ -4,9 +4,27 @@ import {
   sanitizeAnimeEmbedUrl,
 } from "@/lib/animePlayEmbed";
 import { normalizeSplitCourMalEpisode, resolveSplitCourPlayback, splitCourGroupForMal, animePlayMalEmbedTarget } from "@/lib/animeSplitCour";
-import { resolveAnikotoFallbackEmbedUrl, resolveAnikotoAudioAvailable } from "@/lib/anikotoApi";
+import { resolveAnikotoEpisodePlayback } from "@/lib/anikotoApi";
 import { lookupKometaByMalId } from "@/lib/kometaAnimeIds";
 import { anilistIdFromMalId } from "@/lib/malToAnilistId";
+
+function buildAlternateAudioUrl(malEmbedId, malEmbedEp, anilistId, playbackEp, audio) {
+  const oppositeAudio = audio === "dub" ? "sub" : "dub";
+  const alternateAudioMalUrl = buildAnimePlayMalUrl(
+    malEmbedId,
+    malEmbedEp,
+    oppositeAudio
+  );
+  const alternateAudioAniUrl =
+    anilistId != null && anilistId > 0
+      ? buildAnimePlayAniListUrl(anilistId, playbackEp, oppositeAudio)
+      : "";
+  return (
+    sanitizeAnimeEmbedUrl(alternateAudioMalUrl) ||
+    sanitizeAnimeEmbedUrl(alternateAudioAniUrl) ||
+    null
+  );
+}
 
 export async function GET(req) {
   try {
@@ -33,32 +51,50 @@ export async function GET(req) {
           anilistId: null,
         };
 
-    const kometa = await lookupKometaByMalId(playback.malId);
+    const [kometa, anilistFromMal, anikotoPlayback] = await Promise.all([
+      lookupKometaByMalId(playback.malId),
+      anilistIdFromMalId(playback.malId).catch(() => null),
+      resolveAnikotoEpisodePlayback({
+        malId: playback.malId,
+        anilistId: playback.anilistId ?? undefined,
+        episode: playback.malEpisode,
+        audio,
+      }).catch(() => null),
+    ]);
+
     const anilistId =
-      playback.anilistId ??
-      kometa?.anilistId ??
-      (await anilistIdFromMalId(playback.malId).catch(() => null));
+      playback.anilistId ?? kometa?.anilistId ?? anilistFromMal ?? null;
+
+    const alternateAudioUrl = buildAlternateAudioUrl(
+      malEmbedId,
+      malEmbedEp,
+      anilistId,
+      playback.malEpisode,
+      audio
+    );
+
+    if (
+      audio === "dub" &&
+      anikotoPlayback?.episodeFound &&
+      !anikotoPlayback.audioAvailable
+    ) {
+      return Response.json({
+        primaryUrl: "",
+        fallbackUrl: "",
+        fallbackAvailable: false,
+        alternateAudioUrl,
+        audioAvailable: false,
+        malId: malEmbedId,
+        malEpisode: malEmbedEp,
+        anilistId: anilistId ?? null,
+      });
+    }
 
     const malUrl = buildAnimePlayMalUrl(malEmbedId, malEmbedEp, audio);
     const aniUrl =
       anilistId != null && anilistId > 0
         ? buildAnimePlayAniListUrl(anilistId, playback.malEpisode, audio)
         : "";
-
-    const oppositeAudio = audio === "dub" ? "sub" : "dub";
-    const alternateAudioMalUrl = buildAnimePlayMalUrl(
-      malEmbedId,
-      malEmbedEp,
-      oppositeAudio
-    );
-    const alternateAudioAniUrl =
-      anilistId != null && anilistId > 0
-        ? buildAnimePlayAniListUrl(anilistId, playback.malEpisode, oppositeAudio)
-        : "";
-    const alternateAudioUrl =
-      sanitizeAnimeEmbedUrl(alternateAudioMalUrl) ||
-      sanitizeAnimeEmbedUrl(alternateAudioAniUrl) ||
-      "";
 
     const primaryUrl =
       sanitizeAnimeEmbedUrl(malUrl) || sanitizeAnimeEmbedUrl(aniUrl) || "";
@@ -67,39 +103,16 @@ export async function GET(req) {
         ? sanitizeAnimeEmbedUrl(aniUrl)
         : null;
     const fallbackUrl = megaPlayAlt || sanitizeAnimeEmbedUrl(malUrl);
-
-    let anikotoUrl = null;
-    let audioAvailable = true;
-    if (anilistId) {
-      try {
-        const raw = await resolveAnikotoFallbackEmbedUrl({
-          malId: playback.malId,
-          anilistId,
-          episode: playback.malEpisode,
-          audio,
-        });
-        anikotoUrl = sanitizeAnimeEmbedUrl(raw);
-
-        if (audio === "dub") {
-          const dubListed = await resolveAnikotoAudioAvailable({
-            malId: playback.malId,
-            anilistId,
-            episode: playback.malEpisode,
-            audio: "dub",
-          });
-          if (dubListed === false) audioAvailable = false;
-        }
-      } catch (e) {
-        console.error("Anikoto fallback lookup failed:", e);
-      }
-    }
+    const anikotoUrl = anikotoPlayback?.embedUrl ?? null;
 
     return Response.json({
       primaryUrl,
       fallbackUrl: anikotoUrl || fallbackUrl,
       fallbackAvailable: Boolean(anikotoUrl || fallbackUrl),
-      alternateAudioUrl: alternateAudioUrl || null,
-      audioAvailable,
+      alternateAudioUrl,
+      audioAvailable: anikotoPlayback?.episodeFound
+        ? anikotoPlayback.audioAvailable
+        : true,
       malId: malEmbedId,
       malEpisode: malEmbedEp,
       anilistId: anilistId ?? null,
