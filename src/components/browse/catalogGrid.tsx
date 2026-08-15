@@ -13,17 +13,22 @@ import {
 type CatalogGridProps = {
   items: ContentItem[];
   defaultType?: "movie" | "tv";
+  gridClassName?: string;
 };
 
 export default function CatalogGrid({
   items,
   defaultType = "movie",
+  gridClassName,
 }: CatalogGridProps) {
   const { mode } = useCatalogCardStyle();
   const horizontal = mode === "horizontal";
+  const gridClass =
+    gridClassName ??
+    (horizontal ? CATALOG_GRID_HORIZONTAL : CATALOG_GRID_VERTICAL);
 
   return (
-    <div className={horizontal ? CATALOG_GRID_HORIZONTAL : CATALOG_GRID_VERTICAL}>
+    <div className={gridClass}>
       {items.map((item, index) => {
         const title = item.title ?? item.name ?? "Untitled";
         const releaseDate = item.release_date ?? item.first_air_date ?? "";

@@ -1,9 +1,14 @@
 import React from "react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  PAGE_CARD_FOOTER,
+  PAGE_CARD_LABEL,
+  PAGE_CARD_TITLE,
+} from "@/lib/pageLayout";
 
 export const PAGE_CARD =
-  "rounded-xl border border-white/10 bg-black/40 p-5 backdrop-blur-md";
+  "rounded-xl border border-default-200/40 bg-default-50/80 p-5 backdrop-blur-md dark:border-white/10 dark:bg-black/40";
 
 type PageCardProps = {
   title: string;
@@ -17,16 +22,21 @@ export function PageCard({ title, icon, action, children, footer }: PageCardProp
   return (
     <section className={PAGE_CARD}>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+        <h2 className={PAGE_CARD_TITLE}>
           {icon ? (
-            <HugeiconsIcon icon={icon} size={18} className="shrink-0 text-white/50" aria-hidden />
+            <HugeiconsIcon
+              icon={icon}
+              size={18}
+              className="shrink-0 text-default-400"
+              aria-hidden
+            />
           ) : null}
           <span>{title}</span>
         </h2>
         {action ?? null}
       </div>
       <div className="mt-4 space-y-5">{children}</div>
-      {footer ? <p className="mt-4 text-xs leading-relaxed text-white/45">{footer}</p> : null}
+      {footer ? <p className={`mt-4 ${PAGE_CARD_FOOTER}`}>{footer}</p> : null}
     </section>
   );
 }
@@ -56,13 +66,20 @@ export function PageCardRow({
           : "flex flex-col gap-3"
       }
     >
-      <p className="flex items-center gap-2 text-sm text-white/80">
+      <p className={PAGE_CARD_LABEL}>
         {icon ? (
-          <HugeiconsIcon icon={icon} size={16} className="shrink-0 text-white/50" aria-hidden />
+          <HugeiconsIcon
+            icon={icon}
+            size={16}
+            className="shrink-0 text-default-400"
+            aria-hidden
+          />
         ) : null}
         <span>{label}</span>
       </p>
-      <div className={stackOnMobile ? "sm:flex sm:justify-end" : "w-full"}>{children}</div>
+      <div className={stackOnMobile ? "sm:flex sm:justify-end" : "w-full"}>
+        {children}
+      </div>
     </div>
   );
 }

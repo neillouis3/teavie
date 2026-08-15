@@ -21,9 +21,11 @@ export const RAIL_TRACK = '-ml-3';
 export const RAIL_CAROUSEL_ITEM_VERTICAL =
   `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[32%] md:basis-1/5 lg:basis-[calc((100%-6rem)/8.5)]`;
 
-/** Detail modal rails: ~5 cards across at `lg`. */
+/** Detail modal rails: 5 cards across from `md`. */
 export const DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL =
-  `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[32%] md:basis-1/4 lg:basis-1/5`;
+  "basis-[45%] pl-3 sm:basis-[32%] md:basis-1/5 lg:basis-1/5";
+
+export const DETAIL_RAIL_MAX_ITEMS = 5;
 
 export const RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE =
   `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[30%] md:basis-1/4 lg:basis-[calc((100%-6rem)/8.5)]`;
@@ -42,12 +44,23 @@ export const NEW_ON_TEAVIE_MAX_ITEMS = 20;
 /** Title → cards (12px). */
 export const RAIL_INNER_CLASS = 'flex w-full flex-col gap-3';
 
+/** Detail-page rails below the hero (collection, you might like). */
+export const DETAIL_RAIL_SECTION_CLASS = 'mt-10 flex w-full flex-col gap-3 pt-8';
+
 /** Between stacked rails (32px). */
 export const RAIL_STACK_CLASS = 'flex w-full flex-col gap-8';
 
 /** Centered library grid — portrait cards in a narrow column. */
 export const LIBRARY_GRID_CLASS =
   'mx-auto grid w-full max-w-4xl grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
+
+/** Collection page — centered row of portrait cards (handles short lists). */
+export const COLLECTION_PAGE_GRID_CLASS =
+  'mx-auto flex w-full max-w-4xl flex-wrap justify-center gap-x-5 gap-y-8';
+
+/** Person page filmography — 6 columns from lg, equal gutters. */
+export const PERSON_FILMOGRAPHY_GRID_CLASS =
+  'grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
 
 /** Full-bleed category hub rails (no content gutter). */
 export const FLUSH_RAIL_TRACK = 'ml-0 gap-3';

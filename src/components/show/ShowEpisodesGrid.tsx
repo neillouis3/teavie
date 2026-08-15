@@ -9,6 +9,19 @@ import { formatRuntimeLabel } from "@/components/ui/catalogMediaPanel";
 import { isEpisodeUpcoming } from "@/lib/episodeRelease";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
 import { formatWatchEpKey } from "@/lib/watchProgress";
+import {
+  CATALOG_PAGE_HEADER,
+  PAGE_BODY,
+  PAGE_CONTENT_OUTER,
+  PAGE_FOOTER,
+  PAGE_FOOTER_BODY,
+  PAGE_FOOTER_SUBTITLE,
+  PAGE_FOOTER_TITLE,
+  PAGE_META,
+  PAGE_SEARCH_INPUT,
+  PAGE_SECTION,
+  PAGE_TITLE_CENTERED,
+} from "@/lib/pageLayout";
 
 type ShowEpisodesGridProps = {
   title: string;
@@ -128,10 +141,10 @@ export default function ShowEpisodesGrid({
 
   return (
     <div className="relative w-full">
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col px-4 pb-20 pt-20 sm:px-6 lg:px-8 lg:pt-24">
-        <header className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+      <div className={PAGE_CONTENT_OUTER}>
+        <header className={CATALOG_PAGE_HEADER}>
           {logoUrl ? (
-            <div className="mb-6 flex h-24 w-full max-w-md items-end justify-center sm:h-28 md:h-32">
+            <div className="mb-4 flex h-20 w-full max-w-md items-end justify-center sm:h-24 md:h-28">
               <img
                 src={logoUrl}
                 alt={title}
@@ -139,20 +152,16 @@ export default function ShowEpisodesGrid({
               />
             </div>
           ) : (
-            <h1 className="max-w-2xl text-3xl font-bold uppercase tracking-[0.08em] text-white sm:text-4xl md:text-5xl">
-              {title}
-            </h1>
+            <h1 className={PAGE_TITLE_CENTERED}>{title}</h1>
           )}
 
           {metaParts.length > 0 ? (
-            <p className="mt-4 text-xs font-medium uppercase tracking-[0.14em] text-white/45 sm:text-sm">
-              {metaParts.join("   ")}
-            </p>
+            <p className={PAGE_META}>{metaParts.join(" · ")}</p>
           ) : null}
 
           {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
             <nav
-              className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
+              className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
               aria-label="Seasons"
             >
               {releasedSeasons.map((season) => {
@@ -164,8 +173,8 @@ export default function ShowEpisodesGrid({
                     onClick={() => handleSeasonSelect(season.season_number)}
                     className={`text-sm transition-colors ${
                       active
-                        ? "font-medium text-white"
-                        : "text-white/40 hover:text-white/70"
+                        ? "font-medium text-foreground"
+                        : "text-default-500 hover:text-foreground/80"
                     }`}
                   >
                     Season {season.season_number}
@@ -175,14 +184,14 @@ export default function ShowEpisodesGrid({
             </nav>
           ) : null}
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             <button
               type="button"
               onClick={() => setUnwatchedOnly((prev) => !prev)}
               className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs transition-colors ${
                 unwatchedOnly
-                  ? "border-white/25 bg-white/10 text-white"
-                  : "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white/80"
+                  ? "border-default-300 bg-default-100/60 text-foreground dark:border-white/25 dark:bg-white/10 dark:text-white"
+                  : "border-default-200/50 bg-default-100/30 text-default-500 hover:text-foreground dark:border-white/10 dark:bg-white/5 dark:hover:text-white/80"
               }`}
             >
               Unwatched
@@ -191,28 +200,28 @@ export default function ShowEpisodesGrid({
               <HugeiconsIcon
                 icon={Search01Icon}
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-default-400"
               />
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search"
-                className="h-8 w-36 rounded-full border border-white/10 bg-white/5 py-0 pl-8 pr-3 text-xs text-white placeholder:text-white/35 focus:border-white/25 focus:outline-none sm:w-44"
+                className={PAGE_SEARCH_INPUT}
               />
             </div>
           </div>
         </header>
 
-        <section className="mt-12 w-full" aria-label="Episodes">
+        <section className={PAGE_SECTION} aria-label="Episodes">
           {loading ? (
             <EpisodeGridSkeleton />
           ) : error ? (
-            <p className="text-center text-sm text-white/50">
+            <p className={`text-center ${PAGE_BODY}`}>
               Could not load episodes. Try again later.
             </p>
           ) : filteredEpisodes.length === 0 ? (
-            <p className="text-center text-sm text-white/50">
+            <p className={`text-center ${PAGE_BODY}`}>
               {searchQuery.trim() || unwatchedOnly
                 ? "No episodes match your filters."
                 : "No episodes available yet."}
@@ -254,18 +263,18 @@ export default function ShowEpisodesGrid({
                       )}
                     </div>
 
-                    <p className="mt-3 text-xs text-white/45">
+                    <p className="mt-3 text-xs text-default-500">
                       Season {row.season}, Episode {row.episode}
                     </p>
-                    <h3 className="mt-1 text-base font-semibold leading-snug text-white">
+                    <h3 className="mt-1 text-sm font-normal leading-snug text-foreground">
                       {row.name}
                     </h3>
                     {row.overview?.trim() ? (
-                      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-white/55">
+                      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-default-500">
                         {row.overview}
                       </p>
                     ) : null}
-                    <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/45">
+                    <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-default-500">
                       {runtime ? <span>{runtime}</span> : null}
                       {runtime && airDate ? (
                         <span aria-hidden className="text-white/25">
@@ -298,17 +307,13 @@ export default function ShowEpisodesGrid({
         </section>
 
         {overview?.trim() ? (
-          <footer className="mx-auto mt-16 w-full max-w-2xl text-center">
-            <h2 className="text-lg font-semibold text-white">
-              Season {selectedSeason}
-            </h2>
-            <p className="mt-1 text-sm text-white/45">
+          <footer className={PAGE_FOOTER}>
+            <h2 className={PAGE_FOOTER_TITLE}>Season {selectedSeason}</h2>
+            <p className={PAGE_FOOTER_SUBTITLE}>
               {currentSeasonCount} Episode
               {currentSeasonCount === 1 ? "" : "s"}
             </p>
-            <p className="mt-5 text-sm leading-relaxed text-white/55">
-              {overview.trim()}
-            </p>
+            <p className={PAGE_FOOTER_BODY}>{overview.trim()}</p>
           </footer>
         ) : null}
       </div>

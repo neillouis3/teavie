@@ -5,6 +5,11 @@ import Link from "next/link";
 import { Button } from "@heroui/react";
 import ShowEpisodesGrid from "@/components/show/ShowEpisodesGrid";
 import PageBlurredBackdrop from "@/components/ui/pageBlurredBackdrop";
+import {
+  PAGE_CONTENT_OUTER,
+  PAGE_SHELL_MIN,
+  PAGE_TITLE,
+} from "@/lib/pageLayout";
 import { ShowEpisodePickerProvider } from "@/components/show/ShowEpisodePicker";
 
 type EpisodePickerProviderProps = Omit<
@@ -38,12 +43,12 @@ export default function ShowEpisodesView({
   onNavigateToEpisode,
 }: ShowEpisodesViewProps) {
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden pb-24">
+    <div className={PAGE_SHELL_MIN}>
       <PageBlurredBackdrop imageUrl={backdropUrl} />
       <div className="relative z-10">
         {isAnimeMovie ? (
-          <div className="mx-auto flex max-w-6xl flex-col items-center px-4 py-16 text-center">
-            <h1 className="text-3xl font-bold text-white">{title}</h1>
+          <div className={`${PAGE_CONTENT_OUTER} items-center text-center`}>
+            <h1 className={PAGE_TITLE}>{title}</h1>
             <Button
               as={Link}
               href={watchHref}

@@ -13,6 +13,7 @@ import { FAVORITES_CHANGED_EVENT } from "@/lib/favorites";
 import { fetchUserRailRows } from "@/lib/explorePageData";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import { LIBRARY_GRID_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
+import { PAGE_BODY } from "@/lib/pageLayout";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 import type { ContentItem } from "@/types/content";
@@ -131,26 +132,20 @@ export default function LibraryPage() {
       contentClassName="flex flex-col items-center"
     >
       {isEmpty ? (
-        <div className="flex w-full max-w-lg flex-col items-center space-y-8 text-center">
+        <div className="flex w-full max-w-lg flex-col items-center gap-8 text-center">
           <section className="space-y-2">
-            <ExploreSectionTitle
-              className="justify-center text-lg text-white"
-              variant="explore"
-            >
+            <ExploreSectionTitle className="justify-center" variant="explore">
               Favorites
             </ExploreSectionTitle>
-            <p className="text-sm text-white/50">
+            <p className={PAGE_BODY}>
               Star movies and shows from their detail page or catalog cards.
             </p>
           </section>
           <section className="space-y-2">
-            <ExploreSectionTitle
-              className="justify-center text-lg text-white"
-              variant="explore"
-            >
+            <ExploreSectionTitle className="justify-center" variant="explore">
               Watch later
             </ExploreSectionTitle>
-            <p className="text-sm text-white/50">
+            <p className={PAGE_BODY}>
               Save titles from their detail page when you want to come back.
             </p>
           </section>
@@ -169,10 +164,7 @@ export default function LibraryPage() {
         <div className={`${RAIL_STACK_CLASS} w-full items-center`}>
           {loading && favoriteEntries.length > 0 && favoriteRows.length === 0 ? (
             <section className="flex w-full flex-col items-center gap-4" aria-busy="true">
-              <ExploreSectionTitle
-                className="justify-center text-lg text-white"
-                variant="explore"
-              >
+              <ExploreSectionTitle className="justify-center" variant="explore">
                 Favorites
               </ExploreSectionTitle>
               <LibraryGridSkeleton count={4} />
@@ -190,10 +182,7 @@ export default function LibraryPage() {
 
           {loading && watchLaterEntries.length > 0 && watchLaterRows.length === 0 ? (
             <section className="flex w-full flex-col items-center gap-4" aria-busy="true">
-              <ExploreSectionTitle
-                className="justify-center text-lg text-white"
-                variant="explore"
-              >
+              <ExploreSectionTitle className="justify-center" variant="explore">
                 Watch later
               </ExploreSectionTitle>
               <LibraryGridSkeleton count={3} />

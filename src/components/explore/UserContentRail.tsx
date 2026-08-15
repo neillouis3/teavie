@@ -80,7 +80,7 @@ export default function UserContentRail<T extends ContentItem>({
       >
         <ExploreSectionTitle
           variant="explore"
-          className={cn("justify-center text-lg text-white", sectionTitleClassName)}
+          className={cn("justify-center", sectionTitleClassName)}
         >
           {title}
         </ExploreSectionTitle>

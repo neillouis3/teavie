@@ -2,6 +2,8 @@
 
 import React from "react";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
+import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
+import { RAIL_INNER_CLASS } from "@/lib/catalogGrid";
 
 type MovieTrailerEmbedProps = {
   src: string;
@@ -20,10 +22,10 @@ export default function MovieTrailerEmbed({
 }: MovieTrailerEmbedProps) {
   if (variant === "details") {
     return (
-      <section className="flex w-full flex-col gap-3" aria-label="Trailer">
-        <h2 className="text-xl tracking-tight text-foreground sm:text-2xl">
+      <section className={RAIL_INNER_CLASS} aria-label="Trailer">
+        <ExploreSectionTitle variant="explore" hideIcon>
           Trailer
-        </h2>
+        </ExploreSectionTitle>
         <div className={TRAILER_DETAILS_SHELL}>
           <VideoEmbedFrame
             src={src}

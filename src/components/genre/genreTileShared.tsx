@@ -160,7 +160,7 @@ export function GenreBrowseAllTile() {
         aria-hidden
       />
       <div className="relative z-20 flex h-full w-full flex-col items-center justify-center text-center px-2">
-        <span className="text-sm font-bold leading-tight text-white drop-shadow-sm">
+        <span className="text-sm font-normal leading-tight text-white drop-shadow-sm">
           Browse genres
         </span>
         <span className="mt-0.5 text-[11px] font-medium text-white/80">View all</span>
@@ -190,7 +190,7 @@ export function GenreSquareTile({
         aria-hidden
       />
       <div className="relative z-20 mt-auto flex flex-col items-start text-left">
-        <span className="text-xs font-bold leading-tight text-white drop-shadow-sm sm:text-sm">
+        <span className="text-xs font-normal leading-tight text-white drop-shadow-sm sm:text-sm">
           {genre.name}
         </span>
       </div>

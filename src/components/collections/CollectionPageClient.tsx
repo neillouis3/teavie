@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import CatalogGrid from "@/components/browse/catalogGrid";
-import CatalogGridLoading from "@/components/browse/skeleton/catalogGridLoading";
-import { CONTENT_INSET_X } from "@/lib/contentInset";
+import CollectionTitlesGrid from "@/components/collections/CollectionTitlesGrid";
+import PageBlurredBackdrop from "@/components/ui/pageBlurredBackdrop";
+import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
+import {
+  PAGE_BODY,
+  PAGE_CONTENT_OUTER,
+  PAGE_SHELL_MIN,
+  PAGE_TITLE,
+} from "@/lib/pageLayout";
 import type { ContentItem } from "@/types/content";
 
 type CollectionPageProps = {
@@ -24,19 +29,50 @@ type CollectionPayload = {
   items: ContentItem[];
 };
 
+const COLLECTION_PAGE_CACHE_PREFIX = "teavie.cache.collection-page.v1:";
+
+function collectionBackdropUrl(collection: CollectionPayload["collection"]) {
+  if (!collection) return null;
+  return (
+    tmdbImageUrl(collection.backdrop_path) ||
+    tmdbImageUrl(collection.poster_path) ||
+    null
+  );
+}
+
 export default function CollectionPageClient({ collectionId }: CollectionPageProps) {
-  const [payload, setPayload] = useState<CollectionPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `${COLLECTION_PAGE_CACHE_PREFIX}${collectionId}`;
+
+  const [payload, setPayload] = useState<CollectionPayload | null>(() => {
+    if (typeof window === "undefined") return null;
+    return readClientDayCache<CollectionPayload>(cacheKey);
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !readClientDayCache<CollectionPayload>(cacheKey);
+  });
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    document.title = "Collection - Teavie";
-  }, []);
+    document.title = payload?.collection?.name
+      ? `${payload.collection.name} - Teavie`
+      : "Collection - Teavie";
+  }, [payload?.collection?.name]);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(false);
+    const cached = readClientDayCache<CollectionPayload>(cacheKey);
+
+    if (cached) {
+      setPayload(cached);
+      setLoading(false);
+      setError(false);
+    } else {
+      setPayload(null);
+      setLoading(true);
+      setError(false);
+    }
+
     void fetch(
       `/api/movie/collection?collectionId=${encodeURIComponent(collectionId)}&includeCurrent=1`
     )
@@ -44,108 +80,65 @@ export default function CollectionPageClient({ collectionId }: CollectionPagePro
       .then((data: CollectionPayload) => {
         if (cancelled) return;
         setPayload(data);
-        if (data.collection?.name) {
-          document.title = `${data.collection.name} - Teavie`;
-        }
+        setError(false);
+        if (data.collection) writeClientDayCache(cacheKey, data);
       })
       .catch(() => {
-        if (!cancelled) setError(true);
+        if (cancelled) return;
+        if (!cached?.collection) setError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [collectionId]);
+  }, [cacheKey, collectionId]);
 
-  const collection = payload?.collection;
+  const collection = payload?.collection ?? null;
   const items = payload?.items ?? [];
-  const backdrop = tmdbImageUrl(collection?.backdrop_path);
-  const poster = tmdbImageUrl(collection?.poster_path);
+  const backdropImageUrl = useMemo(
+    () => collectionBackdropUrl(collection),
+    [collection]
+  );
+
+  const title = error
+    ? "Collection not found"
+    : collection?.name ?? "Collection";
+
+  if (error && !collection) {
+    return (
+      <div className={PAGE_SHELL_MIN}>
+        <PageBlurredBackdrop emptyFallback="dark" />
+        <div className={`${PAGE_CONTENT_OUTER} items-center text-center`}>
+          <h1 className={PAGE_TITLE}>{title}</h1>
+          <p className={`mt-2 ${PAGE_BODY}`}>This collection could not be loaded.</p>
+          <Link
+            href="/movies/all"
+            className="mt-6 text-sm text-success hover:underline"
+          >
+            Browse movies
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-background min-h-screen w-full">
-      <div className={`pb-12 ${CONTENT_INSET_X}`}>
-        {loading ? (
-          <div className="py-8">
-            <header className="relative mb-8 overflow-hidden rounded-2xl bg-default-100 dark:bg-default-100/10">
-              <div className="relative h-40 animate-pulse bg-default-200 sm:h-52 md:h-64 dark:bg-default-100/15" />
-              <div className="relative z-10 flex gap-4 px-4 pb-5 -mt-16">
-                <div className="h-28 w-20 shrink-0 animate-pulse rounded-xl bg-default-200 sm:h-36 sm:w-24 dark:bg-default-100/20" />
-                <div className="min-w-0 flex-1 space-y-2 pt-2">
-                  <div className="h-3 w-20 animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
-                  <div className="h-7 w-56 max-w-full animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
-                  <div className="h-4 w-full max-w-md animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
-                  <div className="h-3 w-32 animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
-                </div>
-              </div>
-            </header>
-            <CatalogGridLoading />
-          </div>
-        ) : error || !collection ? (
-          <div className="py-20 text-center">
-            <p className="text-sm text-default-500">Collection not found.</p>
-            <Link href="/movies/all" className="mt-3 inline-block text-sm text-success hover:underline">
-              Browse movies
-            </Link>
-          </div>
-        ) : (
-          <>
-            <header className="relative mb-8 overflow-hidden rounded-2xl bg-default-100 dark:bg-default-100/10">
-              {backdrop ? (
-                <div className="relative h-40 sm:h-52 md:h-64">
-                  <Image
-                    src={backdrop}
-                    alt=""
-                    fill
-                    className="object-cover object-center"
-                    sizes="(max-width: 768px) 100vw, 80rem"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
-                </div>
-              ) : null}
-              <div
-                className={`flex gap-4 px-4 pb-5 ${backdrop ? "-mt-16 relative z-10" : "pt-5"}`}
-              >
-                {poster ? (
-                  <div className="relative h-28 w-20 shrink-0 overflow-hidden rounded-xl shadow-lg sm:h-36 sm:w-24">
-                    <Image
-                      src={poster}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="96px"
-                    />
-                  </div>
-                ) : null}
-                <div className="min-w-0 pt-2">
-                  <p className="text-xs uppercase tracking-wide text-default-500">Collection</p>
-                  <h1 className="text-xl font-normal tracking-tight text-foreground sm:text-2xl">
-                    {collection.name}
-                  </h1>
-                  {collection.overview ? (
-                    <p className="mt-2 line-clamp-3 max-w-3xl text-sm text-default-500">
-                      {collection.overview}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 text-xs text-default-400">
-                    {items.length.toLocaleString()} titles in catalog
-                  </p>
-                </div>
-              </div>
-            </header>
-
-            {items.length === 0 ? (
-              <p className="py-12 text-center text-sm text-default-500">
-                No titles from this collection are in the catalog yet.
-              </p>
-            ) : (
-              <CatalogGrid items={items} defaultType="movie" />
-            )}
-          </>
-        )}
+    <div className={PAGE_SHELL_MIN}>
+      <PageBlurredBackdrop
+        imageUrl={backdropImageUrl}
+        emptyFallback="dark"
+      />
+      <div className="relative z-10">
+        <CollectionTitlesGrid
+          title={title}
+          overview={collection?.overview}
+          items={items}
+          loading={loading}
+          error={false}
+        />
       </div>
     </div>
   );

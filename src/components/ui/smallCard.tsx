@@ -107,8 +107,10 @@ export default function SmallCard({
           className="object-cover transition-opacity duration-300 group-hover:opacity-90"
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-default-500">
-          No poster
+        <div className="flex h-full w-full items-center justify-center bg-[#141414] px-3 py-4 text-center">
+          <p className="line-clamp-4 text-sm leading-snug text-white/45">
+            {displayTitle}
+          </p>
         </div>
       )}
       {enableHoverActions ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 import SmallCard from "@/components/ui/smallCard";
@@ -20,6 +20,8 @@ import {
 import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import {
   DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL,
+  DETAIL_RAIL_MAX_ITEMS,
+  DETAIL_RAIL_SECTION_CLASS,
   RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
   RAIL_TRACK,
@@ -79,6 +81,10 @@ export default function MovieCollectionRail({
     : bleed
       ? RAIL_CAROUSEL_ITEM_VERTICAL
       : DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL;
+  const visibleItems = useMemo(
+    () => (bleed ? items : items.slice(0, DETAIL_RAIL_MAX_ITEMS)),
+    [bleed, items]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +105,7 @@ export default function MovieCollectionRail({
       if (existing) return existing;
 
       const promise = fetch(
-        `/api/movie/collection?movieId=${encodeURIComponent(movieId)}`
+        `/api/movie/collection?movieId=${encodeURIComponent(movieId)}&limit=${DETAIL_RAIL_MAX_ITEMS}`
       )
         .then((res) =>
           res.ok ? res.json() : { collection: null, items: [] }
@@ -146,66 +152,66 @@ export default function MovieCollectionRail({
     ? `/collections/${collection.id}`
     : undefined;
 
-  const titleNode = viewAllHref ? (
-    <Link href={viewAllHref} className="hover:text-success">
-      {title}
-    </Link>
-  ) : (
-    title
-  );
-
   return (
-    <CatalogRailShell bleed={bleed}>
-      <ExploreSectionTitle variant="explore">{titleNode}</ExploreSectionTitle>
-      {loading && items.length === 0 ? (
-        <CatalogRailSkeleton count={6} horizontal={horizontal} bleed={bleed} detail={!bleed} />
-      ) : (
-        <>
-        <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
-          <CarouselContent
-            viewportClassName={catalogRailViewportClass(bleed)}
-            className={RAIL_TRACK}
-          >
-            {bleed ? <SidebarBleedStartSpacer /> : null}
-            {items.map((item) => (
-              <CarouselItem key={String(item.id)} className={itemClass}>
-                {horizontal ? (
-                  <HorizontalCatalogCard
-                    id={String(item.id)}
-                    title={item.title ?? "Untitled"}
-                    year={itemYear(item)}
-                    posterPath={item.poster_path ?? ""}
-                    backdropPath={item.backdrop_path ?? ""}
-                    type="movie"
-                  />
-                ) : (
-                  <SmallCard
-                    id={String(item.id)}
-                    title={item.title ?? "Untitled"}
-                    year={itemYear(item)}
-                    posterPath={item.poster_path ?? ""}
-                    runtimeSeconds={item.runtimeSeconds}
-                    voteAverage={item.vote_average}
-                    seasonAmount={0}
-                    type="movie"
-                  />
-                )}
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-        {viewAllHref && items.length > 0 ? (
-          <p className="mt-2 text-right">
-            <Link
-              href={viewAllHref}
-              className="text-sm text-success hover:underline"
-            >
-              View full collection
-            </Link>
-          </p>
-        ) : null}
-        </>
-      )}
-    </CatalogRailShell>
+    <section className={DETAIL_RAIL_SECTION_CLASS} aria-label={title}>
+      <ExploreSectionTitle variant="explore" hideIcon>
+        {title}
+      </ExploreSectionTitle>
+      <CatalogRailShell bleed={bleed}>
+        {loading && items.length === 0 ? (
+          <CatalogRailSkeleton
+            count={DETAIL_RAIL_MAX_ITEMS}
+            horizontal={horizontal}
+            bleed={bleed}
+            detail={!bleed}
+          />
+        ) : (
+          <>
+            <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+              <CarouselContent
+                viewportClassName={catalogRailViewportClass(bleed)}
+                className={RAIL_TRACK}
+              >
+                {bleed ? <SidebarBleedStartSpacer /> : null}
+                {visibleItems.map((item) => (
+                  <CarouselItem key={String(item.id)} className={itemClass}>
+                    {horizontal ? (
+                      <HorizontalCatalogCard
+                        id={String(item.id)}
+                        title={item.title ?? "Untitled"}
+                        year={itemYear(item)}
+                        posterPath={item.poster_path ?? ""}
+                        backdropPath={item.backdrop_path ?? ""}
+                        type="movie"
+                      />
+                    ) : (
+                      <SmallCard
+                        id={String(item.id)}
+                        title={item.title ?? "Untitled"}
+                        year={itemYear(item)}
+                        posterPath={item.poster_path ?? ""}
+                        runtimeSeconds={item.runtimeSeconds}
+                        seasonAmount={0}
+                        type="movie"
+                      />
+                    )}
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+            {viewAllHref && visibleItems.length > 0 ? (
+              <p className="mt-2 text-right">
+                <Link
+                  href={viewAllHref}
+                  className="text-sm text-success hover:underline"
+                >
+                  View full collection
+                </Link>
+              </p>
+            ) : null}
+          </>
+        )}
+      </CatalogRailShell>
+    </section>
   );
 }

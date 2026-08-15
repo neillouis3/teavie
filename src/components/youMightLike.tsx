@@ -19,6 +19,8 @@ import {
 import { CatalogRailSkeleton } from '@/components/catalog/catalogRail';
 import {
   DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL,
+  DETAIL_RAIL_MAX_ITEMS,
+  DETAIL_RAIL_SECTION_CLASS,
   EXPLORE_RAIL_MAX_ITEMS,
   RAIL_CAROUSEL_ITEM_HORIZONTAL,
   RAIL_CAROUSEL_ITEM_VERTICAL,
@@ -28,7 +30,7 @@ import { readClientDayCache, writeClientDayCache } from '@/lib/clientDayCache';
 
 const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
 const YOU_MIGHT_LIKE_MAX_VERTICAL = EXPLORE_RAIL_MAX_ITEMS;
-const YOU_MIGHT_LIKE_DETAIL_MAX = 5;
+const YOU_MIGHT_LIKE_DETAIL_MAX = DETAIL_RAIL_MAX_ITEMS;
 
 const YML_CACHE_PREFIX = 'teavie.cache.yml.v1:';
 
@@ -261,7 +263,7 @@ export default function YouMightLike({
 
   if (loading && visibleItems.length === 0) {
     return (
-      <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="More like this">
+      <section className={DETAIL_RAIL_SECTION_CLASS} aria-label="More like this">
         <ExploreSectionTitle variant="explore" hideIcon>
           More like this
         </ExploreSectionTitle>
@@ -275,7 +277,7 @@ export default function YouMightLike({
   if (visibleItems.length === 0) return null;
 
   return (
-    <section className="mt-10 flex w-full flex-col gap-3 pt-8" aria-label="More like this">
+    <section className={DETAIL_RAIL_SECTION_CLASS} aria-label="More like this">
       <ExploreSectionTitle variant="explore" hideIcon>
         More like this
       </ExploreSectionTitle>

@@ -184,19 +184,20 @@ export async function loadMovieCollectionPayload(collectionId, opts = {}) {
   }
 
   const excludeMovieId = opts.excludeMovieId ?? opts.movieId;
+  const limit =
+    typeof opts.limit === "number" && Number.isFinite(opts.limit) && opts.limit > 0
+      ? Math.min(Math.floor(opts.limit), DEFAULT_LIMIT)
+      : DEFAULT_LIMIT;
 
   let mongoItems = await loadCollectionMoviesFromMongo(id, { excludeMovieId });
 
-  let tmdbCollection = null;
-  if (mongoItems.length < 2) {
-    tmdbCollection = await fetchTmdbCollection(id);
-    if (tmdbCollection?.parts?.length) {
-      const enriched = await enrichTmdbPartsWithCatalog(tmdbCollection.parts, {
-        excludeMovieId,
-      });
-      if (enriched.length > mongoItems.length) {
-        mongoItems = enriched;
-      }
+  const tmdbCollection = await fetchTmdbCollection(id);
+  if (tmdbCollection?.parts?.length) {
+    const enriched = await enrichTmdbPartsWithCatalog(tmdbCollection.parts, {
+      excludeMovieId,
+    });
+    if (enriched.length > 0) {
+      mongoItems = enriched;
     }
   }
 
@@ -216,7 +217,7 @@ export async function loadMovieCollectionPayload(collectionId, opts = {}) {
           ? tmdbCollection.overview.trim()
           : "",
     },
-    items: mongoItems,
+    items: mongoItems.slice(0, limit),
   };
 }
 
@@ -277,6 +278,7 @@ export async function loadMovieCollectionForMovie(movieId, opts = {}) {
 
   const payload = await loadMovieCollectionPayload(collectionMeta.id, {
     excludeMovieId: opts.excludeCurrent !== false ? idStr : undefined,
+    limit: opts.limit,
   });
 
   if (!payload.collection?.name && collectionMeta.name) {

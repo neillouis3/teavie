@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import Link from "next/link";
 import { Avatar } from "@heroui/react";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
 import { avatarInitials } from "@/lib/partyNickname";
@@ -149,7 +150,11 @@ function CreditAvatar({ person, subtitle }: CreditAvatarProps) {
   const photo = tmdbImageUrl(person.profile_path);
 
   return (
-    <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 sm:w-[5rem]">
+    <Link
+      href={`/people/${person.id}`}
+      className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 transition-opacity hover:opacity-85 sm:w-[5rem]"
+      aria-label={`View ${name}'s profile`}
+    >
       <Avatar
         src={photo || undefined}
         name={name}
@@ -170,7 +175,7 @@ function CreditAvatar({ person, subtitle }: CreditAvatarProps) {
           </span>
         ) : null}
       </div>
-    </div>
+    </Link>
   );
 }
 

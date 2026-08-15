@@ -4,6 +4,14 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import PageBlurredBackdrop from "@/components/ui/pageBlurredBackdrop";
 import type { PageShellBackdrop } from "@/lib/pageBackdrop";
+import {
+  PAGE_CONTENT_AFTER_HEADER,
+  PAGE_CONTENT_OUTER,
+  PAGE_DESCRIPTION,
+  PAGE_SHELL_MIN,
+  PAGE_TITLE,
+  USER_PAGE_HEADER,
+} from "@/lib/pageLayout";
 
 type UserPageShellProps = {
   title: string;
@@ -16,6 +24,10 @@ type UserPageShellProps = {
   headerClassName?: string;
   /** Static blurred backdrop (default: library shell). */
   backdrop?: PageShellBackdrop;
+  /** TMDB / hero art for a frosted dynamic backdrop. */
+  backdropImageUrl?: string | null;
+  /** Backdrop while hero art is loading or unavailable. */
+  backdropEmptyFallback?: "shell" | "dark";
 };
 
 /** Library-style shell: blurred backdrop + centered page header. */
@@ -27,31 +39,28 @@ export default function UserPageShell({
   contentClassName,
   headerClassName,
   backdrop = "shell",
+  backdropImageUrl,
+  backdropEmptyFallback = "shell",
 }: UserPageShellProps) {
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden pb-24">
-      <PageBlurredBackdrop variant={backdrop} />
+    <div className={PAGE_SHELL_MIN}>
+      <PageBlurredBackdrop
+        variant={backdrop}
+        imageUrl={backdropImageUrl}
+        emptyFallback={backdropEmptyFallback}
+      />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-4 pb-12 pt-4 sm:px-6 lg:px-8 lg:pt-6">
-        <header
-          className={cn(
-            "mx-auto flex w-full max-w-2xl flex-col items-center text-center",
-            headerClassName
-          )}
-        >
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            {title}
-          </h1>
+      <div className={PAGE_CONTENT_OUTER}>
+        <header className={cn(USER_PAGE_HEADER, headerClassName)}>
+          <h1 className={PAGE_TITLE}>{title}</h1>
           {description ? (
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-white/55">
-              {description}
-            </p>
+            <p className={PAGE_DESCRIPTION}>{description}</p>
           ) : null}
         </header>
 
         <div
           className={cn(
-            "mx-auto mt-8 w-full",
+            PAGE_CONTENT_AFTER_HEADER,
             contentMaxWidth === "6xl" ? "max-w-6xl" : "max-w-2xl",
             contentClassName
           )}

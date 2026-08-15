@@ -24,6 +24,11 @@ import {
   ONBOARDING_LANGUAGES,
   ONBOARDING_CATEGORIES,
 } from "@/lib/onboardingOptions";
+import {
+  PAGE_BODY,
+  PAGE_CARD_FOOTER,
+  PAGE_CARD_TITLE,
+} from "@/lib/pageLayout";
 
 function openPreferenceEditor() {
   window.dispatchEvent(new CustomEvent(ONBOARDING_REQUEST_EVENT));
@@ -248,10 +253,8 @@ export default function ProfilePage() {
         <section className={PAGE_CARD}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-white">
-                Your preferences
-              </h2>
-              <p className="mt-1 text-sm text-white/50">
+              <h2 className={PAGE_CARD_TITLE}>Your preferences</h2>
+              <p className={`mt-1 ${PAGE_BODY}`}>
                 Used for Recommended for you and Explore rails.
               </p>
             </div>
@@ -269,14 +272,14 @@ export default function ProfilePage() {
             <div className="mt-5 space-y-5">
               {preferenceGroups.map((group) => (
                 <div key={group.label} className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-white/45">
+                  <p className="text-xs font-medium uppercase tracking-wide text-default-400">
                     {group.label}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {group.items.map((item) => (
                       <span
                         key={item}
-                        className="inline-flex items-center rounded-md border border-white/10 bg-white/8 px-2.5 py-1 text-sm text-white/85"
+                        className="inline-flex items-center rounded-md border border-default-200/50 bg-default-100/40 px-2.5 py-1 text-sm text-foreground dark:border-white/10 dark:bg-white/8"
                       >
                         {item}
                       </span>
@@ -287,7 +290,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="mt-5 space-y-3">
-              <p className="text-sm text-white/50">
+              <p className={PAGE_BODY}>
                 No preferences yet. Set categories, genres, and languages to
                 personalize Explore.
               </p>
@@ -297,7 +300,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          <p className="mt-5 text-xs leading-relaxed text-white/45">
+          <p className={`mt-5 ${PAGE_CARD_FOOTER}`}>
             Saved to your account and synced across devices.
           </p>
         </section>

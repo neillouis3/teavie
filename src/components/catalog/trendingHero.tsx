@@ -258,7 +258,7 @@ function TrendingHero({
         {showSpotlightSelector ? (
         <div
           ref={spotlightRailRef}
-          className="absolute inset-x-0 bottom-4 z-20 cursor-grab touch-none overflow-x-scroll overscroll-x-contain px-4 [scrollbar-width:none] active:cursor-grabbing [&::-webkit-scrollbar]:hidden lg:px-24"
+          className="absolute inset-x-0 bottom-4 z-20 hidden cursor-grab touch-none overflow-x-scroll overscroll-x-contain px-4 [scrollbar-width:none] active:cursor-grabbing lg:block [&::-webkit-scrollbar]:hidden lg:px-24"
           aria-label="Choose a spotlight title"
           onPointerDown={(event) => {
             spotlightDragRef.current = {

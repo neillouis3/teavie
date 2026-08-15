@@ -9,6 +9,7 @@ import WatchHistoryLogRail from "@/components/explore/watchHistoryLogRail";
 import UserPageShell from "@/components/ui/userPageShell";
 import { watchHistoryLogLabel } from "@/lib/watchHistory";
 import { RAIL_INNER_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
+import { PAGE_BODY } from "@/lib/pageLayout";
 import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
@@ -65,30 +66,24 @@ export default function ActivityPage() {
       contentClassName="flex flex-col items-center"
     >
       {isEmpty ? (
-        <div className="flex w-full max-w-lg flex-col items-center space-y-8 text-center">
+        <div className="flex w-full max-w-lg flex-col items-center gap-8 text-center">
           <section className="space-y-2">
-            <ExploreSectionTitle
-              className="justify-center text-lg text-white"
-              variant="explore"
-            >
+            <ExploreSectionTitle className="justify-center" variant="explore">
               Continue watching
             </ExploreSectionTitle>
-            <p className="text-sm text-white/50">
+            <p className={PAGE_BODY}>
               Titles you play will show up here and on Explore.
             </p>
           </section>
           <section className="space-y-2">
-            <ExploreSectionTitle
-              className="justify-center text-lg text-white"
-              variant="explore"
-            >
+            <ExploreSectionTitle className="justify-center" variant="explore">
               Watch history
             </ExploreSectionTitle>
-            <p className="text-sm text-white/50">
+            <p className={PAGE_BODY}>
               A longer record of movies and shows you have watched.
             </p>
           </section>
-          <p className="text-sm text-white/50">
+          <p className={PAGE_BODY}>
             Favorites and watch later live in{" "}
             <Link href="/library" className="text-success hover:underline">
               Library
@@ -116,8 +111,8 @@ export default function ActivityPage() {
           </section>
         </div>
       ) : loadFailed ? (
-        <div className="flex w-full max-w-lg flex-col items-center space-y-4 text-center">
-          <p className="text-sm text-white/50">
+        <div className="flex w-full max-w-lg flex-col items-center gap-4 text-center">
+          <p className={PAGE_BODY}>
             Couldn&apos;t load your activity.{" "}
             <button
               type="button"

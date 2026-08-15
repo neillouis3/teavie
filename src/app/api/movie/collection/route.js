@@ -10,15 +10,22 @@ export async function GET(req) {
     const movieId = searchParams.get("movieId") ?? searchParams.get("id");
     const collectionId = searchParams.get("collectionId");
     const includeCurrent = searchParams.get("includeCurrent") === "1";
+    const limitRaw = Number.parseInt(searchParams.get("limit") ?? "", 10);
+    const limit =
+      Number.isFinite(limitRaw) && limitRaw > 0
+        ? Math.min(limitRaw, 48)
+        : undefined;
 
     let payload;
     if (collectionId && /^\d+$/.test(collectionId)) {
       payload = await loadMovieCollectionPayload(collectionId, {
         excludeMovieId: includeCurrent ? undefined : movieId,
+        limit,
       });
     } else if (movieId && /^\d+$/.test(String(movieId))) {
       payload = await loadMovieCollectionForMovie(movieId, {
         excludeCurrent: !includeCurrent,
+        limit,
       });
     } else {
       return Response.json(
