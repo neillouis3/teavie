@@ -74,6 +74,19 @@ export async function resolveAnikotoCatalogId({ malId, anilistId }) {
   return null;
 }
 
+function hasEmbedForAudio(row, audio) {
+  const lang = audio === "dub" ? "dub" : "sub";
+  const embeds = row?.embed_url;
+  if (embeds && typeof embeds === "object") {
+    const direct = embeds[lang];
+    if (typeof direct === "string" && direct.startsWith("http")) return true;
+  }
+  if (lang === "sub") {
+    return row?.episode_embed_id != null && String(row.episode_embed_id).trim() !== "";
+  }
+  return false;
+}
+
 function pickEmbedUrl(row, audio) {
   const lang = audio === "dub" ? "dub" : "sub";
   const embedId = row?.episode_embed_id;
@@ -88,26 +101,10 @@ function pickEmbedUrl(row, audio) {
   if (typeof direct === "string" && direct.startsWith("http")) {
     return normalizeMegaPlayEmbedHost(direct);
   }
-  if (typeof embeds.sub === "string" && embeds.sub.startsWith("http")) {
-    return normalizeMegaPlayEmbedHost(embeds.sub);
-  }
-  if (typeof embeds.dub === "string" && embeds.dub.startsWith("http")) {
-    return normalizeMegaPlayEmbedHost(embeds.dub);
-  }
   return null;
 }
 
-/**
- * Fetch episode embed URL from Anikoto catalog + MegaPlay s-2 wrapper.
- * @param {{ malId?: number, anilistId?: number, episode: number, audio: "sub" | "dub" }} params
- * @returns {Promise<string | null>}
- */
-export async function resolveAnikotoFallbackEmbedUrl({
-  malId,
-  anilistId,
-  episode,
-  audio,
-}) {
+async function fetchAnikotoEpisodeRow({ malId, anilistId, episode }) {
   const epNum = Math.max(1, Math.floor(Number(episode)) || 1);
   const catalogId = await resolveAnikotoCatalogId({ malId, anilistId });
   if (!catalogId) return null;
@@ -129,7 +126,37 @@ export async function resolveAnikotoFallbackEmbedUrl({
   const episodes = payload?.data?.episodes;
   if (!Array.isArray(episodes)) return null;
 
-  const row = episodes.find((e) => Number(e?.number) === epNum);
+  return episodes.find((e) => Number(e?.number) === epNum) ?? null;
+}
+
+/**
+ * Whether Anikoto lists an embed for the requested audio on this episode.
+ * @param {{ malId?: number, anilistId?: number, episode: number, audio: "sub" | "dub" }} params
+ * @returns {Promise<boolean | null>} null when episode/catalog cannot be resolved
+ */
+export async function resolveAnikotoAudioAvailable({
+  malId,
+  anilistId,
+  episode,
+  audio,
+}) {
+  const row = await fetchAnikotoEpisodeRow({ malId, anilistId, episode });
+  if (!row) return null;
+  return hasEmbedForAudio(row, audio);
+}
+
+/**
+ * Fetch episode embed URL from Anikoto catalog + MegaPlay s-2 wrapper.
+ * @param {{ malId?: number, anilistId?: number, episode: number, audio: "sub" | "dub" }} params
+ * @returns {Promise<string | null>}
+ */
+export async function resolveAnikotoFallbackEmbedUrl({
+  malId,
+  anilistId,
+  episode,
+  audio,
+}) {
+  const row = await fetchAnikotoEpisodeRow({ malId, anilistId, episode });
   if (!row) return null;
 
   return sanitizeAnimeEmbedUrl(pickEmbedUrl(row, audio));

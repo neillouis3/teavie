@@ -27,7 +27,8 @@ import { useWatchOverlay } from '@/contexts/watchOverlayContext';
  * @param {string} [props.vidukiImdbId]
  * @param {() => void} [props.onLoad]
  * @param {() => void} [props.onEmbedFailure] Called when MegaPlay errors or never reports progress
- * @param {number} [props.embedFailureTimeoutMs] No-progress timeout for MegaPlay embeds
+ * @param {() => void} [props.onEmbedProgress] Called on first MegaPlay progress tick
+ * @param {number} [props.embedFailureTimeoutMs] No-progress timeout after iframe load
  */
 export default function VideoEmbedFrame({
   src,
@@ -41,7 +42,8 @@ export default function VideoEmbedFrame({
   vidukiImdbId,
   onLoad,
   onEmbedFailure,
-  embedFailureTimeoutMs = 8000,
+  onEmbedProgress,
+  embedFailureTimeoutMs = 2200,
 }) {
   const [activeSrc, setActiveSrc] = useState(src);
   const activeSrcRef = useRef(src);
@@ -49,8 +51,25 @@ export default function VideoEmbedFrame({
   const playbackStartedRef = useRef(false);
   const embedProgressRef = useRef(false);
   const embedFailedRef = useRef(false);
+  const failureTimerRef = useRef(null);
   const onEmbedFailureRef = useRef(onEmbedFailure);
+  const onEmbedProgressRef = useRef(onEmbedProgress);
   onEmbedFailureRef.current = onEmbedFailure;
+  onEmbedProgressRef.current = onEmbedProgress;
+
+  const clearFailureTimer = () => {
+    if (failureTimerRef.current != null) {
+      window.clearTimeout(failureTimerRef.current);
+      failureTimerRef.current = null;
+    }
+  };
+
+  const markEmbedProgress = () => {
+    if (embedProgressRef.current) return;
+    embedProgressRef.current = true;
+    clearFailureTimer();
+    onEmbedProgressRef.current?.();
+  };
 
   useEffect(() => {
     setActiveSrc(src);
@@ -58,6 +77,7 @@ export default function VideoEmbedFrame({
     playbackStartedRef.current = false;
     embedProgressRef.current = false;
     embedFailedRef.current = false;
+    clearFailureTimer();
   }, [src]);
 
   const reportEmbedFailure = () => {
@@ -86,12 +106,21 @@ export default function VideoEmbedFrame({
   }, [activeSrc, watchOverlay]);
 
   useEffect(() => {
-    if (!onEmbedFailure || !activeSrc) return undefined;
-    const timer = window.setTimeout(() => {
+    return () => clearFailureTimer();
+  }, []);
+
+  const scheduleFailureTimer = () => {
+    if (!onEmbedFailureRef.current || !activeSrcRef.current) return;
+    clearFailureTimer();
+    failureTimerRef.current = window.setTimeout(() => {
       reportEmbedFailure();
     }, embedFailureTimeoutMs);
-    return () => window.clearTimeout(timer);
-  }, [activeSrc, embedFailureTimeoutMs, onEmbedFailure]);
+  };
+
+  const handleIframeLoad = () => {
+    onLoad?.();
+    scheduleFailureTimer();
+  };
 
   useEffect(() => {
     const handler = (event) => {
@@ -105,7 +134,7 @@ export default function VideoEmbedFrame({
       const mega = parseMegaPlayMessage(event);
       if (mega) {
         if (mega.kind === 'progress') {
-          embedProgressRef.current = true;
+          markEmbedProgress();
           maybeNotifyPlaybackStart(mega.currentTime);
         } else if (mega.kind === 'error') {
           reportEmbedFailure();
@@ -146,7 +175,7 @@ export default function VideoEmbedFrame({
       allowFullScreen
       referrerPolicy="no-referrer-when-downgrade"
       className={cn(EMBED_IFRAME_CLASS, className)}
-      onLoad={onLoad}
+      onLoad={handleIframeLoad}
     />
   );
 }

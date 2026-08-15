@@ -4,7 +4,7 @@ import {
   sanitizeAnimeEmbedUrl,
 } from "@/lib/animePlayEmbed";
 import { normalizeSplitCourMalEpisode, resolveSplitCourPlayback, splitCourGroupForMal, animePlayMalEmbedTarget } from "@/lib/animeSplitCour";
-import { resolveAnikotoFallbackEmbedUrl } from "@/lib/anikotoApi";
+import { resolveAnikotoFallbackEmbedUrl, resolveAnikotoAudioAvailable } from "@/lib/anikotoApi";
 import { lookupKometaByMalId } from "@/lib/kometaAnimeIds";
 import { anilistIdFromMalId } from "@/lib/malToAnilistId";
 
@@ -69,6 +69,7 @@ export async function GET(req) {
     const fallbackUrl = megaPlayAlt || sanitizeAnimeEmbedUrl(malUrl);
 
     let anikotoUrl = null;
+    let audioAvailable = true;
     if (anilistId) {
       try {
         const raw = await resolveAnikotoFallbackEmbedUrl({
@@ -78,6 +79,16 @@ export async function GET(req) {
           audio,
         });
         anikotoUrl = sanitizeAnimeEmbedUrl(raw);
+
+        if (audio === "dub") {
+          const dubListed = await resolveAnikotoAudioAvailable({
+            malId: playback.malId,
+            anilistId,
+            episode: playback.malEpisode,
+            audio: "dub",
+          });
+          if (dubListed === false) audioAvailable = false;
+        }
       } catch (e) {
         console.error("Anikoto fallback lookup failed:", e);
       }
@@ -88,6 +99,7 @@ export async function GET(req) {
       fallbackUrl: anikotoUrl || fallbackUrl,
       fallbackAvailable: Boolean(anikotoUrl || fallbackUrl),
       alternateAudioUrl: alternateAudioUrl || null,
+      audioAvailable,
       malId: malEmbedId,
       malEpisode: malEmbedEp,
       anilistId: anilistId ?? null,
