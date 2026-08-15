@@ -44,8 +44,11 @@ export const NEW_ON_TEAVIE_MAX_ITEMS = 20;
 /** Title → cards (12px). */
 export const RAIL_INNER_CLASS = 'flex w-full flex-col gap-3';
 
-/** Detail-page rails below the hero (collection, you might like). */
-export const DETAIL_RAIL_SECTION_CLASS = 'mt-10 flex w-full flex-col gap-3 pt-8';
+/** Stacked blocks on movie/show detail views and modals. */
+export const DETAIL_CONTENT_STACK_CLASS = 'flex w-full flex-col gap-8';
+
+/** Detail-page rails below the hero (collection, you might like, trailer). */
+export const DETAIL_RAIL_SECTION_CLASS = 'flex w-full flex-col gap-3';
 
 /** Between stacked rails (32px). */
 export const RAIL_STACK_CLASS = 'flex w-full flex-col gap-8';

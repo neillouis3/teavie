@@ -6,6 +6,7 @@ import ShowDetailsHero, {
 } from "@/components/show/ShowDetailsHero";
 import MovieTrailerEmbed from "@/components/movie/MovieTrailerEmbed";
 import { SHOW_CONTENT_INSET_X } from "@/lib/contentInset";
+import { DETAIL_CONTENT_STACK_CLASS } from "@/lib/catalogGrid";
 
 type ShowDetailsViewProps = {
   detailsModal: boolean;
@@ -60,7 +61,7 @@ export default function ShowDetailsView({
         />
       ) : null}
       <div
-        className={`relative z-10 flex w-full flex-col gap-6 ${SHOW_CONTENT_INSET_X} ${
+        className={`relative z-10 ${DETAIL_CONTENT_STACK_CLASS} ${SHOW_CONTENT_INSET_X} ${
           hasDetailsHero
             ? SHOW_DETAILS_HERO_OVERLAP
             : "bg-background/92 dark:bg-background/88"

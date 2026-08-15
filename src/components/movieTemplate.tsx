@@ -38,6 +38,7 @@ import ShowDetailsHero, {
 } from '@/components/show/ShowDetailsHero';
 import { pickYoutubeTrailerEmbedUrl, type TmdbVideosPayload } from '@/lib/tmdbVideos';
 import { MOVIE_CONTENT_INSET_X } from '@/lib/contentInset';
+import { DETAIL_CONTENT_STACK_CLASS } from '@/lib/catalogGrid';
 import { useTmdbTitleLogo } from '@/hooks/useTmdbTitleLogo';
 import {
   type CatalogDetailsSeed,
@@ -594,7 +595,7 @@ export default function MovieTemplate({
           />
         ) : null}
         <div
-          className={`relative z-10 flex w-full flex-col gap-6 ${MOVIE_CONTENT_INSET_X} ${
+          className={`relative z-10 ${DETAIL_CONTENT_STACK_CLASS} ${MOVIE_CONTENT_INSET_X} ${
             hasDetailsHero
               ? SHOW_DETAILS_HERO_OVERLAP
               : 'bg-background/92 dark:bg-background/88'

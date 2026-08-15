@@ -9,6 +9,7 @@ import {
   SHOW_DETAILS_MODAL_HERO_MB,
 } from "@/components/show/ShowDetailsHero";
 import { SHOW_CONTENT_INSET_X } from "@/lib/contentInset";
+import { DETAIL_CONTENT_STACK_CLASS } from "@/lib/catalogGrid";
 
 /**
  * Shared loading shell for movie + show details pages.
@@ -60,7 +61,7 @@ export default function CatalogDetailsSkeleton({
         />
       </section>
       <div
-        className={`relative z-10 flex w-full flex-col gap-6 ${SHOW_CONTENT_INSET_X} ${SHOW_DETAILS_HERO_OVERLAP}`}
+        className={`relative z-10 ${DETAIL_CONTENT_STACK_CLASS} ${SHOW_CONTENT_INSET_X} ${SHOW_DETAILS_HERO_OVERLAP}`}
       >
         <CatalogMediaPanelSkeleton />
         {modal ? null : (

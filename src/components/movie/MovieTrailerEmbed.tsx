@@ -3,7 +3,11 @@
 import React from "react";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
 import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import { RAIL_INNER_CLASS } from "@/lib/catalogGrid";
+import {
+  DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL,
+  DETAIL_RAIL_MAX_ITEMS,
+  DETAIL_RAIL_SECTION_CLASS,
+} from "@/lib/catalogGrid";
 
 type MovieTrailerEmbedProps = {
   src: string;
@@ -13,7 +17,7 @@ type MovieTrailerEmbedProps = {
 };
 
 const TRAILER_DETAILS_SHELL =
-  "relative aspect-video w-full max-h-[52vh] max-w-[min(100%,calc(52vh*16/9))] overflow-hidden rounded-xl bg-black sm:max-h-[60vh] sm:max-w-[min(100%,calc(60vh*16/9))] lg:max-h-[min(56vh,640px)] lg:max-w-[min(100%,calc(min(56vh,640px)*16/9))]";
+  "relative aspect-video w-full overflow-hidden rounded-xl bg-black";
 
 export default function MovieTrailerEmbed({
   src,
@@ -22,7 +26,7 @@ export default function MovieTrailerEmbed({
 }: MovieTrailerEmbedProps) {
   if (variant === "details") {
     return (
-      <section className={RAIL_INNER_CLASS} aria-label="Trailer">
+      <section className={DETAIL_RAIL_SECTION_CLASS} aria-label="Trailer">
         <ExploreSectionTitle variant="explore" hideIcon>
           Trailer
         </ExploreSectionTitle>
