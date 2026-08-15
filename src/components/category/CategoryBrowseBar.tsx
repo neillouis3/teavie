@@ -49,7 +49,7 @@ export default function CategoryBrowseBar({
       <nav
         aria-label={`Browse ${category.label}`}
         className={cn(
-          "pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-start px-4 lg:bottom-6 lg:px-24",
+          "pointer-events-none absolute inset-x-0 bottom-4 z-20 flex translate-y-6 justify-start px-4 lg:bottom-6 lg:translate-y-0 lg:px-24",
           className
         )}
       >

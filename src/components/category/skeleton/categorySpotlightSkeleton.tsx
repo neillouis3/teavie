@@ -23,7 +23,7 @@ export default function CategorySpotlightSkeleton() {
       />
       <nav
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-start px-4 lg:bottom-6 lg:px-24"
+        className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex translate-y-6 justify-start px-4 lg:bottom-6 lg:translate-y-0 lg:px-24"
       >
         <div className="h-11 w-40 animate-pulse rounded-full bg-black/25 dark:bg-white/10" />
       </nav>
