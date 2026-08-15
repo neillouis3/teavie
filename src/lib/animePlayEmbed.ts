@@ -1,5 +1,8 @@
-/** MegaPlay anime embed — https://animeplay.cfd/ */
-export const ANIMEPLAY_BASE = "https://animeplay.cfd";
+/** MegaPlay anime embed — https://megaplay.buzz/ (animeplay.cfd mirror is suspended). */
+export const MEGAPLAY_EMBED_BASE = "https://megaplay.buzz";
+
+/** @deprecated alias — use MEGAPLAY_EMBED_BASE */
+export const ANIMEPLAY_BASE = MEGAPLAY_EMBED_BASE;
 
 export type AnimeAudioLanguage = "sub" | "dub";
 
@@ -9,8 +12,27 @@ export function animeAudioLabel(language: AnimeAudioLanguage): string {
   return language === "dub" ? "Dub" : "Sub";
 }
 
+/** Rewrite suspended / legacy animeplay.cfd hosts to MegaPlay. */
+export function normalizeMegaPlayEmbedHost(url: string): string {
+  return String(url ?? "").replace(/^https?:\/\/animeplay\.cfd/i, MEGAPLAY_EMBED_BASE);
+}
+
 /**
- * AniList route: `https://animeplay.cfd/stream/ani/{anilist-id}/{ep-num}/{language}`
+ * Catalog episode id from Anikoto `/series/{id}` (`episode_embed_id`).
+ * https://megaplay.buzz/stream/s-2/{id}/{language}
+ */
+export function buildMegaPlayCatalogEmbedUrl(
+  episodeEmbedId: string | number,
+  language: AnimeAudioLanguage
+): string {
+  const id = String(episodeEmbedId ?? "").trim();
+  const lang = language === "dub" ? "dub" : "sub";
+  if (!id) return "";
+  return `${MEGAPLAY_EMBED_BASE}/stream/s-2/${encodeURIComponent(id)}/${lang}`;
+}
+
+/**
+ * AniList route: `https://megaplay.buzz/stream/ani/{anilist-id}/{ep-num}/{language}`
  */
 export function buildAnimePlayAniListUrl(
   anilistId: number,
@@ -21,11 +43,11 @@ export function buildAnimePlayAniListUrl(
   const ep = Math.max(1, Math.floor(Number(episode)) || 1);
   const lang = language === "dub" ? "dub" : "sub";
   if (!Number.isFinite(id) || id <= 0) return "";
-  return `${ANIMEPLAY_BASE}/stream/ani/${id}/${ep}/${lang}`;
+  return `${MEGAPLAY_EMBED_BASE}/stream/ani/${id}/${ep}/${lang}`;
 }
 
 /**
- * MAL route: `https://animeplay.cfd/stream/mal/{mal-id}/{ep-num}/{language}`
+ * MAL route: `https://megaplay.buzz/stream/mal/{mal-id}/{ep-num}/{language}`
  */
 export function buildAnimePlayMalUrl(
   malId: number,
@@ -36,20 +58,21 @@ export function buildAnimePlayMalUrl(
   const ep = Math.max(1, Math.floor(Number(episode)) || 1);
   const lang = language === "dub" ? "dub" : "sub";
   if (!Number.isFinite(id) || id <= 0) return "";
-  return `${ANIMEPLAY_BASE}/stream/mal/${id}/${ep}/${lang}`;
+  return `${MEGAPLAY_EMBED_BASE}/stream/mal/${id}/${ep}/${lang}`;
 }
 
-/** Legacy megaplay.buzz AniList routes 410 — animeplay.cfd ani routes are OK. */
+/** MegaPlay AniList routes are unreliable — prefer MAL URLs. */
 export function isMegaPlayAnilistEmbedUrl(url: string): boolean {
   return /megaplay\.buzz\/stream\/ani\/\d+/i.test(String(url ?? ""));
 }
 
 /**
- * Drop broken MegaPlay AniList embeds; callers should use MAL URLs instead.
+ * Drop broken hosts and normalize MegaPlay mirrors.
  */
 export function sanitizeAnimeEmbedUrl(url: string | null | undefined): string | null {
-  const u = typeof url === "string" ? url.trim() : "";
+  const u = normalizeMegaPlayEmbedHost(typeof url === "string" ? url.trim() : "");
   if (!u.startsWith("http")) return null;
+  if (/animeplay\.cfd/i.test(u)) return null;
   if (isMegaPlayAnilistEmbedUrl(u)) return null;
   return u;
 }

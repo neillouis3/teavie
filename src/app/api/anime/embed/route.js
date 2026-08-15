@@ -57,6 +57,7 @@ export async function GET(req) {
     if (anilistId) {
       try {
         const raw = await resolveAnikotoFallbackEmbedUrl({
+          malId: playback.malId,
           anilistId,
           episode: playback.malEpisode,
           audio,

@@ -12,9 +12,7 @@ import React, {
 export type AnimeSourceId = "anikoto" | "megaplay";
 
 const STORAGE_KEY = "teavie-anime-source";
-const DEFAULT_SOURCE: AnimeSourceId = "megaplay";
-
-const ORDER: AnimeSourceId[] = ["anikoto", "megaplay"];
+const DEFAULT_SOURCE: AnimeSourceId = "anikoto";
 
 export function animeSourceLabel(id: AnimeSourceId): string {
   switch (id) {
@@ -27,13 +25,13 @@ export function animeSourceLabel(id: AnimeSourceId): string {
   }
 }
 
-export const ANIME_SOURCE_OPTIONS: AnimeSourceId[] = [...ORDER];
+export const ANIME_SOURCE_OPTIONS: AnimeSourceId[] = ["anikoto"];
 
 function readStored(): AnimeSourceId {
   if (typeof window === "undefined") return DEFAULT_SOURCE;
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "anikoto" || v === "megaplay") return v;
+    if (v === "anikoto") return v;
   } catch {
     /* ignore */
   }

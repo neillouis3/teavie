@@ -20,11 +20,6 @@ import {
   useAnimeAudio,
 } from '@/contexts/animeAudioContext';
 import {
-  ANIME_SOURCE_OPTIONS,
-  animeSourceLabel,
-  useAnimeSource,
-} from '@/contexts/animeSourceContext';
-import {
   STREAM_SERVER_OPTIONS,
   streamServerLabel,
   useStreamingSource,
@@ -87,7 +82,6 @@ export default function SettingsPage() {
   const { mode: cardLayout, setMode: setCardLayout } = useCatalogCardStyle();
   const { server: streamServer, setServer: setStreamServer, hydrated: streamHydrated } = useStreamingSource();
   const { audio: animeAudio, setAudio: setAnimeAudio } = useAnimeAudio();
-  const { source: animeSource, setSource: setAnimeSource } = useAnimeSource();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -164,15 +158,6 @@ export default function SettingsPage() {
               label={streamServerLabel}
             />
           )}
-        </PageCardRow>
-
-        <PageCardRow label="Anime player">
-          <SegmentControl
-            options={ANIME_SOURCE_OPTIONS}
-            value={animeSource}
-            onChange={setAnimeSource}
-            label={animeSourceLabel}
-          />
         </PageCardRow>
 
         <PageCardRow label="Anime audio">

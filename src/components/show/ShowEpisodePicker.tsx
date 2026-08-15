@@ -824,35 +824,51 @@ function useEpisodePickerState({
   };
 }
 
-function AnimeAudioSelect() {
+function AnimeAudioSelect({
+  bare = false,
+  compact = false,
+}: {
+  bare?: boolean;
+  compact?: boolean;
+}) {
   const { audio, setAudio } = useAnimeAudio();
 
   return (
-    <div className="flex shrink-0 items-center gap-1">
-      <span className="text-[11px] font-medium text-default-500">Audio</span>
-      <Select
-        size="sm"
-        aria-label="Audio"
-        variant="bordered"
-        radius="md"
-        selectedKeys={new Set([audio])}
-        onSelectionChange={(keys) => {
-          const next = Array.from(keys)[0];
-          if (next === "sub" || next === "dub") setAudio(next);
-        }}
-        classNames={{
-          base: "w-[76px]",
-          trigger: "h-8 min-h-8 border-default-300 px-2 dark:border-default-500/60",
-          value: "text-xs font-normal text-foreground",
-          selectorIcon: "text-default-400",
-        }}
-        popoverProps={{ classNames: { content: "min-w-[76px]" } }}
-      >
-        {ANIME_AUDIO_OPTIONS.map((lang) => (
-          <SelectItem key={lang}>{animeAudioLabel(lang)}</SelectItem>
-        ))}
-      </Select>
-    </div>
+    <Select
+      size="sm"
+      aria-label="Audio"
+      variant={bare ? "flat" : "bordered"}
+      radius="md"
+      selectedKeys={new Set([audio])}
+      onSelectionChange={(keys) => {
+        const next = Array.from(keys)[0];
+        if (next === "sub" || next === "dub") setAudio(next);
+      }}
+      classNames={{
+        base: bare ? "w-auto shrink-0" : "w-[76px] shrink-0",
+        trigger: bare
+          ? cn(
+              "h-11 min-h-11 border-0 bg-transparent px-1.5 text-xs text-white shadow-none hover:bg-transparent data-[hover=true]:bg-transparent",
+              compact ? "px-1 sm:px-1.5" : "px-1.5"
+            )
+          : "h-8 min-h-8 border-default-300 px-2 dark:border-default-500/60",
+        value: bare
+          ? "text-xs font-normal text-white"
+          : "text-xs font-normal text-foreground",
+        selectorIcon: bare ? "text-white/70" : "text-default-400",
+      }}
+      popoverProps={{
+        classNames: {
+          content: bare
+            ? "min-w-[5.5rem] border border-white/15 bg-black/80 text-white backdrop-blur-xl"
+            : "min-w-[76px]",
+        },
+      }}
+    >
+      {ANIME_AUDIO_OPTIONS.map((lang) => (
+        <SelectItem key={lang}>{animeAudioLabel(lang)}</SelectItem>
+      ))}
+    </Select>
   );
 }
 
@@ -906,15 +922,9 @@ export function ShowEpisodePickerControls({
       aria-label="Episode controls"
     >
           {showAnimeAudio ? (
-            <>
-              <AnimeAudioSelect />
-              <span className="text-sm text-default-400" aria-hidden>
-                ·
-              </span>
-            </>
+            <AnimeAudioSelect bare={bare} compact={compact} />
           ) : null}
           {hideSeasonEpisodeJump ? null : (
-            <>
               <div className="flex shrink-0 items-center gap-1.5">
                 <div className="flex items-center gap-1">
                   <span className="text-[11px] font-medium text-default-500">S</span>
@@ -953,10 +963,6 @@ export function ShowEpisodePickerControls({
                   />
                 </div>
               </div>
-              <span className="text-sm text-default-400" aria-hidden>
-                ·
-              </span>
-            </>
           )}
           <Button
             size="sm"
@@ -981,11 +987,6 @@ export function ShowEpisodePickerControls({
               prevLabel
             )}
           </Button>
-          {bare ? null : (
-            <span className="text-sm text-default-400" aria-hidden>
-              ·
-            </span>
-          )}
           <Button
             size="sm"
             variant={buttonVariant}
@@ -1006,11 +1007,6 @@ export function ShowEpisodePickerControls({
               nextLabel
             )}
           </Button>
-      {bare ? null : (
-        <span className="hidden text-sm text-default-400 sm:inline" aria-hidden>
-          ·
-        </span>
-      )}
       <Button
         size="sm"
         variant={buttonVariant}
