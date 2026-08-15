@@ -31,6 +31,21 @@ export type WatchHistoryEntry = {
 export const WATCH_HISTORY_CHANGED_EVENT = "teavie-watch-history-changed";
 export const WATCH_HISTORY_LOG_CHANGED_EVENT = "teavie-watch-history-log-changed";
 
+const EMPTY_WATCH_HISTORY: WatchHistoryEntry[] = [];
+let continueSnapshot: WatchHistoryEntry[] = EMPTY_WATCH_HISTORY;
+let continueSnapshotKey = "";
+let logSnapshot: WatchHistoryEntry[] = EMPTY_WATCH_HISTORY;
+let logSnapshotKey = "";
+
+function entriesSnapshotKey(entries: WatchHistoryEntry[]): string {
+  return entries
+    .map(
+      (e) =>
+        `${e.mediaType}:${e.catalogId}:${e.lastWatchedAt}:${e.lastSeason}:${e.lastEpisode}`
+    )
+    .join("|");
+}
+
 function normalizeEntry(e: WatchHistoryEntry): WatchHistoryEntry {
   return {
     catalogId: e.catalogId,
@@ -80,6 +95,7 @@ function writeIndex(
   options?: WatchHistoryWriteOptions
 ): void {
   if (typeof window === "undefined") return;
+  continueSnapshotKey = "";
   try {
     localStorage.setItem(
       WATCH_HISTORY_INDEX_KEY,
@@ -107,6 +123,8 @@ function writeLog(
   options?: WatchHistoryWriteOptions
 ): void {
   if (typeof window === "undefined") return;
+  logSnapshotKey = "";
+  continueSnapshotKey = "";
   try {
     localStorage.setItem(
       WATCH_HISTORY_LOG_KEY,
@@ -172,6 +190,67 @@ function undismissFromContinue(catalogId: string): void {
 function isEligibleForContinue(entry: WatchHistoryEntry, now = Date.now()): boolean {
   if (isDismissedFromContinue(entry.catalogId)) return false;
   return now - entry.lastWatchedAt < WATCH_HISTORY_TTL_MS;
+}
+
+function overlayProgress(entries: WatchHistoryEntry[]): WatchHistoryEntry[] {
+  const now = Date.now();
+  const kept: WatchHistoryEntry[] = [];
+  for (const entry of entries) {
+    if (!isEligibleForContinue(entry, now)) continue;
+    const progress = loadWatchProgress(entry.catalogId);
+    kept.push({
+      ...entry,
+      lastSeason: progress?.lastSeason ?? entry.lastSeason,
+      lastEpisode: progress?.lastEpisode ?? entry.lastEpisode,
+    });
+  }
+  return kept;
+}
+
+/** Pure localStorage read for useSyncExternalStore — never writes. */
+export function getWatchHistorySnapshot(): WatchHistoryEntry[] {
+  if (typeof window === "undefined") return EMPTY_WATCH_HISTORY;
+  let index = readIndex();
+  if (index.length === 0) {
+    const now = Date.now();
+    index = readLogRaw()
+      .filter((e) => isEligibleForContinue(e, now))
+      .slice(0, WATCH_HISTORY_MAX);
+  }
+  const next = overlayProgress(index);
+  const key = entriesSnapshotKey(next);
+  if (key === continueSnapshotKey) return continueSnapshot;
+  continueSnapshotKey = key;
+  continueSnapshot = next.length === 0 ? EMPTY_WATCH_HISTORY : next;
+  return continueSnapshot;
+}
+
+export function getWatchHistoryLogSnapshot(): WatchHistoryEntry[] {
+  if (typeof window === "undefined") return EMPTY_WATCH_HISTORY;
+  let log = readLogRaw();
+  if (log.length === 0) log = readIndex();
+  const key = entriesSnapshotKey(log);
+  if (key === logSnapshotKey) return logSnapshot;
+  logSnapshotKey = key;
+  logSnapshot = log.length === 0 ? EMPTY_WATCH_HISTORY : log;
+  return logSnapshot;
+}
+
+export function getEmptyWatchHistorySnapshot(): WatchHistoryEntry[] {
+  return EMPTY_WATCH_HISTORY;
+}
+
+export function subscribeWatchHistory(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const handler = () => onStoreChange();
+  window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, handler);
+  window.addEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, handler);
+  window.addEventListener("storage", handler);
+  return () => {
+    window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, handler);
+    window.removeEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, handler);
+    window.removeEventListener("storage", handler);
+  };
 }
 
 function upsertLogEntry(entry: WatchHistoryEntry): void {
@@ -341,17 +420,7 @@ export function listWatchHistory(): WatchHistoryEntry[] {
     }
   }
 
-  const kept: WatchHistoryEntry[] = [];
-  for (const entry of index) {
-    if (!isEligibleForContinue(entry, now)) continue;
-    const progress = loadWatchProgress(entry.catalogId);
-    kept.push({
-      ...entry,
-      lastSeason: progress?.lastSeason ?? entry.lastSeason,
-      lastEpisode: progress?.lastEpisode ?? entry.lastEpisode,
-    });
-  }
-  return kept;
+  return overlayProgress(index);
 }
 
 /** Remove a title from continue watching and clear saved progress. Keeps durable log. */

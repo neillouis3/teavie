@@ -56,6 +56,7 @@ export const MOVIE_SERVERS = {
  * @param {boolean} [props.immersive] Full-viewport watch page (no rounded shell)
  * @param {(seconds: number) => void} [props.onStremioProgress]
  * @param {(progress: import('@/lib/vidrockProgress').VidrockProgress) => void} [props.onVidrockProgress]
+ * @param {() => void} [props.onEmbedLoad]
  */
 const MoviePlayer = ({
   videoId,
@@ -69,6 +70,7 @@ const MoviePlayer = ({
   immersive = false,
   onStremioProgress,
   onVidrockProgress,
+  onEmbedLoad,
 }) => {
   const [streamQuality, setStreamQuality] = useState(streamQualityProp ?? null);
 
@@ -165,6 +167,7 @@ const MoviePlayer = ({
           className="absolute inset-0 h-full w-full border-0"
           vidrockTmdbId={String(videoId ?? '')}
           onVidrockProgress={server === 'vidrock' ? onVidrockProgress : undefined}
+          onLoad={onEmbedLoad}
         />
       ) : (
         <PlayerEmbedSkeleton />

@@ -9,10 +9,10 @@ import React, {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { useAuth } from "@/contexts/authContext";
 import {
-  listWatchHistory,
   listWatchHistoryLog,
   mergeWatchHistoryLog,
   removeFromWatchHistory,
@@ -20,9 +20,12 @@ import {
   touchWatchHistory,
   isDismissedFromContinue,
   type WatchHistoryEntry,
-  WATCH_HISTORY_CHANGED_EVENT,
   WATCH_HISTORY_LOG_CHANGED_EVENT,
   WATCH_HISTORY_MIN_PLAY_SECONDS,
+  subscribeWatchHistory,
+  getWatchHistorySnapshot,
+  getWatchHistoryLogSnapshot,
+  getEmptyWatchHistorySnapshot,
 } from "@/lib/watchHistory";
 import {
   addToWatchLater,
@@ -208,22 +211,22 @@ async function replayRemoteWatchProgress(): Promise<void> {
   }
 
   if (historyTouches.length > 0) {
-    mergeWatchHistoryLog(historyTouches, { silent: true });
+    mergeWatchHistoryLog(historyTouches);
   }
-}
-
-function refreshLocalHistoryState(
-  setContinue: (entries: WatchHistoryEntry[]) => void,
-  setLog: (entries: WatchHistoryEntry[]) => void
-) {
-  setContinue(listWatchHistory());
-  setLog(listWatchHistoryLog());
 }
 
 export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, loading: authLoading } = useAuth();
-  const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>([]);
-  const [watchHistoryLogEntries, setWatchHistoryLogEntries] = useState<WatchHistoryEntry[]>([]);
+  const watchHistoryEntries = useSyncExternalStore(
+    subscribeWatchHistory,
+    getWatchHistorySnapshot,
+    getEmptyWatchHistorySnapshot
+  );
+  const watchHistoryLogEntries = useSyncExternalStore(
+    subscribeWatchHistory,
+    getWatchHistoryLogSnapshot,
+    getEmptyWatchHistorySnapshot
+  );
   const [watchLaterEntries, setWatchLaterEntries] = useState<WatchLaterEntry[]>([]);
   const [favoriteEntries, setFavoriteEntries] = useState<FavoriteEntry[]>([]);
   const [guestPreferences, setGuestPreferences] = useState<UserPreferences>(
@@ -287,7 +290,6 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const refreshUserData = useCallback(async () => {
-    refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
     if (user) {
       const [later, favorites] = await Promise.all([
         fetchRemoteWatchLater(),
@@ -315,7 +317,6 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   useLayoutEffect(() => {
-    refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
     if (!user) {
       setGuestPreferences(loadGuestPreferences());
     }
@@ -338,10 +339,9 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       try {
         const remote = await fetchRemoteWatchHistory();
         if (remote.length > 0) {
-          mergeWatchHistoryLog(remote, { silent: true });
+          mergeWatchHistoryLog(remote);
         }
         await replayRemoteWatchProgress();
-        refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
       } finally {
         remoteHistorySyncPausedRef.current = false;
       }
@@ -349,11 +349,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   }, [user?.id]);
 
   useEffect(() => {
-    const onHistory = () => {
-      refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
-    };
     const onHistoryLog = () => {
-      refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
       scheduleRemoteHistorySync();
     };
     const onLater = () => {
@@ -366,17 +362,13 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     const onFavorites = () => {
       if (!user) setFavoriteEntries(listFavorites());
     };
-    window.addEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistory);
     window.addEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, onHistoryLog);
     window.addEventListener(WATCH_LATER_CHANGED_EVENT, onLater);
     window.addEventListener(FAVORITES_CHANGED_EVENT, onFavorites);
-    window.addEventListener("storage", onHistory);
     return () => {
-      window.removeEventListener(WATCH_HISTORY_CHANGED_EVENT, onHistory);
       window.removeEventListener(WATCH_HISTORY_LOG_CHANGED_EVENT, onHistoryLog);
       window.removeEventListener(WATCH_LATER_CHANGED_EVENT, onLater);
       window.removeEventListener(FAVORITES_CHANGED_EVENT, onFavorites);
-      window.removeEventListener("storage", onHistory);
     };
   }, [user, scheduleRemoteHistorySync]);
 
@@ -396,7 +388,6 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
         credentials: "include",
       });
     }
-    refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
   }, [user]);
 
   const removeHistoryLogItem = useCallback(async (catalogId: string) => {
@@ -413,13 +404,11 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
         }),
       ]);
     }
-    refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
   }, [user]);
 
   const syncHistoryTouch = useCallback(
     (catalogId: string, payload: Omit<WatchHistoryEntry, "catalogId" | "lastWatchedAt">) => {
       touchWatchHistory(catalogId, payload);
-      refreshLocalHistoryState(setWatchHistoryEntries, setWatchHistoryLogEntries);
     },
     []
   );

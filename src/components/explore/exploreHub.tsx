@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import CatalogRail, { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import TrendingHero, { SPOTLIGHT_SKELETON_H } from "@/components/catalog/trendingHero";
 import { cn } from "@/lib/utils";
@@ -12,20 +18,21 @@ import NewContentRail from "@/components/explore/newContentRail";
 import {
   loadExploreCoreShell,
   bustExploreCoreInflight,
-  peekExploreInitialCore,
-  fetchExploreBundle,
+  peekExploreCoreCache,
+  isUsableExploreCore,
   fetchPersonalizedExploreBundle,
-  applyPersonalizedToCore,
+  peekPersonalizedExploreCache,
   buildSpotlightItems,
   type ExploreCorePayload,
-  type ExplorePagePayload,
   type TmdbDiscoverPayload,
 } from "@/lib/explorePageData";
+import { seedExploreBundleCache } from "@/lib/pageDataCache";
 import { hasUserPreferences } from "@/types/user";
 import { useResumeFetchWhenVisible } from "@/hooks/useResumeFetchWhenVisible";
 import { useContinueWatchingRows } from "@/hooks/useContinueWatchingRows";
 import { useUserData } from "@/contexts/userDataContext";
 import { MOBILE_CONTENT_INSET_LEFT } from "@/lib/contentInset";
+import type { ContentItem } from "@/types/content";
 
 export type { TmdbDiscoverPayload };
 
@@ -38,35 +45,99 @@ import {
 
 const SECTION_MAX_ITEMS = EXPLORE_RAIL_MAX_ITEMS;
 
-export default function ExploreHub() {
+function seedCacheFromCore(core: ExploreCorePayload): void {
+  seedExploreBundleCache({
+    discover: core.discover,
+    genres: core.genres,
+    feed: {
+      newContent: core.newContent,
+      updatedContent: [],
+      upcomingContent: core.upcomingContent,
+    },
+  });
+}
+
+export default function ExploreHub({
+  initialCore = null,
+}: {
+  initialCore?: ExploreCorePayload | null;
+}) {
   const { preferences, watchHistoryEntries, watchedMovieIds } = useUserData();
-  const [core, setCore] = useState<ExploreCorePayload | null>(null);
+  const [core, setCore] = useState<ExploreCorePayload | null>(initialCore);
+  const [recommendedRows, setRecommendedRows] = useState<ContentItem[]>([]);
 
   const {
     rows: historyRows,
-    loading: historyLoading,
     failed: historyFailed,
     reload: reloadHistory,
   } = useContinueWatchingRows(watchHistoryEntries);
 
-  const preferencesSig = useMemo(() => JSON.stringify(preferences), [preferences]);
-  const watchedMoviesSig = useMemo(
-    () => [...watchedMovieIds].sort().join("|"),
-    [watchedMovieIds]
-  );
+  const loadShell = useCallback(() => {
+    void loadExploreCoreShell().then((shell) => {
+      setCore((prev) => (isUsableExploreCore(prev) ? prev : shell));
+    });
+  }, []);
 
-  const payload = useMemo<ExplorePagePayload | null>(
-    () =>
-      core
-        ? {
-            ...core,
-            historyRows: [],
-            watchLaterRows: [],
-            favoriteRows: [],
-          }
-        : null,
-    [core]
-  );
+  useLayoutEffect(() => {
+    if (initialCore && isUsableExploreCore(initialCore)) {
+      seedCacheFromCore(initialCore);
+      setCore((prev) => prev ?? initialCore);
+      return;
+    }
+    const peeked = peekExploreCoreCache();
+    if (peeked) setCore((prev) => prev ?? peeked);
+  }, [initialCore]);
+
+  const bustCoreInflight = useCallback(() => {
+    bustExploreCoreInflight(null, []);
+  }, []);
+
+  useEffect(() => {
+    document.title = "Explore - Teavie";
+  }, []);
+
+  useEffect(() => {
+    if (isUsableExploreCore(core)) return;
+    let cancelled = false;
+    void loadExploreCoreShell().then((shell) => {
+      if (cancelled) return;
+      setCore((prev) => (isUsableExploreCore(prev) ? prev : shell));
+      if (isUsableExploreCore(shell)) seedCacheFromCore(shell);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [core]);
+
+  useResumeFetchWhenVisible(!isUsableExploreCore(core), loadShell, bustCoreInflight);
+
+  useLayoutEffect(() => {
+    if (!hasUserPreferences(preferences)) {
+      setRecommendedRows([]);
+      return;
+    }
+    const peeked = peekPersonalizedExploreCache(preferences, watchedMovieIds);
+    if (peeked?.recommended?.length) {
+      setRecommendedRows(peeked.recommended);
+    }
+  }, [preferences, watchedMovieIds]);
+
+  useEffect(() => {
+    if (!hasUserPreferences(preferences)) {
+      setRecommendedRows([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchPersonalizedExploreBundle(preferences, watchedMovieIds, true).then(
+      (bundle) => {
+        if (cancelled) return;
+        setRecommendedRows(bundle?.recommended ?? []);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [preferences, watchedMovieIds]);
 
   const spotlightItems = useMemo(
     () =>
@@ -74,102 +145,44 @@ export default function ExploreHub() {
         ? buildSpotlightItems(
             core.discover.trendingMovies,
             core.discover.trendingTv,
-            preferences,
+            null,
             SECTION_MAX_ITEMS
           )
         : [],
-    [core, preferencesSig, preferences]
+    [core]
   );
 
-  const loadShell = useCallback(() => {
-    void loadExploreCoreShell().then(setCore);
-  }, []);
+  const continueWatchingSection =
+    watchHistoryEntries.length > 0 ? (
+      historyRows.length > 0 ? (
+        <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
+      ) : historyFailed ? (
+        <section className={RAIL_INNER_CLASS} aria-label="Continue watching">
+          <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+          <p className="text-sm text-default-500">
+            Couldn&apos;t load your titles.{" "}
+            <button
+              type="button"
+              className="text-success hover:underline"
+              onClick={() => void reloadHistory()}
+            >
+              Try again
+            </button>
+          </p>
+        </section>
+      ) : (
+        <section
+          className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
+          aria-label="Continue watching"
+          aria-busy="true"
+        >
+          <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
+          <CatalogRailSkeleton count={6} />
+        </section>
+      )
+    ) : null;
 
-  useLayoutEffect(() => {
-    const peeked = peekExploreInitialCore(preferences, watchedMovieIds);
-    if (peeked) {
-      setCore((prev) => prev ?? peeked);
-    }
-  }, [preferencesSig, watchedMoviesSig, preferences, watchedMovieIds]);
-
-  const bustCoreInflight = useCallback(() => {
-    bustExploreCoreInflight(preferences, watchedMovieIds);
-  }, [preferences, watchedMovieIds]);
-
-  useEffect(() => {
-    document.title = "Explore - Teavie";
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const wantsPersonalized = hasUserPreferences(preferences);
-
-    void (async () => {
-      try {
-        const [shell, bundle, personalized] = await Promise.all([
-          loadExploreCoreShell(),
-          fetchExploreBundle(),
-          wantsPersonalized
-            ? fetchPersonalizedExploreBundle(preferences, watchedMovieIds, false)
-            : Promise.resolve(null),
-        ]);
-
-        if (cancelled) return;
-
-        const nextCore =
-          wantsPersonalized && personalized
-            ? applyPersonalizedToCore(
-                shell,
-                bundle,
-                personalized,
-                preferences,
-                watchedMovieIds
-              )
-            : shell;
-
-        setCore(nextCore);
-      } catch {
-        // Core rails still render from shell/bundle on failure.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [preferencesSig, watchedMoviesSig, preferences, watchedMovieIds]);
-
-  useResumeFetchWhenVisible(!core, loadShell, bustCoreInflight);
-
-  const continueWatchingSection = watchHistoryEntries.length > 0 ? (
-    historyRows.length > 0 ? (
-      <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
-    ) : historyLoading ? (
-      <section
-        className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
-        aria-label="Continue watching"
-        aria-busy="true"
-      >
-        <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-        <CatalogRailSkeleton count={6} />
-      </section>
-    ) : historyFailed ? (
-      <section className={RAIL_INNER_CLASS} aria-label="Continue watching">
-        <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-        <p className="text-sm text-default-500">
-          Couldn&apos;t load your titles.{" "}
-          <button
-            type="button"
-            className="text-success hover:underline"
-            onClick={() => void reloadHistory()}
-          >
-            Try again
-          </button>
-        </p>
-      </section>
-    ) : null
-  ) : null;
-
-  if (!core || !payload) {
+  if (!core) {
     return (
       <div className="flex w-full flex-col bg-background">
         <section
@@ -196,13 +209,7 @@ export default function ExploreHub() {
     );
   }
 
-  const {
-    discover,
-    genres,
-    recommendedRows,
-    newContent,
-    upcomingContent,
-  } = payload;
+  const { discover, genres, newContent, upcomingContent } = core;
   const hasTrending = spotlightItems.length > 0;
   const hasPopular =
     discover.popularMovies.length > 0 || discover.popularTv.length > 0;

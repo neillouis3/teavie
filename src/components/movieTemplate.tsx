@@ -249,14 +249,17 @@ export default function MovieTemplate({
   }, [id, watchParty.room, viewMode]);
 
   useEffect(() => {
-    if (viewMode !== 'watch' || !movieReleased) return;
+    if (viewMode !== 'watch') return;
     recordMovieInWatchHistory(String(id));
-  }, [viewMode, id, movieReleased]);
+  }, [viewMode, id]);
 
   const handleStremioProgress = useCallback(
     (seconds: number) => {
       const sec = Math.floor(Number(seconds) || 0);
-      saveMoviePlaybackPosition(String(id), sec);
+      if (sec >= 1) {
+        recordMovieInWatchHistory(String(id));
+        saveMoviePlaybackPosition(String(id), sec);
+      }
       watchParty.noteHostPlayback(sec);
       if (!watchParty.isHost || !watchParty.room || server !== 'stremio') return;
       const now = Date.now();
@@ -269,10 +272,16 @@ export default function MovieTemplate({
 
   const handleVidrockProgress = useCallback(
     (progress: { seconds: number }) => {
-      handleStremioProgress(progress.seconds);
+      recordMovieInWatchHistory(String(id));
+      const sec = Math.floor(Number(progress.seconds) || 0);
+      if (sec >= 1) handleStremioProgress(sec);
     },
-    [handleStremioProgress]
+    [id, handleStremioProgress]
   );
+
+  const handlePlayerReady = useCallback(() => {
+    recordMovieInWatchHistory(String(id));
+  }, [id]);
 
   const handleCreateParty = useCallback(
     async (nickname: string) => {
@@ -818,6 +827,7 @@ export default function MovieTemplate({
             onVidrockProgress={
               server === 'vidrock' ? handleVidrockProgress : undefined
             }
+            onEmbedLoad={handlePlayerReady}
             streamQuality={inferMovieStreamQuality(
               movie.release_dates,
               movie.release_date

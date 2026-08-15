@@ -847,11 +847,12 @@ export default function ShowTemplate({
   }, [id, selectedSeason, selectedEpisode, progressHydrated, watchParty.room]);
 
   useEffect(() => {
-    if (viewMode !== "watch" || !show) return;
+    if (viewMode !== "watch") return;
     if (isAnimeMovie) {
       recordMovieInWatchHistory(String(id));
       return;
     }
+    if (!show) return;
     const coords = show.is_anime
       ? resolveAnimePlayerCoords(show, selectedSeason, selectedEpisode)
       : { season: selectedSeason, episode: selectedEpisode };
@@ -874,18 +875,44 @@ export default function ShowTemplate({
       const s = progress.season || selectedSeason;
       const e = progress.episode || selectedEpisode;
       const sec = Math.floor(Number(progress.seconds) || 0);
-      markEpisodeWatchedFromPlayback(s, e, sec);
-      saveEpisodePlaybackPosition(String(id), s, e, sec);
+      if (isAnimeMovie) {
+        recordMovieInWatchHistory(String(id));
+        if (sec >= 1) saveMoviePlaybackPosition(String(id), sec);
+        watchParty.noteHostPlayback(sec);
+        return;
+      }
+      touchWatchHistory(String(id), {
+        mediaType: "tv",
+        lastSeason: s,
+        lastEpisode: e,
+      });
+      if (sec >= 1) {
+        markEpisodeWatchedFromPlayback(s, e, sec);
+        saveEpisodePlaybackPosition(String(id), s, e, sec);
+      }
       watchParty.noteHostPlayback(sec);
     },
     [
       id,
+      isAnimeMovie,
       selectedSeason,
       selectedEpisode,
       watchParty,
       markEpisodeWatchedFromPlayback,
     ]
   );
+
+  const handlePlayerReady = useCallback(() => {
+    if (isAnimeMovie) {
+      recordMovieInWatchHistory(String(id));
+      return;
+    }
+    touchWatchHistory(String(id), {
+      mediaType: "tv",
+      lastSeason: selectedSeason,
+      lastEpisode: selectedEpisode,
+    });
+  }, [id, isAnimeMovie, selectedSeason, selectedEpisode]);
 
   const handleStremioProgress = useCallback(
     (seconds: number) => {
@@ -1353,6 +1380,8 @@ export default function ShowTemplate({
             posterUrl={imageUrl}
             backdropUrl={resolveShowDetailsBannerUrl(show, id, imageUrl, fetchedBannerUrl)}
             server={server}
+            onVidrockProgress={server === "vidrock" ? handleVidrockProgress : undefined}
+            onEmbedLoad={handlePlayerReady}
           />
           )
         ) : (
@@ -1408,12 +1437,12 @@ export default function ShowTemplate({
           startSeconds={server === "stremio" ? playerStartSeconds : 0}
           onStremioProgress={server === "stremio" ? handleStremioProgress : undefined}
           onVidrockProgress={server === "vidrock" ? handleVidrockProgress : undefined}
-          onEmbedLoad={
-            server === "vidcore"
-              ? () =>
-                  markEpisodeWatched(playerCoords.season, playerCoords.episode)
-              : undefined
-          }
+          onEmbedLoad={() => {
+            handlePlayerReady();
+            if (server === "vidcore") {
+              markEpisodeWatched(playerCoords.season, playerCoords.episode);
+            }
+          }}
         />
       )}
     </div>

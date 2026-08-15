@@ -579,6 +579,38 @@ function buildCoreFromBundle(
   };
 }
 
+/** Map the public explore JSON into the hub payload. */
+export function exploreCoreFromApiPayload(payload: {
+  discover: TmdbDiscoverPayload;
+  genres: CatalogGenreRow[];
+  feed?: { newContent?: ContentItem[]; upcomingContent?: ContentItem[] } | null;
+}): ExploreCorePayload {
+  const feed = {
+    newContent: payload.feed?.newContent ?? [],
+    updatedContent: [] as ContentItem[],
+    upcomingContent: payload.feed?.upcomingContent ?? [],
+  };
+  return buildCoreFromBundle(
+    {
+      discover: payload.discover,
+      genres: payload.genres,
+      feed,
+    },
+    feed
+  );
+}
+
+export function isUsableExploreCore(core: ExploreCorePayload | null | undefined): boolean {
+  if (!core) return false;
+  const d = core.discover;
+  return (
+    (d?.trendingMovies?.length ?? 0) > 0 ||
+    (d?.trendingTv?.length ?? 0) > 0 ||
+    (d?.popularMovies?.length ?? 0) > 0 ||
+    (d?.popularTv?.length ?? 0) > 0
+  );
+}
+
 export function applyPersonalizedToCore(
   shell: ExploreCorePayload,
   bundle: ExploreBundle,

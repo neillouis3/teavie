@@ -24,7 +24,7 @@ export function useContinueWatchingRows(
 ) {
   const key = useMemo(() => entriesKey(entries), [entries]);
   const [rows, setRows] = useState<ExploreHistoryRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(entries.length > 0);
   const [failed, setFailed] = useState(false);
 
   const reload = useCallback(async () => {
@@ -40,6 +40,7 @@ export function useContinueWatchingRows(
     try {
       const next = await fetchContinueWatchingRows(entries, progressLabel);
       setRows(next);
+      setFailed(next.length === 0);
     } catch {
       setRows([]);
       setFailed(true);

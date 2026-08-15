@@ -7,6 +7,7 @@ export type VidrockProgress = {
   duration?: number;
   season: number;
   episode: number;
+  event?: string;
 };
 
 function parseMessageData(raw: unknown): Record<string, unknown> | null {
@@ -107,12 +108,13 @@ export function parseVidrockMessage(
   fallbackSeason = 1,
   fallbackEpisode = 1
 ): VidrockProgress | null {
-  if (!isVidrockPlayerOrigin(event.origin)) return null;
   const data = parseMessageData(event.data);
   if (!data) return null;
+  const type = data.type;
+  if (type !== "PLAYER_EVENT" && type !== "MEDIA_DATA") return null;
   const expected = String(expectedTmdbId ?? "").trim();
 
-  if (data.type === "PLAYER_EVENT") {
+  if (type === "PLAYER_EVENT") {
     const payload =
       data.data && typeof data.data === "object"
         ? (data.data as Record<string, unknown>)
@@ -120,27 +122,29 @@ export function parseVidrockMessage(
     const seconds = asSeconds(payload.currentTime);
     if (seconds == null) return null;
     const rawId = payload.mtmdbId ?? payload.tmdbId ?? payload.id;
-    const tmdbId = Number.isFinite(Number(rawId))
-      ? String(rawId)
-      : expected;
-    if (expected && tmdbId && !idsMatch(tmdbId, expected)) return null;
+    const parsedId = Number.isFinite(Number(rawId)) ? String(Math.trunc(Number(rawId))) : "";
+    // Always attach to the title on this watch page. VidRock's mtmdbId is the
+    // TMDB id, which can differ from the catalog route id (anime_*, aliases).
     return {
-      tmdbId: tmdbId || expected,
+      tmdbId: expected || parsedId,
       mediaType: payload.mediaType === "tv" ? "tv" : "movie",
       seconds,
       duration: asSeconds(payload.duration) ?? undefined,
       season: asCoord(payload.season, fallbackSeason),
       episode: asCoord(payload.episode, fallbackEpisode),
+      event: typeof payload.event === "string" ? payload.event : undefined,
     };
   }
 
-  if (data.type !== "MEDIA_DATA") return null;
   const list = Array.isArray(data.data) ? (data.data as VidrockItem[]) : [];
   if (list.length === 0) return null;
+  if (event.origin && event.origin !== "null" && !isVidrockPlayerOrigin(event.origin)) {
+    return null;
+  }
 
-  const match =
-    (expected ? list.find((item) => idsMatch(item.id, expected)) : null) ??
-    list[0];
+  const match = expected
+    ? list.find((item) => idsMatch(item.id, expected))
+    : null;
   if (!match) return null;
   return progressFromItem(match, expected, fallbackSeason, fallbackEpisode);
 }

@@ -291,6 +291,12 @@ export function peekExploreBundleCache(): ExploreBundle | null {
   return null;
 }
 
+/** Seed the day cache from SSR so client navigations skip a second /api/explore fetch. */
+export function seedExploreBundleCache(bundle: ExploreBundle): void {
+  if (!isExploreBundleCacheable(bundle)) return;
+  writeClientDayCache(`${PREFIX}.explore.bundle.v2`, bundle);
+}
+
 export async function fetchExploreBundle(): Promise<ExploreBundle> {
   return withDayCache(
     `${PREFIX}.explore.bundle.v2`,

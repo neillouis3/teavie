@@ -70,7 +70,7 @@ interface TrendingHeroProps {
   showSpotlightSelector?: boolean;
 }
 
-export default function TrendingHero({
+function TrendingHero({
   trendingMovies,
   trendingTv,
   spotlightItems,
@@ -362,3 +362,5 @@ export default function TrendingHero({
     </div>
   );
 }
+
+export default React.memo(TrendingHero);
