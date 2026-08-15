@@ -1,0 +1,232 @@
+{
+  "topic": "Stream IP pinning, TorBox duplicate downloads, and watch-page latency",
+  "date": "2026-08-13",
+  "repo": "teavie",
+  "branch": "main",
+  "summary": "Investigation into why viewers see ElfHosted's \"Wrong IP\" screen, why TorBox accumulates downloads nobody watched, and how dulo.gd avoids both. Conclusion: teavie needs a server-side byte relay, and it should not live on Vercel.",
+
+  "problems": [
+    {
+      "id": "wrong-ip",
+      "symptom": "Viewers get an ElfHosted/Slate \"Wrong IP\" page instead of video.",
+      "cause": "The playback link is bound to the IP that requested it. Teavie mints the link from a Vercel function, so it is bound to Vercel's egress IP, while the browser that plays it is on a different IP.",
+      "why_current_fix_is_insufficient": "Forwarding X-Forwarded-For and X-Real-IP to the addon does not move the pin. ElfHosted binds to the real TCP source address and has no reason to trust a header from an unknown client. Handing the raw URL to the browser removed one extra pinning source (the old server-side ffprobe) but the link was already pinned when it was minted.",
+      "secondary_cause": "Even with no server involvement, a viewer on a rotating egress IP (mobile carrier, CGNAT, load-balanced VPN exit) can trip the same screen when a later range request arrives from a different IP. This is likely why dulo ships a \"Having trouble playing this?\" VPN prompt."
+    },
+    {
+      "id": "torbox-duplicates",
+      "symptom": "TorBox account fills with downloads nobody pressed play on, plus multiple releases of the same title.",
+      "cause": "Addon configs offer uncached torrents. Opening an uncached stream URL makes TorBox add the torrent and start downloading it.",
+      "findings_in_env_local": [
+        "All Comet configs (STREMIO_ADDON_URLS, _LATEST, _STRICT, _PRIMARY) are built with \"cachedOnly\": false.",
+        "All Comet configs use \"deduplicateStreams\": false.",
+        "STREMIO_ADDON_URLS_EXTRA (Torrentio) is missing the debridoptions=nodownloadlinks,nocatalog that STREMIO_ADDON_URLS_DEFAULT has, so it also hands out uncached download links."
+      ],
+      "note": "TorBox deduplicates by torrent hash, so replaying the same release never creates a second entry. The duplicates are different releases of the same title, created by retries, auto-skips past broken streams, and quality switches."
+    },
+    {
+      "id": "slow-watch-pages",
+      "symptom": "Watch pages were slow and resolved streams nobody asked for.",
+      "status": "addressed"
+    }
+  ],
+
+  "shipped_earlier": [
+    {
+      "commit": "2773174",
+      "title": "IP pinning mitigation",
+      "changes": [
+        "Browser loads stream URLs directly, no server prefetch",
+        "Forward viewer IP to addons via X-Forwarded-For (later found ineffective, see problems.wrong-ip)",
+        "Removed ffprobe from /api/streams/tracks, which was pinning links before play",
+        "/api/streams/resolve reduced to pass-through"
+      ]
+    },
+    {
+      "commit": "d70010f",
+      "title": "TorBox spam reduction",
+      "changes": [
+        "One addon per request instead of parallel Promise.all",
+        "No automatic fallback addon fetch",
+        "Max 2 auto stream retries, removed short-duration auto-skip",
+        "Manual \"Try another source\" control in the player"
+      ]
+    }
+  ],
+
+  "shipped_this_session": {
+    "status": "implemented locally, build verified, not committed",
+    "build": { "command": "npm run build", "exit_code": 0, "elapsed_ms": 143801 },
+    "items": [
+      {
+        "name": "Never resolve streams until explicit Play",
+        "detail": "stremioPlayer.tsx gained a playRequested state and a PlayGate (poster plus Play button). IMDb resolution via /api/movie/resolve or /api/tv/resolve is deferred until Play. loading now defaults to false.",
+        "impact": "Biggest single reduction in TorBox noise and watch-page latency, but cannot reach zero downloads on its own, because one deliberate Play on an uncached torrent still creates one."
+      },
+      {
+        "name": "SSE source API",
+        "detail": "New GET /api/streams/source emits event: stream, meta, error, done. Playback starts on the first stream event instead of waiting for the full ranked list.",
+        "new_files": [
+          "src/app/api/streams/source/route.ts",
+          "src/lib/stremio/parseStreamsRequest.ts",
+          "src/lib/stremio/consumeStreamSource.ts"
+        ]
+      },
+      {
+        "name": "Lazy-load the player chunk",
+        "detail": "src/components/stremioPlayerLazy.tsx wraps stremioPlayer with next/dynamic. moviePlayer.jsx and showPlayer.jsx import the lazy wrapper so Stremio and HLS code no longer ships on browse pages."
+      },
+      {
+        "name": "Episode change handling",
+        "detail": "Reworked the reset effects so changing season or episode refetches streams via reloadNonce instead of dropping the viewer back to the play gate."
+      }
+    ]
+  },
+
+  "dulo_gd_investigation": {
+    "question": "How does dulo.gd avoid the Wrong IP screen?",
+    "answer": "It never gives the browser a debrid link. The backend returns relative paths that the client joins onto its own API origin, so dulo's own servers fetch the debrid link and relay the bytes. One machine mints the link and the same machine reads it, so a mismatch is structurally impossible and the viewer's IP is irrelevant.",
+    "stack": "Vite SPA behind Cloudflare, same-origin API base of /api, Supabase for auth",
+    "evidence": [
+      {
+        "what": "Source list is fetched over SSE",
+        "detail": "POST ${API_BASE}/source with Accept: text/event-stream and credentials: include. Body is { type, tmdbId, season, episode } or { type: 'anime', anilistId, episode }. Events are sources, complete, and error. Falls back to plain JSON if the response is not event-stream.",
+        "location": "assets/index-DYj3CDAI.js"
+      },
+      {
+        "what": "Playback URLs are relative and resolved against dulo's own API",
+        "code": "function resolveSourceUrl(source){ if(!source.url) return null; if(source.url.startsWith('http')) return source.url; if(/localhost|127\\.0\\.0\\.1/.test(API_BASE)) return source.url; const base=API_BASE.replace(/\\/$/,''); return source.url.startsWith('/') ? base+source.url : `${base}/${source.url}`; }",
+        "location": "assets/index-DYj3CDAI.js",
+        "significance": "This is the core of the answer. The video src is a dulo URL, not an ElfHosted one."
+      },
+      {
+        "what": "Hardcoded allowlist of their own relay hosts",
+        "hosts": [
+          "sabrina-proxy.dulo.cc",
+          "victoria-proxy.dulo.cc",
+          "magical.dulo.cc",
+          "vidrock-proxy.dulo.cc",
+          "snowy-wind-68cf.bright67.online",
+          "evergreenindustries.boats"
+        ],
+        "location": "assets/player-BMc4xT-j.js",
+        "probe_result": "All three dulo.cc hosts tested returned HTTP 403 to an unauthenticated request, consistent with session gating."
+      },
+      {
+        "what": "Player special-cases its own proxies",
+        "detail": "Detects them with /dulo.*\\/(m3u8-proxy|proxy)\\?/i, treats /proxy/hls/ and tstrm.org as rate limited, rewrites individual HLS fragment URLs so segments also flow through the relay, disables the hls.js web worker for dulo proxies, and strips sec-* and proxy-* headers before xhrSetup.",
+        "location": "assets/player-BMc4xT-j.js"
+      },
+      {
+        "what": "Uncached torrents are filtered client-side",
+        "code": "if (url.startsWith('magnet:') || url.endsWith('.torrent')) return true; if (/download/i.test(title)) return true;",
+        "significance": "Same conclusion as the cachedOnly recommendation for teavie, applied in the client."
+      },
+      {
+        "what": "Abuse protection on the source endpoint",
+        "detail": "Session cookie plus Cloudflare Turnstile, with a turnstile_required error path. Without this a relay becomes someone else's free CDN."
+      },
+      {
+        "what": "Player is a separate lazy chunk",
+        "detail": "PlayerV2Modal-D51OWtH8.js at roughly 174 kB, loaded via React.lazy, matching the lazy-load change made in teavie."
+      },
+      {
+        "what": "Multiple relay nodes",
+        "detail": "The source response carries a node field, and there are at least six relay hosts. Likely a response to per-IP concurrency limits at the debrid host, which is the tradeoff a relay introduces."
+      }
+    ]
+  },
+
+  "vercel_feasibility": {
+    "verdict": "Technically possible, but wrong on cost, wrong on execution limits, and against fair use guidance. Keep Next.js on Vercel and host the relay elsewhere.",
+    "duration_limits": {
+      "source": "https://vercel.com/docs/functions/configuring-functions/duration",
+      "hobby": "300s default and maximum",
+      "pro": "300s default, 800s maximum, 1800s extended maximum in beta for Node and Python",
+      "why_it_matters": "Docs state the limit includes time spent sending the response, including streamed responses. A 100 minute movie relayed over one connection gets FUNCTION_INVOCATION_TIMEOUT.",
+      "partial_workaround": "Force many short requests instead of one long one. HLS segments do this naturally; progressive MP4 needs each Range response bounded and closed."
+    },
+    "bandwidth": {
+      "note": "Every relayed byte is metered twice.",
+      "fast_data_transfer": { "hobby_included": "100 GB", "pro_included": "1 TB", "overage": "$0.15/GB, regionally priced" },
+      "fast_origin_transfer": { "included": "none, billed from first byte", "overage": "$0.06/GB" },
+      "worked_example": {
+        "assumed_movie_size_gb": 5,
+        "origin_cost_per_view": "$0.30, which exhausts the $20 Pro seat credit after roughly 65 views",
+        "views_inside_included_tb": "about 200",
+        "cost_per_view_beyond_included": "about $1.05",
+        "hobby": "about 20 views per month, no overage available, and commercial use is prohibited"
+      }
+    },
+    "fair_use": {
+      "source": "https://vercel.com/docs/limits/fair-use-guidelines",
+      "detail": "The published guideline ranges are explicitly not entitlements, and Vercel says it contacts outliers. A video relay is an outlier."
+    },
+    "recommended_hosting": "Small VPS with high or unmetered bandwidth. EU regions commonly include around 20 TB for a few euros a month, which is thousands of movie views. US regions include far less, so check before picking one. teavie already has TEAVIE_STREAM_API_URL pointing at a separate stream service, which is the natural home rather than a new Next route."
+  },
+
+  "recommended_relay_shape": {
+    "responsibilities": [
+      "Forward the Range request header and pass back content-type, content-length, content-range, and accept-ranges",
+      "Pipe the upstream body without buffering the file",
+      "Set an explicit CORS origin so hls.js can read segments",
+      "Verify a signed, expiring URL so the relay is not an open proxy",
+      "Rewrite HLS playlists so segment URLs also point at the relay",
+      "Handle debrid link expiry by re-minting rather than surfacing an error"
+    ],
+    "sketch": "app.get('/proxy', async (req, res) => { const target = verifySignedUrl(req.query.u); const upstream = await fetch(target, { headers: req.headers.range ? { range: req.headers.range } : {} }); res.status(upstream.status); for (const h of ['content-type','content-length','content-range','accept-ranges']) { const v = upstream.headers.get(h); if (v) res.setHeader(h, v); } res.setHeader('access-control-allow-origin', 'https://teavie.example'); upstream.body.pipe(res); });",
+    "new_tradeoff": "All viewers reach the debrid host from one IP, which can trip per-IP concurrency or abuse limits. Mitigate with several relay nodes, as dulo does."
+  },
+
+  "open_decisions": [
+    {
+      "id": "cached-only",
+      "question": "How should uncached torrents be handled?",
+      "options": [
+        "Cached-only by default, fall back to uncached only when nothing cached is found (recommended)",
+        "Cached-only everywhere, never create a TorBox download, accept missing titles",
+        "Keep uncached but pin one chosen release per episode so retries reuse the same torrent hash",
+        "Leave the config unchanged"
+      ],
+      "mechanics": "Flip \"cachedOnly\" to true in the Comet base64 configs and add debridoptions=nodownloadlinks,nocatalog to STREMIO_ADDON_URLS_EXTRA. Side benefit: cached torrents start almost instantly.",
+      "cost": "Reduced coverage for obscure titles and same-day releases.",
+      "status": "undecided"
+    },
+    {
+      "id": "relay",
+      "question": "Build the byte relay in the existing stream service?",
+      "status": "undecided"
+    },
+    {
+      "id": "shared-debrid-key",
+      "question": "A single shared TorBox API key serves all site users, so every viewer's lookups land in one account. Most debrid services treat many IPs on one key as account sharing, which is a ban risk independent of download volume.",
+      "status": "unresolved risk"
+    },
+    {
+      "id": "commit",
+      "question": "Commit and push the play-gate, SSE, lazy-load, and Dulo-style player UI work.",
+      "status": "pending"
+    }
+  ],
+
+  "uncommitted_files": {
+    "modified": [
+      "src/app/api/catalog/history/route.js",
+      "src/app/api/streams/route.ts",
+      "src/components/moviePlayer.jsx",
+      "src/components/showPlayer.jsx",
+      "src/components/stremioPlayer.tsx",
+      "src/contexts/userDataContext.tsx",
+      "src/lib/continueWatchingRows.ts",
+      "src/lib/movieWatchProgress.ts",
+      "src/lib/stremio/client.ts",
+      "src/lib/watchHistory.ts"
+    ],
+    "added": [
+      "src/app/api/streams/source/route.ts",
+      "src/components/stremioPlayerLazy.tsx",
+      "src/lib/stremio/consumeStreamSource.ts",
+      "src/lib/stremio/parseStreamsRequest.ts"
+    ]
+  }
+}
