@@ -35,7 +35,12 @@ import { animeAudioLabel, ANIME_AUDIO_OPTIONS } from "@/lib/animePlayEmbed";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import { filterReleasedEpisodes, formatEpisodeAirDate, isEpisodeUpcoming } from "@/lib/episodeRelease";
 import { cn } from "@/lib/utils";
-import { WATCH_CHROME_BLUR_CLASS } from "@/lib/watchChrome";
+import { MENU_GLASS_CLASS } from "@/components/ui/navGlass";
+import {
+  WATCH_CHROME_BLUR_CLASS,
+  WATCH_MENU_ITEM_CLASS,
+  WATCH_TOOLBAR_TEXT_CLASS,
+} from "@/lib/watchChrome";
 
 export type ShowEpisodePickerSeason = {
   season_number: number;
@@ -839,8 +844,7 @@ function AnimeAudioSelect({
       <Dropdown
         placement="bottom-start"
         classNames={{
-          content:
-            "min-w-[4.5rem] border border-white/15 bg-black/80 p-1 text-white backdrop-blur-xl",
+          content: cn("min-w-[4.5rem] text-white", MENU_GLASS_CLASS),
         }}
       >
         <DropdownTrigger>
@@ -850,14 +854,15 @@ function AnimeAudioSelect({
             radius="md"
             aria-label="Audio"
             className={cn(
-              "h-11 min-h-11 shrink-0 gap-1 bg-transparent px-1.5 text-xs text-white shadow-none hover:bg-transparent data-[hover=true]:bg-transparent",
+              "h-11 min-h-11 shrink-0 gap-1 bg-transparent px-1.5 shadow-none hover:bg-transparent data-[hover=true]:bg-transparent",
+              WATCH_TOOLBAR_TEXT_CLASS,
               compact ? "px-1 sm:px-1.5" : "px-1.5"
             )}
             endContent={
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
                 size={14}
-                className="shrink-0 text-white/70"
+                className="hidden shrink-0 text-white/70 sm:inline-flex"
               />
             }
           >
@@ -868,15 +873,17 @@ function AnimeAudioSelect({
           aria-label="Audio"
           selectionMode="single"
           selectedKeys={new Set([audio])}
+          hideSelectedIcon
           onSelectionChange={(keys) => {
             const next = Array.from(keys)[0];
             if (next === "sub" || next === "dub") setAudio(next);
           }}
           classNames={{
-            base: "p-1",
+            base: "bg-transparent p-0",
+            list: "gap-0.5 bg-transparent",
           }}
           itemClasses={{
-            base: "rounded-lg text-xs text-white data-[hover=true]:bg-white/10 data-[focus-visible=true]:bg-white/10",
+            base: WATCH_MENU_ITEM_CLASS,
           }}
         >
           {ANIME_AUDIO_OPTIONS.map((lang) => (
@@ -1367,7 +1374,7 @@ function WatchEpisodeRow({ row }: { row: EpisodeCardRow }) {
         >
           {row.name}
         </span>
-        {row.overview?.trim() ? (
+        {active && row.overview?.trim() ? (
           <p
             className={cn(
               "mt-1 overflow-hidden text-xs leading-snug text-white/45 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]",
@@ -1741,7 +1748,7 @@ export function ShowEpisodePickerList({
                         >
                           {row.name}
                         </span>
-                        {row.overview?.trim() ? (
+                        {active && row.overview?.trim() ? (
                           <p
                             className={`${EPISODE_CARD_DESCRIPTION_CLASS} ${
                               upcoming ? "text-default-400" : ""
