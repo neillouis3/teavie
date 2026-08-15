@@ -5,7 +5,6 @@ import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import {
-  Building02Icon,
   Calendar03Icon,
   Clock01Icon,
   LanguageCircleIcon,
@@ -38,6 +37,7 @@ type CatalogDetailColumnsProps = {
   links: CatalogDetailLink[];
   networkTags?: string[];
   className?: string;
+  compact?: boolean;
 };
 
 function genreBrowseHref(
@@ -101,17 +101,26 @@ export default function CatalogDetailColumns({
   links,
   networkTags = [],
   className = "",
+  compact = false,
 }: CatalogDetailColumnsProps) {
   const infoItems = infoLines.filter((line) => String(line?.label ?? "").trim());
   const linkItems = links.filter((l) => l?.href && l?.label);
   const networks = networkTags.filter((tag) => String(tag).trim());
 
   return (
-    <div className={`flex flex-col gap-6 ${className}`}>
-      <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)] md:gap-10">
+    <div className={`flex flex-col ${compact ? "gap-4" : "gap-6"} ${className}`}>
+      <div
+        className={`grid md:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)] ${
+          compact ? "gap-4 md:gap-8" : "gap-6 md:gap-10"
+        }`}
+      >
         <div className="min-w-0">
           <ColumnHeading label="Details" />
-          <ul className="mt-2.5 grid grid-cols-1 gap-x-6 gap-y-2.5 text-sm text-foreground sm:grid-cols-2">
+          <ul
+            className={`grid grid-cols-1 gap-x-6 text-sm text-foreground sm:grid-cols-2 ${
+              compact ? "mt-2 gap-y-2" : "mt-2.5 gap-y-2.5"
+            }`}
+          >
             {infoItems.length > 0 ? (
               infoItems.map((line, index) => (
                 <li key={`${line.label}-${index}`} className="flex items-start gap-2.5 leading-snug">
@@ -131,7 +140,7 @@ export default function CatalogDetailColumns({
 
         <div className="min-w-0">
           <ColumnHeading label="Links" />
-          <ul className="mt-2.5 flex flex-col gap-2">
+          <ul className={`${compact ? "mt-2" : "mt-2.5"} flex flex-col gap-2`}>
             {linkItems.length > 0 ? (
               linkItems.map((link) => (
                 <li key={link.href}>
@@ -158,7 +167,11 @@ export default function CatalogDetailColumns({
       </div>
 
       {networks.length > 0 ? (
-        <div className="min-w-0 border-t border-default-200/60 pt-5 dark:border-default-100/20">
+        <div
+          className={`min-w-0 border-t border-default-200/60 dark:border-default-100/20 ${
+            compact ? "pt-4" : "pt-5"
+          }`}
+        >
           <ColumnHeading label="Networks & studios" />
           <div className="mt-2.5 flex flex-wrap gap-2 text-sm text-foreground">
             {networks.map((name) => (
@@ -207,37 +220,6 @@ export function languageDisplayName(code: string | undefined | null): string | n
   }
 }
 
-export function sortedCompanyNames(
-  companies: { name?: string }[] | undefined,
-  max = 4
-): string[] {
-  if (!Array.isArray(companies)) return [];
-  return companies
-    .map((c) => String(c?.name ?? "").trim())
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
-    .slice(0, max);
-}
-
-function primaryStudioOrNetwork(show: {
-  production_companies?: { name?: string }[];
-  networks?: { name?: string }[];
-  studios?: { name?: string }[];
-}): string | null {
-  const company = sortedCompanyNames(show.production_companies, 1)[0];
-  if (company) return company;
-  const networks = (show.networks ?? [])
-    .map((n) => String(n?.name ?? "").trim())
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-  if (networks[0]) return networks[0];
-  const studios = (show.studios ?? [])
-    .map((s) => String(s?.name ?? "").trim())
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-  return studios[0] ?? null;
-}
-
 function countryLabelFromShow(show: {
   production_countries?: { name?: string }[];
   origin_country?: string[];
@@ -253,7 +235,6 @@ export function buildMovieInfoLines(movie: {
   release_date?: string | null;
   runtime?: number | null;
   runtimeSeconds?: number | null;
-  production_companies?: { name?: string }[];
   production_countries?: { iso_3166_1?: string; name?: string }[];
   origin_country?: string[];
   original_language?: string | null;
@@ -272,7 +253,6 @@ export function buildMovieInfoLines(movie: {
   const runtime = formatHeroRuntime(runtimeSeconds);
   if (runtime) lines.push({ icon: Clock01Icon, label: runtime });
 
-  const studio = sortedCompanyNames(movie.production_companies, 1)[0] ?? null;
   const country =
     (() => {
       const prod = movie.production_countries;
@@ -289,7 +269,6 @@ export function buildMovieInfoLines(movie: {
       return null;
     })() ?? null;
 
-  if (studio) lines.push({ icon: Building02Icon, label: studio });
   if (country) lines.push({ icon: Location01Icon, label: country });
 
   const language = languageDisplayName(movie.original_language);
@@ -299,9 +278,6 @@ export function buildMovieInfoLines(movie: {
 }
 
 export function buildShowInfoLines(show: {
-  production_companies?: { name?: string }[];
-  networks?: { name?: string }[];
-  studios?: { name?: string }[];
   production_countries?: { name?: string }[];
   origin_country?: string[];
   original_language?: string | null;
@@ -312,10 +288,8 @@ export function buildShowInfoLines(show: {
   const premiere = formatFullReleaseDate(show.first_air_date);
   if (premiere) lines.push({ icon: Calendar03Icon, label: premiere });
 
-  const primary = primaryStudioOrNetwork(show);
   const country = countryLabelFromShow(show);
 
-  if (primary) lines.push({ icon: Building02Icon, label: primary });
   if (country) lines.push({ icon: Location01Icon, label: country });
 
   const language = languageDisplayName(show.original_language);

@@ -37,7 +37,7 @@ export default function FavoriteButton({
         aria-label={saved ? "Remove from favorites" : "Add to favorites"}
         onPress={() => void toggleFavorite(catalogId, mediaType)}
       >
-        <FavoriteStarIcon filled={saved} filledColor="#f5a524" />
+        <FavoriteStarIcon filled={saved} filledColor="#f5a524" size={18} />
       </Button>
     );
   }

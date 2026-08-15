@@ -41,8 +41,8 @@ export default function ShowDetailsView({
 }: ShowDetailsViewProps) {
   return (
     <div
-      className={`flex w-full flex-col overflow-x-hidden pb-32 ${
-        detailsModal ? "bg-transparent" : "bg-background"
+      className={`flex w-full flex-col overflow-x-hidden ${
+        detailsModal ? "bg-transparent pb-6" : "bg-background pb-32"
       }`}
     >
       {adminPreview && adminBypassActive ? (

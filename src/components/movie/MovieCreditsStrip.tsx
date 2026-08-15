@@ -108,6 +108,16 @@ function uniqueCast(cast: MovieCreditPerson[] | undefined): MovieCreditPerson[] 
   return out;
 }
 
+function primaryCharacterLabel(character: string | null | undefined): string | null {
+  const raw = String(character ?? "").trim();
+  if (!raw) return null;
+  const primary = raw
+    .split(/\s*\/\s*/, 1)[0]
+    .replace(/\s*\([^)]*\)/g, "")
+    .trim();
+  return primary || null;
+}
+
 function staffFromCrew(crew: MovieCreditPerson[] | undefined): MovieCreditPerson[] {
   if (!Array.isArray(crew)) return [];
 
@@ -138,6 +148,21 @@ function staffFromCrew(crew: MovieCreditPerson[] | undefined): MovieCreditPerson
       return a.name.localeCompare(b.name);
     })
     .slice(0, STAFF_LIMIT);
+}
+
+function directorsFromCrew(
+  crew: MovieCreditPerson[] | undefined
+): MovieCreditPerson[] {
+  if (!Array.isArray(crew)) return [];
+
+  const directors = new Map<number, MovieCreditPerson>();
+  for (const person of crew) {
+    if (!person?.name?.trim() || !Number.isFinite(person.id)) continue;
+    const job = String(person.job ?? "").trim();
+    if (job !== "Director" && job !== "Co-Director") continue;
+    if (!directors.has(person.id)) directors.set(person.id, person);
+  }
+  return [...directors.values()];
 }
 
 type CreditAvatarProps = {
@@ -190,7 +215,7 @@ function CreditRow({ title, people, subtitleFor }: CreditRowProps) {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
-      <h3 className="pl-2 text-sm font-medium text-default-500">{title}</h3>
+      <h3 className="text-sm font-medium text-default-500">{title}</h3>
       <div className="flex min-w-0 gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {people.map((person) => (
           <CreditAvatar
@@ -201,6 +226,33 @@ function CreditRow({ title, people, subtitleFor }: CreditRowProps) {
         ))}
       </div>
     </div>
+  );
+}
+
+function DirectorLine({ directors }: { directors: MovieCreditPerson[] }) {
+  if (directors.length === 0) return null;
+
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-sm">
+      <span className="text-default-500">
+        {directors.length === 1 ? "Director" : "Directors"}
+      </span>
+      {directors.map((director, index) => (
+        <React.Fragment key={director.id}>
+          {index > 0 ? (
+            <span className="text-default-400" aria-hidden>
+              ·
+            </span>
+          ) : null}
+          <Link
+            href={`/people/${director.id}`}
+            className="text-foreground transition-colors hover:text-success hover:underline"
+          >
+            {director.name.trim()}
+          </Link>
+        </React.Fragment>
+      ))}
+    </p>
   );
 }
 
@@ -226,16 +278,26 @@ export default function MovieCreditsStrip({
     () => staffFromCrew(normalized?.crew),
     [normalized?.crew]
   );
+  const directors = useMemo(
+    () => directorsFromCrew(normalized?.crew),
+    [normalized?.crew]
+  );
 
-  if (cast.length === 0 && (variant !== "show" || staff.length === 0)) return null;
+  if (
+    cast.length === 0 &&
+    (variant === "movie" ? directors.length === 0 : staff.length === 0)
+  ) {
+    return null;
+  }
 
   return (
-    <section className="flex w-full flex-col gap-4" aria-label="Cast and crew">
+    <section className="flex w-full flex-col gap-3" aria-label="Cast and crew">
+      {variant === "movie" ? <DirectorLine directors={directors} /> : null}
       {cast.length > 0 ? (
         <CreditRow
           title="Cast"
           people={cast}
-          subtitleFor={(person) => person.character?.trim() || null}
+          subtitleFor={(person) => primaryCharacterLabel(person.character)}
         />
       ) : null}
       {variant === "show" && staff.length > 0 ? (

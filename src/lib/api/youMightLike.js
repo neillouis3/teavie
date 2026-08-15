@@ -127,6 +127,8 @@ export async function loadTmdbYouMightLike(mediaType, id, limit = DEFAULT_LIMIT)
         poster_path: row.poster_path ?? null,
         backdrop_path: row.backdrop_path ?? null,
         year: yearFromDate(row.release_date ?? row.first_air_date),
+        voteAverage:
+          typeof row.vote_average === "number" ? row.vote_average : null,
       });
       if (out.length >= cap) break;
     }

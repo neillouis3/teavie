@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
 import SmallCard from "@/components/ui/smallCard";
 import { useCatalogCardStyle } from "@/contexts/catalogCardStyleContext";
-import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
+import DetailSectionHeader from "@/components/movie/DetailSectionHeader";
 import {
   CatalogRailShell,
   SIDEBAR_BLEED_CAROUSEL_OPTS,
@@ -154,9 +153,9 @@ export default function MovieCollectionRail({
 
   return (
     <section className={DETAIL_RAIL_SECTION_CLASS} aria-label={title}>
-      <ExploreSectionTitle variant="explore" hideIcon>
+      <DetailSectionHeader href={viewAllHref}>
         {title}
-      </ExploreSectionTitle>
+      </DetailSectionHeader>
       <CatalogRailShell bleed={bleed}>
         {loading && items.length === 0 ? (
           <CatalogRailSkeleton
@@ -166,50 +165,39 @@ export default function MovieCollectionRail({
             detail={!bleed}
           />
         ) : (
-          <>
-            <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
-              <CarouselContent
-                viewportClassName={catalogRailViewportClass(bleed)}
-                className={RAIL_TRACK}
-              >
-                {bleed ? <SidebarBleedStartSpacer /> : null}
-                {visibleItems.map((item) => (
-                  <CarouselItem key={String(item.id)} className={itemClass}>
-                    {horizontal ? (
-                      <HorizontalCatalogCard
-                        id={String(item.id)}
-                        title={item.title ?? "Untitled"}
-                        year={itemYear(item)}
-                        posterPath={item.poster_path ?? ""}
-                        backdropPath={item.backdrop_path ?? ""}
-                        type="movie"
-                      />
-                    ) : (
-                      <SmallCard
-                        id={String(item.id)}
-                        title={item.title ?? "Untitled"}
-                        year={itemYear(item)}
-                        posterPath={item.poster_path ?? ""}
-                        runtimeSeconds={item.runtimeSeconds}
-                        seasonAmount={0}
-                        type="movie"
-                      />
-                    )}
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
-            {viewAllHref && visibleItems.length > 0 ? (
-              <p className="mt-2 text-right">
-                <Link
-                  href={viewAllHref}
-                  className="text-sm text-success hover:underline"
-                >
-                  View full collection
-                </Link>
-              </p>
-            ) : null}
-          </>
+          <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
+            <CarouselContent
+              viewportClassName={catalogRailViewportClass(bleed)}
+              className={RAIL_TRACK}
+            >
+              {bleed ? <SidebarBleedStartSpacer /> : null}
+              {visibleItems.map((item) => (
+                <CarouselItem key={String(item.id)} className={itemClass}>
+                  {horizontal ? (
+                    <HorizontalCatalogCard
+                      id={String(item.id)}
+                      title={item.title ?? "Untitled"}
+                      year={itemYear(item)}
+                      posterPath={item.poster_path ?? ""}
+                      backdropPath={item.backdrop_path ?? ""}
+                      type="movie"
+                    />
+                  ) : (
+                    <SmallCard
+                      id={String(item.id)}
+                      title={item.title ?? "Untitled"}
+                      year={itemYear(item)}
+                      voteAverage={item.vote_average}
+                      posterPath={item.poster_path ?? ""}
+                      runtimeSeconds={item.runtimeSeconds}
+                      seasonAmount={0}
+                      type="movie"
+                    />
+                  )}
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
         )}
       </CatalogRailShell>
     </section>

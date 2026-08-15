@@ -26,8 +26,8 @@ export default function CatalogDetailsSkeleton({
 }) {
   return (
     <div
-      className={`flex w-full flex-col overflow-x-hidden pb-32 ${
-        modal ? "bg-transparent" : "bg-background"
+      className={`flex w-full flex-col overflow-x-hidden ${
+        modal ? "bg-transparent pb-6" : "bg-background pb-32"
       }`}
     >
       <section

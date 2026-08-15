@@ -37,7 +37,7 @@ export default function WatchLaterButton({
         aria-label={saved ? "Remove from watch later" : "Add to watch later"}
         onPress={() => void toggleWatchLater(catalogId, mediaType)}
       >
-        <WatchLaterBookmarkIcon filled={saved} />
+        <WatchLaterBookmarkIcon filled={saved} size={18} />
       </Button>
     );
   }

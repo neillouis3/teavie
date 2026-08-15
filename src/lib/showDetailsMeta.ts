@@ -2,17 +2,14 @@ import type { CatalogDetailLink, CatalogInfoLine } from "@/components/ui/catalog
 import {
   countryNamesFromCodes,
   languageDisplayName,
-  sortedCompanyNames,
 } from "@/components/ui/catalogDetailColumns";
 import { formatFullReleaseDate, formatHeroDate } from "@/lib/formatRelease";
 import {
-  Building02Icon,
   Calendar03Icon,
   Clock01Icon,
   LanguageCircleIcon,
   Location01Icon,
   StarIcon,
-  Tv01Icon,
 } from "@hugeicons/core-free-icons";
 
 export type ShowDetailsSource = {
@@ -98,13 +95,6 @@ export function buildShowAlternateTitles(show: ShowDetailsSource): string[] {
   ]).filter((title) => title !== primary);
 }
 
-export function buildShowNetworkTags(show: ShowDetailsSource): string[] {
-  const networks = (show.networks ?? []).map((n) => n?.name);
-  const studios = (show.studios ?? []).map((s) => s?.name);
-  const companies = (show.production_companies ?? []).map((c) => c?.name);
-  return uniqueStrings([...networks, ...studios, ...companies]).slice(0, 6);
-}
-
 export function buildShowDetailStatPills(
   show: ShowDetailsSource,
   isAnime: boolean
@@ -168,22 +158,6 @@ export function buildExtendedShowInfoLines(
     if (runtime && runtime > 0) {
       lines.push({ icon: Clock01Icon, label: `~${runtime} min per episode` });
     }
-  }
-
-  const networkNames = uniqueStrings((show.networks ?? []).map((n) => n?.name));
-  if (networkNames.length > 0) {
-    lines.push({ icon: Tv01Icon, label: networkNames.slice(0, 3).join(", ") });
-  }
-
-  const companies = sortedCompanyNames(
-    [
-      ...(show.production_companies ?? []),
-      ...((show.studios ?? []).map((s) => ({ name: s?.name })) as { name?: string }[]),
-    ],
-    2
-  );
-  if (companies.length > 0) {
-    lines.push({ icon: Building02Icon, label: companies.join(", ") });
   }
 
   const country =

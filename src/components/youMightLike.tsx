@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import HorizontalCatalogCard from '@/components/ui/horizontalCatalogCard';
 import SmallCard from '@/components/ui/smallCard';
 import { useCatalogCardStyle } from '@/contexts/catalogCardStyleContext';
-import ExploreSectionTitle from '@/components/explore/exploreSectionTitle';
+import DetailSectionHeader from '@/components/movie/DetailSectionHeader';
 import {
   CatalogRailShell,
   SIDEBAR_BLEED_CAROUSEL_OPTS,
@@ -32,7 +32,7 @@ const YOU_MIGHT_LIKE_MAX_HORIZONTAL = 8;
 const YOU_MIGHT_LIKE_MAX_VERTICAL = EXPLORE_RAIL_MAX_ITEMS;
 const YOU_MIGHT_LIKE_DETAIL_MAX = DETAIL_RAIL_MAX_ITEMS;
 
-const YML_CACHE_PREFIX = 'teavie.cache.yml.v1:';
+const YML_CACHE_PREFIX = 'teavie.cache.yml.v2:';
 
 type RecItem = {
   keyId: number;
@@ -41,6 +41,7 @@ type RecItem = {
   poster_path: string | null;
   backdrop_path: string | null;
   year: string;
+  voteAverage?: number | null;
   runtimeSeconds?: number | null;
   seasonAmount?: number;
   numberOfEpisodes?: number | null;
@@ -89,6 +90,7 @@ async function fetchAnimeYml(idMal: number, limit: number): Promise<RecItem[]> {
         title: string;
         year: string;
         posterPath?: string;
+        voteAverage?: number | null;
         runtimeSeconds?: number | null;
         seasonAmount?: number;
         numberOfEpisodes?: number | null;
@@ -106,6 +108,7 @@ async function fetchAnimeYml(idMal: number, limit: number): Promise<RecItem[]> {
           poster_path: r.posterPath ?? null,
           backdrop_path: null,
           year: r.year ?? '—',
+          voteAverage: r.voteAverage ?? null,
           runtimeSeconds: r.runtimeSeconds ?? null,
           seasonAmount: r.seasonAmount ?? 0,
           numberOfEpisodes: r.numberOfEpisodes ?? null,
@@ -136,6 +139,7 @@ async function fetchTmdbYml(
       poster_path?: string | null;
       backdrop_path?: string | null;
       year?: string;
+      voteAverage?: number | null;
       runtimeSeconds?: number | null;
       seasonAmount?: number;
       numberOfEpisodes?: number | null;
@@ -146,6 +150,7 @@ async function fetchTmdbYml(
       poster_path: r.poster_path ?? null,
       backdrop_path: r.backdrop_path ?? null,
       year: r.year ?? '—',
+      voteAverage: r.voteAverage ?? null,
       runtimeSeconds: r.runtimeSeconds ?? null,
       seasonAmount: r.seasonAmount ?? 0,
       numberOfEpisodes: r.numberOfEpisodes ?? null,
@@ -264,9 +269,7 @@ export default function YouMightLike({
   if (loading && visibleItems.length === 0) {
     return (
       <section className={DETAIL_RAIL_SECTION_CLASS} aria-label="More like this">
-        <ExploreSectionTitle variant="explore" hideIcon>
-          More like this
-        </ExploreSectionTitle>
+        <DetailSectionHeader>More like this</DetailSectionHeader>
         <CatalogRailShell bleed={bleed}>
           <CatalogRailSkeleton horizontal={horizontal} bleed={bleed} />
         </CatalogRailShell>
@@ -278,9 +281,7 @@ export default function YouMightLike({
 
   return (
     <section className={DETAIL_RAIL_SECTION_CLASS} aria-label="More like this">
-      <ExploreSectionTitle variant="explore" hideIcon>
-        More like this
-      </ExploreSectionTitle>
+      <DetailSectionHeader>More like this</DetailSectionHeader>
       <CatalogRailShell bleed={bleed}>
         <Carousel opts={SIDEBAR_BLEED_CAROUSEL_OPTS} className="w-full">
           <CarouselContent
@@ -308,6 +309,7 @@ export default function YouMightLike({
                     id={item.linkId}
                     title={item.title}
                     year={item.year}
+                    voteAverage={item.voteAverage}
                     type={mediaType}
                     runtimeSeconds={item.runtimeSeconds ?? undefined}
                     seasonAmount={item.seasonAmount ?? 0}

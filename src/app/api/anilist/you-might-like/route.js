@@ -11,6 +11,7 @@ import {
 } from "@/lib/mapContentDocToItem";
 import { isAnimeCatalogDocReleased } from "@/lib/animeRelease.js";
 import { isBlockedAdultAnimeDoc } from "@/lib/animeContentPolicy.js";
+import { catalogDisplayVoteAverage } from "@/lib/catalogPopularity";
 
 function docAnilistKey(d) {
   const a = d?.anilist_id;
@@ -161,6 +162,7 @@ export async function GET(req) {
         title,
         year,
         posterPath,
+        voteAverage: doc ? catalogDisplayVoteAverage(doc) : null,
         runtimeSeconds: doc ? runtimeSecondsFromDoc(doc) : null,
         seasonAmount: doc ? tvSeasonCountFromDoc(doc) ?? 0 : 0,
         numberOfEpisodes: doc ? tvEpisodeCountFromDoc(doc) : null,

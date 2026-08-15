@@ -2,12 +2,8 @@
 
 import React from "react";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
-import ExploreSectionTitle from "@/components/explore/exploreSectionTitle";
-import {
-  DETAIL_RAIL_CAROUSEL_ITEM_VERTICAL,
-  DETAIL_RAIL_MAX_ITEMS,
-  DETAIL_RAIL_SECTION_CLASS,
-} from "@/lib/catalogGrid";
+import DetailSectionHeader from "@/components/movie/DetailSectionHeader";
+import { DETAIL_RAIL_SECTION_CLASS } from "@/lib/catalogGrid";
 
 type MovieTrailerEmbedProps = {
   src: string;
@@ -27,9 +23,7 @@ export default function MovieTrailerEmbed({
   if (variant === "details") {
     return (
       <section className={DETAIL_RAIL_SECTION_CLASS} aria-label="Trailer">
-        <ExploreSectionTitle variant="explore" hideIcon>
-          Trailer
-        </ExploreSectionTitle>
+        <DetailSectionHeader>Trailer</DetailSectionHeader>
         <div className={TRAILER_DETAILS_SHELL}>
           <VideoEmbedFrame
             src={src}

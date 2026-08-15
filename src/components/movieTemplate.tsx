@@ -33,12 +33,17 @@ import WatchLaterButton from '@/components/watchLater/WatchLaterButton';
 import FavoriteButton from '@/components/favorites/FavoriteButton';
 import MovieCreditsStrip from '@/components/movie/MovieCreditsStrip';
 import MovieTrailerEmbed from '@/components/movie/MovieTrailerEmbed';
+import DetailShareButton from '@/components/ui/DetailShareButton';
 import ShowDetailsHero, {
   SHOW_DETAILS_HERO_OVERLAP,
 } from '@/components/show/ShowDetailsHero';
 import { pickYoutubeTrailerEmbedUrl, type TmdbVideosPayload } from '@/lib/tmdbVideos';
 import { MOVIE_CONTENT_INSET_X } from '@/lib/contentInset';
 import { DETAIL_CONTENT_STACK_CLASS } from '@/lib/catalogGrid';
+import {
+  DETAIL_ICON_ACTION_CLASS,
+  DETAIL_PRIMARY_ACTION_CLASS,
+} from '@/lib/detailActions';
 import { useTmdbTitleLogo } from '@/hooks/useTmdbTitleLogo';
 import {
   type CatalogDetailsSeed,
@@ -204,7 +209,7 @@ export default function MovieTemplate({
   const modalHeroBannerRef = useRef<string | null>(null);
   const titleLogoPath = useTmdbTitleLogo(
     "movie",
-    detailsModal ? null : id
+    resolvedTmdbId
   );
 
   const watchHref = buildMovieWatchHref(id);
@@ -510,18 +515,18 @@ export default function MovieTemplate({
         <Button
           as={Link}
           href={watchHref}
-          color="success"
-          size="lg"
-          radius="full"
-          className="border border-white/25 !bg-[#22c55e]/90 !text-[#052e16] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_24px_rgba(34,197,94,0.16)] backdrop-blur-xl hover:!bg-[#2dd66b]"
-          startContent={<AssetMaskIcon src="/rail-icons/play.svg" size={20} />}
+          size="sm"
+          radius="lg"
+          className={DETAIL_PRIMARY_ACTION_CLASS}
+          startContent={<AssetMaskIcon src="/rail-icons/play.svg" size={18} />}
           onPress={onDetailsNavigate}
         >
           Play
         </Button>
       ) : null}
-      <FavoriteButton catalogId={String(id)} mediaType="movie" size="lg" radius="full" className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10" iconOnly />
-      <WatchLaterButton catalogId={String(id)} mediaType="movie" size="lg" radius="full" className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10" iconOnly />
+      <WatchLaterButton catalogId={String(id)} mediaType="movie" size="sm" radius="lg" className={DETAIL_ICON_ACTION_CLASS} iconOnly />
+      <FavoriteButton catalogId={String(id)} mediaType="movie" size="sm" radius="lg" className={DETAIL_ICON_ACTION_CLASS} iconOnly />
+      <DetailShareButton title={movie.title} href={`/movies/${id}`} />
     </div>
   );
   
@@ -583,8 +588,8 @@ export default function MovieTemplate({
 
     return (
       <div
-        className={`flex w-full flex-col overflow-x-hidden pb-32 ${
-          detailsModal ? "bg-transparent" : "bg-background"
+        className={`flex w-full flex-col overflow-x-hidden ${
+          detailsModal ? "bg-transparent pb-6" : "bg-background pb-32"
         }`}
       >
         {hasDetailsHero ? (

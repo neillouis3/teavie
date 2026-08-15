@@ -58,6 +58,9 @@ const DETAIL_META_CARD =
 const DETAIL_META_CARD_INNER =
   "bg-default-50 px-4 py-5 dark:!bg-black/20 sm:px-6 sm:py-6";
 
+const DETAIL_META_CARD_INNER_COMPACT =
+  "bg-default-50 px-4 py-4 dark:!bg-black/20 sm:px-5";
+
 function formatStatusDisplay(
   status: string | null | undefined
 ): { label: string; active: boolean } | null {
@@ -166,7 +169,7 @@ function CatalogOverview({
     <>
       <p
         ref={textRef}
-        className={`${OVERVIEW_TEXT} ${expanded ? "" : "line-clamp-3"}`}
+        className={`${OVERVIEW_TEXT} ${expanded ? "" : "line-clamp-5"}`}
       >
         {synopsis || "No overview available."}
       </p>
@@ -436,11 +439,11 @@ export default function CatalogMediaPanel({
     );
   }
 
+  const compactDetails = hidePosterOnDesktop && hideTitleBlockOnDesktop;
+
   return (
     <div
-      className={`w-full ${
-        hidePosterOnDesktop && hideTitleBlockOnDesktop ? "space-y-4" : "space-y-5"
-      }`}
+      className={`w-full ${compactDetails ? "space-y-4" : "space-y-5"}`}
     >
       {/* Mobile: title & stats → poster + description → details */}
       <div className={`min-w-0 sm:hidden ${hideTitleBlockOnDesktop ? "lg:hidden" : ""}`}>
@@ -474,11 +477,18 @@ export default function CatalogMediaPanel({
       ) : null}
 
       <section className={DETAIL_META_CARD}>
-        <div className={DETAIL_META_CARD_INNER}>
+        <div
+          className={
+            compactDetails
+              ? DETAIL_META_CARD_INNER_COMPACT
+              : DETAIL_META_CARD_INNER
+          }
+        >
           <CatalogDetailColumns
             infoLines={infoLines}
             links={links}
             networkTags={networkTags}
+            compact={compactDetails}
           />
         </div>
       </section>

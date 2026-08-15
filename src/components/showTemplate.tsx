@@ -67,6 +67,7 @@ import {
 } from "@/lib/animeRelease.js";
 import MovieTrailerEmbed from "@/components/movie/MovieTrailerEmbed";
 import MovieCreditsStrip from "@/components/movie/MovieCreditsStrip";
+import DetailShareButton from "@/components/ui/DetailShareButton";
 import { pickAnilistYoutubeTrailerEmbedUrl } from "@/lib/anilistTrailer";
 import { pickYoutubeTrailerEmbedUrl } from "@/lib/tmdbVideos";
 import { SHOW_CONTENT_INSET_X } from "@/lib/contentInset";
@@ -75,6 +76,10 @@ import {
   fetchTvResolveCached,
 } from "@/lib/catalogDetailsPrefetch";
 import { resolveFrozenModalHeroBanner } from "@/lib/catalogModalHeroBanner";
+import {
+  DETAIL_ICON_ACTION_CLASS,
+  DETAIL_PRIMARY_ACTION_CLASS,
+} from "@/lib/detailActions";
 
 import {
   type Season,
@@ -214,7 +219,7 @@ export default function ShowTemplate({
     (/^\d+$/.test(String(resolvedPlayerId)) ? String(resolvedPlayerId) : null);
   const titleLogoPath = useTmdbTitleLogo(
     animeMovieTmdbId ? "movie" : "tv",
-    detailsModal ? null : titleLogoId
+    titleLogoId
   );
 
   useEffect(() => {
@@ -995,11 +1000,10 @@ export default function ShowTemplate({
           <Button
             as={Link}
             href={watchHref}
-            color="success"
-            size="lg"
-            radius="full"
-            className="border border-white/25 !bg-[#22c55e]/90 !text-[#052e16] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_24px_rgba(34,197,94,0.16)] backdrop-blur-xl hover:!bg-[#2dd66b]"
-            startContent={<AssetMaskIcon src="/rail-icons/play.svg" size={20} />}
+            size="sm"
+            radius="lg"
+            className={DETAIL_PRIMARY_ACTION_CLASS}
+            startContent={<AssetMaskIcon src="/rail-icons/play.svg" size={18} />}
             onPress={onDetailsNavigate}
           >
             Play
@@ -1008,19 +1012,19 @@ export default function ShowTemplate({
           <Button
             as={Link}
             href={episodesHref}
-            color="success"
-            size="lg"
-            radius="full"
-            className="border border-white/25 !bg-[#22c55e]/90 !text-[#052e16] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_24px_rgba(34,197,94,0.16)] backdrop-blur-xl hover:!bg-[#2dd66b]"
-            startContent={<AssetMaskIcon src="/rail-icons/tv-retro.svg" size={20} />}
+            size="sm"
+            radius="lg"
+            className={DETAIL_PRIMARY_ACTION_CLASS}
+            startContent={<AssetMaskIcon src="/rail-icons/tv-retro.svg" size={18} />}
             onPress={onDetailsNavigate}
           >
             Episodes
           </Button>
         ) : null
       ) : null}
-      <FavoriteButton catalogId={String(id)} mediaType="tv" size="lg" radius="full" className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10" iconOnly />
-      <WatchLaterButton catalogId={String(id)} mediaType="tv" size="lg" radius="full" className="border border-white/15 bg-default-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl dark:!bg-white/10" iconOnly />
+      <WatchLaterButton catalogId={String(id)} mediaType="tv" size="sm" radius="lg" className={DETAIL_ICON_ACTION_CLASS} iconOnly />
+      <FavoriteButton catalogId={String(id)} mediaType="tv" size="sm" radius="lg" className={DETAIL_ICON_ACTION_CLASS} iconOnly />
+      <DetailShareButton title={title} href={`/shows/${id}`} />
     </div>
   ) : null;
   
