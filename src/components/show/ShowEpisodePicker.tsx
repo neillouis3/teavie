@@ -10,7 +10,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import { Button, Input, Select, SelectItem } from "@heroui/react";
+import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Select, SelectItem } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
@@ -832,12 +832,66 @@ function AnimeAudioSelect({
   compact?: boolean;
 }) {
   const { audio, setAudio } = useAnimeAudio();
+  const label = animeAudioLabel(audio);
+
+  if (bare) {
+    return (
+      <Dropdown
+        placement="bottom-start"
+        classNames={{
+          content:
+            "min-w-[4.5rem] border border-white/15 bg-black/80 p-1 text-white backdrop-blur-xl",
+        }}
+      >
+        <DropdownTrigger>
+          <Button
+            size="sm"
+            variant="light"
+            radius="md"
+            aria-label="Audio"
+            className={cn(
+              "h-11 min-h-11 shrink-0 gap-1 bg-transparent px-1.5 text-xs text-white shadow-none hover:bg-transparent data-[hover=true]:bg-transparent",
+              compact ? "px-1 sm:px-1.5" : "px-1.5"
+            )}
+            endContent={
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                size={14}
+                className="shrink-0 text-white/70"
+              />
+            }
+          >
+            {label}
+          </Button>
+        </DropdownTrigger>
+        <DropdownMenu
+          aria-label="Audio"
+          selectionMode="single"
+          selectedKeys={new Set([audio])}
+          onSelectionChange={(keys) => {
+            const next = Array.from(keys)[0];
+            if (next === "sub" || next === "dub") setAudio(next);
+          }}
+          classNames={{
+            base: "p-1",
+          }}
+          itemClasses={{
+            base: "rounded-lg text-xs text-white data-[hover=true]:bg-white/10 data-[focus-visible=true]:bg-white/10",
+          }}
+        >
+          {ANIME_AUDIO_OPTIONS.map((lang) => (
+            <DropdownItem key={lang}>{animeAudioLabel(lang)}</DropdownItem>
+          ))}
+        </DropdownMenu>
+      </Dropdown>
+    );
+  }
 
   return (
     <Select
       size="sm"
       aria-label="Audio"
-      variant={bare ? "flat" : "bordered"}
+      variant="bordered"
       radius="md"
       selectedKeys={new Set([audio])}
       onSelectionChange={(keys) => {
@@ -845,28 +899,21 @@ function AnimeAudioSelect({
         if (next === "sub" || next === "dub") setAudio(next);
       }}
       classNames={{
-        base: bare ? "w-auto shrink-0" : "w-[76px] shrink-0",
-        trigger: bare
-          ? cn(
-              "h-11 min-h-11 border-0 bg-transparent px-1.5 text-xs text-white shadow-none hover:bg-transparent data-[hover=true]:bg-transparent",
-              compact ? "px-1 sm:px-1.5" : "px-1.5"
-            )
-          : "h-8 min-h-8 border-default-300 px-2 dark:border-default-500/60",
-        value: bare
-          ? "text-xs font-normal text-white"
-          : "text-xs font-normal text-foreground",
-        selectorIcon: bare ? "text-white/70" : "text-default-400",
+        base: "w-[76px] shrink-0",
+        trigger: "h-8 min-h-8 border-default-300 px-2 dark:border-default-500/60",
+        value: "text-xs font-normal text-foreground",
+        selectorIcon: "text-default-400",
       }}
       popoverProps={{
         classNames: {
-          content: bare
-            ? "min-w-[5.5rem] border border-white/15 bg-black/80 text-white backdrop-blur-xl"
-            : "min-w-[76px]",
+          content: "min-w-[76px]",
         },
       }}
     >
       {ANIME_AUDIO_OPTIONS.map((lang) => (
-        <SelectItem key={lang}>{animeAudioLabel(lang)}</SelectItem>
+        <SelectItem key={lang} classNames={{ title: "whitespace-nowrap" }}>
+          {animeAudioLabel(lang)}
+        </SelectItem>
       ))}
     </Select>
   );
