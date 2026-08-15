@@ -13,6 +13,7 @@ type WatchPageSkeletonProps = {
 };
 
 /** Loading shell for movie + show watch pages (player first). */
+/** @deprecated Use ImmersiveWatchPageSkeleton, ShowEpisodesPageSkeleton, or CatalogDetailsSkeleton. */
 export default function WatchPageSkeleton({
   withSeasonPicker = false,
 }: WatchPageSkeletonProps) {

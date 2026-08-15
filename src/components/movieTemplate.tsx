@@ -26,13 +26,12 @@ import CatalogMediaPanel, { CatalogTitleBlock } from './ui/catalogMediaPanel';
 import { ImmersiveWatchPageSkeleton } from '@/components/ui/watchPageSkeleton';
 import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
-import WatchPlayerBackButton from '@/components/ui/watchPlayerBackButton';
+import ImmersiveWatchBackChrome from '@/components/ui/immersiveWatchBackChrome';
 import DeferredModalSections from '@/components/ui/deferredModalSections';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { recordMovieInWatchHistory } from '@/lib/watchHistory';
 import { usCertificationFromDoc } from '@/lib/mapContentDocToItem';
 import { tmdbImageUrl } from '@/lib/tmdbImage';
-import { inferMovieStreamQuality } from '@/lib/streamQuality';
 import { isBlockedMovieTmdbId } from '@/lib/tmdbMovieContentPolicy';
 import CatalogUnavailable from './ui/catalogUnavailable';
 import WatchLaterButton from '@/components/watchLater/WatchLaterButton';
@@ -631,7 +630,7 @@ export default function MovieTemplate({
     if (viewMode === 'watch' && !detailsModal) {
       return (
         <div className="fixed inset-0 z-0 flex h-[100dvh] w-full items-center justify-center bg-black px-6">
-          <WatchPlayerBackButton />
+          <ImmersiveWatchBackChrome />
           {unavailable}
         </div>
       );
@@ -791,7 +790,7 @@ export default function MovieTemplate({
       <div className="relative min-h-0 flex-1 w-full">
         {!movieReleased ? (
           <>
-            <WatchPlayerBackButton />
+            <ImmersiveWatchBackChrome />
             {trailerEmbedUrl ? (
             <MovieTrailerEmbed
               src={trailerEmbedUrl}
@@ -811,28 +810,28 @@ export default function MovieTemplate({
         ) : !streamHydrated ? (
           <ImmersiveWatchPageSkeleton />
         ) : (
-          <MoviePlayer
-            key={`movie-${resolvedTmdbId}-${playerEpoch}`}
-            videoId={resolvedTmdbId}
-            imdbId={movie.imdb_id}
-            title={movie.title}
-            posterUrl={imageUrl}
-            backdropUrl={resolveMovieDetailsBannerUrl(movie)}
-            server={server}
-            immersive
-            startSeconds={server === 'stremio' ? playerStartSeconds : 0}
-            onStremioProgress={
-              server === 'stremio' ? handleStremioProgress : undefined
-            }
-            onVidrockProgress={
-              server === 'vidrock' ? handleVidrockProgress : undefined
-            }
-            onEmbedLoad={handlePlayerReady}
-            streamQuality={inferMovieStreamQuality(
-              movie.release_dates,
-              movie.release_date
-            )}
-          />
+          <>
+            <MoviePlayer
+              key={`movie-${resolvedTmdbId}-${playerEpoch}`}
+              videoId={resolvedTmdbId}
+              imdbId={movie.imdb_id}
+              title={movie.title}
+              posterUrl={imageUrl}
+              backdropUrl={resolveMovieDetailsBannerUrl(movie)}
+              server={server}
+              immersive
+              hideBackButton
+              startSeconds={server === 'stremio' ? playerStartSeconds : 0}
+              onStremioProgress={
+                server === 'stremio' ? handleStremioProgress : undefined
+              }
+              onVidrockProgress={
+                server === 'viduki' ? handleVidrockProgress : undefined
+              }
+              onEmbedLoad={handlePlayerReady}
+            />
+            <ImmersiveWatchBackChrome />
+          </>
         )}
       </div>
     </div>

@@ -17,7 +17,7 @@ import { Suspense } from "react";
 import { AuthProvider } from "@/contexts/authContext";
 import { UserDataProvider } from "@/contexts/userDataContext";
 import { pathUsesAuthShell } from "@/lib/authShellPaths";
-import { pathUsesImmersiveMovieWatch } from "@/lib/immersiveWatchPaths";
+import { pathUsesImmersiveWatch } from "@/lib/immersiveWatchPaths";
 
 const TeaPartyModal = dynamic(
   () => import("@/components/watchParty/TeaPartyModal"),
@@ -39,7 +39,7 @@ export interface ProvidersProps {
 
 function MobileTopNavGate() {
   const pathname = usePathname();
-  if (pathUsesAuthShell(pathname) || pathUsesImmersiveMovieWatch(pathname)) return null;
+  if (pathUsesAuthShell(pathname) || pathUsesImmersiveWatch(pathname)) return null;
 
   return (
     <Suspense

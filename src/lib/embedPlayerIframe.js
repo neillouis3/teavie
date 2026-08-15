@@ -4,7 +4,7 @@
  *
  * Keep this minimal; do not add site-wide Permissions-Policy headers in
  * next.config — embed hosts must match the final URL (no 301) or fullscreen
- * delegation breaks when embed hosts redirect (e.g. peachify.pro → .top).
+ * delegation breaks when embed hosts redirect.
  */
 export const EMBED_IFRAME_ALLOW =
   'fullscreen; autoplay; encrypted-media; picture-in-picture; gyroscope; accelerometer';

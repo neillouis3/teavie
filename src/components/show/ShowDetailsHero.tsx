@@ -4,7 +4,7 @@ import React from "react";
 
 /** Pull details content up over the bottom of the hero banner (non-modal layout). */
 export const SHOW_DETAILS_HERO_OVERLAP =
-  "-mt-[164px] sm:-mt-[164px] md:-mt-[164px] lg:-mt-[164px]";
+  "-mt-[120px] sm:-mt-[140px] md:-mt-[164px] lg:-mt-[164px]";
 
 /** Modal hero with title overlay — pairs with SHOW_DETAILS_HERO_OVERLAP. */
 export const SHOW_DETAILS_MODAL_HERO_MB = "mb-40";

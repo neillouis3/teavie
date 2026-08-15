@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAnimeSource } from "@/contexts/animeSourceContext";
 import VideoEmbedFrame from "@/components/videoEmbedFrame";
 import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
-import StreamQualityBadge from "@/components/ui/streamQualityBadge";
 import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
 import {
   sanitizeAnimeEmbedUrl,
@@ -18,6 +17,7 @@ import { isMegaPlayEmbedUrl } from "@/lib/megaPlayProgress";
  * @param {number} props.episode 1-based absolute episode index
  * @param {"sub" | "dub"} props.audio
  * @param {number} [props.startSeconds] MegaPlay resume offset
+ * @param {boolean} [props.immersive] Full-viewport watch page (no rounded shell)
  * @param {(msg: import('@/lib/megaPlayProgress').MegaPlayMessage) => void} [props.onMegaPlayMessage]
  */
 export default function AnimePlayer({
@@ -25,6 +25,7 @@ export default function AnimePlayer({
   episode,
   audio = "sub",
   startSeconds = 0,
+  immersive = false,
   onMegaPlayMessage,
 }) {
   const { source: animeSource } = useAnimeSource();
@@ -110,16 +111,15 @@ export default function AnimePlayer({
 
   if (error) {
     return (
-      <div className="flex h-full min-h-0 w-full items-center justify-center rounded-lg bg-black p-4 ring-1 ring-white/10">
+      <div className={`flex h-full min-h-0 w-full items-center justify-center bg-black p-4 ${immersive ? "" : "rounded-lg ring-1 ring-white/10"}`}>
         <p className="text-sm text-red-400">Error loading video: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className="relative flex h-full min-h-0 w-full touch-auto flex-col rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
-      <WatchPlayerBackButton />
-      <StreamQualityBadge quality="hd" className="left-auto right-2 top-2 sm:right-3 sm:top-3" />
+    <div className={`relative flex h-full min-h-0 w-full touch-auto flex-col bg-black [touch-action:pan-x_pan-y_pinch-zoom] ${immersive ? "overflow-hidden" : "rounded-lg ring-1 ring-white/10 lg:overflow-hidden"}`}>
+      {immersive ? null : <WatchPlayerBackButton />}
       <div className="relative min-h-0 flex-1">
         {loading ? (
           <PlayerEmbedSkeleton />

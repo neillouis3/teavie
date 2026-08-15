@@ -1,6 +1,11 @@
-const MOVIE_WATCH_RE = /^\/movies\/[^/]+\/watch\/?$/;
+const IMMERSIVE_WATCH_RE = /^\/(movies|shows)\/[^/]+\/watch\/?$/;
 
-/** Movie watch routes: full-viewport player with no app chrome. */
+/** Movie and show watch routes: full-viewport player with no app chrome. */
+export function pathUsesImmersiveWatch(pathname: string): boolean {
+  return IMMERSIVE_WATCH_RE.test(pathname);
+}
+
+/** @deprecated Use pathUsesImmersiveWatch */
 export function pathUsesImmersiveMovieWatch(pathname: string): boolean {
-  return MOVIE_WATCH_RE.test(pathname);
+  return pathUsesImmersiveWatch(pathname);
 }

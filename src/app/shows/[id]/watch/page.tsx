@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import ShowTemplate from "@/components/showTemplate";
-import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
+import { ImmersiveWatchPageSkeleton } from "@/components/ui/watchPageSkeleton";
 
 type ShowWatchPageProps = {
   params: Promise<{ id: string }>;
@@ -14,7 +14,7 @@ export default async function ShowWatchPage({ params }: ShowWatchPageProps) {
   }
 
   return (
-    <Suspense fallback={<WatchPageSkeleton withSeasonPicker />}>
+    <Suspense fallback={<ImmersiveWatchPageSkeleton />}>
       <ShowTemplate id={id} viewMode="watch" />
     </Suspense>
   );

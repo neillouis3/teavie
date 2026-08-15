@@ -40,7 +40,7 @@ export default function AuthPageShell({
         />
       </Link>
 
-      <div className="relative z-10 ml-auto flex min-h-screen w-full flex-col lg:w-[40vw] lg:min-w-[22rem] lg:max-w-none">
+      <div className="relative z-10 ml-auto flex min-h-screen w-full flex-col lg:max-w-lg xl:max-w-xl">
         <div
           className={`flex flex-1 items-center justify-center px-6 py-16 lg:px-12 lg:py-12 ${AUTH_PANEL_GLASS_CLASS}`}
         >

@@ -6,9 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { categoryBrowseSortHref, type CatalogCategory } from "@/lib/catalogCategories";
 import { cn } from "@/lib/utils";
-
-const CHROME_BLUR_CLASS =
-  "border border-white/15 bg-black/45 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-black/38";
+import { WATCH_CHROME_BLUR_CLASS } from "@/lib/watchChrome";
 
 type CategoryBrowseBarProps = {
   category: CatalogCategory;
@@ -32,7 +30,7 @@ export default function CategoryBrowseBar({
       className={cn(
         "inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-medium text-white transition-colors",
         "hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
-        overlay ? CHROME_BLUR_CLASS : "border border-divider bg-content1/40 backdrop-blur-sm dark:bg-white/[0.06]"
+        overlay ? WATCH_CHROME_BLUR_CLASS : "border border-divider bg-content1/40 backdrop-blur-sm dark:bg-white/[0.06]"
       )}
     >
       <span>{label}</span>

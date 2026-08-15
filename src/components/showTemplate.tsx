@@ -41,10 +41,10 @@ import {
   buildShowDetailStatPills,
 } from "@/lib/showDetailsMeta";
 import CatalogMediaPanel, { CatalogTitleBlock } from "@/components/ui/catalogMediaPanel";
-import WatchPageSkeleton from "@/components/ui/watchPageSkeleton";
+import { ImmersiveWatchPageSkeleton } from "@/components/ui/watchPageSkeleton";
 import CatalogDetailsSkeleton from "@/components/ui/catalogDetailsSkeleton";
 import DeferredModalSections from "@/components/ui/deferredModalSections";
-import { PlayerEmbedSkeleton, PLAYER_SHELL_CLASS } from "@/components/ui/playerEmbedSkeleton";
+import { PlayerEmbedSkeleton } from "@/components/ui/playerEmbedSkeleton";
 import CatalogComingSoon from "@/components/ui/catalogComingSoon";
 import CatalogUnavailable from "@/components/ui/catalogUnavailable";
 import { usCertificationFromDoc } from "@/lib/mapContentDocToItem";
@@ -1336,7 +1336,7 @@ export default function ShowTemplate({
     return viewMode === "details" ? (
       <CatalogDetailsSkeleton modal={detailsModal} bannerUrl={seedBanner} />
     ) : (
-      <WatchPageSkeleton withSeasonPicker />
+      <ImmersiveWatchPageSkeleton />
     );
   }
 
@@ -1363,14 +1363,18 @@ export default function ShowTemplate({
   const playerBlock = (
     <div
       id={SHOW_VIDEO_PLAYER_ID}
-      className="aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]"
+      className={
+        viewMode === "watch"
+          ? "h-full min-h-0 w-full overflow-hidden bg-black"
+          : "aspect-video w-full max-h-[52vh] min-h-[200px] shrink-0 overflow-hidden rounded-xl bg-default-200 sm:max-h-[70vh] lg:aspect-auto lg:h-[min(80vh,900px)] lg:max-h-[80vh]"
+      }
     >
       {isAnimeMovie ? (
         animeMovieResolving ? (
-          <PlayerEmbedSkeleton rounded="rounded-xl" />
+          <PlayerEmbedSkeleton rounded={viewMode === "watch" ? "rounded-none" : "rounded-xl"} />
         ) : animeMovieTmdbId ? (
           !streamHydrated ? (
-            <PlayerEmbedSkeleton rounded="rounded-xl" />
+            <PlayerEmbedSkeleton rounded={viewMode === "watch" ? "rounded-none" : "rounded-xl"} />
           ) : (
           <MoviePlayer
             key={`movie-${id}`}
@@ -1380,7 +1384,9 @@ export default function ShowTemplate({
             posterUrl={imageUrl}
             backdropUrl={resolveShowDetailsBannerUrl(show, id, imageUrl, fetchedBannerUrl)}
             server={server}
-            onVidrockProgress={server === "vidrock" ? handleVidrockProgress : undefined}
+            immersive={viewMode === "watch"}
+            hideBackButton={viewMode === "watch"}
+            onVidrockProgress={server === "viduki" ? handleVidrockProgress : undefined}
             onEmbedLoad={handlePlayerReady}
           />
           )
@@ -1420,9 +1426,10 @@ export default function ShowTemplate({
           audio={animeAudio}
           startSeconds={playerStartSeconds}
           onMegaPlayMessage={handleMegaPlayMessage}
+          immersive={viewMode === "watch"}
         />
       ) : !streamHydrated ? (
-        <PlayerEmbedSkeleton rounded="rounded-xl" />
+        <PlayerEmbedSkeleton rounded={viewMode === "watch" ? "rounded-none" : "rounded-xl"} />
       ) : (
         <ShowPlayer
           key={`${id}-${playerCoords.season}-${playerCoords.episode}-${playerEpoch}`}
@@ -1435,13 +1442,12 @@ export default function ShowTemplate({
           season={playerCoords.season}
           episode={playerCoords.episode}
           startSeconds={server === "stremio" ? playerStartSeconds : 0}
+          immersive={viewMode === "watch"}
           onStremioProgress={server === "stremio" ? handleStremioProgress : undefined}
-          onVidrockProgress={server === "vidrock" ? handleVidrockProgress : undefined}
+          onVidrockProgress={server === "viduki" ? handleVidrockProgress : undefined}
           onEmbedLoad={() => {
             handlePlayerReady();
-            if (server === "vidcore") {
-              markEpisodeWatched(playerCoords.season, playerCoords.episode);
-            }
+            markEpisodeWatched(playerCoords.season, playerCoords.episode);
           }}
         />
       )}
@@ -1511,7 +1517,6 @@ export default function ShowTemplate({
       adminPreview={adminPreview}
       adminBypassActive={adminBypassActive}
       isAnimeMovie={isAnimeMovie}
-      title={title}
       playerBlock={playerBlock}
       episodePickerProps={episodePickerProps}
     />

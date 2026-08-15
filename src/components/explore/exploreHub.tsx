@@ -22,6 +22,7 @@ import {
   isUsableExploreCore,
   fetchPersonalizedExploreBundle,
   peekPersonalizedExploreCache,
+  peekPersonalizedExploreSession,
   buildSpotlightItems,
   type ExploreCorePayload,
   type TmdbDiscoverPayload,
@@ -116,7 +117,9 @@ export default function ExploreHub({
       setRecommendedRows([]);
       return;
     }
-    const peeked = peekPersonalizedExploreCache(preferences, watchedMovieIds);
+    const peeked =
+      peekPersonalizedExploreSession(preferences, watchedMovieIds, true) ??
+      peekPersonalizedExploreCache(preferences, watchedMovieIds);
     if (peeked?.recommended?.length) {
       setRecommendedRows(peeked.recommended);
     }

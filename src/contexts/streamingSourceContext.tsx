@@ -13,28 +13,28 @@ import { MOVIE_SERVERS } from '@/components/moviePlayer';
 export type StreamServerId = keyof typeof MOVIE_SERVERS;
 
 const STORAGE_KEY = 'teavie-streaming-server';
-const DEFAULT_SERVER: StreamServerId = 'vidrock';
+const DEFAULT_MIGRATION_KEY = 'teavie-streaming-default-v2';
+const DEFAULT_SERVER: StreamServerId = 'movies111';
 
-const ORDER: StreamServerId[] = ['vidrock', 'movies111', 'peachify', 'vidcore', 'stremio'];
+const ORDER: StreamServerId[] = ['movies111', 'viduki', 'stremio'];
 
 /** Legacy / mistyped values saved in localStorage. */
 const SERVER_ALIASES: Record<string, StreamServerId> = {
   '111movies': 'movies111',
   videasy: 'movies111',
+  vidrock: 'viduki',
+  peachify: 'viduki',
+  vidcore: 'viduki',
 };
 
 export function streamServerLabel(id: StreamServerId): string {
   switch (id) {
     case 'stremio':
       return 'Stremio';
-    case 'vidrock':
-      return 'VidRock';
+    case 'viduki':
+      return 'Viduki';
     case 'movies111':
       return '111movies';
-    case 'peachify':
-      return 'Peachify';
-    case 'vidcore':
-      return 'VidCore';
     default:
       return id;
   }
@@ -56,6 +56,14 @@ function readStored(): StreamServerId {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     const normalized = normalizeStored(v);
+    const migrated = localStorage.getItem(DEFAULT_MIGRATION_KEY);
+    if (!migrated) {
+      localStorage.setItem(DEFAULT_MIGRATION_KEY, '1');
+      if (!normalized || normalized === 'viduki') {
+        localStorage.setItem(STORAGE_KEY, DEFAULT_SERVER);
+        return DEFAULT_SERVER;
+      }
+    }
     if (normalized) {
       if (v !== normalized) {
         localStorage.setItem(STORAGE_KEY, normalized);

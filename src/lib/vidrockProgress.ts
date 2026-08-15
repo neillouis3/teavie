@@ -1,4 +1,4 @@
-/** VidRock iframe postMessage: MEDIA_DATA (continue-watching list) and PLAYER_EVENT. */
+/** Embed iframe postMessage: MEDIA_DATA (continue-watching list/map) and PLAYER_EVENT. */
 
 export type VidrockProgress = {
   tmdbId: string;
@@ -22,13 +22,29 @@ function parseMessageData(raw: unknown): Record<string, unknown> | null {
   return null;
 }
 
-export function isVidrockPlayerOrigin(origin: string): boolean {
+export function isVidukiPlayerOrigin(origin: string): boolean {
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    return host === "vidrock.ru" || host.endsWith(".vidrock.ru");
+    return host === "viduki.net" || host.endsWith(".viduki.net");
   } catch {
     return false;
   }
+}
+
+/** API 1 posts this when every backend server fails — parent should swap to API 2/3/4. */
+export function isVidukiAllServersFailed(event: MessageEvent): boolean {
+  if (!isVidukiPlayerOrigin(event.origin)) return false;
+  const data = parseMessageData(event.data);
+  if (!data) return false;
+  const type = String(data.type ?? "");
+  const source = String(data.source ?? "");
+  const isFailEvent =
+    type === "viduki:all-servers-failed" ||
+    type.includes("all-servers-failed") ||
+    source.startsWith("viduki-api");
+  if (!isFailEvent) return false;
+  const stage = data.stage;
+  return stage == null || stage === "initial" || stage === "manual-switch";
 }
 
 function asSeconds(raw: unknown): number | null {
@@ -99,8 +115,8 @@ function progressFromItem(
 }
 
 /**
- * Parse a VidRock parent-window message into playback seconds.
- * `expectedTmdbId` picks the matching row out of the MEDIA_DATA list.
+ * Parse a Viduki (or VidRock-shaped) parent-window message into playback seconds.
+ * `expectedTmdbId` picks the matching row out of the MEDIA_DATA list or map.
  */
 export function parseVidrockMessage(
   event: MessageEvent,
@@ -136,9 +152,14 @@ export function parseVidrockMessage(
     };
   }
 
-  const list = Array.isArray(data.data) ? (data.data as VidrockItem[]) : [];
+  const raw = data.data;
+  const list: VidrockItem[] = Array.isArray(raw)
+    ? (raw as VidrockItem[])
+    : raw && typeof raw === "object"
+      ? (Object.values(raw) as VidrockItem[])
+      : [];
   if (list.length === 0) return null;
-  if (event.origin && event.origin !== "null" && !isVidrockPlayerOrigin(event.origin)) {
+  if (event.origin && event.origin !== "null" && !isVidukiPlayerOrigin(event.origin)) {
     return null;
   }
 

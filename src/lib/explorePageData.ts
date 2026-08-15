@@ -341,8 +341,11 @@ export async function fetchPersonalizedExploreBundle(
   recommendedOnly = false
 ): Promise<PersonalizedExploreBundle | null> {
   if (!preferences || !hasUserPreferences(preferences)) return null;
-  const excludeKey = [...excludeMovieIds].map(String).sort().join("|");
-  const key = `${JSON.stringify(preferences)}::${excludeKey}::${recommendedOnly ? "rec" : "full"}`;
+  const key = personalizedSessionKey(preferences, excludeMovieIds, recommendedOnly);
+
+  const session = personalizedSession.get(key);
+  if (session) return session;
+
   const inflight = personalizedInflight.get(key);
   if (inflight) return inflight;
 
@@ -350,14 +353,48 @@ export async function fetchPersonalizedExploreBundle(
     preferences,
     excludeMovieIds,
     recommendedOnly
-  ).finally(() => {
-    personalizedInflight.delete(key);
-  });
+  )
+    .then((bundle) => {
+      if (bundle) personalizedSession.set(key, bundle);
+      return bundle;
+    })
+    .finally(() => {
+      personalizedInflight.delete(key);
+    });
   personalizedInflight.set(key, promise);
   return promise;
 }
 
 const personalizedInflight = new Map<string, Promise<PersonalizedExploreBundle | null>>();
+
+/**
+ * Bundles already fetched during this page load. Cleared only by a full document
+ * load, so client-side navigation reuses them instead of refetching.
+ */
+const personalizedSession = new Map<string, PersonalizedExploreBundle>();
+
+function personalizedSessionKey(
+  preferences: UserPreferences,
+  excludeMovieIds: string[],
+  recommendedOnly: boolean
+): string {
+  const excludeKey = [...excludeMovieIds].map(String).sort().join("|");
+  return `${JSON.stringify(preferences)}::${excludeKey}::${recommendedOnly ? "rec" : "full"}`;
+}
+
+/** Synchronous read of a bundle already fetched during this page load. */
+export function peekPersonalizedExploreSession(
+  preferences: UserPreferences | null,
+  excludeMovieIds: string[] = [],
+  recommendedOnly = false
+): PersonalizedExploreBundle | null {
+  if (!preferences || !hasUserPreferences(preferences)) return null;
+  return (
+    personalizedSession.get(
+      personalizedSessionKey(preferences, excludeMovieIds, recommendedOnly)
+    ) ?? null
+  );
+}
 
 const PERSONALIZED_BUNDLE_CACHE_PREFIX = "teavie.cache.personalized-explore.v2:";
 

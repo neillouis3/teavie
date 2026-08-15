@@ -23,12 +23,66 @@ export function catalogIdsMatch(
   return false;
 }
 
-/** Fetch poster/title rows for continue watching — no client cache. */
-export async function fetchContinueWatchingRows(
+/**
+ * Rows already fetched during this page load. Module state survives client-side
+ * navigation and dies with the document, so the rail refreshes on a hard refresh
+ * but not on back, forward, or moving between tabs.
+ */
+const sessionRows = new Map<string, ExploreHistoryRow[]>();
+
+function catalogSignature(entries: WatchHistoryEntry[]): string {
+  return entries
+    .map((e) => `${e.mediaType}:${e.catalogId}`)
+    .sort()
+    .join("|");
+}
+
+/** Reuse cards for the current entries; progress labels are reapplied per read. */
+function relabelRows(
+  rows: ExploreHistoryRow[],
   entries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
+): ExploreHistoryRow[] {
+  const out: ExploreHistoryRow[] = [];
+  for (const entry of entries) {
+    const row = rows.find((candidate) =>
+      catalogIdsMatch(entry.catalogId, candidate.id)
+    );
+    if (!row) continue;
+    out.push({
+      ...row,
+      id: entry.catalogId,
+      progressLabel: progressLabel(entry),
+      lastSeason: entry.lastSeason,
+      lastEpisode: entry.lastEpisode,
+    });
+  }
+  return out;
+}
+
+/** Synchronous read of this page load's rows. Null means nothing fetched yet. */
+export function peekContinueWatchingRows(
+  entries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string
+): ExploreHistoryRow[] | null {
+  if (entries.length === 0) return [];
+  const cached = sessionRows.get(catalogSignature(entries));
+  return cached ? relabelRows(cached, entries, progressLabel) : null;
+}
+
+/** Fetch poster/title rows for continue watching, once per page load. */
+export async function fetchContinueWatchingRows(
+  entries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string,
+  options: { force?: boolean } = {}
 ): Promise<ExploreHistoryRow[]> {
   if (entries.length === 0) return [];
+
+  const signature = catalogSignature(entries);
+  if (!options.force) {
+    const cached = sessionRows.get(signature);
+    if (cached) return relabelRows(cached, entries, progressLabel);
+  }
 
   const res = await fetch("/api/catalog/history", {
     method: "POST",
@@ -68,5 +122,6 @@ export async function fetchContinueWatchingRows(
     });
   }
 
+  sessionRows.set(signature, rows);
   return rows;
 }

@@ -10,7 +10,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import SportsMatchPanel from '@/components/sports/sportsMatchPanel';
-import WatchPageSkeleton from '@/components/ui/watchPageSkeleton';
+import SportsPlayerSkeleton from '@/components/sports/sportsPlayerSkeleton';
 import { WatchPlayerShell } from '@/components/ui/playerEmbedSkeleton';
 import {
   fetchMatchById,
@@ -155,7 +155,7 @@ export default function SportsPlayer({ matchId }: SportsPlayerProps) {
   }, [activeStream?.embedUrl]);
 
   if (loadingMatch) {
-    return <WatchPageSkeleton />;
+    return <SportsPlayerSkeleton />;
   }
 
   if (!match) {

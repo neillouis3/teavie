@@ -25,6 +25,7 @@ import {
 import type { ClientMediaCapabilities, PlayableStream } from "@/lib/stremio/types";
 import { consumeStreamSource } from "@/lib/stremio/consumeStreamSource";
 import { useWatchPartyNav } from "@/contexts/watchPartyNavContext";
+import { useWatchOverlay } from "@/contexts/watchOverlayContext";
 
 type Props = {
   type: "movie" | "series";
@@ -89,6 +90,8 @@ export default function StremioPlayer({
   const [audioOverrideUrl, setAudioOverrideUrl] = useState<string | null>(null);
   const [playbackSrc, setPlaybackSrc] = useState<string | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
+  const watchOverlay = useWatchOverlay();
+  const playbackStartedRef = useRef(false);
 
   useEffect(() => {
     setResolvedImdbId(imdbId ? normalizeImdbId(imdbId) : null);
@@ -101,6 +104,7 @@ export default function StremioPlayer({
     setAddonIndex(0);
     setHasMoreAddons(false);
     autoSkipCountRef.current = 0;
+    playbackStartedRef.current = false;
   }, [imdbId, catalogKey, type]);
 
   const query = useMemo(() => {
@@ -231,19 +235,35 @@ export default function StremioPlayer({
       audioResumeTimeRef.current = 0;
     };
     video.addEventListener("loadedmetadata", resume, { once: true });
+    const disableSubtitles = () => {
+      for (const track of Array.from(video.textTracks)) {
+        if (track.kind === "subtitles" || track.kind === "captions") {
+          track.mode = "disabled";
+        }
+      }
+    };
+    disableSubtitles();
+    video.textTracks.addEventListener("addtrack", disableSubtitles);
     const supportsNativeHls = Boolean(
       video.canPlayType("application/vnd.apple.mpegurl") ||
         video.canPlayType("application/x-mpegURL")
     );
     if (isHls && !supportsNativeHls && Hls.isSupported()) {
-      hls = new Hls();
-      hls.loadSource(playbackUrl);
-      hls.attachMedia(video);
+      const hlsPlayer = new Hls();
+      hlsPlayer.subtitleDisplay = false;
+      hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+        hlsPlayer.subtitleTrack = -1;
+        hlsPlayer.subtitleDisplay = false;
+      });
+      hlsPlayer.loadSource(playbackUrl);
+      hlsPlayer.attachMedia(video);
+      hls = hlsPlayer;
     } else {
       video.src = playbackUrl;
     }
     return () => {
       video.removeEventListener("loadedmetadata", resume);
+      video.textTracks.removeEventListener("addtrack", disableSubtitles);
       hls?.destroy();
       video.pause();
       video.removeAttribute("src");
@@ -413,6 +433,10 @@ export default function StremioPlayer({
         onPlay={() => {
           setPlaying(true);
           setNeedsPlaybackTap(false);
+          if (!playbackStartedRef.current && watchOverlay) {
+            playbackStartedRef.current = true;
+            watchOverlay.notifyPlaybackStart();
+          }
         }}
         onPause={() => setPlaying(false)}
         onCanPlay={(event) => {

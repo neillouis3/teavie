@@ -44,7 +44,7 @@ function formatEpisodeAirDateLong(airDate?: string | null): string | null {
   }
 }
 
-function EpisodeGridSkeleton() {
+export function EpisodeGridSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }, (_, i) => (

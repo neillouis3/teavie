@@ -2,9 +2,9 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Header from "@/components/ui/header";
 import PageBlurredBackdrop from "@/components/ui/pageBlurredBackdrop";
 import CatalogGrid from "@/components/browse/catalogGrid";
+import BrowseCatalogPageSkeleton from "@/components/browse/skeleton/browseCatalogPageSkeleton";
 import CatalogGridLoading from "@/components/browse/skeleton/catalogGridLoading";
 import CatalogFilterBar from "@/components/browse/CatalogFilterBar";
 import BrowseCatalogSidebar from "@/components/browse/BrowseCatalogSidebar";
@@ -456,7 +456,7 @@ function BrowseCatalogPageContent({
     <div className="relative min-h-screen w-full pb-10">
       <PageBlurredBackdrop variant={backdrop} />
       <div className={`relative z-10 ${CONTENT_INSET_X}`}>
-        <div className="flex items-start gap-8">
+        <div className="flex items-start gap-4 sm:gap-6 lg:gap-8">
           <BrowseCatalogSidebar
             label={viewer === "movie" ? "Movies" : "Shows"}
             genreSlugs={genreSlugs}
@@ -547,13 +547,7 @@ function BrowseCatalogPageFallback({
   backdrop?: PageBrowseBackdrop;
 }) {
   return (
-    <div className="relative min-h-screen w-full">
-      <PageBlurredBackdrop variant={backdrop} />
-      <div className={`relative z-10 pb-8 pt-2 ${CONTENT_INSET_X}`}>
-        <Header pageName={pageName} />
-        <CatalogGridLoading />
-      </div>
-    </div>
+    <BrowseCatalogPageSkeleton pageName={pageName} backdrop={backdrop} />
   );
 }
 

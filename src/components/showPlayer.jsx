@@ -3,38 +3,25 @@
 import { useMemo } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
-import StreamQualityBadge from "@/components/ui/streamQualityBadge";
 import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
 import StremioPlayer from "@/components/stremioPlayerLazy";
 import {
   MOVIES111_EMBED_BASE,
-  PEACHIFY_EMBED_BASE,
-  VIDCORE_EMBED_BASE,
-  VIDCORE_THEME_QUERY,
-  VIDROCK_EMBED_BASE,
-  VIDROCK_TV_QUERY,
+  MOVIES111_THEME_QUERY,
+  VIDUKI_EMBED_BASE,
+  VIDUKI_THEME_QUERY,
 } from '@/lib/embedHosts';
 
 export const SHOW_SERVERS = {
-  vidrock: {
-    base: VIDROCK_EMBED_BASE,
-    path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
-    suffix: () => VIDROCK_TV_QUERY,
+  viduki: {
+    base: VIDUKI_EMBED_BASE,
+    path: (id, season, episode) => `/1/tv/${id}/${season}/${episode}`,
+    suffix: () => VIDUKI_THEME_QUERY,
   },
   movies111: {
     base: MOVIES111_EMBED_BASE,
     path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
-    suffix: () => '',
-  },
-  peachify: {
-    base: PEACHIFY_EMBED_BASE,
-    path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
-    suffix: () => '',
-  },
-  vidcore: {
-    base: VIDCORE_EMBED_BASE,
-    path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
-    suffix: () => VIDCORE_THEME_QUERY,
+    suffix: () => MOVIES111_THEME_QUERY,
   },
 };
 
@@ -45,7 +32,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.vidrock;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.movies111;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -71,6 +58,7 @@ function buildEmbedUrl(p) {
  * @param {number} props.episode
  * @param {string} [props.server]
  * @param {number} [props.startSeconds] Stremio resume position
+ * @param {boolean} [props.immersive] Full-viewport watch page (no rounded shell)
  * @param {(seconds: number) => void} [props.onStremioProgress]
  * @param {(progress: import('@/lib/vidrockProgress').VidrockProgress) => void} [props.onVidrockProgress]
  * @param {() => void} [props.onEmbedLoad]
@@ -83,8 +71,9 @@ export default function ShowPlayer({
   backdropUrl,
   season,
   episode,
-  server = 'vidrock',
+  server = 'movies111',
   startSeconds = 0,
+  immersive = false,
   onStremioProgress,
   onVidrockProgress,
   onEmbedLoad,
@@ -102,8 +91,8 @@ export default function ShowPlayer({
 
   if (server === 'stremio') {
     return (
-      <div className="relative h-full min-h-0 w-full">
-        <WatchPlayerBackButton />
+      <div className={immersive ? 'relative h-full min-h-0 w-full' : 'relative h-full min-h-0 w-full'}>
+        {immersive ? null : <WatchPlayerBackButton />}
         <StremioPlayer
           type="series"
           imdbId={imdbId}
@@ -122,16 +111,15 @@ export default function ShowPlayer({
 
   if (error) {
     return (
-      <div className="flex h-full min-h-0 w-full items-center justify-center rounded-lg bg-black p-4 ring-1 ring-white/10">
+      <div className={`flex h-full min-h-0 w-full items-center justify-center bg-black p-4 ${immersive ? '' : 'rounded-lg ring-1 ring-white/10'}`}>
         <p className="text-sm text-red-400">Error loading video: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className="relative h-full min-h-0 w-full touch-auto rounded-lg bg-black ring-1 ring-white/10 [touch-action:pan-x_pan-y_pinch-zoom] lg:overflow-hidden">
-      <WatchPlayerBackButton />
-      <StreamQualityBadge quality="hd" className="left-auto right-2 top-2 sm:right-3 sm:top-3" />
+    <div className={`relative h-full min-h-0 w-full touch-auto bg-black [touch-action:pan-x_pan-y_pinch-zoom] ${immersive ? 'overflow-hidden' : 'rounded-lg ring-1 ring-white/10 lg:overflow-hidden'}`}>
+      {immersive ? null : <WatchPlayerBackButton />}
       {url ? (
         <VideoEmbedFrame
           key={url}
@@ -141,7 +129,8 @@ export default function ShowPlayer({
           vidrockTmdbId={String(videoId ?? '')}
           vidrockSeason={season}
           vidrockEpisode={episode}
-          onVidrockProgress={server === 'vidrock' ? onVidrockProgress : undefined}
+          vidukiImdbId={imdbId}
+          onVidrockProgress={server === 'viduki' ? onVidrockProgress : undefined}
           onLoad={onEmbedLoad}
         />
       ) : (

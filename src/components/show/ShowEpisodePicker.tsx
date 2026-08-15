@@ -34,6 +34,8 @@ import { useAnimeAudio } from "@/contexts/animeAudioContext";
 import { animeAudioLabel, ANIME_AUDIO_OPTIONS } from "@/lib/animePlayEmbed";
 import { readClientDayCache, writeClientDayCache } from "@/lib/clientDayCache";
 import { filterReleasedEpisodes, formatEpisodeAirDate, isEpisodeUpcoming } from "@/lib/episodeRelease";
+import { cn } from "@/lib/utils";
+import { WATCH_CHROME_BLUR_CLASS } from "@/lib/watchChrome";
 
 export type ShowEpisodePickerSeason = {
   season_number: number;
@@ -191,39 +193,6 @@ export function useEpisodePicker() {
     );
   }
   return ctx;
-}
-
-function useEpisodePickerOptional() {
-  return useContext(EpisodePickerContext);
-}
-
-function currentEpisodeSubtitle(ctx: EpisodePickerContextValue): string {
-  const row =
-    ctx.releasedEpisodes.find((episode) => ctx.isSelected(episode)) ??
-    ctx.episodes.find((episode) => ctx.isSelected(episode));
-  const episodeNumber = row
-    ? episodeNavNumber(row, ctx.flatMode, ctx.catalogAbsoluteEpisodes)
-    : ctx.selectedEpisode;
-  const name = row?.name?.trim();
-  return name
-    ? `Episode ${episodeNumber}: ${name}`
-    : `Episode ${episodeNumber}`;
-}
-
-export function ShowWatchPlayerHeading({ title }: { title: string }) {
-  const picker = useEpisodePickerOptional();
-  const episodeSubtitle = picker ? currentEpisodeSubtitle(picker) : null;
-
-  return (
-    <div className="flex w-full min-w-0 flex-col gap-1">
-      {episodeSubtitle ? (
-        <p className="text-sm text-default-500">{episodeSubtitle}</p>
-      ) : null}
-      <h1 className="text-xl !font-normal tracking-tight text-foreground sm:text-2xl">
-        {title}
-      </h1>
-    </div>
-  );
 }
 
 function padEpisode(n: number) {
@@ -887,7 +856,21 @@ function AnimeAudioSelect() {
   );
 }
 
-export function ShowEpisodePickerControls() {
+export function ShowEpisodePickerControls({
+  onEpisodesPress,
+  episodesOpen = false,
+  align = "start",
+  hideSeasonEpisodeJump = false,
+  bare = false,
+  compact = false,
+}: {
+  onEpisodesPress?: () => void;
+  episodesOpen?: boolean;
+  align?: "start" | "end";
+  hideSeasonEpisodeJump?: boolean;
+  bare?: boolean;
+  compact?: boolean;
+} = {}) {
   const {
     jumpSeason,
     jumpEpisode,
@@ -902,8 +885,26 @@ export function ShowEpisodePickerControls() {
     showAnimeAudio,
   } = useEpisodePicker();
 
+  const buttonClass = bare
+    ? cn(
+        "h-11 min-h-11 shrink-0 cursor-pointer bg-transparent text-xs text-white shadow-none hover:bg-transparent hover:opacity-100 data-[hover=true]:bg-transparent data-[hover=true]:opacity-100",
+        compact ? "px-1 sm:px-1.5" : "px-1.5"
+      )
+    : "h-8 min-h-8 shrink-0 text-xs";
+  const buttonVariant = bare ? "light" : "bordered";
+  const prevLabel = previousEpisodeLabel ?? "Prev";
+  const nextLabel = nextEpisodeLabel ?? "Next";
+
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5" aria-label="Episode controls">
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-x-2",
+        compact ? "flex-nowrap" : "flex-wrap gap-y-1.5",
+        bare ? "w-auto" : "w-full",
+        align === "end" ? "justify-end" : ""
+      )}
+      aria-label="Episode controls"
+    >
           {showAnimeAudio ? (
             <>
               <AnimeAudioSelect />
@@ -912,52 +913,57 @@ export function ShowEpisodePickerControls() {
               </span>
             </>
           ) : null}
-          <div className="flex shrink-0 items-center gap-1.5">
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-medium text-default-500">S</span>
-              <Input
-                size="sm"
-                type="number"
-                min={1}
-                aria-label="Season"
-                variant="bordered"
-                radius="md"
-                value={jumpSeason}
-                onValueChange={handleJumpSeasonChange}
-                classNames={{
-                  base: "w-[48px]",
-                  input: "text-xs tabular-nums",
-                  inputWrapper: "h-8 min-h-8 px-2",
-                }}
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-medium text-default-500">E</span>
-              <Input
-                size="sm"
-                type="number"
-                min={1}
-                aria-label="Episode"
-                variant="bordered"
-                radius="md"
-                value={jumpEpisode}
-                onValueChange={handleJumpEpisodeChange}
-                classNames={{
-                  base: "w-[48px]",
-                  input: "text-xs tabular-nums",
-                  inputWrapper: "h-8 min-h-8 px-2",
-                }}
-              />
-            </div>
-          </div>
-          <span className="text-sm text-default-400" aria-hidden>
-            ·
-          </span>
+          {hideSeasonEpisodeJump ? null : (
+            <>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] font-medium text-default-500">S</span>
+                  <Input
+                    size="sm"
+                    type="number"
+                    min={1}
+                    aria-label="Season"
+                    variant="bordered"
+                    radius="md"
+                    value={jumpSeason}
+                    onValueChange={handleJumpSeasonChange}
+                    classNames={{
+                      base: "w-[48px]",
+                      input: "text-xs tabular-nums",
+                      inputWrapper: "h-8 min-h-8 px-2",
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] font-medium text-default-500">E</span>
+                  <Input
+                    size="sm"
+                    type="number"
+                    min={1}
+                    aria-label="Episode"
+                    variant="bordered"
+                    radius="md"
+                    value={jumpEpisode}
+                    onValueChange={handleJumpEpisodeChange}
+                    classNames={{
+                      base: "w-[48px]",
+                      input: "text-xs tabular-nums",
+                      inputWrapper: "h-8 min-h-8 px-2",
+                    }}
+                  />
+                </div>
+              </div>
+              <span className="text-sm text-default-400" aria-hidden>
+                ·
+              </span>
+            </>
+          )}
           <Button
             size="sm"
-            variant="bordered"
+            variant={buttonVariant}
             radius="md"
-            className="h-8 min-h-8 text-xs"
+            isIconOnly={compact ? undefined : false}
+            className={cn(buttonClass, compact && "max-sm:min-w-11 max-sm:px-0")}
             isDisabled={!hasPreviousEpisode}
             onPress={goPreviousEpisode}
             aria-label={
@@ -969,16 +975,22 @@ export function ShowEpisodePickerControls() {
               <HugeiconsIcon icon={ArrowLeft01Icon} size={14} className="shrink-0" />
             }
           >
-            {previousEpisodeLabel ?? "Prev"}
+            {compact ? (
+              <span className="hidden sm:inline">{prevLabel}</span>
+            ) : (
+              prevLabel
+            )}
           </Button>
-          <span className="text-sm text-default-400" aria-hidden>
-            ·
-          </span>
+          {bare ? null : (
+            <span className="text-sm text-default-400" aria-hidden>
+              ·
+            </span>
+          )}
           <Button
             size="sm"
-            variant="bordered"
+            variant={buttonVariant}
             radius="md"
-            className="h-8 min-h-8 text-xs"
+            className={cn(buttonClass, compact && "max-sm:min-w-11 max-sm:px-0")}
             isDisabled={!hasNextEpisode}
             onPress={goNextEpisode}
             aria-label={
@@ -988,29 +1000,50 @@ export function ShowEpisodePickerControls() {
               <HugeiconsIcon icon={ArrowRight01Icon} size={14} className="shrink-0" />
             }
           >
-            {nextEpisodeLabel ?? "Next"}
+            {compact ? (
+              <span className="hidden sm:inline">{nextLabel}</span>
+            ) : (
+              nextLabel
+            )}
           </Button>
-      <span className="hidden text-sm text-default-400 sm:inline" aria-hidden>
-        ·
-      </span>
+      {bare ? null : (
+        <span className="hidden text-sm text-default-400 sm:inline" aria-hidden>
+          ·
+        </span>
+      )}
       <Button
         size="sm"
-        variant="bordered"
+        variant={buttonVariant}
         radius="md"
-        className="hidden h-8 min-h-8 text-xs sm:inline-flex"
-        onPress={scrollToPlayerBottom}
-        aria-label="Scroll to bottom of player"
+        className={
+          onEpisodesPress
+            ? buttonClass
+            : `hidden sm:inline-flex ${buttonClass}`
+        }
+        onPress={onEpisodesPress ?? scrollToPlayerBottom}
+        aria-expanded={onEpisodesPress ? episodesOpen : undefined}
+        aria-label={
+          onEpisodesPress
+            ? episodesOpen
+              ? "Hide episode list"
+              : "Show episode list"
+            : "Scroll to bottom of player"
+        }
         endContent={
           <HugeiconsIcon icon={ArrowDown01Icon} size={14} className="shrink-0" />
         }
       >
-        Episodes
+        {compact ? (
+          <span className="hidden sm:inline">Episodes</span>
+        ) : (
+          "Episodes"
+        )}
       </Button>
     </div>
   );
 }
 
-function ShowEpisodePickerSeasonRow() {
+function ShowEpisodePickerSeasonRow({ chrome = false }: { chrome?: boolean } = {}) {
   const {
     showSeasonTabs,
     flatMode,
@@ -1031,7 +1064,13 @@ function ShowEpisodePickerSeasonRow() {
   const manySeasons = releasedSeasons.length > 3;
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-x-2">
+    <div
+      className={
+        chrome
+          ? "flex min-w-0 w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center"
+          : "flex w-full min-w-0 flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-x-2"
+      }
+    >
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
         <Select
           aria-label="Season"
@@ -1047,15 +1086,26 @@ function ShowEpisodePickerSeasonRow() {
             onEpisodeChange(s, 1);
           }}
           classNames={{
-            base: manySeasons
-              ? "w-full min-w-0 max-w-full lg:w-[12rem]"
-              : "w-full min-w-0 max-w-full lg:w-[11rem]",
-            trigger:
-              "h-8 min-h-8 border-default-300 px-3 dark:border-default-500/60",
-            value: "text-xs font-normal text-foreground",
-            selectorIcon: "text-default-400",
+            base: chrome
+              ? "w-full min-w-0 max-w-full sm:w-auto sm:min-w-[9.5rem] sm:max-w-[12rem] shrink-0"
+              : manySeasons
+                ? "w-full min-w-0 max-w-full lg:w-[12rem]"
+                : "w-full min-w-0 max-w-full lg:w-[11rem]",
+            trigger: chrome
+              ? "h-8 min-h-8 cursor-pointer border-white/20 bg-white/10 px-3 text-white shadow-none hover:bg-white/10 data-[hover=true]:bg-white/10"
+              : "h-8 min-h-8 border-default-300 px-3 dark:border-default-500/60",
+            value: chrome
+              ? "text-xs font-normal text-white"
+              : "text-xs font-normal text-foreground",
+            selectorIcon: chrome ? "text-white/60" : "text-default-400",
           }}
-          popoverProps={{ classNames: { content: "min-w-[12rem]" } }}
+          popoverProps={{
+            classNames: {
+              content: chrome
+                ? "min-w-[12rem] border border-white/15 bg-black/80 text-white backdrop-blur-xl"
+                : "min-w-[12rem]",
+            },
+          }}
         >
           {releasedSeasons.map((s) => (
             <SelectItem
@@ -1068,7 +1118,13 @@ function ShowEpisodePickerSeasonRow() {
         </Select>
       ) : null}
       {currentSeasonEpisodeLabel ? (
-        <span className="shrink-0 text-xs font-medium text-default-500 sm:text-sm">
+        <span
+          className={
+            chrome
+              ? "shrink-0 text-xs font-medium text-white/55 sm:text-sm"
+              : "shrink-0 text-xs font-medium text-default-500 sm:text-sm"
+          }
+        >
           {currentSeasonEpisodeLabel}
         </span>
       ) : null}
@@ -1160,7 +1216,136 @@ function EpisodeCarouselScrollArrows({ api }: { api: CarouselApi | null }) {
   );
 }
 
-export function ShowEpisodePickerList() {
+function WatchEpisodeRow({ row }: { row: EpisodeCardRow }) {
+  const {
+    flatMode,
+    catalogAbsoluteEpisodes,
+    watchedKeys,
+    fallbackStillPath,
+    isSelected,
+    handleSelect,
+  } = useEpisodePicker();
+
+  const active = isSelected(row);
+  const labelNum =
+    flatMode && row.displayNumber != null && !catalogAbsoluteEpisodes
+      ? row.displayNumber
+      : row.episode;
+  const watchKey = formatWatchEpKey(row.season, row.episode);
+  const watched = watchedKeys?.has(watchKey) ?? false;
+  const upcoming = isEpisodeUpcoming(row.air_date);
+  const runtime = formatRuntimeLabel(row.runtime);
+  const stillUrl =
+    episodeStillUrl(row.still_path) ?? episodeStillUrl(fallbackStillPath);
+  const airDateLabel = formatEpisodeAirDate(row.air_date);
+
+  return (
+    <button
+      type="button"
+      id={`watch-episode-${row.season}-${row.episode}`}
+      onClick={() => handleSelect(row)}
+      disabled={upcoming}
+      aria-label={`Episode ${labelNum}: ${row.name}${
+        active ? ", now playing" : watched ? ", watched" : upcoming ? ", upcoming" : ""
+      }`}
+      aria-current={active ? "true" : undefined}
+      aria-disabled={upcoming ? true : undefined}
+      className={cn(
+        "flex w-full cursor-pointer items-start gap-3 rounded-xl p-2 text-left",
+        active ? "bg-white/10" : "bg-transparent",
+        upcoming ? "cursor-not-allowed opacity-70" : ""
+      )}
+    >
+      <div
+        className={cn(
+          "relative shrink-0 overflow-hidden rounded-lg max-sm:h-[3.75rem] max-sm:w-[6.5rem] sm:h-[4.5rem] sm:w-[8rem]",
+          stillUrl
+            ? "bg-white/10"
+            : episodeStillFallbackClass(row.season, row.episode),
+          upcoming ? "grayscale-[0.35]" : ""
+        )}
+      >
+        {stillUrl ? (
+          <Image
+            src={stillUrl}
+            alt=""
+            aria-hidden
+            fill
+            unoptimized
+            sizes="128px"
+            quality={70}
+            className="object-cover"
+          />
+        ) : null}
+        {active ? (
+          <span className="pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-md bg-success px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-success-foreground">
+            Now playing
+          </span>
+        ) : null}
+        {upcoming && airDateLabel ? (
+          <span className="pointer-events-none absolute left-1.5 top-1.5 z-[2] inline-flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white/80">
+            <HugeiconsIcon icon={Calendar03Icon} size={11} className="shrink-0" />
+            {airDateLabel}
+          </span>
+        ) : null}
+        {watched && !active ? (
+          <span
+            className="pointer-events-none absolute right-1.5 top-1.5 z-[2] h-2 w-2 rounded-full bg-success ring-2 ring-success/25"
+            aria-hidden
+          />
+        ) : null}
+      </div>
+      <div className="min-w-0 flex-1 py-0.5">
+        <span
+          className={cn(
+            "text-xs font-medium",
+            active ? "text-success" : upcoming ? "text-white/40" : "text-white/55"
+          )}
+        >
+          E{padEpisode(labelNum)}
+          {runtime ? (
+            <>
+              <span aria-hidden> · </span>
+              {runtime}
+            </>
+          ) : null}
+          {upcoming ? (
+            <>
+              <span aria-hidden> · </span>
+              Upcoming
+            </>
+          ) : null}
+        </span>
+        <span
+          className={cn(
+            "mt-0.5 block overflow-hidden text-sm leading-tight text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]",
+            upcoming ? "text-white/55" : ""
+          )}
+        >
+          {row.name}
+        </span>
+        {row.overview?.trim() ? (
+          <p
+            className={cn(
+              "mt-1 overflow-hidden text-xs leading-snug text-white/45 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]",
+              upcoming ? "text-white/35" : ""
+            )}
+          >
+            {row.overview}
+          </p>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
+export function ShowEpisodePickerList({
+  variant = "page",
+  embedded = false,
+}: {
+  variant?: "page" | "watch";
+  embedded?: boolean;
+} = {}) {
   const {
     loading,
     error,
@@ -1245,6 +1430,87 @@ export function ShowEpisodePickerList() {
     selectedSeason,
     selectedEpisode,
   ]);
+
+  useEffect(() => {
+    if (variant !== "watch") return;
+    document
+      .getElementById(`watch-episode-${selectedSeason}-${selectedEpisode}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [variant, selectedSeason, selectedEpisode, displayedEpisodes]);
+
+  if (variant === "watch") {
+    return (
+      <section
+        id={EPISODE_PICKER_LIST_ID}
+        className={cn(
+          "flex w-full min-h-0 flex-col overflow-hidden",
+          embedded ? "flex-1" : cn("rounded-2xl", WATCH_CHROME_BLUR_CLASS)
+        )}
+        aria-label="Episodes"
+      >
+        <div className="flex items-center gap-2 px-3 py-2">
+          <ShowEpisodePickerSeasonRow chrome />
+          {!loading && episodes.length > 1 ? (
+            <Button
+              size="sm"
+              variant="light"
+              radius="md"
+              isIconOnly
+              className={cn(
+                "h-8 w-8 min-w-8 shrink-0 cursor-pointer bg-transparent text-white shadow-none hover:bg-transparent data-[hover=true]:bg-transparent",
+                episodeSortLatestFirst ? "text-success" : "text-white"
+              )}
+              onPress={toggleEpisodeSort}
+              aria-pressed={episodeSortLatestFirst}
+              aria-label={
+                episodeSortLatestFirst
+                  ? "Showing latest episodes first. Sort oldest first."
+                  : "Showing oldest episodes first. Sort latest first."
+              }
+            >
+              <HugeiconsIcon icon={ArrowUpDownIcon} size={14} className="shrink-0" />
+            </Button>
+          ) : null}
+        </div>
+        <div
+          className={cn(
+            "min-h-0 overflow-y-auto px-1.5 pb-2",
+            embedded ? "flex-1" : "max-h-[min(70vh,36rem)]"
+          )}
+        >
+          {loading ? (
+            <div className="flex flex-col gap-1" aria-hidden>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex gap-3 rounded-xl p-2">
+                  <div className="h-[4.5rem] w-[8rem] shrink-0 animate-pulse rounded-lg bg-white/10" />
+                  <div className="flex flex-1 flex-col gap-2 py-1">
+                    <div className="h-3 w-16 animate-pulse rounded bg-white/10" />
+                    <div className="h-4 w-3/4 animate-pulse rounded bg-white/10" />
+                    <div className="h-3 w-full animate-pulse rounded bg-white/10" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : error && episodes.length === 0 ? (
+            <p className="px-2 py-3 text-sm text-white/55">Could not load episodes.</p>
+          ) : episodes.length === 0 ? (
+            <p className="px-2 py-3 text-sm text-white/55">
+              Nothing to show for this season yet.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {displayedEpisodes.map((row) => (
+                <WatchEpisodeRow
+                  key={`${row.season}-${row.episode}-${row.displayNumber ?? ""}`}
+                  row={row}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

@@ -69,7 +69,18 @@ export default function CollectionPageClient({ collectionId }: CollectionPagePro
       <div className={`pb-12 ${CONTENT_INSET_X}`}>
         {loading ? (
           <div className="py-8">
-            <div className="mb-6 h-10 w-64 animate-pulse rounded-lg bg-default-200 dark:bg-default-100/10" />
+            <header className="relative mb-8 overflow-hidden rounded-2xl bg-default-100 dark:bg-default-100/10">
+              <div className="relative h-40 animate-pulse bg-default-200 sm:h-52 md:h-64 dark:bg-default-100/15" />
+              <div className="relative z-10 flex gap-4 px-4 pb-5 -mt-16">
+                <div className="h-28 w-20 shrink-0 animate-pulse rounded-xl bg-default-200 sm:h-36 sm:w-24 dark:bg-default-100/20" />
+                <div className="min-w-0 flex-1 space-y-2 pt-2">
+                  <div className="h-3 w-20 animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
+                  <div className="h-7 w-56 max-w-full animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
+                  <div className="h-4 w-full max-w-md animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
+                  <div className="h-3 w-32 animate-pulse rounded bg-default-200 dark:bg-default-100/20" />
+                </div>
+              </div>
+            </header>
             <CatalogGridLoading />
           </div>
         ) : error || !collection ? (

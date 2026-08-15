@@ -429,7 +429,7 @@ export default function OnboardingModal() {
       hideCloseButton={Boolean(user) && !isPreferenceEdit}
       scrollBehavior="inside"
       classNames={{
-        base: `${MODAL_GLASS_CLASS} border border-default-200/60 dark:border-white/10 h-[53vh] w-[40vw] max-w-[95vw] shadow-lg`,
+        base: `${MODAL_GLASS_CLASS} border border-default-200/60 dark:border-white/10 h-[min(53vh,32rem)] w-full max-w-lg sm:max-w-xl shadow-lg`,
         body: "flex-1 overflow-y-auto bg-transparent py-2 text-left",
         header: "shrink-0 bg-transparent font-normal normal-case text-left",
         footer: "shrink-0 bg-transparent",

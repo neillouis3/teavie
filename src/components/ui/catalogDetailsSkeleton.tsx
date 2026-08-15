@@ -2,6 +2,7 @@
 
 import React from "react";
 import { CatalogMediaPanelSkeleton } from "@/components/ui/catalogMediaPanel";
+import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import {
   SHOW_DETAILS_HERO_OVERLAP,
   SHOW_DETAILS_MODAL_HERO_HEIGHT,
@@ -64,15 +65,8 @@ export default function CatalogDetailsSkeleton({
         <CatalogMediaPanelSkeleton />
         {modal ? null : (
           <div className="space-y-3 pt-4" aria-hidden>
-            <div className="h-5 w-36 animate-pulse rounded bg-default-200" />
-            <div className="flex gap-3 overflow-hidden">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-52 w-36 shrink-0 animate-pulse rounded-lg bg-default-200"
-                />
-              ))}
-            </div>
+            <div className="h-5 w-36 animate-pulse rounded bg-default-200 dark:bg-white/10" />
+            <CatalogRailSkeleton count={8} bleed />
           </div>
         )}
       </div>
