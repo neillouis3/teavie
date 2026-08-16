@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import UserContentRail, { useCatalogRailLayout } from "@/components/explore/UserContentRail";
-import SmallCard from "@/components/ui/smallCard";
-import HorizontalCatalogCard from "@/components/ui/horizontalCatalogCard";
-import { watchHistoryMetaChips } from "@/lib/watchHistory";
+import UserContentRail from "@/components/explore/UserContentRail";
+import ContinueWatchingCard from "@/components/ui/continueWatchingCard";
+import { watchHistoryCardSubtitle } from "@/lib/watchHistory";
+import { buildShowWatchHref } from "@/lib/showCatalogHelpers";
 import {
   catalogItemMediaType,
   catalogItemTitle,
@@ -22,6 +22,16 @@ type WatchHistoryRailProps = {
   className?: string;
 };
 
+function continueWatchingHref(item: ExploreHistoryRow, mediaType: "movie" | "tv") {
+  if (mediaType === "tv") {
+    return buildShowWatchHref(String(item.id), {
+      season: item.lastSeason,
+      episode: item.lastEpisode,
+    });
+  }
+  return `/movies/${encodeURIComponent(String(item.id))}/watch`;
+}
+
 export default function WatchHistoryRail({
   items,
   layout = "explore",
@@ -31,7 +41,6 @@ export default function WatchHistoryRail({
   className,
 }: WatchHistoryRailProps) {
   const { removeHistoryItem } = useUserData();
-  const { horizontal } = useCatalogRailLayout(layout);
 
   return (
     <UserContentRail
@@ -41,6 +50,7 @@ export default function WatchHistoryRail({
       layout={layout}
       bleed={bleed}
       display={display}
+      forceHorizontal
       maxItems={maxItems}
       className={className}
       getItemKey={(item) => `${catalogItemMediaType(item)}-${item.id}`}
@@ -48,40 +58,33 @@ export default function WatchHistoryRail({
         const mediaType = catalogItemMediaType(item);
         const titleText = catalogItemTitle(item);
         const year = catalogItemYear(item);
-        const metaChips = watchHistoryMetaChips(
+        const subtitle = watchHistoryCardSubtitle(
           {
             mediaType,
             lastSeason: item.lastSeason,
             lastEpisode: item.lastEpisode,
           },
           item.season_amount ?? 0,
-          item.runtimeSeconds ?? undefined
+          {
+            episodeName: item.episodeName,
+            runtimeSeconds: item.runtimeSeconds ?? undefined,
+          }
         );
-        const dismiss = () => void removeHistoryItem(String(item.id));
 
-        return horizontal ? (
-          <HorizontalCatalogCard
+        return (
+          <ContinueWatchingCard
             id={item.id}
             title={titleText}
             year={year}
             type={mediaType}
             posterPath={item.poster_path || ""}
             backdropPath={item.backdrop_path || ""}
-            topNote={metaChips?.join(" · ")}
-            onDismiss={dismiss}
-          />
-        ) : (
-          <SmallCard
-            id={item.id}
-            title={titleText}
-            year={year}
-            type={mediaType}
-            runtimeSeconds={item.runtimeSeconds ?? undefined}
-            seasonAmount={item.season_amount ?? 0}
-            numberOfEpisodes={item.number_of_episodes ?? undefined}
-            posterPath={item.poster_path || ""}
-            metaChips={metaChips}
-            onDismiss={dismiss}
+            episodeStillPath={item.episodeStillPath}
+            subtitle={subtitle}
+            href={continueWatchingHref(item, mediaType)}
+            overview={item.overview}
+            releaseDate={item.release_date ?? item.first_air_date ?? undefined}
+            onDismiss={() => void removeHistoryItem(String(item.id))}
           />
         );
       }}

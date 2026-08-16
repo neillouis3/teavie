@@ -6,6 +6,7 @@ import clientPromise from "@/lib/mongo";
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
 import { tmdbFetchJson } from "@/lib/tmdbAuth";
+import { fetchTmdbSeasonEpisodes } from "@/lib/tmdbSeasonEpisodes";
 
 function mapTmdbToItem(entry, data) {
   const voteAverage =
@@ -139,7 +140,9 @@ function parseEntries(body) {
     if (!catalogId || seen.has(catalogId)) continue;
     seen.add(catalogId);
     const mediaType = row?.mediaType === "movie" ? "movie" : "tv";
-    out.push({ catalogId, mediaType });
+    const lastSeason = Math.max(1, Math.floor(Number(row?.lastSeason)) || 1);
+    const lastEpisode = Math.max(1, Math.floor(Number(row?.lastEpisode)) || 1);
+    out.push({ catalogId, mediaType, lastSeason, lastEpisode });
     if (out.length >= 24) break;
   }
   return out;
@@ -151,6 +154,78 @@ function isAbortError(err) {
     err?.code === "ABORT_ERR" ||
     err?.message === "aborted"
   );
+}
+
+function resolveTmdbTvId(entry, doc) {
+  if (doc?.tmdb_id != null) {
+    const n = Number(doc.tmdb_id);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  if (/^\d+$/.test(entry.catalogId)) {
+    const n = Number(entry.catalogId);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+async function enrichEpisodeMetadata(items, entries, docs, reqSignal) {
+  if (!items.length) return items;
+
+  const docById = new Map();
+  for (const doc of docs) {
+    docById.set(String(doc.id), doc);
+    for (const key of catalogAliasKeys(doc)) {
+      docById.set(String(key), doc);
+    }
+  }
+
+  const seasonCache = new Map();
+  const out = [];
+
+  for (const item of items) {
+    const entry = entries.find((row) => row.catalogId === String(item.id));
+    if (!entry || entry.mediaType !== "tv") {
+      out.push(item);
+      continue;
+    }
+
+    if (reqSignal?.aborted) {
+      out.push(item);
+      continue;
+    }
+
+    const doc = docById.get(entry.catalogId);
+    const tvId = resolveTmdbTvId(entry, doc);
+    if (!tvId) {
+      out.push(item);
+      continue;
+    }
+
+    const cacheKey = `${tvId}:${entry.lastSeason}`;
+    if (!seasonCache.has(cacheKey)) {
+      seasonCache.set(
+        cacheKey,
+        fetchTmdbSeasonEpisodes(tvId, entry.lastSeason, { airedOnly: false })
+      );
+    }
+
+    let episodeMeta = null;
+    try {
+      const rows = await seasonCache.get(cacheKey);
+      episodeMeta =
+        rows.find((row) => row.episode_number === entry.lastEpisode) ?? null;
+    } catch {
+      episodeMeta = null;
+    }
+
+    out.push({
+      ...item,
+      episode_still_path: episodeMeta?.still_path ?? null,
+      episode_name: episodeMeta?.name ?? null,
+    });
+  }
+
+  return out;
 }
 
 export async function POST(req) {
@@ -240,7 +315,9 @@ export async function POST(req) {
       )
     ).filter(Boolean);
 
-    return Response.json({ items });
+    const enriched = await enrichEpisodeMetadata(items, entries, docs, req.signal);
+
+    return Response.json({ items: enriched });
   } catch (err) {
     if (isAbortError(err)) {
       return Response.json({ items: [] });

@@ -8,6 +8,8 @@ export type ExploreHistoryRow = ContentItem & {
   progressLabel: string;
   lastSeason: number;
   lastEpisode: number;
+  episodeStillPath?: string | null;
+  episodeName?: string | null;
 };
 
 /** True when two catalog ids refer to the same title (e.g. anime MAL aliases). */
@@ -55,6 +57,8 @@ function relabelRows(
       progressLabel: progressLabel(entry),
       lastSeason: entry.lastSeason,
       lastEpisode: entry.lastEpisode,
+      episodeStillPath: row.episodeStillPath ?? null,
+      episodeName: row.episodeName ?? null,
     });
   }
   return out;
@@ -91,6 +95,8 @@ export async function fetchContinueWatchingRows(
       entries: entries.map((e) => ({
         catalogId: e.catalogId,
         mediaType: e.mediaType,
+        lastSeason: e.lastSeason,
+        lastEpisode: e.lastEpisode,
       })),
     }),
   });
@@ -119,6 +125,14 @@ export async function fetchContinueWatchingRows(
       progressLabel: progressLabel({ ...entry, mediaType: resolved }),
       lastSeason: entry.lastSeason,
       lastEpisode: entry.lastEpisode,
+      episodeStillPath:
+        "episode_still_path" in item && typeof item.episode_still_path === "string"
+          ? item.episode_still_path
+          : null,
+      episodeName:
+        "episode_name" in item && typeof item.episode_name === "string"
+          ? item.episode_name
+          : null,
     });
   }
 

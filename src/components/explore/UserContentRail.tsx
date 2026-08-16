@@ -36,6 +36,8 @@ type UserContentRailProps<T extends ContentItem> = {
   bleed?: boolean;
   /** Carousel rail (default) or centered grid (Library / Activity). */
   display?: "rail" | "grid";
+  /** Landscape tiles regardless of global catalog card style. */
+  forceHorizontal?: boolean;
   maxItems?: number;
   className?: string;
   sectionTitleClassName?: string;
@@ -50,6 +52,7 @@ export default function UserContentRail<T extends ContentItem>({
   layout = "explore",
   bleed = true,
   display = "rail",
+  forceHorizontal = false,
   maxItems = EXPLORE_RAIL_MAX_ITEMS,
   className = "",
   sectionTitleClassName,
@@ -57,7 +60,7 @@ export default function UserContentRail<T extends ContentItem>({
   renderItem,
 }: UserContentRailProps<T>) {
   const { mode } = useCatalogCardStyle();
-  const horizontal = mode === "horizontal";
+  const horizontal = forceHorizontal || mode === "horizontal";
   const profile = layout === "profile";
   const itemClass = horizontal
     ? RAIL_CAROUSEL_ITEM_HORIZONTAL
@@ -84,7 +87,13 @@ export default function UserContentRail<T extends ContentItem>({
         >
           {title}
         </ExploreSectionTitle>
-        <div className={LIBRARY_GRID_CLASS}>
+        <div
+          className={
+            horizontal
+              ? "mx-auto grid w-full max-w-5xl grid-cols-1 gap-y-6 sm:grid-cols-2"
+              : LIBRARY_GRID_CLASS
+          }
+        >
           {visibleItems.map((item) => (
             <div key={getItemKey(item)}>{renderItem(item)}</div>
           ))}

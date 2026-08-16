@@ -475,3 +475,25 @@ export function watchHistoryMetaChips(
   }
   return [`Episode ${episode}`];
 }
+
+/** Single subtitle line for horizontal continue-watching cards (no chips). */
+export function watchHistoryCardSubtitle(
+  entry: Pick<WatchHistoryEntry, "mediaType" | "lastSeason" | "lastEpisode">,
+  seasonAmount: number,
+  options: { episodeName?: string | null; runtimeSeconds?: number } = {}
+): string {
+  if (entry.mediaType === "movie") {
+    const runtime = formatHeroRuntime(options.runtimeSeconds);
+    return runtime ?? "Continue watching";
+  }
+
+  const season = Math.max(1, Math.floor(Number(entry.lastSeason)) || 1);
+  const episode = Math.max(1, Math.floor(Number(entry.lastEpisode)) || 1);
+  const seasons = seasonAmount > 0 ? seasonAmount : 1;
+  const episodeName = String(options.episodeName ?? "").trim();
+  const progress =
+    seasons > 1 ? `Season ${season} · Episode ${episode}` : `Episode ${episode}`;
+
+  if (episodeName) return `${progress} · ${episodeName}`;
+  return progress;
+}
