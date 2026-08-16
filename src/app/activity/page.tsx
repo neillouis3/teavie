@@ -8,9 +8,8 @@ import WatchHistoryRail from "@/components/explore/watchHistoryRail";
 import WatchHistoryLogRail from "@/components/explore/watchHistoryLogRail";
 import UserPageShell from "@/components/ui/userPageShell";
 import { watchHistoryLogLabel } from "@/lib/watchHistory";
-import { RAIL_INNER_CLASS, RAIL_STACK_CLASS } from "@/lib/catalogGrid";
+import { RAIL_STACK_CLASS } from "@/lib/catalogGrid";
 import { PAGE_BODY } from "@/lib/pageLayout";
-import { CatalogRailSkeleton } from "@/components/catalog/catalogRail";
 import { useAuth } from "@/contexts/authContext";
 import { useUserData } from "@/contexts/userDataContext";
 import { useContinueWatchingRows } from "@/hooks/useContinueWatchingRows";
@@ -41,16 +40,15 @@ export default function ActivityPage() {
   const hasLocalHistory =
     watchHistoryEntries.length > 0 || logEntries.length > 0;
   const hasRows = historyRows.length > 0 || historyLogRows.length > 0;
-  const loading =
-    hasLocalHistory && (continueLoading || logLoading) && !hasRows;
+  const stillLoading = hasLocalHistory && (continueLoading || logLoading) && !hasRows;
   const loadFailed =
-    hasLocalHistory && !loading && (continueFailed || logFailed) && !hasRows;
+    hasLocalHistory && !stillLoading && (continueFailed || logFailed) && !hasRows;
 
   useEffect(() => {
     document.title = "Activity - Teavie";
   }, []);
 
-  const isEmpty = !loading && !loadFailed && !hasRows;
+  const isEmpty = !hasLocalHistory && !stillLoading && !loadFailed && !hasRows;
 
   const retry = () => {
     void reloadContinue();
@@ -100,15 +98,6 @@ export default function ActivityPage() {
               </Button>
             </div>
           ) : null}
-        </div>
-      ) : loading ? (
-        <div className={`${RAIL_STACK_CLASS} w-full items-center`}>
-          <section className={RAIL_INNER_CLASS} aria-label="Continue watching" aria-busy="true">
-            <ExploreSectionTitle className="justify-center" variant="explore">
-              Continue watching
-            </ExploreSectionTitle>
-            <CatalogRailSkeleton count={6} />
-          </section>
         </div>
       ) : loadFailed ? (
         <div className="flex w-full max-w-lg flex-col items-center gap-4 text-center">

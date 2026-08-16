@@ -6,6 +6,7 @@ import {
   WATCH_HISTORY_CHANGED_EVENT,
   watchHistoryProgressLabel,
 } from "@/lib/watchHistory";
+import { peekExploreHistoryRows } from "@/lib/explorePageData";
 import {
   fetchContinueWatchingRows,
   peekContinueWatchingRows,
@@ -18,6 +19,17 @@ function entriesKey(entries: WatchHistoryEntry[]): string {
     .join("|");
 }
 
+function peekRows(
+  entries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string
+): ExploreHistoryRow[] | null {
+  if (entries.length === 0) return [];
+  const session = peekContinueWatchingRows(entries, progressLabel);
+  if (session) return session;
+  const day = peekExploreHistoryRows(entries, progressLabel);
+  return day.length > 0 ? day : null;
+}
+
 /**
  * Load catalog cards for watch-history entries. The API is hit once per page load;
  * navigating back to a rail reuses what was already fetched, so only a hard refresh
@@ -28,13 +40,15 @@ export function useContinueWatchingRows(
   progressLabel: (entry: WatchHistoryEntry) => string = watchHistoryProgressLabel
 ) {
   const key = useMemo(() => entriesKey(entries), [entries]);
-  const [rows, setRows] = useState<ExploreHistoryRow[]>([]);
-  const [loading, setLoading] = useState(entries.length > 0);
+  const [rows, setRows] = useState<ExploreHistoryRow[]>(() => peekRows(entries, progressLabel) ?? []);
+  const [loading, setLoading] = useState(
+    () => entries.length > 0 && !(peekRows(entries, progressLabel)?.length)
+  );
   const [failed, setFailed] = useState(false);
 
   // Runs before paint, so a rail restored by back navigation never flashes empty.
   useLayoutEffect(() => {
-    const cached = peekContinueWatchingRows(entries, progressLabel);
+    const cached = peekRows(entries, progressLabel);
     if (!cached) return;
     setRows(cached);
     setLoading(false);
@@ -49,9 +63,9 @@ export function useContinueWatchingRows(
         setFailed(false);
         return;
       }
-      if (!force && peekContinueWatchingRows(entries, progressLabel)) return;
+      if (!force && peekRows(entries, progressLabel)) return;
 
-      setLoading(true);
+      if (rows.length === 0) setLoading(true);
       setFailed(false);
       try {
         const next = await fetchContinueWatchingRows(entries, progressLabel, {
@@ -66,7 +80,7 @@ export function useContinueWatchingRows(
         setLoading(false);
       }
     },
-    [entries, progressLabel]
+    [entries, progressLabel, rows.length]
   );
 
   const reload = useCallback(() => load(true), [load]);

@@ -69,8 +69,6 @@ export default function ExploreHub({
 
   const {
     rows: historyRows,
-    failed: historyFailed,
-    reload: reloadHistory,
   } = useContinueWatchingRows(watchHistoryEntries);
 
   const loadShell = useCallback(() => {
@@ -156,33 +154,8 @@ export default function ExploreHub({
   );
 
   const continueWatchingSection =
-    watchHistoryEntries.length > 0 ? (
-      historyRows.length > 0 ? (
-        <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
-      ) : historyFailed ? (
-        <section className={RAIL_INNER_CLASS} aria-label="Continue watching">
-          <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-          <p className="text-sm text-default-500">
-            Couldn&apos;t load your titles.{" "}
-            <button
-              type="button"
-              className="text-success hover:underline"
-              onClick={() => void reloadHistory()}
-            >
-              Try again
-            </button>
-          </p>
-        </section>
-      ) : (
-        <section
-          className={cn(RAIL_INNER_CLASS, "min-h-[280px]")}
-          aria-label="Continue watching"
-          aria-busy="true"
-        >
-          <ExploreSectionTitle variant="explore">Continue watching</ExploreSectionTitle>
-          <CatalogRailSkeleton count={6} />
-        </section>
-      )
+    historyRows.length > 0 ? (
+      <WatchHistoryRail items={historyRows} maxItems={SECTION_MAX_ITEMS} />
     ) : null;
 
   if (!core) {
