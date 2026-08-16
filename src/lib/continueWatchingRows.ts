@@ -31,6 +31,7 @@ export function catalogIdsMatch(
  * but not on back, forward, or moving between tabs.
  */
 const sessionRows = new Map<string, ExploreHistoryRow[]>();
+const sessionRowByCatalogId = new Map<string, ExploreHistoryRow>();
 
 function catalogSignature(entries: WatchHistoryEntry[]): string {
   return entries
@@ -39,8 +40,14 @@ function catalogSignature(entries: WatchHistoryEntry[]): string {
     .join("|");
 }
 
+function rememberSessionRows(rows: ExploreHistoryRow[]): void {
+  for (const row of rows) {
+    sessionRowByCatalogId.set(String(row.id), row);
+  }
+}
+
 /** Reuse cards for the current entries; progress labels are reapplied per read. */
-function relabelRows(
+export function relabelRows(
   rows: ExploreHistoryRow[],
   entries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
@@ -64,14 +71,46 @@ function relabelRows(
   return out;
 }
 
+function findSessionRow(catalogId: string): ExploreHistoryRow | undefined {
+  const id = String(catalogId ?? "").trim();
+  if (!id) return undefined;
+  const direct = sessionRowByCatalogId.get(id);
+  if (direct) return direct;
+  for (const row of sessionRowByCatalogId.values()) {
+    if (catalogIdsMatch(id, row.id)) return row;
+  }
+  return undefined;
+}
+
+function assembleSessionRows(
+  entries: WatchHistoryEntry[],
+  progressLabel: (entry: WatchHistoryEntry) => string
+): ExploreHistoryRow[] | null {
+  const rows: ExploreHistoryRow[] = [];
+  for (const entry of entries) {
+    const row = findSessionRow(entry.catalogId);
+    if (!row) return null;
+    rows.push(row);
+  }
+  return relabelRows(rows, entries, progressLabel);
+}
+
 /** Synchronous read of this page load's rows. Null means nothing fetched yet. */
 export function peekContinueWatchingRows(
   entries: WatchHistoryEntry[],
   progressLabel: (entry: WatchHistoryEntry) => string
 ): ExploreHistoryRow[] | null {
   if (entries.length === 0) return [];
-  const cached = sessionRows.get(catalogSignature(entries));
-  return cached ? relabelRows(cached, entries, progressLabel) : null;
+  const signature = catalogSignature(entries);
+  const cached = sessionRows.get(signature);
+  if (cached) return relabelRows(cached, entries, progressLabel);
+
+  const assembled = assembleSessionRows(entries, progressLabel);
+  if (assembled) {
+    sessionRows.set(signature, assembled);
+    return assembled;
+  }
+  return null;
 }
 
 /** Fetch poster/title rows for continue watching, once per page load. */
@@ -136,6 +175,7 @@ export async function fetchContinueWatchingRows(
     });
   }
 
+  rememberSessionRows(rows);
   sessionRows.set(signature, rows);
   return rows;
 }

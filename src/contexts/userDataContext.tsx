@@ -383,7 +383,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const removeHistoryItem = useCallback(async (catalogId: string) => {
     removeFromWatchHistory(catalogId);
     if (user) {
-      await fetch(`/api/user/watch-progress?catalogId=${encodeURIComponent(catalogId)}`, {
+      void fetch(`/api/user/watch-progress?catalogId=${encodeURIComponent(catalogId)}`, {
         method: "DELETE",
         credentials: "include",
       });

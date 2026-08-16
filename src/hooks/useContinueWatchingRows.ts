@@ -10,6 +10,7 @@ import { peekExploreHistoryRows } from "@/lib/explorePageData";
 import {
   fetchContinueWatchingRows,
   peekContinueWatchingRows,
+  relabelRows,
   type ExploreHistoryRow,
 } from "@/lib/continueWatchingRows";
 
@@ -46,13 +47,28 @@ export function useContinueWatchingRows(
   );
   const [failed, setFailed] = useState(false);
 
-  // Runs before paint, so a rail restored by back navigation never flashes empty.
+  // Runs before paint, so dismiss/back navigation never flash stale cards.
   useLayoutEffect(() => {
+    if (entries.length === 0) {
+      setRows([]);
+      setLoading(false);
+      setFailed(false);
+      return;
+    }
+
     const cached = peekRows(entries, progressLabel);
-    if (!cached) return;
-    setRows(cached);
-    setLoading(false);
-    setFailed(entries.length > 0 && cached.length === 0);
+    if (cached) {
+      setRows(cached);
+      setLoading(false);
+      setFailed(cached.length === 0);
+      return;
+    }
+
+    setRows((prev) => {
+      if (prev.length === 0) return prev;
+      const filtered = relabelRows(prev, entries, progressLabel);
+      return filtered.length > 0 ? filtered : prev;
+    });
   }, [key, entries, progressLabel]);
 
   const load = useCallback(
