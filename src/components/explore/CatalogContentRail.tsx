@@ -117,7 +117,7 @@ export default function CatalogContentRail({
       >
         <ExploreSectionTitle
           variant="explore"
-          className={cn("justify-center text-white", sectionTitleClassName)}
+          className={cn("justify-center", sectionTitleClassName)}
         >
           {title}
         </ExploreSectionTitle>

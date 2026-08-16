@@ -62,13 +62,13 @@ export function EpisodeGridSkeleton() {
     <div className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }, (_, i) => (
         <div key={i} className="flex flex-col" aria-hidden>
-          <div className="aspect-video w-full animate-pulse rounded-2xl bg-white/5" />
-          <div className="mt-3 h-3 w-28 animate-pulse rounded bg-white/5" />
-          <div className="mt-2 h-5 w-3/4 animate-pulse rounded bg-white/5" />
+          <div className="aspect-video w-full animate-pulse rounded-2xl bg-default-200/80 dark:bg-white/5" />
+          <div className="mt-3 h-3 w-28 animate-pulse rounded bg-default-200/80 dark:bg-white/5" />
+          <div className="mt-2 h-5 w-3/4 animate-pulse rounded bg-default-200/80 dark:bg-white/5" />
           <div className="mt-3 space-y-2">
-            <div className="h-3 w-full animate-pulse rounded bg-white/5" />
-            <div className="h-3 w-full animate-pulse rounded bg-white/5" />
-            <div className="h-3 w-2/3 animate-pulse rounded bg-white/5" />
+            <div className="h-3 w-full animate-pulse rounded bg-default-200/80 dark:bg-white/5" />
+            <div className="h-3 w-full animate-pulse rounded bg-default-200/80 dark:bg-white/5" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-default-200/80 dark:bg-white/5" />
           </div>
         </div>
       ))}
@@ -246,7 +246,7 @@ export default function ShowEpisodesGrid({
                       upcoming ? "cursor-not-allowed opacity-60" : "hover:opacity-95"
                     }`}
                   >
-                    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-zinc-900">
+                    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-default-200 dark:bg-zinc-900">
                       {stillUrl ? (
                         <Image
                           src={stillUrl}
@@ -277,7 +277,7 @@ export default function ShowEpisodesGrid({
                     <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-default-500">
                       {runtime ? <span>{runtime}</span> : null}
                       {runtime && airDate ? (
-                        <span aria-hidden className="text-white/25">
+                        <span aria-hidden className="text-default-300 dark:text-white/25">
                           ·
                         </span>
                       ) : null}
@@ -285,13 +285,13 @@ export default function ShowEpisodesGrid({
                       {!upcoming ? (
                         <>
                           <span
-                            className="rounded border border-white/20 px-1 py-px text-[10px] font-medium uppercase tracking-wide text-white/50"
+                            className="rounded border border-default-300/80 px-1 py-px text-[10px] font-medium uppercase tracking-wide text-default-500 dark:border-white/20 dark:text-white/50"
                             aria-hidden
                           >
                             HD
                           </span>
                           <span
-                            className="rounded border border-white/20 px-1 py-px text-[10px] font-medium uppercase tracking-wide text-white/50"
+                            className="rounded border border-default-300/80 px-1 py-px text-[10px] font-medium uppercase tracking-wide text-default-500 dark:border-white/20 dark:text-white/50"
                             aria-hidden
                           >
                             CC

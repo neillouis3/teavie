@@ -19,6 +19,7 @@ import {
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { avatarInitials } from "@/lib/partyNickname";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/authContext";
 import AssetMaskIcon from "@/components/ui/assetMaskIcon";
 import { MENU_GLASS_CLASS, NAV_MENU_ITEM_CLASS, NAV_MENU_ITEM_DANGER_CLASS } from "@/components/ui/navGlass";
@@ -89,7 +90,7 @@ export default function ProfileNavAvatar() {
           list: "gap-0.5 bg-transparent",
         }}
         itemClasses={{
-          base: NAV_MENU_ITEM_CLASS,
+          base: cn(NAV_MENU_ITEM_CLASS, "text-foreground/70"),
         }}
       >
         <DropdownSection showDivider>

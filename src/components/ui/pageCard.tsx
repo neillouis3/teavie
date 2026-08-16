@@ -8,7 +8,7 @@ import {
 } from "@/lib/pageLayout";
 
 export const PAGE_CARD =
-  "rounded-xl border border-default-200/40 bg-default-50/80 p-5 backdrop-blur-md dark:border-white/10 dark:bg-black/40";
+  "rounded-xl border border-default-200/60 bg-background p-5 shadow-sm dark:border-white/10 dark:bg-black/40 dark:shadow-none dark:backdrop-blur-md";
 
 type PageCardProps = {
   title: string;

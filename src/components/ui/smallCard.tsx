@@ -107,8 +107,8 @@ export default function SmallCard({
           className="object-cover transition-opacity duration-300 group-hover:opacity-90"
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-[#141414] px-3 py-4 text-center">
-          <p className="line-clamp-4 text-sm leading-snug text-white/45">
+        <div className="flex h-full w-full items-center justify-center bg-default-200 px-3 py-4 text-center dark:bg-[#141414]">
+          <p className="line-clamp-4 text-sm leading-snug text-default-500 dark:text-white/45">
             {displayTitle}
           </p>
         </div>

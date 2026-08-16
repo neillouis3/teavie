@@ -70,7 +70,7 @@ const genreIcons = {
 } as const;
 
 const sidebarItemClass =
-  "min-h-8 rounded-lg px-3 py-1 text-xs font-normal text-white/80 transition-colors data-[hover=true]:bg-white/8 data-[hover=true]:text-white data-[focus=true]:bg-white/8 data-[focus-visible=true]:bg-white/8 data-[pressed=true]:bg-white/8 data-[selected=true]:bg-white/15 data-[selected=true]:text-white data-[selected=true]:backdrop-blur-md data-[selected=true]:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]";
+  "min-h-8 rounded-lg px-3 py-1 text-xs font-normal text-foreground/80 transition-colors data-[hover=true]:bg-foreground/[0.06] data-[hover=true]:text-foreground data-[focus=true]:bg-foreground/[0.06] data-[focus-visible=true]:bg-foreground/[0.06] data-[pressed=true]:bg-foreground/[0.06] data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground data-[selected=true]:backdrop-blur-md data-[selected=true]:shadow-[inset_0_1px_0_rgba(0,0,0,0.06)] dark:data-[selected=true]:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]";
 
 const sidebarIconClass = "shrink-0 text-current opacity-90";
 
@@ -161,7 +161,7 @@ export default function BrowseCatalogSidebar({
           classNames={{
             base: "mt-2",
             group: "space-y-0",
-            heading: "px-3 pb-1.5 pt-2 text-xs font-medium uppercase tracking-wide text-white/50",
+            heading: "px-3 pb-1.5 pt-2 text-xs font-medium uppercase tracking-wide text-default-500",
           }}
         >
           {genres.map((genre) => (

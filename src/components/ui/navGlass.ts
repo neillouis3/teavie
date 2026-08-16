@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 
 /** Static frosted glass (non-hero pages). */
 export const NAV_GLASS_CLASS =
-  "bg-background/40 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/32 dark:bg-background/32 dark:supports-[backdrop-filter]:bg-background/26";
+  "bg-background/88 backdrop-blur-xl supports-[backdrop-filter]:bg-background/82 dark:bg-background/32 dark:supports-[backdrop-filter]:bg-background/26";
 
 /** Lighter sidebar glass — same blur as nav, more opaque so content shows through less. */
 export const SIDEBAR_GLASS_CLASS =
@@ -14,7 +14,7 @@ export const AUTH_PANEL_GLASS_CLASS =
 
 /** Popover / dropdown menus — matches floating nav chrome. */
 export const MENU_GLASS_CLASS =
-  "border border-white/10 bg-background/58 p-1 shadow-[0_14px_40px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/44 dark:bg-black/50 dark:supports-[backdrop-filter]:bg-black/42";
+  "border border-default-200/70 bg-background/95 p-1 shadow-[0_10px_32px_rgba(15,23,42,0.1)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/92 dark:border-white/10 dark:bg-black/50 dark:shadow-[0_14px_40px_rgba(0,0,0,0.25)] dark:supports-[backdrop-filter]:bg-black/42";
 
 /** Dropdown row hover — matches desktop nav link chrome. */
 export const NAV_MENU_ITEM_CLASS =

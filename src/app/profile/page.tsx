@@ -192,7 +192,7 @@ export default function ProfilePage() {
               type="button"
               disabled={avatarUploading}
               onClick={() => fileRef.current?.click()}
-              className="text-sm text-white/55 transition-colors hover:text-white disabled:opacity-50"
+              className="text-sm text-default-500 transition-colors hover:text-foreground disabled:opacity-50"
             >
               {avatarUploading ? "Uploading…" : "Change photo"}
             </button>

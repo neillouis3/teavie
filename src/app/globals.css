@@ -15,14 +15,20 @@
   }
   
   
-  /* Dark mode via manual theme toggle */
+  :root {
+    --background: #ffffff;
+    --midground: #f3f4f6;
+    --foreground: #171717;
+    --sidebar-w: 0rem;
+    transition: --sidebar-w 200ms ease-in-out;
+  }
+
   .dark {
     --background: #121212;
     --midground: #27272a;
     --foreground: #ededed;
   }
-  
-  /* Light mode via manual theme toggle (overrides system dark mode) */
+
   .light {
     --background: #ffffff;
     --midground: #f3f4f6;
@@ -40,11 +46,6 @@
     syntax: "<length>";
     inherits: true;
     initial-value: 0rem;
-  }
-
-  :root {
-    --sidebar-w: 0rem;
-    transition: --sidebar-w 200ms ease-in-out;
   }
 
   @media (prefers-reduced-motion: reduce) {

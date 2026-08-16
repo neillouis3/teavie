@@ -93,7 +93,7 @@ export default function GenresIndexPage() {
       {!ready ? (
         <GenreSquareTilesSkeleton className={GENRE_SQUARE_CENTERED_GRID} />
       ) : error ? (
-        <p className="py-12 text-center text-sm text-white/50">
+        <p className="py-12 text-center text-sm text-default-500">
           Could not load genres. Try again later.
         </p>
       ) : (

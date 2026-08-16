@@ -17,44 +17,67 @@ type PageBlurredBackdropProps = {
 
 const DYNAMIC_BACKDROP_CLASS = {
   default:
-    "absolute inset-0 h-full w-full scale-110 object-cover object-[center_25%] blur-2xl brightness-[0.72] saturate-150",
-  dark: "absolute inset-0 h-full w-full scale-110 object-cover object-[center_25%] blur-2xl brightness-[0.38] saturate-125",
+    "absolute inset-0 h-full w-full scale-110 object-cover object-[center_25%] blur-3xl opacity-90 brightness-[1.12] saturate-[0.22] dark:blur-2xl dark:opacity-100 dark:brightness-[0.72] dark:saturate-150",
+  dark: "absolute inset-0 h-full w-full scale-110 object-cover object-[center_25%] blur-3xl opacity-95 brightness-[1.05] saturate-[0.28] dark:blur-2xl dark:opacity-100 dark:brightness-[0.38] dark:saturate-125",
 };
 
 function FrostedOverlay({ tone }: { tone: "default" | "dark" }) {
   if (tone === "dark") {
     return (
       <>
-        <div className="absolute inset-0 bg-black/65" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/45" />
+        <div className="absolute inset-0 bg-white/84 dark:bg-black/65" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/55 via-white/25 to-background dark:from-black/20 dark:via-transparent dark:to-black/45" />
       </>
     );
   }
 
   return (
     <>
-      <div className="absolute inset-0 bg-black/35" />
-      <div className="absolute left-[18%] top-0 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[120px]" />
-      <div className="absolute right-[18%] top-0 h-[28rem] w-[28rem] translate-x-1/2 rounded-full bg-rose-700/10 blur-[120px]" />
+      <div className="absolute inset-0 bg-white/76 dark:bg-black/35" />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-background dark:from-transparent dark:via-transparent dark:to-transparent" />
+      <div className="absolute left-[18%] top-0 hidden h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[120px] dark:block" />
+      <div className="absolute right-[18%] top-0 hidden h-[28rem] w-[28rem] translate-x-1/2 rounded-full bg-rose-700/10 blur-[120px] dark:block" />
     </>
   );
 }
 
-function GreenBlobBackdrop() {
+function ShellBlobBackdrop() {
   return (
     <>
-      <div className="absolute inset-0 bg-[#070a08]" />
-      <div className="absolute -left-[12%] top-[-8%] h-[34rem] w-[34rem] rounded-full bg-emerald-500/25 blur-[120px]" />
-      <div className="absolute left-[22%] top-[18%] h-[28rem] w-[28rem] rounded-full bg-green-400/15 blur-[100px]" />
-      <div className="absolute -right-[10%] top-[4%] h-[32rem] w-[32rem] rounded-full bg-teal-500/20 blur-[120px]" />
-      <div className="absolute bottom-[-12%] right-[18%] h-[30rem] w-[30rem] rounded-full bg-lime-500/12 blur-[110px]" />
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-background" />
+      <div
+        className="absolute inset-0 dark:hidden"
+        style={{
+          backgroundImage: [
+            "radial-gradient(ellipse 80% 55% at 50% -15%, rgba(148, 163, 184, 0.16), transparent 68%)",
+            "radial-gradient(ellipse 55% 45% at 0% 35%, rgba(226, 232, 240, 0.55), transparent 72%)",
+            "radial-gradient(ellipse 50% 40% at 100% 20%, rgba(241, 245, 249, 0.65), transparent 70%)",
+          ].join(", "),
+        }}
+      />
+      <div className="absolute -left-[12%] top-[-8%] hidden h-[34rem] w-[34rem] rounded-full bg-emerald-500/25 blur-[120px] dark:block" />
+      <div className="absolute left-[22%] top-[18%] hidden h-[28rem] w-[28rem] rounded-full bg-green-400/15 blur-[100px] dark:block" />
+      <div className="absolute -right-[10%] top-[4%] hidden h-[32rem] w-[32rem] rounded-full bg-teal-500/20 blur-[120px] dark:block" />
+      <div className="absolute bottom-[-12%] right-[18%] hidden h-[30rem] w-[30rem] rounded-full bg-lime-500/12 blur-[110px] dark:block" />
+      <div className="absolute inset-0 hidden bg-black/40 dark:block" />
     </>
   );
 }
 
 function DarkBackdrop() {
-  return <div className="absolute inset-0 bg-[#070a08]" />;
+  return (
+    <>
+      <div className="absolute inset-0 bg-background" />
+      <div
+        className="absolute inset-0 dark:hidden"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(226, 232, 240, 0.45), transparent 72%)",
+        }}
+      />
+      <div className="absolute inset-0 hidden bg-[#070a08] dark:block" />
+    </>
+  );
 }
 
 function FrostedArtLayer({
@@ -85,7 +108,7 @@ function FrostedArtLayer({
   );
 }
 
-/** Shell/browse pages use green blob gradients; hero pages use frosted art. */
+/** Shell/browse pages use soft blobs; hero pages use frosted art. */
 export default function PageBlurredBackdrop({
   imageUrl,
   variant: _variant = "shell",
@@ -138,14 +161,22 @@ export default function PageBlurredBackdrop({
   }, [imageUrl]);
 
   const emptyLayer =
-    emptyFallback === "dark" ? <DarkBackdrop /> : <GreenBlobBackdrop />;
+    emptyFallback === "dark" ? <DarkBackdrop /> : <ShellBlobBackdrop />;
+  const heroActive = Boolean(displayUrl && visible);
 
   return (
     <div
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#070a08]"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-background"
       aria-hidden
     >
-      <div className="absolute inset-0">{emptyLayer}</div>
+      <div
+        className={cn(
+          "absolute inset-0 transition-opacity duration-700 ease-out",
+          heroActive ? "opacity-0" : "opacity-100"
+        )}
+      >
+        {emptyLayer}
+      </div>
       {displayUrl ? (
         <FrostedArtLayer imageUrl={displayUrl} visible={visible} tone={tone} />
       ) : null}

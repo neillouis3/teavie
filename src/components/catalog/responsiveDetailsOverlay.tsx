@@ -28,10 +28,10 @@ export default function ResponsiveDetailsOverlay({
       aria-label={label}
       classNames={{
         base:
-          "isolate overflow-hidden border border-white/15 bg-background/65 shadow-[0_24px_100px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl dark:!bg-[#101214]/90 dark:[--background:#101214] dark:[--foreground:#f4f4f5]",
-        backdrop: "bg-black/45 backdrop-blur-md",
+          "isolate overflow-hidden border border-default-200/60 bg-background/90 shadow-[0_24px_100px_rgba(0,0,0,0.18)] backdrop-blur-2xl dark:border-white/15 dark:bg-[#101214]/90 dark:shadow-[0_24px_100px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12)] dark:[--background:#101214] dark:[--foreground:#f4f4f5]",
+        backdrop: "bg-black/15 backdrop-blur-sm dark:bg-black/45",
         closeButton:
-          "z-50 bg-black/45 text-white backdrop-blur-md hover:bg-black/65",
+          "z-50 bg-default-100/90 text-foreground backdrop-blur-md hover:bg-default-200/90 dark:bg-black/45 dark:text-white dark:hover:bg-black/65",
       }}
     >
       <ModalContent>

@@ -45,7 +45,7 @@ function SegmentControl<T extends string>({
 }) {
   return (
     <div
-      className="inline-flex max-w-full flex-wrap gap-1 rounded-lg bg-white/8 p-1"
+      className="inline-flex max-w-full flex-wrap gap-1 rounded-lg bg-default-100/80 p-1 dark:bg-white/8"
       role="group"
     >
       {options.map((id) => {
@@ -62,10 +62,10 @@ function SegmentControl<T extends string>({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
               optionDisabled
-                ? 'cursor-not-allowed bg-transparent text-white/30 opacity-45'
+                ? 'cursor-not-allowed bg-transparent text-default-400 opacity-45 dark:text-white/30'
                 : selected
-                ? 'bg-white/15 text-white shadow-sm'
-                : 'text-white/60 hover:text-white'
+                ? 'bg-default-200/80 text-foreground shadow-sm dark:bg-white/15 dark:text-white'
+                : 'text-default-500 hover:text-foreground dark:text-white/60 dark:hover:text-white'
             )}
           >
             {icon?.(id)}
@@ -105,7 +105,7 @@ export default function SettingsPage() {
       <PageCard title="Appearance">
         <PageCardRow label="Theme">
           {!mounted ? (
-            <div className="h-9 w-40 animate-pulse rounded-lg bg-white/10" />
+            <div className="h-9 w-40 animate-pulse rounded-lg bg-default-200 dark:bg-white/10" />
           ) : (
             <SegmentControl
               options={['light', 'dark'] as const}

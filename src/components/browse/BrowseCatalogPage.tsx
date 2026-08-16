@@ -465,12 +465,12 @@ function BrowseCatalogPageContent({
           <main className="min-w-0 flex-1">
             <div className="mb-5 flex items-end justify-between gap-4">
               <div>
-                <h1 className="text-base font-medium tracking-tight text-white">{pageName}</h1>
+                <h1 className="text-base font-medium tracking-tight text-foreground">{pageName}</h1>
                 
               </div>
               {!loading ? (
                 <span
-                  className={`shrink-0 rounded-full bg-white/10 px-4 py-2 text-xs text-white/70 ${total > 0 ? "" : "invisible"}`}
+                  className={`shrink-0 rounded-full bg-default-100/80 px-4 py-2 text-xs text-default-500 dark:bg-white/10 dark:text-white/70 ${total > 0 ? "" : "invisible"}`}
                   aria-hidden={total <= 0}
                 >
                   {total > 0 ? `${total.toLocaleString()} titles` : "0 titles"}
