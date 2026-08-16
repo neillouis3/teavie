@@ -3,7 +3,8 @@
 import React from "react";
 import UserContentRail from "@/components/explore/UserContentRail";
 import ContinueWatchingCard from "@/components/ui/continueWatchingCard";
-import { watchHistoryCardSubtitle } from "@/lib/watchHistory";
+import { RAIL_CAROUSEL_ITEM_CONTINUE_WATCHING } from "@/lib/catalogGrid";
+import { watchHistoryCardLines } from "@/lib/watchHistory";
 import { buildShowWatchHref } from "@/lib/showCatalogHelpers";
 import {
   catalogItemMediaType,
@@ -51,6 +52,7 @@ export default function WatchHistoryRail({
       bleed={bleed}
       display={display}
       forceHorizontal
+      itemClass={RAIL_CAROUSEL_ITEM_CONTINUE_WATCHING}
       maxItems={maxItems}
       className={className}
       getItemKey={(item) => `${catalogItemMediaType(item)}-${item.id}`}
@@ -58,7 +60,8 @@ export default function WatchHistoryRail({
         const mediaType = catalogItemMediaType(item);
         const titleText = catalogItemTitle(item);
         const year = catalogItemYear(item);
-        const subtitle = watchHistoryCardSubtitle(
+        const { titleLine, subtitleLine } = watchHistoryCardLines(
+          titleText,
           {
             mediaType,
             lastSeason: item.lastSeason,
@@ -74,13 +77,13 @@ export default function WatchHistoryRail({
         return (
           <ContinueWatchingCard
             id={item.id}
-            title={titleText}
+            title={titleLine}
             year={year}
             type={mediaType}
             posterPath={item.poster_path || ""}
             backdropPath={item.backdrop_path || ""}
             episodeStillPath={item.episodeStillPath}
-            subtitle={subtitle}
+            subtitle={subtitleLine}
             href={continueWatchingHref(item, mediaType)}
             overview={item.overview}
             releaseDate={item.release_date ?? item.first_air_date ?? undefined}

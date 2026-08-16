@@ -30,9 +30,13 @@ export const DETAIL_RAIL_MAX_ITEMS = 5;
 export const RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE =
   `basis-[45%] ${RAIL_ITEM_PAD} sm:basis-[30%] md:basis-1/4 lg:basis-[calc((100%-6rem)/8.5)]`;
 
-/** Landscape / continue-watching style cards. */
+/** Landscape catalog rails (collection, related, etc.). */
 export const RAIL_CAROUSEL_ITEM_HORIZONTAL =
   `basis-[88%] ${RAIL_ITEM_PAD} sm:basis-[55%] md:basis-[42%] lg:basis-1/3 xl:basis-1/4`;
+
+/** Continue watching: 4 full cards + ½ peek from `lg`. */
+export const RAIL_CAROUSEL_ITEM_CONTINUE_WATCHING =
+  `basis-[85%] ${RAIL_ITEM_PAD} sm:basis-[52%] md:basis-[38%] lg:basis-[calc((100%-3.375rem)/4.5)] xl:basis-[calc((100%-3.375rem)/4.5)]`;
 
 /** Genre tiles: slightly wider than portrait rails (one fewer visible). */
 export const RAIL_CAROUSEL_ITEM_GENRE =

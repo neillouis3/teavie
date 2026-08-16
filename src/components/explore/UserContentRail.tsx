@@ -38,6 +38,8 @@ type UserContentRailProps<T extends ContentItem> = {
   display?: "rail" | "grid";
   /** Landscape tiles regardless of global catalog card style. */
   forceHorizontal?: boolean;
+  /** Override carousel item width (e.g. continue-watching 5.5 peek). */
+  itemClass?: string;
   maxItems?: number;
   className?: string;
   sectionTitleClassName?: string;
@@ -53,6 +55,7 @@ export default function UserContentRail<T extends ContentItem>({
   bleed = true,
   display = "rail",
   forceHorizontal = false,
+  itemClass: itemClassProp,
   maxItems = EXPLORE_RAIL_MAX_ITEMS,
   className = "",
   sectionTitleClassName,
@@ -62,11 +65,13 @@ export default function UserContentRail<T extends ContentItem>({
   const { mode } = useCatalogCardStyle();
   const horizontal = forceHorizontal || mode === "horizontal";
   const profile = layout === "profile";
-  const itemClass = horizontal
-    ? RAIL_CAROUSEL_ITEM_HORIZONTAL
-    : profile
-      ? RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE
-      : RAIL_CAROUSEL_ITEM_VERTICAL;
+  const itemClass =
+    itemClassProp ??
+    (horizontal
+      ? RAIL_CAROUSEL_ITEM_HORIZONTAL
+      : profile
+        ? RAIL_CAROUSEL_ITEM_VERTICAL_PROFILE
+        : RAIL_CAROUSEL_ITEM_VERTICAL);
 
   const visibleItems = useMemo(
     () => railContentItems(items, maxItems) as T[],

@@ -79,8 +79,7 @@ export default function ContinueWatchingCard({
           shadow="none"
           radius="lg"
           classNames={{
-            base:
-              "border border-default-200/45 bg-default-50/90 dark:border-default-100/15 dark:bg-default-50/10",
+            base: "border-0 bg-transparent",
           }}
         >
           <CardBody className="relative aspect-video w-full overflow-hidden p-0">
@@ -108,7 +107,7 @@ export default function ContinueWatchingCard({
               )}
               {src ? (
                 <div
-                  className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[58%] bg-gradient-to-t from-black/90 via-black/45 to-transparent"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] bg-gradient-to-t from-black/82 via-black/35 to-transparent"
                   aria-hidden
                 />
               ) : null}
@@ -124,11 +123,11 @@ export default function ContinueWatchingCard({
             ) : null}
 
             {src ? (
-              <div className="absolute bottom-0 left-0 right-0 z-[2] px-3 pb-3 pt-8 sm:px-4 sm:pb-4">
-                <p className="text-left text-[15px] font-semibold leading-snug tracking-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] line-clamp-2 sm:text-base">
+              <div className="absolute bottom-2 left-2 right-2 z-[2] max-w-[92%] sm:bottom-3 sm:left-3 sm:right-4">
+                <p className="text-left text-sm font-normal leading-snug tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[15px]">
                   {title}
                 </p>
-                <p className="mt-1 text-left text-xs font-normal leading-snug text-white/72 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2 sm:text-[13px]">
+                <p className="mt-0.5 text-left text-[11px] font-normal leading-snug text-white/75 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] line-clamp-2">
                   {subtitle}
                 </p>
               </div>
@@ -139,7 +138,7 @@ export default function ContinueWatchingCard({
       {onDismiss != null ? (
         <button
           type="button"
-          className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+          className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
           aria-label={`Remove ${title} from continue watching`}
           onClick={(e) => {
             e.preventDefault();
