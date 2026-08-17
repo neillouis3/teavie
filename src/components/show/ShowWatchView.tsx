@@ -60,16 +60,29 @@ export default function ShowWatchView({
 
   const overlay = (
     <div className="pointer-events-none absolute inset-0 z-[100]">
+      {!isAnimeMovie && episodesOpen ? (
+        <button
+          type="button"
+          aria-label="Close episode list"
+          className="pointer-events-auto fixed inset-0 z-[104] hidden bg-transparent lg:block"
+          onClick={closeEpisodes}
+        />
+      ) : null}
       <div
         className={cn(
           "pointer-events-auto absolute flex max-w-full flex-col items-start",
           WATCH_OVERLAY_TOP_CLASS,
-          WATCH_OVERLAY_LEFT_CLASS
+          WATCH_OVERLAY_LEFT_CLASS,
+          episodesOpen && "z-[106]"
         )}
       >
         {chromeBar}
         {!isAnimeMovie && episodesOpen ? (
-          <div className="mt-2 hidden w-[min(calc(100vw-2rem-env(safe-area-inset-left)-env(safe-area-inset-right)),28rem)] lg:block">
+          <div
+            className="mt-2 hidden w-[min(calc(100vw-2rem-env(safe-area-inset-left)-env(safe-area-inset-right)),28rem)] lg:block"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
             <ShowEpisodePickerList variant="watch" />
           </div>
         ) : null}

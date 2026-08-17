@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { MENU_GLASS_CLASS } from "@/components/ui/navGlass";
 import {
   WATCH_CHROME_BLUR_CLASS,
+  WATCH_DROPDOWN_CLASS,
   WATCH_MENU_ITEM_CLASS,
   WATCH_TOOLBAR_TEXT_CLASS,
 } from "@/lib/watchChrome";
@@ -1093,6 +1094,72 @@ export function ShowEpisodePickerControls({
   );
 }
 
+function WatchSeasonSelect({
+  releasedSeasons,
+  selectedSeason,
+  onSeasonChange,
+  onEpisodeChange,
+}: {
+  releasedSeasons: ShowEpisodePickerSeason[];
+  selectedSeason: number;
+  onSeasonChange: (season: number) => void;
+  onEpisodeChange: (season: number, episode: number) => void;
+}) {
+  return (
+    <Dropdown
+      placement="bottom-start"
+      classNames={{
+        content: cn("min-w-[9.5rem] text-white", WATCH_DROPDOWN_CLASS),
+      }}
+    >
+      <DropdownTrigger>
+        <Button
+          size="sm"
+          variant="light"
+          radius="md"
+          aria-label="Season"
+          className="h-8 min-h-8 shrink-0 gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 text-xs font-normal text-white shadow-none hover:bg-white/15 data-[hover=true]:bg-white/15"
+          endContent={
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              size={14}
+              className="shrink-0 text-white/60"
+            />
+          }
+        >
+          Season {selectedSeason}
+        </Button>
+      </DropdownTrigger>
+      <DropdownMenu
+        aria-label="Season"
+        selectionMode="single"
+        selectedKeys={new Set([String(selectedSeason)])}
+        hideSelectedIcon
+        onSelectionChange={(keys) => {
+          const key = Array.from(keys)[0];
+          const season = parseInt(String(key), 10);
+          if (!Number.isFinite(season)) return;
+          onSeasonChange(season);
+          onEpisodeChange(season, 1);
+        }}
+        classNames={{
+          base: "bg-transparent p-0",
+          list: "gap-0.5 bg-transparent",
+        }}
+        itemClasses={{
+          base: WATCH_MENU_ITEM_CLASS,
+        }}
+      >
+        {releasedSeasons.map((season) => (
+          <DropdownItem key={String(season.season_number)}>
+            Season {season.season_number}
+          </DropdownItem>
+        ))}
+      </DropdownMenu>
+    </Dropdown>
+  );
+}
+
 function ShowEpisodePickerSeasonRow({ chrome = false }: { chrome?: boolean } = {}) {
   const {
     showSeasonTabs,
@@ -1122,6 +1189,14 @@ function ShowEpisodePickerSeasonRow({ chrome = false }: { chrome?: boolean } = {
       }
     >
       {showSeasonTabs && releasedSeasons.length > 1 && !flatMode ? (
+        chrome ? (
+          <WatchSeasonSelect
+            releasedSeasons={releasedSeasons}
+            selectedSeason={selectedSeason}
+            onSeasonChange={onSeasonChange}
+            onEpisodeChange={onEpisodeChange}
+          />
+        ) : (
         <Select
           aria-label="Season"
           size="sm"
@@ -1136,24 +1211,16 @@ function ShowEpisodePickerSeasonRow({ chrome = false }: { chrome?: boolean } = {
             onEpisodeChange(s, 1);
           }}
           classNames={{
-            base: chrome
-              ? "w-full min-w-0 max-w-full sm:w-auto sm:min-w-[9.5rem] sm:max-w-[12rem] shrink-0"
-              : manySeasons
-                ? "w-full min-w-0 max-w-full lg:w-[12rem]"
-                : "w-full min-w-0 max-w-full lg:w-[11rem]",
-            trigger: chrome
-              ? "h-8 min-h-8 cursor-pointer border-white/20 bg-white/10 px-3 text-white shadow-none hover:bg-white/10 data-[hover=true]:bg-white/10"
-              : "h-8 min-h-8 border-default-300 px-3 dark:border-default-500/60",
-            value: chrome
-              ? "text-xs font-normal text-white"
-              : "text-xs font-normal text-foreground",
-            selectorIcon: chrome ? "text-white/60" : "text-default-400",
+            base: manySeasons
+              ? "w-full min-w-0 max-w-full lg:w-[12rem]"
+              : "w-full min-w-0 max-w-full lg:w-[11rem]",
+            trigger: "h-8 min-h-8 border-default-300 px-3 dark:border-default-500/60",
+            value: "text-xs font-normal text-foreground",
+            selectorIcon: "text-default-400",
           }}
           popoverProps={{
             classNames: {
-              content: chrome
-                ? "min-w-[12rem] border border-white/15 bg-black/80 text-white backdrop-blur-xl"
-                : "min-w-[12rem]",
+              content: "min-w-[12rem]",
             },
           }}
         >
@@ -1166,6 +1233,7 @@ function ShowEpisodePickerSeasonRow({ chrome = false }: { chrome?: boolean } = {
             </SelectItem>
           ))}
         </Select>
+        )
       ) : null}
       {currentSeasonEpisodeLabel ? (
         <span
@@ -1499,7 +1567,9 @@ export function ShowEpisodePickerList({
         aria-label="Episodes"
       >
         <div className="flex items-center gap-2 px-3 py-2">
-          <ShowEpisodePickerSeasonRow chrome />
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <ShowEpisodePickerSeasonRow chrome />
+          </div>
           {!loading && episodes.length > 1 ? (
             <Button
               size="sm"

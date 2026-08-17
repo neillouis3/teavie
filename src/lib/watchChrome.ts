@@ -10,6 +10,10 @@ export const WATCH_OVERLAY_TOP_CLASS =
 export const WATCH_OVERLAY_LEFT_CLASS =
   "left-[max(1rem,env(safe-area-inset-left))]";
 
+/** Watch dropdown menu — frosted dark panel matching episode chrome. */
+export const WATCH_DROPDOWN_CLASS =
+  "border border-white/15 bg-black/80 p-1 text-white shadow-[0_14px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl";
+
 /** Watch toolbar label — matches immersive chrome buttons (Sub, Prev, Episodes). */
 export const WATCH_TOOLBAR_TEXT_CLASS = "text-xs font-normal text-white";
 
