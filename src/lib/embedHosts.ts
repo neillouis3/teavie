@@ -1,6 +1,9 @@
 /** Shared third-party embed player hosts. */
 export const MOVIES111_EMBED_BASE = "https://player.vidlove.cc";
 export const MOVIES111_THEME_QUERY = "?ds_lang=none&iconsize=0.8&chromecast=false";
+/** VidFast TMDB/IMDB embed player. */
+export const VIDFAST_EMBED_BASE = "https://vidfast.vc";
+export const VIDFAST_THEME_QUERY = "?theme=22c55e";
 /** Viduki API 1 (multi-server). Use www — apex 301s with X-Frame-Options: SAMEORIGIN. */
 export const VIDUKI_EMBED_BASE = "https://www.viduki.net";
 export const VIDUKI_THEME_QUERY = "?color=22c55e";

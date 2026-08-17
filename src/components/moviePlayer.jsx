@@ -7,12 +7,19 @@ import StremioPlayer from '@/components/stremioPlayerLazy';
 import {
   MOVIES111_EMBED_BASE,
   MOVIES111_THEME_QUERY,
+  VIDFAST_EMBED_BASE,
+  VIDFAST_THEME_QUERY,
   VIDUKI_EMBED_BASE,
   VIDUKI_THEME_QUERY,
 } from '@/lib/embedHosts';
 import { cn } from '@/lib/utils';
 
 export const MOVIE_SERVERS = {
+  vidfast: {
+    base: VIDFAST_EMBED_BASE,
+    path: (id) => `/movie/${id}`,
+    suffix: () => VIDFAST_THEME_QUERY,
+  },
   viduki: {
     base: VIDUKI_EMBED_BASE,
     path: (id) => `/1/movie/${id}`,
@@ -51,7 +58,7 @@ const MoviePlayer = ({
   title,
   posterUrl,
   backdropUrl,
-  server = 'movies111',
+  server = 'vidfast',
   startSeconds = 0,
   immersive = false,
   hideBackButton = false,
@@ -61,7 +68,7 @@ const MoviePlayer = ({
 }) => {
   const { playerUrl, playerError } = useMemo(() => {
     if (server === 'stremio') return { playerUrl: '', playerError: null };
-    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.movies111;
+    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.vidfast;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { playerUrl: '', playerError: 'Missing TMDB movie id' };

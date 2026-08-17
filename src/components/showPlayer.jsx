@@ -8,11 +8,18 @@ import StremioPlayer from "@/components/stremioPlayerLazy";
 import {
   MOVIES111_EMBED_BASE,
   MOVIES111_THEME_QUERY,
+  VIDFAST_EMBED_BASE,
+  VIDFAST_THEME_QUERY,
   VIDUKI_EMBED_BASE,
   VIDUKI_THEME_QUERY,
 } from '@/lib/embedHosts';
 
 export const SHOW_SERVERS = {
+  vidfast: {
+    base: VIDFAST_EMBED_BASE,
+    path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
+    suffix: () => VIDFAST_THEME_QUERY,
+  },
   viduki: {
     base: VIDUKI_EMBED_BASE,
     path: (id, season, episode) => `/1/tv/${id}/${season}/${episode}`,
@@ -32,7 +39,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.movies111;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.vidfast;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -71,7 +78,7 @@ export default function ShowPlayer({
   backdropUrl,
   season,
   episode,
-  server = 'movies111',
+  server = 'vidfast',
   startSeconds = 0,
   immersive = false,
   onStremioProgress,

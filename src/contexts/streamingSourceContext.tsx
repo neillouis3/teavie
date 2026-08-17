@@ -14,9 +14,10 @@ export type StreamServerId = keyof typeof MOVIE_SERVERS;
 
 const STORAGE_KEY = 'teavie-streaming-server';
 const DEFAULT_MIGRATION_KEY = 'teavie-streaming-default-v2';
-const DEFAULT_SERVER: StreamServerId = 'movies111';
+const DEFAULT_MIGRATION_KEY_V3 = 'teavie-streaming-default-v3';
+const DEFAULT_SERVER: StreamServerId = 'vidfast';
 
-const ORDER: StreamServerId[] = ['movies111', 'viduki', 'stremio'];
+const ORDER: StreamServerId[] = ['vidfast', 'movies111', 'viduki', 'stremio'];
 
 /** Legacy / mistyped values saved in localStorage. */
 const SERVER_ALIASES: Record<string, StreamServerId> = {
@@ -25,10 +26,13 @@ const SERVER_ALIASES: Record<string, StreamServerId> = {
   vidrock: 'viduki',
   peachify: 'viduki',
   vidcore: 'viduki',
+  vidfastvc: 'vidfast',
 };
 
 export function streamServerLabel(id: StreamServerId): string {
   switch (id) {
+    case 'vidfast':
+      return 'VidFast';
     case 'stremio':
       return 'Stremio';
     case 'viduki':
@@ -55,15 +59,26 @@ function readStored(): StreamServerId {
   if (typeof window === 'undefined') return DEFAULT_SERVER;
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    const normalized = normalizeStored(v);
-    const migrated = localStorage.getItem(DEFAULT_MIGRATION_KEY);
-    if (!migrated) {
+    let normalized = normalizeStored(v);
+
+    const migratedV2 = localStorage.getItem(DEFAULT_MIGRATION_KEY);
+    if (!migratedV2) {
       localStorage.setItem(DEFAULT_MIGRATION_KEY, '1');
       if (!normalized || normalized === 'viduki') {
-        localStorage.setItem(STORAGE_KEY, DEFAULT_SERVER);
-        return DEFAULT_SERVER;
+        normalized = 'movies111';
+        localStorage.setItem(STORAGE_KEY, normalized);
       }
     }
+
+    const migratedV3 = localStorage.getItem(DEFAULT_MIGRATION_KEY_V3);
+    if (!migratedV3) {
+      localStorage.setItem(DEFAULT_MIGRATION_KEY_V3, '1');
+      if (!normalized || normalized === 'movies111') {
+        normalized = DEFAULT_SERVER;
+        localStorage.setItem(STORAGE_KEY, normalized);
+      }
+    }
+
     if (normalized) {
       if (v !== normalized) {
         localStorage.setItem(STORAGE_KEY, normalized);
