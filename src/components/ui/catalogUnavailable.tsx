@@ -89,7 +89,7 @@ function UnavailableMessage({
 
       <p
         className={`mt-3 leading-relaxed text-default-500 ${
-          compact ? "text-sm" : "text-sm sm:text-[15px]"
+          compact ? "text-sm" : "text-sm sm:text-base"
         }`}
       >
         {copy.message}

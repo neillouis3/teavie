@@ -326,7 +326,7 @@ function HeroCardOverlay({
           )}
           {ratingLabel && certification && <MetaDot />}
           {certification && (
-            <span className="rounded border border-white/35 px-1.5 py-0.5 text-[11px] font-medium text-white/90 sm:text-xs">
+            <span className="rounded border border-white/35 px-1.5 py-0.5 text-xs font-medium text-white/90 sm:text-xs">
               {certification}
             </span>
           )}

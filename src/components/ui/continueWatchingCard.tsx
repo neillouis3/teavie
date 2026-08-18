@@ -124,10 +124,10 @@ export default function ContinueWatchingCard({
 
             {src ? (
               <div className="absolute bottom-2 left-2 right-2 z-[2] max-w-[92%] sm:bottom-3 sm:left-3 sm:right-4">
-                <p className="text-left text-sm font-normal leading-snug tracking-tight text-white line-clamp-1 sm:text-[15px]">
+                <p className="text-left text-sm font-normal leading-snug tracking-tight text-white line-clamp-1 sm:text-base">
                   {title}
                 </p>
-                <p className="mt-0.5 text-left text-sm font-normal leading-snug text-white/75 line-clamp-1 sm:text-[15px]">
+                <p className="mt-0.5 text-left text-sm font-normal leading-snug text-white/75 line-clamp-1 sm:text-base">
                   {subtitle}
                 </p>
               </div>

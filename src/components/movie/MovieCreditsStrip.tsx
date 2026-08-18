@@ -195,7 +195,7 @@ function CreditAvatar({ person, subtitle }: CreditAvatarProps) {
           {name}
         </span>
         {subtitle ? (
-          <span className="w-full truncate text-[11px] leading-tight text-default-500">
+          <span className="w-full truncate text-xs leading-tight text-default-500">
             {subtitle}
           </span>
         ) : null}

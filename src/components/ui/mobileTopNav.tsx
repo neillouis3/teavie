@@ -135,7 +135,7 @@ export default function MobileTopNav() {
                     <div className="mt-3 border-t border-divider pt-3" />
                   ) : null}
                   {section.title ? (
-                    <p className="px-3 pb-1 text-[11px] font-semibold text-default-500">
+                    <p className="px-3 pb-1 text-xs font-semibold text-default-500">
                       {section.title}
                     </p>
                   ) : null}

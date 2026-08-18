@@ -14,7 +14,7 @@ export const AUTH_PANEL_GLASS_CLASS =
 
 /** Popover / dropdown menus — matches floating nav chrome. */
 export const MENU_GLASS_CLASS =
-  "border border-default-200/70 bg-background/95 p-1 shadow-[0_10px_32px_rgba(15,23,42,0.1)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/92 dark:border-white/10 dark:bg-black/50 dark:shadow-[0_14px_40px_rgba(0,0,0,0.25)] dark:supports-[backdrop-filter]:bg-black/42";
+  "border border-default-200/70 bg-background/95 p-1 text-sm shadow-[0_10px_32px_rgba(15,23,42,0.1)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/92 dark:border-white/10 dark:bg-black/50 dark:shadow-[0_14px_40px_rgba(0,0,0,0.25)] dark:supports-[backdrop-filter]:bg-black/42";
 
 /** Dropdown row hover — matches desktop nav link chrome. */
 export const NAV_MENU_ITEM_CLASS =

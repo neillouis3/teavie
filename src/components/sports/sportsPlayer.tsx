@@ -45,7 +45,7 @@ function NoActiveServersState({
         <h2 className="text-lg font-semibold text-foreground sm:text-xl">
           No active servers
         </h2>
-        <p className="text-sm leading-relaxed text-default-500 sm:text-[15px]">
+        <p className="text-sm leading-relaxed text-default-500 sm:text-base">
           No servers have active streams for this match
         </p>
       </div>
@@ -162,7 +162,7 @@ export default function SportsPlayer({ matchId }: SportsPlayerProps) {
     return (
       <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col items-center justify-center bg-background px-6 py-12 text-center lg:min-h-[100dvh]">
         <div className="flex max-w-md flex-col items-center gap-4">
-          <p className="text-sm leading-relaxed text-default-500 sm:text-[15px]">
+          <p className="text-sm leading-relaxed text-default-500 sm:text-base">
             {error ?? 'This event was not found.'}
           </p>
           <Button

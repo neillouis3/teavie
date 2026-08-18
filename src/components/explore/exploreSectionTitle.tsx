@@ -2,6 +2,7 @@ import React from "react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { exploreSectionIcon } from "@/lib/exploreSectionIcons";
+import { TEXT_SECTION } from "@/lib/typography";
 import { cn } from "@/lib/utils";
 
 export type ExploreSectionTitleVariant = "default" | "explore";
@@ -41,7 +42,7 @@ export default function ExploreSectionTitle({
 
   return (
     <h2
-      className={`flex items-center gap-2.5 font-normal leading-none tracking-tight text-foreground normal-case ${isExplore ? "text-lg" : "text-xl"} ${className}`.trim()}
+      className={cn("flex items-center gap-2.5 normal-case", TEXT_SECTION, className)}
     >
       {resolvedIcon ? (
         <span className="inline-flex shrink-0 items-center justify-center" aria-hidden>

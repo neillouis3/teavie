@@ -285,13 +285,13 @@ export default function ShowEpisodesGrid({
                       {!upcoming ? (
                         <>
                           <span
-                            className="rounded border border-default-300/80 px-1 py-px text-[10px] font-medium uppercase tracking-wide text-default-500 dark:border-white/20 dark:text-white/50"
+                            className="rounded border border-default-300/80 px-1 py-px text-xs font-medium uppercase tracking-wide text-default-500 dark:border-white/20 dark:text-white/50"
                             aria-hidden
                           >
                             HD
                           </span>
                           <span
-                            className="rounded border border-default-300/80 px-1 py-px text-[10px] font-medium uppercase tracking-wide text-default-500 dark:border-white/20 dark:text-white/50"
+                            className="rounded border border-default-300/80 px-1 py-px text-xs font-medium uppercase tracking-wide text-default-500 dark:border-white/20 dark:text-white/50"
                             aria-hidden
                           >
                             CC

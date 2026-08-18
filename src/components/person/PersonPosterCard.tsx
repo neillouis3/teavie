@@ -83,7 +83,7 @@ export default function PersonPosterCard({
             <HugeiconsIcon icon={SquareLock01Icon} size={22} strokeWidth={1.75} />
             <span className="text-xs font-medium">Unreleased</span>
             {releaseLabel ? (
-              <span className="text-[11px] text-white/70">{releaseLabel}</span>
+              <span className="text-xs text-white/70">{releaseLabel}</span>
             ) : null}
           </div>
         ) : null}

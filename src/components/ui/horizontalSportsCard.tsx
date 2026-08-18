@@ -17,7 +17,7 @@ export type HorizontalSportsCardProps = {
 
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex shrink-0 items-center rounded-md bg-default-100/45 p-1.5 text-[11px] font-medium leading-none text-foreground/65 dark:bg-white/[0.06] dark:text-white/65">
+    <span className="inline-flex shrink-0 items-center rounded-md bg-default-100/45 p-1.5 text-xs font-medium leading-none text-foreground/65 dark:bg-white/[0.06] dark:text-white/65">
       {children}
     </span>
   );
@@ -60,7 +60,7 @@ export default function HorizontalSportsCard({
           </div>
         ) : null}
         <p
-          className="normal-case min-w-0 line-clamp-2 text-sm leading-snug text-foreground transition-colors duration-300 group-hover:text-success sm:text-[15px]"
+          className="normal-case min-w-0 line-clamp-2 text-sm leading-snug text-foreground transition-colors duration-300 group-hover:text-success sm:text-base"
           title={displayTitle}
         >
           {displayTitle}

@@ -121,7 +121,7 @@ export function GenreCatalogTile({
             className="shrink-0 transition-transform duration-200 group-hover:translate-x-1"
           />
         </span>
-        <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/75 sm:text-[11px]">
+        <span className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-white/75 sm:text-xs">
           {genre.count.toLocaleString()} titles
         </span>
       </div>
@@ -163,7 +163,7 @@ export function GenreBrowseAllTile() {
         <span className="text-sm font-normal leading-tight text-white drop-shadow-sm">
           Browse genres
         </span>
-        <span className="mt-0.5 text-[11px] font-medium text-white/80">View all</span>
+        <span className="mt-0.5 text-xs font-medium text-white/80">View all</span>
       </div>
       <span className="pointer-events-none absolute inset-0 z-[1] rounded-xl bg-gradient-to-br from-white/15 to-black/20 transition-opacity group-hover:opacity-90" />
     </Link>

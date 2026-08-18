@@ -7,9 +7,11 @@ import {
   ShowEpisodePickerProvider,
 } from "@/components/show/ShowEpisodePicker";
 import WatchEpisodesSheet from "@/components/show/WatchEpisodesSheet";
+import WatchFullscreenButton from "@/components/ui/watchFullscreenButton";
 import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
 import WatchPlayerChromeBar from "@/components/ui/watchPlayerChromeBar";
 import TeaPartyWatchButton from "@/components/watchParty/TeaPartyWatchButton";
+import { WATCH_ROOT_ATTR } from "@/components/ui/watchFullscreenButton";
 import { WatchOverlayProvider } from "@/contexts/watchOverlayContext";
 import {
   WATCH_OVERLAY_LEFT_CLASS,
@@ -57,6 +59,7 @@ export default function ShowWatchView({
         />
       ) : null}
       <TeaPartyWatchButton />
+      <WatchFullscreenButton />
     </WatchPlayerChromeBar>
   );
 
@@ -107,7 +110,10 @@ export default function ShowWatchView({
   );
 
   return (
-    <div className="fixed inset-0 z-40 flex h-[100dvh] w-full flex-col bg-black">
+    <div
+      className="fixed inset-0 z-40 flex h-[100dvh] w-full flex-col bg-black"
+      {...{ [WATCH_ROOT_ATTR]: "" }}
+    >
       {adminPreview && adminBypassActive ? (
         <div className="absolute left-1/2 top-4 z-30 w-[min(100%-2rem,28rem)] -translate-x-1/2 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-center text-xs text-warning-800 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">
           Admin preview — content policy bypass active

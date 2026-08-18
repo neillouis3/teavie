@@ -11,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import type { WatchPartyRoom } from "@/hooks/useWatchParty";
 import type { TeaPartyGuestSyncRole, TeaPartyGuestJoinMode, TeaPartySettings } from "@/lib/teaPartySync";
+import { TEXT_CAPTION_MUTED, TEXT_UI, TEXT_UI_MUTED } from "@/lib/typography";
 
 export type WatchPartyContentProps = {
   room: WatchPartyRoom | null;
@@ -28,13 +29,6 @@ export type WatchPartyContentProps = {
   onReleaseSync: () => void | Promise<void>;
   guestJoinSyncRole?: TeaPartyGuestSyncRole;
 };
-
-function memberInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-}
 
 function useSyncHoldCountdown(
   active: boolean,
@@ -84,7 +78,7 @@ function TeaPartySyncBanner({
 
   if (isHost) {
     return (
-      <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+      <div className="rounded-xl bg-warning/10 px-3 py-2.5">
         <p className="text-sm font-medium text-foreground">
           {guestName} joined — pause your player
         </p>
@@ -109,7 +103,7 @@ function TeaPartySyncBanner({
 
   if (guestJoinSyncRole === "joiner") {
     return (
-      <div className="rounded-xl border border-default-200/80 bg-default-50/80 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+      <div className="rounded-xl bg-white/5 px-3 py-2.5">
         <p className="text-sm font-medium text-foreground">Waiting to sync in</p>
         <p className="mt-1 text-xs leading-relaxed text-default-500">
           The host is pausing at their current spot. Your player will load there when
@@ -120,7 +114,7 @@ function TeaPartySyncBanner({
   }
 
   return (
-    <div className="rounded-xl border border-default-200/80 bg-default-50/80 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+    <div className="rounded-xl bg-white/5 px-3 py-2.5">
       <p className="text-sm font-medium text-foreground">Resyncing the party</p>
       <p className="mt-1 text-xs leading-relaxed text-default-500">
         {guestName} joined. Your player will refresh to the host&apos;s position when
@@ -138,61 +132,90 @@ function TeaPartySettingsPanel({
   onUpdateSettings: (patch: Partial<TeaPartySettings>) => void | Promise<void>;
 }) {
   return (
-    <div className="rounded-xl border border-default-200/80 bg-default-50/50 p-3 dark:border-white/10 dark:bg-white/5">
-      <p className="mb-2 text-xs font-semibold tracking-wide text-default-500">
-        Party options
-      </p>
+    <details className="group rounded-xl bg-white/5 px-3 py-2">
+      <summary className={`cursor-pointer list-none marker:content-none [&::-webkit-details-marker]:hidden ${TEXT_CAPTION_MUTED} font-medium`}>
+        <span className="group-open:hidden">Party options</span>
+        <span className="hidden group-open:inline">Hide options</span>
+      </summary>
 
-      <RadioGroup
-        label="When someone joins"
-        size="sm"
-        value={settings.onGuestJoin}
-        onValueChange={(value) =>
-          void onUpdateSettings({
-            onGuestJoin: value as TeaPartyGuestJoinMode,
-          })
-        }
-        classNames={{ label: "text-xs text-default-500" }}
-      >
-        <Radio value="off" description="Guests sync in the background only.">
-          No pause
-        </Radio>
-        <Radio
-          value="auto_resume"
-          description="You pause; everyone resyncs after a short countdown."
-        >
-          Pause & auto-resume
-        </Radio>
-        <Radio
-          value="host_resume"
-          description="You pause and tap Resume when ready to sync everyone."
-        >
-          Pause until I resume
-        </Radio>
-      </RadioGroup>
-
-      {settings.onGuestJoin === "auto_resume" ? (
-        <Select
-          label="Auto-resume delay"
+      <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
+        <RadioGroup
+          label="When someone joins"
           size="sm"
-          className="mt-3"
-          selectedKeys={new Set([String(settings.autoResumeSeconds)])}
-          onSelectionChange={(keys) => {
-            const key = Array.from(keys)[0];
-            if (!key) return;
-            void onUpdateSettings({ autoResumeSeconds: Number(key) });
-          }}
+          value={settings.onGuestJoin}
+          onValueChange={(value) =>
+            void onUpdateSettings({
+              onGuestJoin: value as TeaPartyGuestJoinMode,
+            })
+          }
+          classNames={{ label: "text-xs text-default-500" }}
         >
-          <SelectItem key="3">3 seconds</SelectItem>
-          <SelectItem key="5">5 seconds</SelectItem>
-          <SelectItem key="10">10 seconds</SelectItem>
-        </Select>
-      ) : null}
+          <Radio value="off" description="Guests sync in the background only.">
+            No pause
+          </Radio>
+          <Radio
+            value="auto_resume"
+            description="You pause; everyone resyncs after a short countdown."
+          >
+            Pause & auto-resume
+          </Radio>
+          <Radio
+            value="host_resume"
+            description="You pause and tap Resume when ready to sync everyone."
+          >
+            Pause until I resume
+          </Radio>
+        </RadioGroup>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-default-400">
-        Only the host pauses manually. On resume, all guests remount to the same
-        position. Drift beyond ~35s is corrected automatically during playback.
-      </p>
+        {settings.onGuestJoin === "auto_resume" ? (
+          <Select
+            label="Auto-resume delay"
+            size="sm"
+            selectedKeys={new Set([String(settings.autoResumeSeconds)])}
+            onSelectionChange={(keys) => {
+              const key = Array.from(keys)[0];
+              if (!key) return;
+              void onUpdateSettings({ autoResumeSeconds: Number(key) });
+            }}
+          >
+            <SelectItem key="3">3 seconds</SelectItem>
+            <SelectItem key="5">5 seconds</SelectItem>
+            <SelectItem key="10">10 seconds</SelectItem>
+          </Select>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
+const INPUT_SHELL =
+  "border border-white/10 bg-white/5 shadow-none data-[hover=true]:bg-white/8 group-data-[focus=true]:bg-white/8";
+
+type LobbyMode = "start" | "join";
+
+function LobbyModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: LobbyMode;
+  onChange: (mode: LobbyMode) => void;
+}) {
+  return (
+    <div className="flex rounded-full bg-white/5 p-1">
+      {(["start", "join"] as const).map((key) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          className={`flex-1 rounded-full px-3 py-1.5 font-medium transition-colors ${TEXT_UI} ${
+            mode === key
+              ? "bg-white/10 text-foreground"
+              : "text-default-500 hover:text-foreground"
+          }`}
+        >
+          {key === "start" ? "Start" : "Join"}
+        </button>
+      ))}
     </div>
   );
 }
@@ -203,7 +226,6 @@ export function WatchPartyContent({
   loading,
   error,
   nickname: defaultNick,
-  mediaType,
   title,
   onCreate,
   onJoin,
@@ -215,6 +237,7 @@ export function WatchPartyContent({
 }: WatchPartyContentProps) {
   const [nick, setNick] = useState(defaultNick);
   const [joinCode, setJoinCode] = useState("");
+  const [lobbyMode, setLobbyMode] = useState<LobbyMode>("start");
   const [chatDraft, setChatDraft] = useState("");
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -251,75 +274,63 @@ export function WatchPartyContent({
 
   if (!room) {
     return (
-      <div className="flex flex-col gap-5 px-1 pb-4">
+      <div className="flex flex-col gap-4">
         {error ? (
-          <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <p className={`rounded-lg bg-danger/10 px-3 py-2 text-danger ${TEXT_UI}`}>{error}</p>
         ) : null}
 
         {displayTitle ? (
-          <div className="rounded-xl border border-default-200/80 bg-default-50/80 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-medium tracking-wide text-default-500">
-              Watching
-            </p>
-            <p className="mt-0.5 line-clamp-2 text-sm font-medium text-foreground">
-              {displayTitle}
-            </p>
-          </div>
+          <p className={`truncate text-center ${TEXT_UI_MUTED}`}>
+            <span className="text-foreground">{displayTitle}</span>
+          </p>
         ) : null}
 
+        <LobbyModeToggle mode={lobbyMode} onChange={setLobbyMode} />
+
         <Input
-          label="Your name"
+          placeholder="Your name"
           size="sm"
           value={nick}
           onValueChange={setNick}
-          classNames={{ inputWrapper: "bg-default-50/80 dark:bg-white/5" }}
+          classNames={{
+            inputWrapper: INPUT_SHELL,
+            input: "text-sm",
+          }}
         />
 
-        <Button
-          color="success"
-          size="lg"
-          className="font-medium"
-          isLoading={loading}
-          onPress={() => void onCreate(nick)}
-        >
-          Start a tea party
-        </Button>
-
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-divider" />
-          <span className="text-xs text-default-400">or join with a code</span>
-          <div className="h-px flex-1 bg-divider" />
-        </div>
-
-        <div className="flex flex-wrap items-end gap-2">
+        {lobbyMode === "join" ? (
           <Input
-            label="Party code"
+            placeholder="Party code"
             size="sm"
             value={joinCode}
             onValueChange={setJoinCode}
-            className="min-w-[6rem] flex-1"
             classNames={{
-              input: "uppercase tracking-[0.2em] font-mono",
-              inputWrapper: "bg-default-50/80 dark:bg-white/5",
+              input: "uppercase tracking-[0.18em] font-mono text-sm",
+              inputWrapper: INPUT_SHELL,
             }}
           />
-          <Button
-            size="lg"
-            variant="bordered"
-            isLoading={loading}
-            onPress={() => onJoin(joinCode.trim().toUpperCase(), nick)}
-          >
-            Join
-          </Button>
-        </div>
+        ) : null}
+
+        <Button
+          color="success"
+          className="font-medium"
+          isLoading={loading}
+          onPress={() =>
+            lobbyMode === "start"
+              ? void onCreate(nick)
+              : onJoin(joinCode.trim().toUpperCase(), nick)
+          }
+        >
+          {lobbyMode === "start" ? "Start party" : "Join party"}
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 px-1 pb-4">
+    <div className="flex flex-col gap-4">
       {error ? (
-        <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <p className={`rounded-lg bg-danger/10 px-3 py-2 text-danger ${TEXT_UI}`}>{error}</p>
       ) : null}
 
       <TeaPartySyncBanner
@@ -329,6 +340,54 @@ export function WatchPartyContent({
         onReleaseSync={onReleaseSync}
       />
 
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          {displayTitle ? (
+            <p className={`truncate font-medium text-foreground ${TEXT_UI}`}>{displayTitle}</p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void copyText(room.roomId, "code")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-success/15 px-2.5 py-1 font-mono text-xs font-semibold tracking-[0.16em] text-success transition-colors hover:bg-success/20"
+            >
+              {room.roomId}
+              <HugeiconsIcon icon={Copy01Icon} size={13} />
+            </button>
+            <span className={TEXT_CAPTION_MUTED}>
+              {isHost ? "Hosting" : "Guest"}
+            </span>
+          </div>
+          {copied === "code" ? (
+            <p className="text-xs text-success">Code copied</p>
+          ) : copied === "link" ? (
+            <p className="text-xs text-success">Link copied</p>
+          ) : null}
+        </div>
+        <Button
+          size="sm"
+          variant="light"
+          isIconOnly
+          aria-label="Leave party"
+          onPress={onLeave}
+          className="text-default-500"
+        >
+          <HugeiconsIcon icon={Logout03Icon} size={18} />
+        </Button>
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="flat"
+          className="flex-1 bg-white/5"
+          startContent={<HugeiconsIcon icon={LinkSquare01Icon} size={15} />}
+          onPress={() => void copyText(partyUrl, "link")}
+        >
+          Copy invite link
+        </Button>
+      </div>
+
       {isHost ? (
         <TeaPartySettingsPanel
           settings={room.settings}
@@ -336,87 +395,26 @@ export function WatchPartyContent({
         />
       ) : null}
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
-          {displayTitle ? (
-            <p className="line-clamp-1 text-sm font-medium text-foreground">
-              {displayTitle}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void copyText(room.roomId, "code")}
-              className="inline-flex items-center gap-2 rounded-lg bg-success/12 px-3 py-1.5 font-mono text-sm font-semibold tracking-[0.18em] text-success transition-colors hover:bg-success/18"
-            >
-              {room.roomId}
-              <HugeiconsIcon icon={Copy01Icon} size={14} />
-            </button>
-            <span className="rounded-full bg-default-100 px-2.5 py-0.5 text-[11px] font-medium text-default-600 dark:bg-white/10 dark:text-default-400">
-              {isHost ? "You are hosting" : "Following host"}
-            </span>
-          </div>
-          {copied === "code" ? (
-            <p className="text-xs text-success">Code copied</p>
-          ) : null}
-        </div>
-        <Button
-          size="sm"
-          variant="light"
-          color="danger"
-          startContent={<HugeiconsIcon icon={Logout03Icon} size={16} />}
-          onPress={onLeave}
-        >
-          Leave
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="flat"
-          startContent={<HugeiconsIcon icon={LinkSquare01Icon} size={16} />}
-          onPress={() => void copyText(partyUrl, "link")}
-        >
-          {copied === "link" ? "Link copied" : "Copy invite link"}
-        </Button>
-      </div>
-
-      <p className="text-xs leading-relaxed text-default-500">
-        {mediaType === "tv"
-          ? "Episode changes sync immediately. Mid-join resync reloads everyone to the host."
-          : "Playback syncs periodically. Mid-join resync reloads everyone to the host."}
-      </p>
-
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {room.members.map((m) => (
-          <div
+          <span
             key={m.id}
-            className="flex items-center gap-2 rounded-full border border-default-200/80 bg-default-50/80 py-1 pl-1 pr-3 dark:border-white/10 dark:bg-white/5"
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ${
+              m.isHost
+                ? "bg-success/15 text-success"
+                : "bg-white/5 text-default-600 dark:text-default-400"
+            }`}
           >
-            <span
-              className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold ${
-                m.isHost
-                  ? "bg-success text-success-foreground"
-                  : "bg-default-200 text-foreground dark:bg-white/15"
-              }`}
-            >
-              {memberInitials(m.nickname)}
-            </span>
-            <span className="text-xs font-medium text-foreground">
-              {m.nickname}
-              {m.isHost ? " · host" : ""}
-            </span>
-          </div>
+            <span className="font-medium">{m.nickname}</span>
+            {m.isHost ? <span className="opacity-70">host</span> : null}
+          </span>
         ))}
       </div>
 
-      <div className="flex max-h-44 min-h-[8rem] flex-col overflow-hidden rounded-xl border border-default-200/80 bg-default-50/50 dark:border-white/10 dark:bg-black/25">
+      <div className="flex max-h-40 min-h-[7rem] flex-col overflow-hidden rounded-xl bg-white/5">
         <div className="flex-1 space-y-2 overflow-y-auto p-3">
           {room.messages.length === 0 ? (
-            <p className="py-6 text-center text-xs text-default-400">
-              No messages yet — say hi to the party
-            </p>
+            <p className="py-4 text-center text-xs text-default-400">Say hi to the party</p>
           ) : (
             room.messages.map((m) => {
               const isSelf = m.nickname === nick;
@@ -426,14 +424,14 @@ export function WatchPartyContent({
                   className={`flex ${isSelf ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-3 py-2 ${
+                    className={`max-w-[85%] rounded-2xl px-3 py-1.5 ${
                       isSelf
                         ? "rounded-br-md bg-success/15 text-foreground"
-                        : "rounded-bl-md bg-default-100 text-foreground dark:bg-white/10"
+                        : "rounded-bl-md bg-white/10 text-foreground"
                     }`}
                   >
                     {!isSelf ? (
-                      <p className="mb-0.5 text-[10px] font-semibold text-default-500">
+                      <p className="mb-0.5 text-xs font-medium text-default-500">
                         {m.nickname}
                       </p>
                     ) : null}
@@ -448,16 +446,17 @@ export function WatchPartyContent({
 
         <form
           onSubmit={submitChat}
-          className="flex gap-2 border-t border-default-200/80 p-2 dark:border-white/10"
+          className="flex gap-2 border-t border-white/10 p-2"
         >
           <Input
             size="sm"
-            placeholder="Message the party…"
+            placeholder="Message…"
             value={chatDraft}
             onValueChange={setChatDraft}
             className="flex-1"
             classNames={{
-              inputWrapper: "bg-background/80 dark:bg-white/5",
+              inputWrapper: "border-0 bg-transparent shadow-none",
+              input: "text-sm",
             }}
           />
           <Button

@@ -141,7 +141,7 @@ export default function SportsMatchPanel({
   );
 
   const overviewBlock = (
-    <p className="text-sm leading-relaxed text-foreground/85 sm:text-[15px]">
+    <p className="text-sm leading-relaxed text-foreground/85 sm:text-base">
       {matchOverview(match)}
     </p>
   );

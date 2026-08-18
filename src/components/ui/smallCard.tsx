@@ -46,7 +46,7 @@ interface SmallCardProps {
 
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex shrink-0 items-center rounded-md bg-default-100/45 p-1.5 text-[11px] font-medium leading-none text-foreground/65 dark:bg-white/[0.06] dark:text-white/65">
+    <span className="inline-flex shrink-0 items-center rounded-md bg-default-100/45 p-1.5 text-xs font-medium leading-none text-foreground/65 dark:bg-white/[0.06] dark:text-white/65">
       {children}
     </span>
   );
@@ -128,7 +128,7 @@ export default function SmallCard({
     <div className="flex min-w-0 flex-col gap-1 px-1 pt-0.5">
       {subtitle ? (
         <p
-          className="line-clamp-1 text-[11px] leading-snug text-default-500"
+          className="line-clamp-1 text-xs leading-snug text-default-500"
           title={subtitle}
         >
           {subtitle}
@@ -160,7 +160,7 @@ export default function SmallCard({
       ) : null}
       {releaseNote ? (
         <p
-          className="line-clamp-2 text-[11px] leading-snug text-default-500"
+          className="line-clamp-2 text-xs leading-snug text-default-500"
           title={releaseNote}
         >
           {releaseNote}

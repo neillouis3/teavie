@@ -472,7 +472,7 @@ export default function StremioPlayer({
                 </span>
               </button>
               {title ? (
-                <p className="truncate text-sm font-medium text-white/95 sm:text-[15px]">
+                <p className="truncate text-sm font-medium text-white/95 sm:text-base">
                   {title}
                   {type === "series" && season != null && episode != null
                     ? ` · S${season}E${episode}`
@@ -552,7 +552,7 @@ export default function StremioPlayer({
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
               {duration > 0 ? (
-                <span className="truncate text-[11px] text-white/45">
+                <span className="truncate text-xs text-white/45">
                   {formatEndTime(currentTime, duration)}
                 </span>
               ) : null}
@@ -793,7 +793,7 @@ function SettingsSection({
 }) {
   return (
     <section className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0">
-      <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/40">
         {title}
       </h3>
       {children}

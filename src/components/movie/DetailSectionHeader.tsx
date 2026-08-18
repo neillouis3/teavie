@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { TEXT_SECTION } from "@/lib/typography";
 
 type DetailSectionHeaderProps = {
   children: React.ReactNode;
@@ -14,7 +15,7 @@ export default function DetailSectionHeader({
   href,
 }: DetailSectionHeaderProps) {
   return (
-    <h2 className="flex min-h-7 min-w-0 items-center text-lg font-normal leading-none tracking-tight text-foreground">
+    <h2 className={`flex min-h-7 min-w-0 items-center leading-none ${TEXT_SECTION}`}>
       {href ? (
         <Link
           href={href}

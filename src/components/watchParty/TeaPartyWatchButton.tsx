@@ -5,6 +5,8 @@ import { Button } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BubbleTea01Icon } from "@hugeicons/core-free-icons";
 import { useWatchPartyNav } from "@/contexts/watchPartyNavContext";
+import { WATCH_TOOLBAR_BUTTON_CLASS } from "@/lib/watchChrome";
+import { cn } from "@/lib/utils";
 
 /** Tea Party control for immersive watch chrome (nav is hidden on watch pages). */
 export default function TeaPartyWatchButton() {
@@ -16,16 +18,18 @@ export default function TeaPartyWatchButton() {
   return (
     <Button
       isIconOnly
-      variant={active ? "solid" : "flat"}
-      color={active ? "success" : "default"}
+      size="sm"
+      variant="light"
       radius="md"
       aria-label="Tea Party"
       onPress={openTeaParty}
-      className={`h-9 w-9 min-w-9 shrink-0 ${
-        active ? "" : "bg-black/40 text-white backdrop-blur-md"
-      }`}
+      className={cn(
+        WATCH_TOOLBAR_BUTTON_CLASS,
+        "ml-auto min-w-11 px-0 text-white",
+        active && "text-success"
+      )}
     >
-      <HugeiconsIcon icon={BubbleTea01Icon} size={20} className="shrink-0" />
+      <HugeiconsIcon icon={BubbleTea01Icon} size={18} className="shrink-0" />
     </Button>
   );
 }

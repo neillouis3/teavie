@@ -18,6 +18,7 @@ import {
   ArrowRight01Icon,
   ArrowUpDownIcon,
   Calendar03Icon,
+  ParagraphBulletsPoint01Icon,
   PlayIcon,
 } from "@hugeicons/core-free-icons";
 import {
@@ -40,6 +41,7 @@ import {
   WATCH_CHROME_BLUR_CLASS,
   WATCH_DROPDOWN_CLASS,
   WATCH_MENU_ITEM_CLASS,
+  WATCH_TOOLBAR_BUTTON_CLASS,
   WATCH_TOOLBAR_TEXT_CLASS,
 } from "@/lib/watchChrome";
 
@@ -958,7 +960,8 @@ export function ShowEpisodePickerControls({
 
   const buttonClass = bare
     ? cn(
-        "h-11 min-h-11 shrink-0 cursor-pointer bg-transparent text-xs text-white shadow-none hover:bg-transparent hover:opacity-100 data-[hover=true]:bg-transparent data-[hover=true]:opacity-100",
+        WATCH_TOOLBAR_BUTTON_CLASS,
+        WATCH_TOOLBAR_TEXT_CLASS,
         compact ? "px-1 sm:px-1.5" : "px-1.5"
       )
     : "h-8 min-h-8 shrink-0 text-xs";
@@ -982,7 +985,7 @@ export function ShowEpisodePickerControls({
           {hideSeasonEpisodeJump ? null : (
               <div className="flex shrink-0 items-center gap-1.5">
                 <div className="flex items-center gap-1">
-                  <span className="text-[11px] font-medium text-default-500">S</span>
+                  <span className="text-xs font-medium text-default-500">S</span>
                   <Input
                     size="sm"
                     type="number"
@@ -1000,7 +1003,7 @@ export function ShowEpisodePickerControls({
                   />
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-[11px] font-medium text-default-500">E</span>
+                  <span className="text-xs font-medium text-default-500">E</span>
                   <Input
                     size="sm"
                     type="number"
@@ -1066,11 +1069,11 @@ export function ShowEpisodePickerControls({
         size="sm"
         variant={buttonVariant}
         radius="md"
-        className={
-          onEpisodesPress
-            ? buttonClass
-            : `hidden sm:inline-flex ${buttonClass}`
-        }
+        isIconOnly={onEpisodesPress ? true : undefined}
+        className={cn(
+          onEpisodesPress ? buttonClass : `hidden sm:inline-flex ${buttonClass}`,
+          onEpisodesPress && compact && "min-w-11 px-0"
+        )}
         onPress={onEpisodesPress ?? scrollToPlayerBottom}
         aria-expanded={onEpisodesPress ? episodesOpen : undefined}
         aria-label={
@@ -1081,11 +1084,13 @@ export function ShowEpisodePickerControls({
             : "Scroll to bottom of player"
         }
         endContent={
-          <HugeiconsIcon icon={ArrowDown01Icon} size={14} className="shrink-0" />
+          onEpisodesPress ? undefined : (
+            <HugeiconsIcon icon={ArrowDown01Icon} size={14} className="shrink-0" />
+          )
         }
       >
-        {compact ? (
-          <span className="hidden sm:inline">Episodes</span>
+        {onEpisodesPress ? (
+          <HugeiconsIcon icon={ParagraphBulletsPoint01Icon} size={18} className="shrink-0" />
         ) : (
           "Episodes"
         )}
@@ -1396,12 +1401,12 @@ function WatchEpisodeRow({ row }: { row: EpisodeCardRow }) {
           />
         ) : null}
         {active ? (
-          <span className="pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-md bg-success px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-success-foreground">
+          <span className="pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-md bg-success px-1.5 py-0.5 text-xs font-semibold tracking-wide text-success-foreground">
             Now playing
           </span>
         ) : null}
         {upcoming && airDateLabel ? (
-          <span className="pointer-events-none absolute left-1.5 top-1.5 z-[2] inline-flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white/80">
+          <span className="pointer-events-none absolute left-1.5 top-1.5 z-[2] inline-flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white/80">
             <HugeiconsIcon icon={Calendar03Icon} size={11} className="shrink-0" />
             {airDateLabel}
           </span>
@@ -1767,12 +1772,12 @@ export function ShowEpisodePickerList({
                         ) : null}
                       </div>
                       {active ? (
-                        <span className="pointer-events-none absolute left-2 top-2 z-[2] rounded-md bg-success px-2 py-0.5 text-[10px] font-semibold tracking-wide text-success-foreground">
+                        <span className="pointer-events-none absolute left-2 top-2 z-[2] rounded-md bg-success px-2 py-0.5 text-xs font-semibold tracking-wide text-success-foreground">
                           Now playing
                         </span>
                       ) : null}
                       {upcoming && airDateLabel ? (
-                        <span className="pointer-events-none absolute left-2 top-2 z-[2] inline-flex items-center gap-1 rounded-md bg-background/85 px-2 py-0.5 text-[10px] font-medium text-default-600 backdrop-blur-sm dark:bg-background/70 dark:text-default-300">
+                        <span className="pointer-events-none absolute left-2 top-2 z-[2] inline-flex items-center gap-1 rounded-md bg-background/85 px-2 py-0.5 text-xs font-medium text-default-600 backdrop-blur-sm dark:bg-background/70 dark:text-default-300">
                           <HugeiconsIcon icon={Calendar03Icon} size={11} className="shrink-0" />
                           {airDateLabel}
                         </span>

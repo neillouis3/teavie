@@ -41,13 +41,13 @@ export default function BuildLogPage() {
                     >
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-default-100/80 px-2 py-0.5 text-[11px] font-medium text-default-500 dark:bg-white/[0.06]">
+                          <span className="rounded-md bg-default-100/80 px-2 py-0.5 text-xs font-medium text-default-500 dark:bg-white/[0.06]">
                             v{entry.version}
                           </span>
                           {entry.tags?.map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full border border-default-200/70 px-2 py-0.5 text-[11px] text-default-400 dark:border-white/10"
+                              className="rounded-full border border-default-200/70 px-2 py-0.5 text-xs text-default-400 dark:border-white/10"
                             >
                               {tag}
                             </span>
