@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { forwardRef, useMemo } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import WatchPlayerBackButton from '@/components/ui/watchPlayerBackButton';
@@ -11,6 +11,7 @@ import {
   VIDFAST_THEME_QUERY,
   VIDUKI_EMBED_BASE,
   VIDUKI_THEME_QUERY,
+  withVidfastEmbedParams,
 } from '@/lib/embedHosts';
 import { cn } from '@/lib/utils';
 
@@ -50,9 +51,11 @@ export const MOVIE_SERVERS = {
  * @param {boolean} [props.hideBackButton] Skip in-player back (parent overlay owns it)
  * @param {(seconds: number) => void} [props.onStremioProgress]
  * @param {(progress: import('@/lib/vidrockProgress').VidrockProgress) => void} [props.onVidrockProgress]
+ * @param {(progress: import('@/lib/vidfastProgress').VidfastProgress) => void} [props.onVidfastProgress]
  * @param {() => void} [props.onEmbedLoad]
  */
-const MoviePlayer = ({
+const MoviePlayer = forwardRef(function MoviePlayer(
+  {
   videoId,
   imdbId,
   title,
@@ -64,8 +67,11 @@ const MoviePlayer = ({
   hideBackButton = false,
   onStremioProgress,
   onVidrockProgress,
+  onVidfastProgress,
   onEmbedLoad,
-}) => {
+  },
+  embedRef
+) {
   const { playerUrl, playerError } = useMemo(() => {
     if (server === 'stremio') return { playerUrl: '', playerError: null };
     const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.vidfast;
@@ -75,8 +81,13 @@ const MoviePlayer = ({
     }
     const path = config.path(id);
     const suffix = typeof config.suffix === 'function' ? config.suffix() : '';
-    return { playerUrl: `${config.base}${path}${suffix}`, playerError: null };
-  }, [videoId, server]);
+    const baseUrl = `${config.base}${path}${suffix}`;
+    const playerUrl =
+      server === 'vidfast'
+        ? withVidfastEmbedParams(baseUrl, { startAt: startSeconds })
+        : baseUrl;
+    return { playerUrl, playerError: null };
+  }, [videoId, server, startSeconds]);
 
   if (playerError) {
     return (
@@ -116,6 +127,7 @@ const MoviePlayer = ({
       {!hideBackButton ? <WatchPlayerBackButton /> : null}
       {playerUrl ? (
         <VideoEmbedFrame
+          ref={embedRef}
           key={playerUrl}
           title="Movie player"
           src={playerUrl}
@@ -123,6 +135,7 @@ const MoviePlayer = ({
           vidrockTmdbId={String(videoId ?? '')}
           vidukiImdbId={imdbId}
           onVidrockProgress={server === 'viduki' ? onVidrockProgress : undefined}
+          onVidfastProgress={server === 'vidfast' ? onVidfastProgress : undefined}
           onLoad={onEmbedLoad}
         />
       ) : (
@@ -131,6 +144,6 @@ const MoviePlayer = ({
     </div>
     )
   );
-};
+});
 
 export default MoviePlayer;

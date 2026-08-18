@@ -11,6 +11,8 @@ import { CatalogCardStyleProvider } from "@/contexts/catalogCardStyleContext";
 import { AnimeAudioProvider } from "@/contexts/animeAudioContext";
 import { AnimeSourceProvider } from "@/contexts/animeSourceContext";
 import { StreamingSourceProvider } from "@/contexts/streamingSourceContext";
+import { WatchPartyNavProvider } from "@/contexts/watchPartyNavContext";
+import TeaPartyHostSyncListener from "@/components/watchParty/TeaPartyHostSyncListener";
 import { Suspense } from "react";
 import { AuthProvider } from "@/contexts/authContext";
 import { UserDataProvider } from "@/contexts/userDataContext";
@@ -24,6 +26,10 @@ const OnboardingModal = dynamic(
 );
 const MaintenanceAnnouncementModal = dynamic(
   () => import("@/components/ui/maintenanceAnnouncementModal"),
+  { ssr: false }
+);
+const TeaPartyModal = dynamic(
+  () => import("@/components/watchParty/TeaPartyModal"),
   { ssr: false }
 );
 import CatalogDetailsModalController from "@/components/catalog/catalogDetailsModalController";
@@ -57,15 +63,19 @@ export function Providers({ children }: ProvidersProps) {
           <UserDataProvider>
             <CatalogCardStyleProvider>
               <StreamingSourceProvider>
-                <AnimeSourceProvider>
-                  <AnimeAudioProvider>
-                      <MaintenanceAnnouncementModal />
-                      <OnboardingModal />
-                      <MobileTopNavGate />
-                      <AppShell>{children}</AppShell>
-                      <CatalogDetailsModalController />
-                  </AnimeAudioProvider>
-                </AnimeSourceProvider>
+                <WatchPartyNavProvider>
+                  <AnimeSourceProvider>
+                    <AnimeAudioProvider>
+                        <MaintenanceAnnouncementModal />
+                        <OnboardingModal />
+                        <TeaPartyModal />
+                        <TeaPartyHostSyncListener />
+                        <MobileTopNavGate />
+                        <AppShell>{children}</AppShell>
+                        <CatalogDetailsModalController />
+                    </AnimeAudioProvider>
+                  </AnimeSourceProvider>
+                </WatchPartyNavProvider>
               </StreamingSourceProvider>
             </CatalogCardStyleProvider>
           </UserDataProvider>

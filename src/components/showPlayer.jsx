@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { forwardRef, useMemo } from 'react';
 import VideoEmbedFrame from '@/components/videoEmbedFrame';
 import { PlayerEmbedSkeleton } from '@/components/ui/playerEmbedSkeleton';
 import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
@@ -12,6 +12,7 @@ import {
   VIDFAST_THEME_QUERY,
   VIDUKI_EMBED_BASE,
   VIDUKI_THEME_QUERY,
+  withVidfastEmbedParams,
 } from '@/lib/embedHosts';
 
 export const SHOW_SERVERS = {
@@ -36,7 +37,7 @@ export const SHOW_SERVERS = {
  * @param {{ server: string; videoId?: string; season: number; episode: number }} p
  */
 function buildEmbedUrl(p) {
-  const { server, videoId, season, episode } = p;
+  const { server, videoId, season, episode, startSeconds = 0 } = p;
 
   try {
     const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.vidfast;
@@ -48,7 +49,12 @@ function buildEmbedUrl(p) {
     const e = Math.max(1, Math.floor(Number(episode)) || 1);
     const path = cfg.path(id, s, e);
     const suffix = typeof cfg.suffix === 'function' ? cfg.suffix() : '';
-    return { url: `${cfg.base}${path}${suffix}`, error: null };
+    const baseUrl = `${cfg.base}${path}${suffix}`;
+    const url =
+      server === 'vidfast'
+        ? withVidfastEmbedParams(baseUrl, { startAt: startSeconds })
+        : baseUrl;
+    return { url, error: null };
   } catch (e) {
     return { url: '', error: e?.message || 'Unknown error' };
   }
@@ -68,9 +74,11 @@ function buildEmbedUrl(p) {
  * @param {boolean} [props.immersive] Full-viewport watch page (no rounded shell)
  * @param {(seconds: number) => void} [props.onStremioProgress]
  * @param {(progress: import('@/lib/vidrockProgress').VidrockProgress) => void} [props.onVidrockProgress]
+ * @param {(progress: import('@/lib/vidfastProgress').VidfastProgress) => void} [props.onVidfastProgress]
  * @param {() => void} [props.onEmbedLoad]
  */
-export default function ShowPlayer({
+const ShowPlayer = forwardRef(function ShowPlayer(
+  {
   videoId,
   imdbId,
   title,
@@ -83,8 +91,11 @@ export default function ShowPlayer({
   immersive = false,
   onStremioProgress,
   onVidrockProgress,
+  onVidfastProgress,
   onEmbedLoad,
-}) {
+  },
+  embedRef
+) {
   const { url, error } = useMemo(
     () =>
       buildEmbedUrl({
@@ -92,8 +103,9 @@ export default function ShowPlayer({
         videoId,
         season,
         episode,
+        startSeconds,
       }),
-    [server, videoId, season, episode]
+    [server, videoId, season, episode, startSeconds]
   );
 
   if (server === 'stremio') {
@@ -129,6 +141,7 @@ export default function ShowPlayer({
       {immersive ? null : <WatchPlayerBackButton />}
       {url ? (
         <VideoEmbedFrame
+          ref={embedRef}
           key={url}
           title="Episode player"
           src={url}
@@ -138,6 +151,7 @@ export default function ShowPlayer({
           vidrockEpisode={episode}
           vidukiImdbId={imdbId}
           onVidrockProgress={server === 'viduki' ? onVidrockProgress : undefined}
+          onVidfastProgress={server === 'vidfast' ? onVidfastProgress : undefined}
           onLoad={onEmbedLoad}
         />
       ) : (
@@ -145,4 +159,6 @@ export default function ShowPlayer({
       )}
     </div>
   );
-}
+});
+
+export default ShowPlayer;

@@ -5,6 +5,23 @@ export const MOVIES111_THEME_QUERY = "?ds_lang=none&iconsize=0.65&chromecast=fal
 export const VIDFAST_EMBED_BASE = "https://vidfast.vc";
 export const VIDFAST_THEME_QUERY =
   "?theme=22c55e&autoPlay=true&hideServer=true&chromecast=false&title=true&poster=true&iconsize=0.65&fullscreenButton=false";
+
+/** Append VidFast resume / Tea Party sync params to an embed URL. */
+export function withVidfastEmbedParams(
+  url: string,
+  opts?: { startAt?: number }
+): string {
+  const startAt = Math.floor(Number(opts?.startAt) || 0);
+  if (startAt < 1) return url;
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("startAt", String(startAt));
+    return parsed.toString();
+  } catch {
+    const join = url.includes("?") ? "&" : "?";
+    return `${url}${join}startAt=${startAt}`;
+  }
+}
 /** Viduki API 1 (multi-server). Use www — apex 301s with X-Frame-Options: SAMEORIGIN. */
 export const VIDUKI_EMBED_BASE = "https://www.viduki.net";
 export const VIDUKI_THEME_QUERY = "?color=22c55e";

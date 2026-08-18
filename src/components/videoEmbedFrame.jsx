@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
   EMBED_IFRAME_ALLOW,
   EMBED_IFRAME_CLASS,
@@ -11,6 +11,7 @@ import {
   isVidukiAllServersFailed,
   parseVidrockMessage,
 } from '@/lib/vidrockProgress';
+import { parseVidfastMessage } from '@/lib/vidfastProgress';
 import { cn } from '@/lib/utils';
 import { useWatchOverlay } from '@/contexts/watchOverlayContext';
 
@@ -21,6 +22,7 @@ import { useWatchOverlay } from '@/contexts/watchOverlayContext';
  * @param {string} [props.className]
  * @param {(msg: import('@/lib/megaPlayProgress').MegaPlayMessage) => void} [props.onMegaPlayMessage]
  * @param {(progress: import('@/lib/vidrockProgress').VidrockProgress) => void} [props.onVidrockProgress]
+ * @param {(progress: import('@/lib/vidfastProgress').VidfastProgress) => void} [props.onVidfastProgress]
  * @param {string} [props.vidrockTmdbId]
  * @param {number} [props.vidrockSeason]
  * @param {number} [props.vidrockEpisode]
@@ -30,21 +32,25 @@ import { useWatchOverlay } from '@/contexts/watchOverlayContext';
  * @param {() => void} [props.onEmbedProgress] Called on first MegaPlay progress tick
  * @param {number} [props.embedFailureTimeoutMs] No-progress timeout after iframe load
  */
-export default function VideoEmbedFrame({
-  src,
-  title,
-  className = '',
-  onMegaPlayMessage,
-  onVidrockProgress,
-  vidrockTmdbId,
-  vidrockSeason = 1,
-  vidrockEpisode = 1,
-  vidukiImdbId,
-  onLoad,
-  onEmbedFailure,
-  onEmbedProgress,
-  embedFailureTimeoutMs = 2200,
-}) {
+const VideoEmbedFrame = forwardRef(function VideoEmbedFrame(
+  {
+    src,
+    title,
+    className = '',
+    onMegaPlayMessage,
+    onVidrockProgress,
+    onVidfastProgress,
+    vidrockTmdbId,
+    vidrockSeason = 1,
+    vidrockEpisode = 1,
+    vidukiImdbId,
+    onLoad,
+    onEmbedFailure,
+    onEmbedProgress,
+    embedFailureTimeoutMs = 2200,
+  },
+  ref
+) {
   const [activeSrc, setActiveSrc] = useState(src);
   const activeSrcRef = useRef(src);
   const watchOverlay = useWatchOverlay();
@@ -151,12 +157,18 @@ export default function VideoEmbedFrame({
         maybeNotifyPlaybackStart(vidrock.seconds);
         if (onVidrockProgress) onVidrockProgress(vidrock);
       }
+      const vidfast = parseVidfastMessage(event);
+      if (vidfast) {
+        maybeNotifyPlaybackStart(vidfast.seconds);
+        onVidfastProgress?.(vidfast);
+      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, [
     onMegaPlayMessage,
     onVidrockProgress,
+    onVidfastProgress,
     vidrockTmdbId,
     vidrockSeason,
     vidrockEpisode,
@@ -175,6 +187,7 @@ export default function VideoEmbedFrame({
 
   return (
     <iframe
+      ref={ref}
       key={activeSrc}
       title={title}
       src={activeSrc}
@@ -189,4 +202,6 @@ export default function VideoEmbedFrame({
       onLoad={handleIframeLoad}
     />
   );
-}
+});
+
+export default VideoEmbedFrame;
