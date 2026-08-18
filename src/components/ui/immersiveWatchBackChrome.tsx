@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import WatchFullscreenButton from "@/components/ui/watchFullscreenButton";
 import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
 import WatchPlayerChromeBar from "@/components/ui/watchPlayerChromeBar";
 import TeaPartyWatchButton from "@/components/watchParty/TeaPartyWatchButton";
@@ -24,7 +23,6 @@ export default function ImmersiveWatchBackChrome() {
         <WatchPlayerChromeBar>
           <WatchPlayerBackButton className="relative left-0 top-0 shrink-0 sm:left-0 sm:top-0" />
           <TeaPartyWatchButton />
-          <WatchFullscreenButton />
         </WatchPlayerChromeBar>
       </div>
     </div>

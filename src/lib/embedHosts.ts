@@ -4,7 +4,7 @@ export const MOVIES111_THEME_QUERY = "?ds_lang=none&iconsize=0.65&chromecast=fal
 /** VidFast TMDB/IMDB embed player. */
 export const VIDFAST_EMBED_BASE = "https://vidfast.vc";
 export const VIDFAST_THEME_QUERY =
-  "?theme=22c55e&autoPlay=true&hideServer=true&chromecast=false&title=true&poster=true&iconsize=0.65&fullscreenButton=false";
+  "?theme=22c55e&autoPlay=true&hideServer=true&chromecast=false&title=true&poster=true&iconsize=0.65&fullscreenButton=true";
 
 /** Append VidFast resume / Tea Party sync params to an embed URL. */
 export function withVidfastEmbedParams(

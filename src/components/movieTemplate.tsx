@@ -23,7 +23,6 @@ import { ImmersiveWatchPageSkeleton } from '@/components/ui/watchPageSkeleton';
 import CatalogDetailsSkeleton from '@/components/ui/catalogDetailsSkeleton';
 import CatalogComingSoon from './ui/catalogComingSoon';
 import ImmersiveWatchBackChrome from '@/components/ui/immersiveWatchBackChrome';
-import { WATCH_ROOT_ATTR } from '@/components/ui/watchFullscreenButton';
 import DeferredModalSections from '@/components/ui/deferredModalSections';
 import { useStreamingSource, type StreamServerId } from '@/contexts/streamingSourceContext';
 import { recordMovieInWatchHistory } from '@/lib/watchHistory';
@@ -822,10 +821,7 @@ export default function MovieTemplate({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-0 flex h-[100dvh] w-full flex-col bg-black"
-      {...{ [WATCH_ROOT_ATTR]: '' }}
-    >
+    <div className="fixed inset-0 z-0 flex h-[100dvh] w-full flex-col bg-black">
       <div className="relative min-h-0 flex-1 w-full">
         {!movieReleased ? (
           <>
