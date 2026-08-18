@@ -120,6 +120,20 @@ export function catalogMoviePolicyClause() {
 }
 
 /**
+ * Content policy for general TV discover/browse rails (Popular TV, etc.).
+ * Keeps JP animation and adult anime off non-anime TV surfaces.
+ */
+export function catalogGeneralTvRailPolicyClause() {
+  return {
+    $and: [
+      catalogExcludeJpAnimationNumericTvMongoClause(),
+      catalogExcludeAdultAnimeMongoClause(),
+      catalogExcludeBlockedTmdbTvMongoClause(),
+    ],
+  };
+}
+
+/**
  * Title/name match for anime catalog rows: primary fields + `title_aliases` + nested AniList titles/synonyms.
  * @param {string} safe - output of `escapeRegex(q)`
  * @returns {Record<string, unknown>[]} conditions for use inside `$or`

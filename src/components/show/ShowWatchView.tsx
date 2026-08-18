@@ -25,6 +25,7 @@ type ShowWatchViewProps = {
   adminPreview: boolean;
   adminBypassActive: boolean;
   isAnimeMovie: boolean;
+  backHref: string;
   playerBlock: React.ReactNode;
   episodePickerProps: EpisodePickerProviderProps;
 };
@@ -33,6 +34,7 @@ export default function ShowWatchView({
   adminPreview,
   adminBypassActive,
   isAnimeMovie,
+  backHref,
   playerBlock,
   episodePickerProps,
 }: ShowWatchViewProps) {
@@ -44,7 +46,10 @@ export default function ShowWatchView({
 
   const chromeBar = (
     <WatchPlayerChromeBar className="max-w-[calc(100vw-2rem-env(safe-area-inset-left)-env(safe-area-inset-right))]">
-      <WatchPlayerBackButton className="relative left-0 top-0 z-30 shrink-0 sm:left-0 sm:top-0" />
+      <WatchPlayerBackButton
+        backHref={backHref}
+        className="relative left-0 top-0 z-30 shrink-0 sm:left-0 sm:top-0"
+      />
       {!isAnimeMovie ? (
         <ShowEpisodePickerControls
           align="start"

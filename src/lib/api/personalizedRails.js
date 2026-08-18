@@ -7,6 +7,8 @@ import {
   catalogMoviePolicyClause,
   catalogTodayIsoUtc,
   releasedCatalogClause,
+  catalogGeneralTvRailPolicyClause,
+  catalogNotAnimeCatalogIdMongoExpr,
 } from "@/lib/catalogQuery";
 import {
   buildPreferenceMatch,
@@ -91,6 +93,15 @@ function baseCatalogMatch(match, todayIso) {
 function buildPersonalizedFindFilter(match, todayIso, opts = {}) {
   /** @type {Record<string, unknown>[]} */
   const clauses = [baseCatalogMatch(match, todayIso)];
+  if (opts.type === "tv") {
+    clauses.push(
+      catalogNotAnimeCatalogIdMongoExpr(),
+      { $nor: [{ is_anime: true }, { tags: "anime" }] },
+      { is_kdrama: { $ne: true } },
+      { catalog_categories: { $ne: "kdrama" } },
+      catalogGeneralTvRailPolicyClause()
+    );
+  }
   if (opts.minVoteAverage != null) {
     clauses.push({ vote_average: { $gte: opts.minVoteAverage } });
   }

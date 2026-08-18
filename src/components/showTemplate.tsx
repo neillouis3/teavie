@@ -831,7 +831,7 @@ export default function ShowTemplate({
 
   const navigateToEpisode = useCallback(
     (season: number, episode: number) => {
-      router.push(
+      router.replace(
         buildShowWatchHref(id, {
           season,
           episode,
@@ -1469,6 +1469,7 @@ export default function ShowTemplate({
       adminPreview={adminPreview}
       adminBypassActive={adminBypassActive}
       isAnimeMovie={isAnimeMovie}
+      backHref={episodesHref}
       playerBlock={playerBlock}
       episodePickerProps={episodePickerProps}
     />

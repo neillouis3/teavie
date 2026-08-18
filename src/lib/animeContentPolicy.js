@@ -57,9 +57,10 @@ export function docHasStoredHentaiGenre(doc) {
   return docHasMalHentaiGenre(doc) || docHasAnilistHentaiGenre(doc);
 }
 
-/** Known TMDB TV ids that must not resolve (backup when keywords are missing). */
+/** TMDB TV ids that must not resolve (backup when keywords are missing). */
 export const BLOCKED_TV_TMDB_IDS = [
   207840, // Harem Camp! (hentai ONA)
+  95897, // Overflow (hentai ONA)
 ];
 
 /** @param {unknown} raw */

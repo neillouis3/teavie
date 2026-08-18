@@ -8,6 +8,7 @@ import {
   catalogMoviePolicyClause,
   catalogTodayIsoUtc,
   releasedCatalogClause,
+  catalogGeneralTvRailPolicyClause,
 } from "@/lib/catalogQuery";
 import {
   CATALOG_POPULAR_MIN_VOTE_AVERAGE,
@@ -59,6 +60,7 @@ function generalTvBaseMatch(todayIso) {
       { catalog_categories: { $ne: "kdrama" } },
       releasedCatalogClause("first_air_date", todayIso),
       HAS_ART,
+      catalogGeneralTvRailPolicyClause(),
     ],
   };
 }
