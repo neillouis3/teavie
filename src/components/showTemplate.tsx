@@ -225,6 +225,10 @@ export default function ShowTemplate({
   const [adminBypassActive, setAdminBypassActive] = useState(false);
   const [playerStartSeconds, setPlayerStartSeconds] = useState(0);
   const [playerEpoch, setPlayerEpoch] = useState(0);
+  /** Iframe mount coords — can lag selectedSeason/Episode when VidFast navigates internally. */
+  const [embedSeason, setEmbedSeason] = useState(1);
+  const [embedEpisode, setEmbedEpisode] = useState(1);
+  const skipEmbedRemountRef = useRef(false);
   const partyPlaybackBroadcastRef = useRef(0);
   const lastPartyEpRef = useRef<string | null>(null);
   const embedIframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -895,6 +899,12 @@ export default function ShowTemplate({
 
   useEffect(() => {
     if (!progressHydrated || watchParty.room) return;
+    if (skipEmbedRemountRef.current) {
+      skipEmbedRemountRef.current = false;
+      return;
+    }
+    setEmbedSeason(selectedSeason);
+    setEmbedEpisode(selectedEpisode);
     const sec = loadEpisodePlaybackPosition(String(id), selectedSeason, selectedEpisode);
     setPlayerStartSeconds(sec);
     setPlayerEpoch((n) => n + 1);
@@ -955,10 +965,36 @@ export default function ShowTemplate({
     ]
   );
 
+  const syncVidfastEpisodeFromPlayer = useCallback(
+    (season: number, episode: number) => {
+      if (season === selectedSeason && episode === selectedEpisode) return;
+      skipEmbedRemountRef.current = true;
+      setSelectedSeason(season);
+      setSelectedEpisode(episode);
+      router.replace(
+        buildShowWatchHref(id, {
+          season,
+          episode,
+          party: partyRoomId,
+        })
+      );
+    },
+    [id, partyRoomId, router, selectedSeason, selectedEpisode]
+  );
+
   const handleVidfastProgress = useCallback(
     (progress: VidfastProgress) => {
       const s = progress.season ?? selectedSeason;
       const e = progress.episode ?? selectedEpisode;
+      if (
+        server === "vidfast" &&
+        progress.mediaType === "tv" &&
+        progress.season != null &&
+        progress.episode != null &&
+        (progress.season !== selectedSeason || progress.episode !== selectedEpisode)
+      ) {
+        syncVidfastEpisodeFromPlayer(progress.season, progress.episode);
+      }
       const sec = Math.floor(Number(progress.seconds) || 0);
       touchWatchHistory(String(id), {
         mediaType: "tv",
@@ -994,6 +1030,7 @@ export default function ShowTemplate({
       server,
       watchParty,
       markEpisodeWatchedFromPlayback,
+      syncVidfastEpisodeFromPlayer,
     ]
   );
 
@@ -1187,7 +1224,7 @@ export default function ShowTemplate({
   const playerCoords =
     show?.is_anime
       ? resolveAnimePlayerCoords(show, selectedSeason, selectedEpisode)
-      : { season: selectedSeason, episode: selectedEpisode };
+      : { season: embedSeason, episode: embedEpisode };
 
   useEffect(() => {
     if (!show?.is_anime || !show.seasons?.length) return;
@@ -1214,6 +1251,13 @@ export default function ShowTemplate({
     onEpisodeChange: (season: number, episode: number) => {
       setSelectedSeason(season);
       setSelectedEpisode(episode);
+      router.replace(
+        buildShowWatchHref(id, {
+          season,
+          episode,
+          party: partyRoomId,
+        })
+      );
     },
     showSeasonTabs: showSeasonPickerStrip,
     preferCatalogEpisodes: Boolean(show?.is_anime),
