@@ -6,7 +6,7 @@ export const VIDFAST_EMBED_BASE = "https://vidfast.vc";
 export const VIDFAST_THEME_QUERY =
   "?theme=22c55e&autoPlay=true&hideServer=true&chromecast=false&title=true&poster=true&iconsize=0.65&fullscreenButton=true";
 
-/** Append VidFast resume / Tea Party sync params to an embed URL. */
+/** Append VidFast resume params to an embed URL. */
 export function withVidfastEmbedParams(
   url: string,
   opts?: { startAt?: number }

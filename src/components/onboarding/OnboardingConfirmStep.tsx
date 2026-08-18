@@ -9,7 +9,7 @@ import {
   Search01Icon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
-import { avatarInitials } from "@/lib/partyNickname";
+import { avatarInitials } from "@/lib/displayName";
 
 type OnboardingConfirmStepProps = {
   displayName: string;

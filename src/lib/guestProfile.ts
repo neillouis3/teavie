@@ -1,4 +1,4 @@
-import { getStoredPartyNickname, setStoredPartyNickname } from "@/lib/partyNickname";
+import { getStoredDisplayName, setStoredDisplayName } from "@/lib/displayName";
 
 export const GUEST_AVATAR_KEY = "teavie:guest-avatar:v1";
 export const GUEST_AVATAR_CHANGED_EVENT = "teavie-guest-avatar-changed";
@@ -24,9 +24,9 @@ export function saveGuestAvatarUrl(url: string | null): void {
 }
 
 export function loadGuestDisplayName(): string {
-  return getStoredPartyNickname();
+  return getStoredDisplayName();
 }
 
 export function saveGuestDisplayName(name: string): void {
-  setStoredPartyNickname(name.trim().slice(0, 64) || "Guest");
+  setStoredDisplayName(name.trim().slice(0, 64) || "Guest");
 }

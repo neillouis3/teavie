@@ -6,7 +6,7 @@ import { Avatar, Button, Input } from "@heroui/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Moon02Icon, Sun03Icon } from "@hugeicons/core-free-icons";
 import { authFieldDefaults } from "@/components/auth/authFieldStyles";
-import { avatarInitials } from "@/lib/partyNickname";
+import { avatarInitials } from "@/lib/displayName";
 
 type ThemeChoice = "light" | "dark";
 

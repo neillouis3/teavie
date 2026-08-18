@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import Link from "next/link";
 import { Avatar } from "@heroui/react";
 import { tmdbImageUrl } from "@/lib/tmdbImage";
-import { avatarInitials } from "@/lib/partyNickname";
+import { avatarInitials } from "@/lib/displayName";
 
 export type MovieCreditPerson = {
   id: number;

@@ -9,7 +9,6 @@ import {
 import WatchEpisodesSheet from "@/components/show/WatchEpisodesSheet";
 import WatchPlayerBackButton from "@/components/ui/watchPlayerBackButton";
 import WatchPlayerChromeBar from "@/components/ui/watchPlayerChromeBar";
-import TeaPartyWatchButton from "@/components/watchParty/TeaPartyWatchButton";
 import { WatchOverlayProvider } from "@/contexts/watchOverlayContext";
 import {
   WATCH_OVERLAY_LEFT_CLASS,
@@ -56,7 +55,6 @@ export default function ShowWatchView({
           episodesOpen={episodesOpen}
         />
       ) : null}
-      <TeaPartyWatchButton />
     </WatchPlayerChromeBar>
   );
 

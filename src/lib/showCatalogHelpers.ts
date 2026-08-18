@@ -579,7 +579,6 @@ export function buildShowWatchHref(
   options: {
     season: number;
     episode: number;
-    party?: string | null;
   }
 ): string {
   const params = new URLSearchParams();
@@ -587,8 +586,6 @@ export function buildShowWatchHref(
     params.set("season", String(options.season));
     params.set("episode", String(options.episode));
   }
-  const party = options.party?.trim();
-  if (party) params.set("party", party);
   const base = `/shows/${encodeURIComponent(catalogId)}/watch`;
   const q = params.toString();
   return q ? `${base}?${q}` : base;

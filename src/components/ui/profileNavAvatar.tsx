@@ -18,7 +18,7 @@ import {
   Settings01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
-import { avatarInitials } from "@/lib/partyNickname";
+import { avatarInitials } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/authContext";
 import AssetMaskIcon from "@/components/ui/assetMaskIcon";

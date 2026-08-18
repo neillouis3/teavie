@@ -178,13 +178,6 @@ const VideoEmbedFrame = forwardRef(function VideoEmbedFrame(
 
   if (!activeSrc) return null;
 
-  let isVidfastEmbed = false;
-  try {
-    isVidfastEmbed = new URL(activeSrc).hostname.toLowerCase() === 'vidfast.vc';
-  } catch {
-    isVidfastEmbed = activeSrc.includes('vidfast.vc');
-  }
-
   return (
     <iframe
       ref={ref}
@@ -194,11 +187,7 @@ const VideoEmbedFrame = forwardRef(function VideoEmbedFrame(
       allow={EMBED_IFRAME_ALLOW}
       allowFullScreen
       referrerPolicy="no-referrer-when-downgrade"
-      className={cn(
-        EMBED_IFRAME_CLASS,
-        isVidfastEmbed && 'origin-center [zoom:0.75]',
-        className
-      )}
+      className={cn(EMBED_IFRAME_CLASS, className)}
       onLoad={handleIframeLoad}
     />
   );

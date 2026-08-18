@@ -80,42 +80,6 @@
     ]
   },
   {
-    "version": "2.3.99",
-    "date": "2026-07-01",
-    "title": "Tea Party mid-join polish",
-    "summary": "Host Tea Party opens automatically when a guest joins, and only the host pauses while everyone resyncs together.",
-    "tags": ["Watch party", "UI"],
-    "changes": [
-      "Tea Party modal auto-opens for the host when a guest join starts a sync hold.",
-      "Only the host is asked to pause; existing guests keep watching until resync.",
-      "Clearer joiner vs member banners when someone joins mid-playback."
-    ]
-  },
-  {
-    "version": "2.3.98",
-    "date": "2026-07-01",
-    "title": "Tea Party sync overhaul",
-    "summary": "Smarter watch sync with guest-join checkpoints, wall-clock position math, and host party options in the modal.",
-    "tags": ["Watch party", "UI"],
-    "changes": [
-      "Guests sync using host position plus elapsed time instead of stale snapshots.",
-      "Player remounts only on episode changes, checkpoints, or large drift.",
-      "Host can choose pause on join with auto-resume or manual resume from Tea Party options."
-    ]
-  },
-  {
-    "version": "2.3.97",
-    "date": "2026-07-01",
-    "title": "Tea Party modal",
-    "summary": "Watch parties are now Tea Party — a glass modal for hosting, joining, and chatting while you watch together.",
-    "tags": ["Watch party", "UI"],
-    "changes": [
-      "Renamed watch party to Tea Party with bubble-tea nav icon.",
-      "Replaced the popover with a centered modal for starting, joining, and managing parties.",
-      "Redesigned invite code, member list, and chat with clearer layout and copy feedback."
-    ]
-  },
-  {
     "version": "2.3.96",
     "date": "2026-07-01",
     "title": "Spotlight full-bleed restore",
@@ -258,8 +222,7 @@
     "tags": ["Deploy", "Lint"],
     "changes": [
       "Removed TypeScript-only syntax from JavaScript API route files so Vercel can compile them.",
-      "Fixed hook dependency warnings in the movie watch page.",
-      "Kept the watch party controls stable across renders."
+      "Fixed hook dependency warnings in the movie watch page."
     ]
   },
   {
@@ -330,12 +293,10 @@
   {
     "version": "2.3.14",
     "date": "2026-06-30",
-    "title": "Watch parties and player sync",
-    "summary": "Added watch party support and persistent playback progress.",
-    "tags": ["Watch parties", "Progress"],
+    "title": "Playback progress and player sync",
+    "summary": "Added persistent playback progress for movies and TV.",
+    "tags": ["Progress"],
     "changes": [
-      "Added watch party room creation and join controls.",
-      "Synced host playback state for supported movie and TV players.",
       "Persisted movie and TV progress locally, with account sync added later.",
       "Added sticky top navigation for player pages."
     ]

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Avatar, Button, Input } from "@heroui/react";
 import UserPageShell from "@/components/ui/userPageShell";
 import { PageCard, PageCardRow, PAGE_CARD } from "@/components/ui/pageCard";
-import { avatarInitials } from "@/lib/partyNickname";
+import { avatarInitials } from "@/lib/displayName";
 import {
   loadGuestAvatarUrl,
   loadGuestDisplayName,
