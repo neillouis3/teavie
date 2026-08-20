@@ -10,17 +10,17 @@ export const NAV_DESKTOP_FLOAT_TOP_REM = "0.75rem";
 /** Breathing room between floating nav bottom and page content on desktop. */
 export const NAV_CONTENT_GAP_REM = "0.75rem";
 
-/** Mobile/tablet fixed nav shell (< lg). */
+/** Mobile/tablet fixed nav shell (< lg, except TV browsers forced to desktop). */
 export const NAV_MOBILE_SHELL_CLASS =
-  "fixed inset-x-0 top-0 z-50 flex items-center gap-2 px-4 sm:px-6 lg:hidden pt-[env(safe-area-inset-top,0px)] min-h-[calc(3.5rem+env(safe-area-inset-top,0px))]";
+  "fixed inset-x-0 top-0 z-50 flex items-center gap-2 px-4 sm:px-6 force-desktop:hidden pt-[env(safe-area-inset-top,0px)] min-h-[calc(3.5rem+env(safe-area-inset-top,0px))]";
 
 /** Mobile nav Suspense fallback — matches shell footprint without interactive content. */
 export const NAV_MOBILE_FALLBACK_CLASS =
-  "fixed inset-x-0 top-0 z-50 bg-background lg:hidden pt-[env(safe-area-inset-top,0px)] min-h-[calc(3.5rem+env(safe-area-inset-top,0px))]";
+  "fixed inset-x-0 top-0 z-50 bg-background force-desktop:hidden pt-[env(safe-area-inset-top,0px)] min-h-[calc(3.5rem+env(safe-area-inset-top,0px))]";
 
-/** Desktop floating nav outer shell (lg+). */
+/** Desktop floating nav outer shell (lg+ or TV). */
 export const NAV_DESKTOP_SHELL_CLASS =
-  "pointer-events-none fixed inset-x-0 top-0 z-50 hidden px-4 pt-3 sm:px-6 lg:flex lg:justify-center";
+  "pointer-events-none fixed inset-x-0 top-0 z-50 hidden px-4 pt-3 sm:px-6 force-desktop:flex force-desktop:justify-center";
 
 /** Desktop floating nav inner pill. */
 export const NAV_DESKTOP_INNER_CLASS =
@@ -28,8 +28,8 @@ export const NAV_DESKTOP_INNER_CLASS =
 
 /** Main content top offset for non-hero pages. */
 export const NAV_MAIN_TOP_OFFSET =
-  "pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-[calc(0.75rem+3.5rem+0.75rem)]";
+  "pt-[calc(3.5rem+env(safe-area-inset-top,0px))] force-desktop:pt-[calc(0.75rem+3.5rem+0.75rem)]";
 
 /** Hero / banner clearance below fixed nav (no content gap). */
 export const NAV_HERO_CLEARANCE =
-  "pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-[calc(0.75rem+3.5rem)]";
+  "pt-[calc(3.5rem+env(safe-area-inset-top,0px))] force-desktop:pt-[calc(0.75rem+3.5rem)]";

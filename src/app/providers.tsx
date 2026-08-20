@@ -27,6 +27,7 @@ const MaintenanceAnnouncementModal = dynamic(
   { ssr: false }
 );
 import CatalogDetailsModalController from "@/components/catalog/catalogDetailsModalController";
+import TvViewportFix from "@/components/layout/TvViewportFix";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -59,6 +60,7 @@ export function Providers({ children }: ProvidersProps) {
               <StreamingSourceProvider>
                 <AnimeSourceProvider>
                   <AnimeAudioProvider>
+                      <TvViewportFix />
                       <MaintenanceAnnouncementModal />
                       <OnboardingModal />
                       <MobileTopNavGate />

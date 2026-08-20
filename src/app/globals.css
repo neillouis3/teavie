@@ -5,6 +5,14 @@
 
 @source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 @custom-variant dark (&:is(.dark *));
+@custom-variant force-desktop {
+  @media (min-width: 1024px) {
+    @slot;
+  }
+  html.tv-desktop & {
+    @slot;
+  }
+}
 
 @theme inline {
     --color-background: var(--background);
@@ -35,6 +43,10 @@
     --foreground: #171717;
   }
   
+  html.tv-desktop {
+    --sidebar-w: 16rem;
+  }
+
   body {
     background: var(--background);
     color: var(--foreground);

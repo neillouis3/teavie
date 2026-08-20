@@ -20,6 +20,7 @@ function subscribeLgUp(onStoreChange: () => void) {
 }
 
 function getLgUpSnapshot() {
+  if (document.documentElement.classList.contains("tv-desktop")) return true;
   return window.matchMedia(LG_MEDIA).matches;
 }
 

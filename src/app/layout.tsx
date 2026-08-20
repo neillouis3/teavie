@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { TV_VIEWPORT_FIX_SCRIPT } from "@/lib/tvBrowser";
 
 
 const geistSans = Geist({
@@ -47,6 +49,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans text-sm antialiased`}
       >
+        <Script id="tv-viewport-fix" strategy="beforeInteractive">
+          {TV_VIEWPORT_FIX_SCRIPT}
+        </Script>
         <Providers>{children}</Providers>
         <SpeedInsights />
       </body>
