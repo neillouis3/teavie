@@ -5,8 +5,33 @@
 
 @source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 @custom-variant dark (&:is(.dark *));
-@custom-variant force-desktop {
+/* Living-room TVs: apply sm–2xl utilities even when the browser reports a narrow viewport. */
+@custom-variant sm {
+  @media (min-width: 640px) {
+    @slot;
+  }
+  html.tv-desktop & {
+    @slot;
+  }
+}
+@custom-variant md {
+  @media (min-width: 768px) {
+    @slot;
+  }
+  html.tv-desktop & {
+    @slot;
+  }
+}
+@custom-variant lg {
   @media (min-width: 1024px) {
+    @slot;
+  }
+  html.tv-desktop & {
+    @slot;
+  }
+}
+@custom-variant xl {
+  @media (min-width: 1280px) {
     @slot;
   }
   html.tv-desktop & {
@@ -45,6 +70,15 @@
   
   html.tv-desktop {
     --sidebar-w: 16rem;
+  }
+
+  html.tv-desktop .nav-mobile-shell {
+    display: none !important;
+  }
+
+  html.tv-desktop .nav-desktop-shell {
+    display: flex !important;
+    justify-content: center;
   }
 
   body {

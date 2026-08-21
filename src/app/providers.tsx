@@ -17,6 +17,7 @@ import { UserDataProvider } from "@/contexts/userDataContext";
 import { pathUsesAuthShell } from "@/lib/authShellPaths";
 import { pathUsesImmersiveWatch } from "@/lib/immersiveWatchPaths";
 import { NAV_MOBILE_FALLBACK_CLASS } from "@/lib/navLayout";
+import { useTvDesktop } from "@/hooks/useTvDesktop";
 
 const OnboardingModal = dynamic(
   () => import("@/components/onboarding/OnboardingModal"),
@@ -35,7 +36,14 @@ export interface ProvidersProps {
 
 function MobileTopNavGate() {
   const pathname = usePathname();
-  if (pathUsesAuthShell(pathname) || pathUsesImmersiveWatch(pathname)) return null;
+  const tvDesktop = useTvDesktop();
+  if (
+    tvDesktop ||
+    pathUsesAuthShell(pathname) ||
+    pathUsesImmersiveWatch(pathname)
+  ) {
+    return null;
+  }
 
   return (
     <Suspense

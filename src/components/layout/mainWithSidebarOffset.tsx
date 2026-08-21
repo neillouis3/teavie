@@ -8,6 +8,7 @@ import DesktopTopNav from "@/components/ui/desktopTopNav";
 import Footer from "@/components/ui/footer";
 import { CatalogStreamingOutageBanner } from "@/components/ui/catalogStreamingOutageAlert";
 import { NAV_MAIN_TOP_OFFSET } from "@/lib/navLayout";
+import { useTvDesktop } from "@/hooks/useTvDesktop";
 
 /** Main column beside the sidebar grid track (desktop) or full width (mobile). */
 export default function MainWithSidebarOffset({
@@ -18,11 +19,12 @@ export default function MainWithSidebarOffset({
   const pathname = usePathname();
   const heroBleed = pathUsesHeroBleed(pathname);
   const showFooter = isExplorePath(pathname);
+  const tvDesktop = useTvDesktop();
 
   return (
     <div
       className={`relative flex min-h-screen w-full min-w-0 flex-col overflow-x-clip lg:overflow-x-visible ${
-        heroBleed ? "pt-0" : NAV_MAIN_TOP_OFFSET
+        heroBleed ? "pt-0" : tvDesktop ? "pt-[calc(0.75rem+3.5rem+0.75rem)]" : NAV_MAIN_TOP_OFFSET
       }`}
     >
       <DesktopTopNav />
