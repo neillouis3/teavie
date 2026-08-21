@@ -40,7 +40,7 @@ function buildEmbedUrl(p) {
   const { server, videoId, season, episode, startSeconds = 0 } = p;
 
   try {
-    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.vidfast;
+    const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.movies111;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
@@ -86,7 +86,7 @@ const ShowPlayer = forwardRef(function ShowPlayer(
   backdropUrl,
   season,
   episode,
-  server = 'vidfast',
+  server = 'movies111',
   startSeconds = 0,
   immersive = false,
   onStremioProgress,

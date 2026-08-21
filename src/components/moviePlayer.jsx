@@ -61,7 +61,7 @@ const MoviePlayer = forwardRef(function MoviePlayer(
   title,
   posterUrl,
   backdropUrl,
-  server = 'vidfast',
+  server = 'movies111',
   startSeconds = 0,
   immersive = false,
   hideBackButton = false,
@@ -74,7 +74,7 @@ const MoviePlayer = forwardRef(function MoviePlayer(
 ) {
   const { playerUrl, playerError } = useMemo(() => {
     if (server === 'stremio') return { playerUrl: '', playerError: null };
-    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.vidfast;
+    const config = MOVIE_SERVERS[server] ?? MOVIE_SERVERS.movies111;
     const id = String(videoId ?? '').trim();
     if (!/^\d+$/.test(id)) {
       return { playerUrl: '', playerError: 'Missing TMDB movie id' };

@@ -15,9 +15,10 @@ export type StreamServerId = keyof typeof MOVIE_SERVERS;
 const STORAGE_KEY = 'teavie-streaming-server';
 const DEFAULT_MIGRATION_KEY = 'teavie-streaming-default-v2';
 const DEFAULT_MIGRATION_KEY_V3 = 'teavie-streaming-default-v3';
-const DEFAULT_SERVER: StreamServerId = 'vidfast';
+const DEFAULT_MIGRATION_KEY_V4 = 'teavie-streaming-default-v4';
+const DEFAULT_SERVER: StreamServerId = 'movies111';
 
-const ORDER: StreamServerId[] = ['vidfast', 'movies111', 'viduki', 'stremio'];
+const ORDER: StreamServerId[] = ['movies111', 'vidfast', 'viduki', 'stremio'];
 
 /** Legacy / mistyped values saved in localStorage. */
 const SERVER_ALIASES: Record<string, StreamServerId> = {
@@ -74,6 +75,15 @@ function readStored(): StreamServerId {
     if (!migratedV3) {
       localStorage.setItem(DEFAULT_MIGRATION_KEY_V3, '1');
       if (!normalized || normalized === 'movies111') {
+        normalized = 'vidfast';
+        localStorage.setItem(STORAGE_KEY, normalized);
+      }
+    }
+
+    const migratedV4 = localStorage.getItem(DEFAULT_MIGRATION_KEY_V4);
+    if (!migratedV4) {
+      localStorage.setItem(DEFAULT_MIGRATION_KEY_V4, '1');
+      if (!normalized || normalized === 'vidfast') {
         normalized = DEFAULT_SERVER;
         localStorage.setItem(STORAGE_KEY, normalized);
       }
