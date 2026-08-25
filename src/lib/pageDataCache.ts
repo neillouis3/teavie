@@ -286,7 +286,7 @@ function parseExploreApiPayload(data: Record<string, unknown>): ExploreBundle {
 }
 
 export function peekExploreBundleCache(): ExploreBundle | null {
-  const cached = readClientDayCache<ExploreBundle>(`${PREFIX}.explore.bundle.v2`);
+  const cached = readClientDayCache<ExploreBundle>(`${PREFIX}.explore.bundle.v4`);
   if (cached && isExploreBundleCacheable(cached)) return cached;
   return null;
 }
@@ -294,12 +294,12 @@ export function peekExploreBundleCache(): ExploreBundle | null {
 /** Seed the day cache from SSR so client navigations skip a second /api/explore fetch. */
 export function seedExploreBundleCache(bundle: ExploreBundle): void {
   if (!isExploreBundleCacheable(bundle)) return;
-  writeClientDayCache(`${PREFIX}.explore.bundle.v2`, bundle);
+  writeClientDayCache(`${PREFIX}.explore.bundle.v4`, bundle);
 }
 
 export async function fetchExploreBundle(): Promise<ExploreBundle> {
   return withDayCache(
-    `${PREFIX}.explore.bundle.v2`,
+    `${PREFIX}.explore.bundle.v4`,
     async () => {
       try {
         const res = await fetch("/api/explore");

@@ -20,6 +20,7 @@ import {
 import { mapContentDocToItem } from "@/lib/mapContentDocToItem";
 import { isBlockedMovieTmdbId } from "@/lib/tmdbMovieContentPolicy";
 import { CATALOG_POPULAR_MIN_VOTE_AVERAGE } from "@/lib/catalogPopularity";
+import { mongoExploreRankSortKeyExpr } from "@/lib/exploreSeedRank";
 
 const DEFAULT_LIMIT = 50;
 
@@ -132,10 +133,20 @@ async function queryPersonalizedCatalog(preferences, opts = {}) {
   const filter = buildPersonalizedFindFilter(match, todayIso, opts);
 
   const docs = await col
-    .find(filter)
-    .sort({ popularity: -1, _id: -1 })
-    .limit(fetchLimit)
-    .project(LIST_PROJECTION)
+    .aggregate([
+      { $match: filter },
+      {
+        $addFields: {
+          _exploreRank: mongoExploreRankSortKeyExpr("explore_popular_rank"),
+          _pop: {
+            $convert: { input: "$popularity", to: "double", onError: 0, onNull: 0 },
+          },
+        },
+      },
+      { $sort: { _exploreRank: 1, _pop: -1, _id: -1 } },
+      { $limit: fetchLimit },
+      { $project: LIST_PROJECTION },
+    ])
     .toArray();
 
   return mapDocsToItems(docs, preferences)

@@ -13,7 +13,7 @@ import {
   tmdbListMovieLooksAdult,
 } from "./tmdbMovieContentPolicy.js";
 import { applyImdbGenresToCatalogDoc, omitTmdbGenreFields } from "./imdbGenres.js";
-import { tmdbCollectionFieldsFromMovie } from "./api/movieCollectionRails.js";
+import { tmdbCollectionFieldsFromMovie } from "./tmdbCollectionFields.js";
 
 const DB_NAME = "teavie";
 const COLLECTION = "content";

@@ -40,6 +40,7 @@ export type ExplorePagePayload = {
   favoriteRows: ContentItem[];
   recommendedRows: ContentItem[];
   newContent: ContentItem[];
+  updatedContent: ContentItem[];
   upcomingContent: ContentItem[];
   personalized: PersonalizedExploreBundle | null;
 };
@@ -604,13 +605,18 @@ export function peekExploreInitialCore(
 
 function buildCoreFromBundle(
   bundle: ExploreBundle,
-  feed: { newContent: ContentItem[]; upcomingContent: ContentItem[] }
+  feed: {
+    newContent: ContentItem[];
+    updatedContent?: ContentItem[];
+    upcomingContent: ContentItem[];
+  }
 ): ExploreCorePayload {
   return {
     discover: bundle.discover,
     genres: bundle.genres,
     recommendedRows: [],
     newContent: feed.newContent,
+    updatedContent: feed.updatedContent ?? [],
     upcomingContent: feed.upcomingContent,
     personalized: null,
   };
@@ -620,11 +626,15 @@ function buildCoreFromBundle(
 export function exploreCoreFromApiPayload(payload: {
   discover: TmdbDiscoverPayload;
   genres: CatalogGenreRow[];
-  feed?: { newContent?: ContentItem[]; upcomingContent?: ContentItem[] } | null;
+  feed?: {
+    newContent?: ContentItem[];
+    updatedContent?: ContentItem[];
+    upcomingContent?: ContentItem[];
+  } | null;
 }): ExploreCorePayload {
   const feed = {
     newContent: payload.feed?.newContent ?? [],
-    updatedContent: [] as ContentItem[],
+    updatedContent: payload.feed?.updatedContent ?? [],
     upcomingContent: payload.feed?.upcomingContent ?? [],
   };
   return buildCoreFromBundle(
@@ -686,6 +696,7 @@ export function applyPersonalizedToCore(
       personalized?.newContent.length
         ? filterRailByPreferences(personalized.newContent, preferences)
         : feed?.newContent ?? shell.newContent,
+    updatedContent: feed?.updatedContent ?? shell.updatedContent,
     upcomingContent:
       personalized?.upcomingContent.length
         ? filterRailByPreferences(personalized.upcomingContent, preferences)

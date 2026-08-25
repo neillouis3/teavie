@@ -8,7 +8,10 @@ import {
   mongoCatalogPopularitySortExpr,
   mongoMixedTvCatalogPopularityExpr,
 } from "@/lib/catalogPopularity";
-import { catalogMoviePolicyClause } from "@/lib/catalogQuery";
+import {
+  catalogMoviePolicyClause,
+  catalogGeneralTvRailPolicyClause,
+} from "@/lib/catalogQuery";
 
 const RAIL_FEED_LIMIT = 50;
 const NEW_CONTENT_LIMIT = 20;
@@ -62,10 +65,26 @@ async function loadNewContent() {
 async function loadUpdatedContent() {
   const client = await clientPromise;
   const contentCollection = client.db("teavie").collection("content");
-  const limit = RAIL_FEED_LIMIT;
+  const limit = NEW_CONTENT_LIMIT;
+
+  const filter = {
+    $or: [
+      {
+        $and: [{ type: "movie" }, catalogMoviePolicyClause()],
+      },
+      {
+        $and: [
+          { type: "tv" },
+          { id: { $not: { $regex: "^anime_" } } },
+          { is_anime: { $ne: true } },
+          catalogGeneralTvRailPolicyClause(),
+        ],
+      },
+    ],
+  };
 
   const results = await contentCollection
-    .find({})
+    .find(filter)
     .sort({ updatedAt: -1 })
     .limit(limit)
     .toArray();

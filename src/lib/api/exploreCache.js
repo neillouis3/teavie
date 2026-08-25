@@ -19,7 +19,7 @@ export function getCachedExplorePayload() {
       ]);
       return { discover, genres, feed };
     },
-    ["explore-hub-v2"],
+    ["explore-hub-v4"],
     { revalidate: DISCOVER_REVALIDATE_SEC, tags: ["explore-hub"] }
   )();
 }

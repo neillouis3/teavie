@@ -52,7 +52,7 @@ function seedCacheFromCore(core: ExploreCorePayload): void {
     genres: core.genres,
     feed: {
       newContent: core.newContent,
-      updatedContent: [],
+      updatedContent: core.updatedContent,
       upcomingContent: core.upcomingContent,
     },
   });
@@ -185,12 +185,13 @@ export default function ExploreHub({
     );
   }
 
-  const { discover, genres, newContent, upcomingContent } = core;
+  const { discover, genres, newContent, updatedContent, upcomingContent } = core;
   const hasTrending = spotlightItems.length > 0;
   const hasPopular =
     discover.popularMovies.length > 0 || discover.popularTv.length > 0;
   const hasUpcoming = upcomingContent.length > 0;
   const hasNew = newContent.length > 0;
+  const hasUpdated = updatedContent.length > 0;
   const hasRecommended = recommendedRows.length > 0;
 
   return (
@@ -259,6 +260,12 @@ export default function ExploreHub({
           <section className={RAIL_INNER_CLASS} aria-label="New on Teavie">
             <ExploreSectionTitle variant="explore">New on Teavie</ExploreSectionTitle>
             <NewContentRail items={newContent} />
+          </section>
+        ) : null}
+        {hasUpdated ? (
+          <section className={RAIL_INNER_CLASS} aria-label="Recently Updated">
+            <ExploreSectionTitle variant="explore">Recently Updated</ExploreSectionTitle>
+            <NewContentRail items={updatedContent} />
           </section>
         ) : null}
       </div>

@@ -21,6 +21,7 @@ const SECTION_TITLE_ICONS: Record<string, string> = {
   "new & upcoming": "/rail-icons/calendar-clock.svg",
   "new and upcoming": "/rail-icons/calendar-clock.svg",
   "new on teavie": "/rail-icons/new-product.svg",
+  "recently updated": "/rail-icons/clock.svg",
   "more like this": "/rail-icons/heart.svg",
   "browse by genre": "/rail-icons/apps.svg",
   featured: "/rail-icons/star.svg",

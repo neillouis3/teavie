@@ -1,5 +1,6 @@
 /**
- * Upsert popular TMDB movies + TV into `teavie.content` so Discover/Search rails fill.
+ * Upsert popular + trending TMDB movies + TV into `teavie.content`.
+ * Writes explore_popular_rank / explore_trending_rank for Explore hero, popular, and recommended rails.
  *
  * TV: skips TMDB ids already owned by catalog anime (anime_* / is_anime / tags + tmdb mapping).
  *
@@ -121,7 +122,8 @@ async function animeClaimedTmdbIds(col) {
   return blocked;
 }
 
-async function popularIds(endpoint, maxPages, listRowSkip) {
+async function rankedIds(endpoint, maxPages, listRowSkip) {
+  /** @type {number[]} */
   const ids = [];
   const seen = new Set();
   for (let page = 1; page <= maxPages; page += 1) {
@@ -145,10 +147,106 @@ async function popularIds(endpoint, maxPages, listRowSkip) {
   return ids;
 }
 
+/** @returns {Map<number, { popularRank?: number; trendingRank?: number }>} */
+function createRankMap() {
+  return new Map();
+}
+
+/** @param {Map<number, { popularRank?: number; trendingRank?: number }>} map */
+function assignRanks(map, ids, field) {
+  for (let i = 0; i < ids.length; i += 1) {
+    const id = ids[i];
+    const cur = map.get(id) ?? {};
+    cur[field] = i + 1;
+    map.set(id, cur);
+  }
+}
+
+function applyExploreSeedRanks(doc, ranks) {
+  if (!doc || !ranks) return doc;
+  const seedAt = new Date();
+  return {
+    ...doc,
+    explore_popular_rank: ranks.popularRank ?? null,
+    explore_trending_rank: ranks.trendingRank ?? null,
+    explore_seed_at: seedAt,
+  };
+}
+
+async function fetchMovieDocs(movieRankMap, dryRun, ops) {
+  const movieIds = [...movieRankMap.keys()];
+  console.log(`movies to fetch: ${movieIds.length}`);
+  let ok = 0;
+  let err = 0;
+  for (let i = 0; i < movieIds.length; i += 1) {
+    const id = movieIds[i];
+    try {
+      const q = new URLSearchParams({
+        language: "en-US",
+        include_adult: "false",
+        append_to_response: "release_dates",
+      });
+      const movie = await tmdbGet(`/movie/${id}?${q}`);
+      const doc = applyExploreSeedRanks(
+        mapTmdbMovieToDoc(movie),
+        movieRankMap.get(id)
+      );
+      if (doc) {
+        ops.push({
+          updateOne: {
+            filter: { type: "movie", id: doc.id },
+            update: { $set: doc },
+            upsert: true,
+          },
+        });
+        ok += 1;
+      }
+    } catch (e) {
+      err += 1;
+      console.warn(`movie ${id}: ${e instanceof Error ? e.message : e}`);
+    }
+    await sleep(SLEEP_MS);
+    if ((i + 1) % 20 === 0) console.log(`  movies fetched ${i + 1}/${movieIds.length}…`);
+  }
+  console.log(`movies detail ok=${ok} err=${err}`);
+}
+
+async function fetchTvDocs(tvRankMap, dryRun, ops) {
+  const tvIds = [...tvRankMap.keys()];
+  console.log(`tv to fetch: ${tvIds.length}`);
+  let ok = 0;
+  let err = 0;
+  for (let i = 0; i < tvIds.length; i += 1) {
+    const id = tvIds[i];
+    try {
+      const q = new URLSearchParams({ language: "en-US", include_adult: "false" });
+      const show = await tmdbGet(`/tv/${id}?${q}`);
+      const doc = applyExploreSeedRanks(mapTmdbTvToDoc(show), tvRankMap.get(id));
+      if (doc) {
+        ops.push({
+          updateOne: {
+            filter: { type: "tv", id: doc.id },
+            update: { $set: doc },
+            upsert: true,
+          },
+        });
+        ok += 1;
+      }
+    } catch (e) {
+      err += 1;
+      console.warn(`tv ${id}: ${e instanceof Error ? e.message : e}`);
+    }
+    await sleep(SLEEP_MS);
+    if ((i + 1) % 20 === 0) console.log(`  tv fetched ${i + 1}/${tvIds.length}…`);
+  }
+  console.log(`tv detail ok=${ok} err=${err}`);
+}
+
 async function main() {
   loadMongoEnv();
   const dryRun = hasFlag("--dry-run");
   const pages = Math.max(1, parseIntFlag("--pages", 3));
+  const trendingPages = Math.max(1, parseIntFlag("--trending-pages", 3));
   const moviesOnly = hasFlag("--movies-only");
   const tvOnly = hasFlag("--tv-only");
 
@@ -163,7 +261,7 @@ async function main() {
   }
 
   console.log(
-    `seed popular | mongo=${mongoHostHint(uri)} pages=${pages} dryRun=${dryRun} movies=${!tvOnly} tv=${!moviesOnly}`
+    `seed popular | mongo=${mongoHostHint(uri)} pages=${pages} trendingPages=${trendingPages} dryRun=${dryRun} movies=${!tvOnly} tv=${!moviesOnly}`
   );
 
   const client = new MongoClient(uri);
@@ -179,76 +277,33 @@ async function main() {
   const ops = [];
 
   if (!tvOnly) {
-    const movieIds = await popularIds("/movie/popular", pages, (r) =>
-      tmdbListMovieLooksAdult(r)
+    const movieRankMap = createRankMap();
+    const [popularMovieIds, trendingMovieIds] = await Promise.all([
+      rankedIds("/movie/popular", pages, (r) => tmdbListMovieLooksAdult(r)),
+      rankedIds("/trending/movie/week", trendingPages, (r) => tmdbListMovieLooksAdult(r)),
+    ]);
+    assignRanks(movieRankMap, popularMovieIds, "popularRank");
+    assignRanks(movieRankMap, trendingMovieIds, "trendingRank");
+    console.log(
+      `popular movies: ${popularMovieIds.length} ids | trending movies: ${trendingMovieIds.length} ids`
     );
-    console.log(`popular movies: ${movieIds.length} ids`);
-    let ok = 0;
-    let err = 0;
-    for (let i = 0; i < movieIds.length; i += 1) {
-      const id = movieIds[i];
-      try {
-        const q = new URLSearchParams({
-          language: "en-US",
-          include_adult: "false",
-          append_to_response: "release_dates",
-        });
-        const movie = await tmdbGet(`/movie/${id}?${q}`);
-        const doc = mapTmdbMovieToDoc(movie);
-        if (doc) {
-          ops.push({
-            updateOne: {
-              filter: { type: "movie", id: doc.id },
-              update: { $set: doc },
-              upsert: true,
-            },
-          });
-          ok += 1;
-        }
-      } catch (e) {
-        err += 1;
-        console.warn(`movie ${id}: ${e instanceof Error ? e.message : e}`);
-      }
-      await sleep(SLEEP_MS);
-      if ((i + 1) % 20 === 0) console.log(`  movies fetched ${i + 1}/${movieIds.length}…`);
-    }
-    console.log(`movies detail ok=${ok} err=${err}`);
+    await fetchMovieDocs(movieRankMap, dryRun, ops);
   }
 
   if (!moviesOnly) {
-    const tvIds = await popularIds("/tv/popular", pages, (r) =>
-      shouldRejectTmdbTvFromCatalog(r)
-    );
-    const toFetch = tvIds.filter((id) => !animeBlocked.has(id));
+    const tvRankMap = createRankMap();
+    const [popularTvIds, trendingTvIds] = await Promise.all([
+      rankedIds("/tv/popular", pages, (r) => shouldRejectTmdbTvFromCatalog(r)),
+      rankedIds("/trending/tv/week", trendingPages, (r) => shouldRejectTmdbTvFromCatalog(r)),
+    ]);
+    const filteredPopular = popularTvIds.filter((id) => !animeBlocked.has(id));
+    const filteredTrending = trendingTvIds.filter((id) => !animeBlocked.has(id));
+    assignRanks(tvRankMap, filteredPopular, "popularRank");
+    assignRanks(tvRankMap, filteredTrending, "trendingRank");
     console.log(
-      `popular tv: ${tvIds.length} ids (${tvIds.length - toFetch.length} skipped — already anime in catalog)`
+      `popular tv: ${popularTvIds.length} ids (${popularTvIds.length - filteredPopular.length} skipped — anime) | trending tv: ${trendingTvIds.length} ids (${trendingTvIds.length - filteredTrending.length} skipped — anime)`
     );
-    let ok = 0;
-    let err = 0;
-    for (let i = 0; i < toFetch.length; i += 1) {
-      const id = toFetch[i];
-      try {
-        const q = new URLSearchParams({ language: "en-US", include_adult: "false" });
-        const show = await tmdbGet(`/tv/${id}?${q}`);
-        const doc = mapTmdbTvToDoc(show);
-        if (doc) {
-          ops.push({
-            updateOne: {
-              filter: { type: "tv", id: doc.id },
-              update: { $set: doc },
-              upsert: true,
-            },
-          });
-          ok += 1;
-        }
-      } catch (e) {
-        err += 1;
-        console.warn(`tv ${id}: ${e instanceof Error ? e.message : e}`);
-      }
-      await sleep(SLEEP_MS);
-      if ((i + 1) % 20 === 0) console.log(`  tv fetched ${i + 1}/${toFetch.length}…`);
-    }
-    console.log(`tv detail ok=${ok} err=${err}`);
+    await fetchTvDocs(tvRankMap, dryRun, ops);
   }
 
   if (ops.length === 0) {
