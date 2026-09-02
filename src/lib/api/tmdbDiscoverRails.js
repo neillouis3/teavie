@@ -9,6 +9,7 @@ import {
   quantizeVoteAverage,
 } from "@/lib/catalogPopularity";
 import { tmdbAuth, buildTmdbRequest } from "@/lib/tmdbAuth";
+import { shouldExcludeFromExploreRegional } from "@/lib/exploreLanguagePriority";
 
 const LIMIT = 50;
 const SOURCE_PAGES = 3;
@@ -117,8 +118,12 @@ async function tvItemsFromTmdbOrder(col, tmdbRows, opts = {}) {
     .filter(Boolean);
 }
 
+function filterExploreRegionalRows(rows) {
+  return (rows ?? []).filter((row) => !shouldExcludeFromExploreRegional(row));
+}
+
 function filterPopularTmdbRows(rows) {
-  return (rows ?? []).filter(
+  return filterExploreRegionalRows(rows).filter(
     (row) => !row?.adult && passesPopularQualityGate(row)
   );
 }
@@ -186,8 +191,8 @@ export async function loadTmdbDiscoverRails() {
 
   const [trendingMoviesAll, trendingTvAll, popularMoviesAll, popularTvAll] =
     await Promise.all([
-      movieItemsFromTmdbOrder(col, tMovieRows),
-      tvItemsFromTmdbOrder(col, tTvRows),
+      movieItemsFromTmdbOrder(col, filterExploreRegionalRows(tMovieRows)),
+      tvItemsFromTmdbOrder(col, filterExploreRegionalRows(tTvRows)),
       movieItemsFromTmdbOrder(col, filterPopularTmdbRows(pMovieRows), {
         overlayTmdbVote: true,
       }),

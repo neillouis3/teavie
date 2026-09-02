@@ -68,6 +68,7 @@ export default function ContinueWatchingCard({
     <div className="group relative min-w-0 w-full">
       <Link
         href={href}
+        prefetch={false}
         className="block min-w-0 w-full outline-none"
         aria-label={`${title}. ${subtitle}`}
         {...catalogSeedLinkProps(catalogSeed)}

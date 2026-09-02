@@ -475,6 +475,7 @@ export default function LargeCard({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={`block h-full w-full ${hero ? "" : "min-w-0"}`}
       {...catalogSeedLinkProps(catalogSeed)}
     >

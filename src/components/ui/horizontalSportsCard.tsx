@@ -38,6 +38,7 @@ export default function HorizontalSportsCard({
   return (
     <Link
       href={href}
+      prefetch={false}
       className="group flex min-w-0 w-full flex-col gap-1.5"
       aria-label={`${displayTitle}, live stream`}
     >

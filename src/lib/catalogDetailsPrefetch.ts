@@ -475,6 +475,9 @@ async function prefetchShowDetailsFull(id: string): Promise<void> {
 export function installCatalogDetailsPrefetchListeners(): () => void {
   if (typeof window === "undefined") return () => {};
 
+  let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastPrefetchPath = "";
+
   const onPointerOver = (event: Event) => {
     if (window.innerWidth < 1024) return;
     const target = event.target;
@@ -484,14 +487,25 @@ export function installCatalogDetailsPrefetchListeners(): () => void {
     try {
       const url = new URL(anchor.href, window.location.href);
       if (url.origin !== window.location.origin) return;
-      const seed = parseCatalogSeed(anchor.getAttribute(CATALOG_SEED_ATTR));
-      preloadHeroBannerFromSeed(seed);
-      prefetchCatalogDetailsPath(url.pathname, { full: true });
+      if (url.pathname === lastPrefetchPath) return;
+
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        hoverTimer = null;
+        lastPrefetchPath = url.pathname;
+        const seed = parseCatalogSeed(anchor.getAttribute(CATALOG_SEED_ATTR));
+        preloadHeroBannerFromSeed(seed);
+        // Hover only warms resolve + lite details; the click handler fetches full.
+        prefetchCatalogDetailsPath(url.pathname);
+      }, 280);
     } catch {
       /* ignore bad href */
     }
   };
 
   document.addEventListener("pointerover", onPointerOver, true);
-  return () => document.removeEventListener("pointerover", onPointerOver, true);
+  return () => {
+    if (hoverTimer) clearTimeout(hoverTimer);
+    document.removeEventListener("pointerover", onPointerOver, true);
+  };
 }

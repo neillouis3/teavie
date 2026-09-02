@@ -22,10 +22,12 @@ import {
   exploreSeedFreshClause,
   mongoExploreRankSortKeyExpr,
 } from "@/lib/exploreSeedRank";
+import { prioritizeEnglishExploreItems } from "@/lib/exploreLanguagePriority";
 
 const LIMIT = 50;
 const TRENDING_DAYS = 120;
 const MIN_SEEDED = 8;
+const ENGLISH_FETCH_PAD = 150;
 const AGG_OPTS = { allowDiskUse: true };
 
 const HAS_ART = {
@@ -36,7 +38,7 @@ const HAS_ART = {
 };
 
 function capItems(items) {
-  return dedupeContentItems(items).slice(0, LIMIT);
+  return prioritizeEnglishExploreItems(dedupeContentItems(items), LIMIT);
 }
 
 function trendingCutoffIso() {
@@ -89,7 +91,7 @@ async function querySeededRail(col, { baseMatch, rankField, type }) {
       },
     },
     { $sort: { _rank: 1, _id: -1 } },
-    { $limit: LIMIT + 24 },
+    { $limit: LIMIT + ENGLISH_FETCH_PAD },
   ];
 
   const docs = await col.aggregate(pipeline, AGG_OPTS).toArray();
@@ -121,7 +123,7 @@ async function queryMovieRail(col, { trending = false, qualityPopular = false } 
     pipeline.push({ $match: { _vote: { $gte: CATALOG_POPULAR_MIN_VOTE_AVERAGE } } });
   }
 
-  pipeline.push({ $sort: { _pop: -1, _id: -1 } }, { $limit: LIMIT + 24 });
+  pipeline.push({ $sort: { _pop: -1, _id: -1 } }, { $limit: LIMIT + ENGLISH_FETCH_PAD });
 
   const docs = await col.aggregate(pipeline, AGG_OPTS).toArray();
   return capItems(
@@ -152,7 +154,7 @@ async function queryTvRail(col, { trending = false, qualityPopular = false } = {
     pipeline.push({ $match: { _vote: { $gte: CATALOG_POPULAR_MIN_VOTE_AVERAGE } } });
   }
 
-  pipeline.push({ $sort: { _pop: -1, _id: -1 } }, { $limit: LIMIT + 24 });
+  pipeline.push({ $sort: { _pop: -1, _id: -1 } }, { $limit: LIMIT + ENGLISH_FETCH_PAD });
 
   const docs = await col.aggregate(pipeline, AGG_OPTS).toArray();
   return capItems(docs.map((doc) => ({ ...mapContentDocToItem(doc), type: "tv" })));

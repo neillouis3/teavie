@@ -48,8 +48,6 @@ const RAIL_SECTIONS: { sort: GenrePageSort; title: string }[] = [
 
 const RAIL_LIMIT = 24;
 const SPOTLIGHT_MAX_ITEMS = 16;
-const GENRE_TAB_TYPES: GenrePageType[] = ["all", "movie", "tv"];
-
 type GenreTabState = {
   payload: GenrePagePayload;
   shellReady: boolean;
@@ -310,12 +308,6 @@ export default function GenrePageTemplate({ slug, genreLabel }: GenrePageTemplat
   useEffect(() => {
     ensureTabLoaded(type);
   }, [slug, type, preferencesSig, ensureTabLoaded]);
-
-  useEffect(() => {
-    for (const tabType of GENRE_TAB_TYPES) {
-      prefetchTab(tabType);
-    }
-  }, [slug, preferencesSig, prefetchTab]);
 
   const discoverPending = !shellReady || !topRatedReady;
   useResumeFetchWhenVisible(discoverPending, loadGenrePage, bustGenreInflight);

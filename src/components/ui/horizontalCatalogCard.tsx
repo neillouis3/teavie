@@ -73,6 +73,7 @@ export default function HorizontalCatalogCard({
     <div className="group relative min-w-0 w-full">
       <Link
         href={href}
+        prefetch={false}
         className="block min-w-0 w-full outline-none"
         aria-label={`${title}, ${label}, ${year}`}
         {...catalogSeedLinkProps(catalogSeed)}

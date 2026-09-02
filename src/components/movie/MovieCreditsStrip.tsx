@@ -177,6 +177,7 @@ function CreditAvatar({ person, subtitle }: CreditAvatarProps) {
   return (
     <Link
       href={`/people/${person.id}`}
+      prefetch={false}
       className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 transition-opacity hover:opacity-85 sm:w-[5rem]"
       aria-label={`View ${name}'s profile`}
     >

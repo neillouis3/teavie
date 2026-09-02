@@ -56,6 +56,7 @@ export default function PersonPosterCard({
   return (
     <Link
       href={href}
+      prefetch={false}
       className="group relative block min-w-0"
       aria-label={`${title}${year !== "—" ? `, ${year}` : ""}`}
     >

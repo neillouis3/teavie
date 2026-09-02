@@ -262,6 +262,60 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const remoteHistorySyncPausedRef = useRef(false);
   const historySyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const historySyncInFlightRef = useRef(false);
+  const progressSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressSyncInFlightRef = useRef(false);
+  const pendingProgressSyncRef = useRef<
+    Map<
+      string,
+      | { kind: "tv"; progress: Omit<WatchProgressPayload, "v"> }
+      | { kind: "movie"; moviePositionSeconds: number }
+    >
+  >(new Map());
+
+  const flushRemoteProgressSync = useCallback(() => {
+    if (!user || progressSyncInFlightRef.current) return;
+    const pending = pendingProgressSyncRef.current;
+    if (pending.size === 0) return;
+
+    const batch = [...pending.entries()];
+    pending.clear();
+    progressSyncInFlightRef.current = true;
+
+    void Promise.all(
+      batch.map(([catalogId, body]) =>
+        fetch("/api/user/watch-progress", {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(
+            body.kind === "tv"
+              ? { catalogId, progress: body.progress }
+              : { catalogId, moviePositionSeconds: body.moviePositionSeconds }
+          ),
+        }).catch(() => {})
+      )
+    ).finally(() => {
+      progressSyncInFlightRef.current = false;
+      if (pendingProgressSyncRef.current.size > 0 && user) {
+        if (progressSyncTimerRef.current) clearTimeout(progressSyncTimerRef.current);
+        progressSyncTimerRef.current = setTimeout(() => {
+          progressSyncTimerRef.current = null;
+          flushRemoteProgressSync();
+        }, 30_000);
+      }
+    });
+  }, [user]);
+
+  const scheduleRemoteProgressSync = useCallback(() => {
+    if (!user) return;
+    if (progressSyncTimerRef.current) {
+      clearTimeout(progressSyncTimerRef.current);
+    }
+    progressSyncTimerRef.current = setTimeout(() => {
+      progressSyncTimerRef.current = null;
+      flushRemoteProgressSync();
+    }, 30_000);
+  }, [user, flushRemoteProgressSync]);
 
   const scheduleRemoteHistorySync = useCallback(() => {
     if (!user || remoteHistorySyncPausedRef.current) return;
@@ -526,27 +580,40 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setTvProgressSyncDelegate((catalogId, payload) => {
       if (!user) return;
-      void fetch("/api/user/watch-progress", {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ catalogId, progress: payload }),
-      });
+      pendingProgressSyncRef.current.set(catalogId, { kind: "tv", progress: payload });
+      scheduleRemoteProgressSync();
     });
     setMovieProgressSyncDelegate((catalogId, seconds) => {
       if (!user) return;
-      void fetch("/api/user/watch-progress", {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ catalogId, moviePositionSeconds: seconds }),
+      pendingProgressSyncRef.current.set(catalogId, {
+        kind: "movie",
+        moviePositionSeconds: seconds,
       });
+      scheduleRemoteProgressSync();
     });
+
+    const flushOnHide = () => {
+      if (progressSyncTimerRef.current) {
+        clearTimeout(progressSyncTimerRef.current);
+        progressSyncTimerRef.current = null;
+      }
+      flushRemoteProgressSync();
+    };
+    window.addEventListener("pagehide", flushOnHide);
+    window.addEventListener("beforeunload", flushOnHide);
+
     return () => {
       setTvProgressSyncDelegate(null);
       setMovieProgressSyncDelegate(null);
+      window.removeEventListener("pagehide", flushOnHide);
+      window.removeEventListener("beforeunload", flushOnHide);
+      if (progressSyncTimerRef.current) {
+        clearTimeout(progressSyncTimerRef.current);
+        progressSyncTimerRef.current = null;
+      }
+      flushRemoteProgressSync();
     };
-  }, [user]);
+  }, [user, scheduleRemoteProgressSync, flushRemoteProgressSync]);
 
   const value = useMemo(
     () => ({

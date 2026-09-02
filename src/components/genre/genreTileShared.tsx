@@ -101,6 +101,7 @@ export function GenreCatalogTile({
   return (
     <Link
       href={href}
+      prefetch={false}
       aria-label={`Browse ${genre.name}`}
       className="group relative flex aspect-[40/21] w-full overflow-hidden rounded-xl p-3"
     >
@@ -152,6 +153,7 @@ export function GenreBrowseAllTile() {
   return (
     <Link
       href="/genres"
+      prefetch={false}
       aria-label="Browse all genres"
       className="group relative flex aspect-[40/21] w-full overflow-hidden rounded-xl p-3"
     >
@@ -182,6 +184,7 @@ export function GenreSquareTile({
   return (
     <Link
       href={href}
+      prefetch={false}
       aria-label={`Browse ${genre.name}`}
       className="group relative flex aspect-square w-full overflow-hidden rounded-xl p-2.5 sm:p-3"
     >

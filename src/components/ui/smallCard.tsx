@@ -215,6 +215,7 @@ export default function SmallCard({
     <div className={shellClass}>
       <Link
         href={resolvedHref}
+        prefetch={false}
         className="flex min-w-0 flex-col gap-1"
         aria-label={`${title}, ${year}`}
         {...catalogSeedLinkProps(catalogSeed)}

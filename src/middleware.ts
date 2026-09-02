@@ -5,7 +5,7 @@ import {
   normalizeSplitCourMalEpisode,
   primaryMalForSplitCourMal,
 } from "@/lib/animeSplitCour.js";
-import { updateSession } from "@/utils/supabase/middleware";
+import { updateSession, shouldSkipSessionRefresh } from "@/utils/supabase/middleware";
 
 /** Redirect hidden split-cour anime rows to their merged primary show page. */
 function splitCourRedirect(request: NextRequest): NextResponse | null {
@@ -35,6 +35,10 @@ function splitCourRedirect(request: NextRequest): NextResponse | null {
 export async function middleware(request: NextRequest) {
   const redirect = splitCourRedirect(request);
   if (redirect) return redirect;
+
+  if (shouldSkipSessionRefresh(request)) {
+    return NextResponse.next();
+  }
 
   return updateSession(request);
 }
