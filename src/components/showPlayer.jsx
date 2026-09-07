@@ -12,14 +12,17 @@ import {
   VIDFAST_THEME_QUERY,
   VIDUKI_EMBED_BASE,
   VIDUKI_THEME_QUERY,
+  withEmbedIconSize,
   withVidfastEmbedParams,
 } from '@/lib/embedHosts';
+import { useEmbedChromeScale } from '@/hooks/useEmbedChromeScale';
 
 export const SHOW_SERVERS = {
   vidfast: {
     base: VIDFAST_EMBED_BASE,
     path: (id, season, episode) => `/tv/${id}/${season}/${episode}`,
     suffix: () => VIDFAST_THEME_QUERY,
+    supportsIconSize: true,
   },
   viduki: {
     base: VIDUKI_EMBED_BASE,
@@ -30,6 +33,7 @@ export const SHOW_SERVERS = {
     base: MOVIES111_EMBED_BASE,
     path: (id, season, episode) => `/embed/tv/${id}/${season}/${episode}`,
     suffix: () => MOVIES111_THEME_QUERY,
+    supportsIconSize: true,
   },
 };
 
@@ -37,7 +41,15 @@ export const SHOW_SERVERS = {
  * @param {{ server: string; videoId?: string; season: number; episode: number }} p
  */
 function buildEmbedUrl(p) {
-  const { server, videoId, season, episode, startSeconds = 0 } = p;
+  const {
+    server,
+    videoId,
+    season,
+    episode,
+    startSeconds = 0,
+    chromeReady = true,
+    iconSize = null,
+  } = p;
 
   try {
     const cfg = SHOW_SERVERS[server] ?? SHOW_SERVERS.movies111;
@@ -45,15 +57,20 @@ function buildEmbedUrl(p) {
     if (!/^\d+$/.test(id)) {
       return { url: '', error: 'Missing TMDB TV id' };
     }
+    // Hold the skeleton until the viewport is known — the icon size is part of
+    // the src, so guessing it would reload the embed a frame later.
+    if (!chromeReady) return { url: '', error: null };
     const s = Math.max(0, Math.floor(Number(season)) || 0);
     const e = Math.max(1, Math.floor(Number(episode)) || 1);
     const path = cfg.path(id, s, e);
     const suffix = typeof cfg.suffix === 'function' ? cfg.suffix() : '';
-    const baseUrl = `${cfg.base}${path}${suffix}`;
-    const url =
-      server === 'vidfast'
-        ? withVidfastEmbedParams(baseUrl, { startAt: startSeconds })
-        : baseUrl;
+    let url = `${cfg.base}${path}${suffix}`;
+    if (cfg.supportsIconSize) {
+      url = withEmbedIconSize(url, iconSize);
+    }
+    if (server === 'vidfast') {
+      url = withVidfastEmbedParams(url, { startAt: startSeconds });
+    }
     return { url, error: null };
   } catch (e) {
     return { url: '', error: e?.message || 'Unknown error' };
@@ -96,6 +113,8 @@ const ShowPlayer = forwardRef(function ShowPlayer(
   },
   embedRef
 ) {
+  const { ready: chromeReady, iconSize } = useEmbedChromeScale();
+
   const { url, error } = useMemo(
     () =>
       buildEmbedUrl({
@@ -104,8 +123,10 @@ const ShowPlayer = forwardRef(function ShowPlayer(
         season,
         episode,
         startSeconds,
+        chromeReady,
+        iconSize,
       }),
-    [server, videoId, season, episode, startSeconds]
+    [server, videoId, season, episode, startSeconds, chromeReady, iconSize]
   );
 
   if (server === 'stremio') {

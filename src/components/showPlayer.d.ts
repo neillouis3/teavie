@@ -31,5 +31,6 @@ export const SHOW_SERVERS: Record<
     base: string;
     path: (id: string, season: number, episode: number) => string;
     suffix: () => string;
+    supportsIconSize?: boolean;
   }
 >;

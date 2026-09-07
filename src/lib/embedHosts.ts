@@ -1,10 +1,35 @@
 /** Shared third-party embed player hosts. */
 export const MOVIES111_EMBED_BASE = "https://player.vidlove.cc";
-export const MOVIES111_THEME_QUERY = "?ds_lang=none&iconsize=0.65&chromecast=false";
+export const MOVIES111_THEME_QUERY = "?ds_lang=none&chromecast=false";
 /** VidFast TMDB/IMDB embed player. */
 export const VIDFAST_EMBED_BASE = "https://vidfast.vc";
 export const VIDFAST_THEME_QUERY =
-  "?theme=22c55e&autoPlay=true&hideServer=true&chromecast=false&title=true&poster=true&iconsize=0.65&fullscreenButton=true";
+  "?theme=22c55e&autoPlay=true&hideServer=true&chromecast=false&title=true&poster=true&fullscreenButton=true";
+
+/**
+ * Player-chrome scale for the viewports that also get `lg:[zoom:0.75]`. Phones
+ * stay at the provider default: `iconsize` shrinks only the provider's own
+ * controls, not the ad overlays it injects, so scaling it down there just makes
+ * the ads look bigger next to our controls.
+ */
+export const EMBED_DESKTOP_ICON_SIZE = 0.65;
+
+/** Set `iconsize` on an embed URL. A nullish size leaves the provider default. */
+export function withEmbedIconSize(
+  url: string,
+  iconSize: number | null | undefined
+): string {
+  const size = Number(iconSize);
+  if (!Number.isFinite(size) || size <= 0) return url;
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("iconsize", String(size));
+    return parsed.toString();
+  } catch {
+    const join = url.includes("?") ? "&" : "?";
+    return `${url}${join}iconsize=${size}`;
+  }
+}
 
 /** Append VidFast resume params to an embed URL. */
 export function withVidfastEmbedParams(

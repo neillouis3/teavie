@@ -30,5 +30,6 @@ export const MOVIE_SERVERS: Record<
     base: string;
     path: (id: string) => string;
     suffix: () => string;
+    supportsIconSize?: boolean;
   }
 >;
